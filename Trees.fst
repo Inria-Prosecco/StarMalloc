@@ -64,6 +64,8 @@ let rec is_wds (#a: Type) (x: tree a) : Tot (bool & nat) (decreases x) =
       let s = s1 + s2 + 1 in
       b1 && b2 && size = s, s
 
+let wds (a: Type) = x:tree a {fst (is_wds x)}
+
 let rec equiv_sot_wds (#a: Type) (x: tree a) :
   Lemma (let b, s = is_wds x in
          not b \/ size_of_tree x = s) =
@@ -73,7 +75,6 @@ let rec equiv_sot_wds (#a: Type) (x: tree a) :
       equiv_sot_wds l;
       equiv_sot_wds r
 
-let wds (#a: Type) = x:tree a {fst (is_wds x)}
 
 let check #a (x: tree a) : Lemma
 //let check (#a: Type) (x: wds a) : Lemma
@@ -84,6 +85,21 @@ let check #a (x: tree a) : Lemma
   let Node _ _ _ s = x in
   assert (fst (is_wds x));
   equiv_sot_wds x
+
+let induction_wds (#a: Type) (x: a) (l r:wds a)
+  : Lemma (let s = size_of_tree l + size_of_tree r + 1 in
+           let t = Node x l r s in
+   fst (is_wds t))
+  =
+  assert (fst (is_wds l));
+  assert (fst (is_wds r));
+  let s = size_of_tree l + size_of_tree r + 1 in
+  let t = Node x l r s in
+  assert (s == size_of_tree t);
+  equiv_sot_wds l;
+  equiv_sot_wds r;
+  assert (fst (is_wds t));
+  ()
 
 
 (*** Operations *)

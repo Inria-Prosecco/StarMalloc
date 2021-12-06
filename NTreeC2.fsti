@@ -19,17 +19,23 @@ val node (a: Type0) : Type0
 let t (a: Type0) = ref (node a)
 
 (** This type reflects the contents of a tree without the memory layout *)
-let tree (a: Type0) = x:Spec.tree a{fst (Spec.is_wds x)}
+//let tree (a: Type0) = x:Spec.tree a{fst (Spec.is_wds x)}
+let tree (a: Type0) = Spec.tree a
 
 (**** Operations on nodes *)
 
 val get_left (#a: Type0) (n: node a) : t a
 val get_right (#a: Type0) (n: node a) : t a
 val get_data (#a: Type0) (n: node a) : a
+val get_size (#a: Type0) (n: node a) : nat
 val mk_node (#a: Type0) (data: a) (left right: t a) (size: nat)
     : Pure (node a)
       (requires True)
-      (ensures (fun n -> get_left n == left /\ get_right n == right /\ get_data n == data))
+      (ensures (fun n ->
+        get_left n == left
+     /\ get_right n == right
+     /\ get_data n == data
+     /\ get_size n == size))
 
 
 (**** Slprop and selector *)
@@ -42,12 +48,12 @@ val is_null_t (#a: Type0) (r: t a) : (b:bool{b <==> r == null_t})
 val tree_sl (#a: Type0) (r: t a) : slprop u#1
 
 (** Selector retrieving the contents of a tree in memory *)
-val tree_sel (#a: Type0) (r: t a) : selector (tree a) (tree_sl r)
+val tree_sel (#a: Type0) (r: t a) : selector (Spec.wds a) (tree_sl r)
 
 [@@__steel_reduce__]
 let linked_tree' (#a: Type0) (r: t a) : vprop' = {
   hp = tree_sl r;
-  t = tree a;
+  t = Spec.wds a;
   sel = tree_sel r
 }
 
@@ -63,7 +69,7 @@ let v_linked_tree
   (h:rmem p{
     FStar.Tactics.with_tactic selector_tactic (can_be_split p (linked_tree r) /\ True)
   })
-    : GTot (tree a)
+    : GTot (Spec.wds a)
   = h (linked_tree r)
 
 (*** Operations *)
@@ -98,9 +104,11 @@ val pack_tree (#a: Type0) (ptr: t a) (left: t a) (right: t a)
         get_left (sel ptr h0) == left /\
         get_right (sel ptr h0) == right))
       (ensures (fun h0 _ h1 ->
+        let l = v_linked_tree left h0 in
+        let r = v_linked_tree right h0 in
+        let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
         v_linked_tree ptr h1 ==
-          Spec.Node (get_data (sel ptr h0)) (v_linked_tree left h0) (v_linked_tree right h0)
-      ))
+          Spec.Node (get_data (sel ptr h0)) l r s))
 
 val unpack_tree (#a: Type0) (ptr: t a)
     : Steel (node a)
