@@ -247,61 +247,6 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
       (pt =!= null_t)
       m
 
-(*
-val move_requires_4
-  (#a #b #c #d: Type)
-  (#p #q: (a -> b -> c -> d -> Type))
-  ($_: (x: a -> y: b -> z: c -> w: d ->
-        Lemma (requires p x y z w) (ensures q x y z w)))
-  (x: a)
-  (y: b)
-  (z: c)
-  (w: d)
-  : Lemma (p x y z w ==> q x y z w)
-*)
-
-let elim_star_wit (p q:slprop) (m:Mem.hmem (p `Mem.star` q))
-  : Ghost (mem & mem)
-    (requires
-      interp (p `Mem.star` q) m)
-    (ensures (fun (ml, mr) ->
-      disjoint ml mr /\
-      m == join ml mr /\
-      interp p ml /\
-      interp q mr))
-  =
-  // TODO
-  let aux () :
-    Lemma
-    (ensures exists m'.
-      let ml = fst m' in
-      let mr = snd m' in
-      interp (p `Mem.star` q) m
-      ==>
-      (disjoint ml mr /\
-      m == join ml mr /\
-      interp p ml /\
-      interp q mr))
-    =
-      //Classical.forall_intro (
-      //  Classical.move_requires (elim_star p q)
-      //)
-    admit()
-
-
-  in
-  aux();
-    //elim_star p q m;
-  FStar.IndefiniteDescription.indefinite_description_ghost
-    (mem & mem)
-    (fun (ml, mr) ->
-      interp (p `Mem.star` q) m
-      ==>
-      (disjoint ml mr /\
-      m == join ml mr /\
-      interp p ml /\
-      interp q mr))
-
 // Maintenant, tenter en ajoutant s (et sr) en paramètre(s)
 let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref nat)
   (x: node a) (l r:Spec.wds a) (s:nat) (m:mem) : Lemma
@@ -345,10 +290,9 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref nat)
     let p2 = tree_sl left in
     let p3 = tree_sl right in
     let p4 = ptr sr in
-    let m123, m4 = elim_star_wit
-      (p1 `Mem.star` p2 `Mem.star` p3) p4 m in
-    let m12, m3 = elim_star_wit (p1 `Mem.star` p2) p3 m123 in
-    let m1, m2 = elim_star_wit p1 p2 m12 in
+    let m123, m4 = id_elim_star (p1 `Mem.star` p2 `Mem.star` p3) p4 m in
+    let m12, m3 = id_elim_star (p1 `Mem.star` p2) p3 m123 in
+    let m1, m2 = id_elim_star p1 p2 m12 in
     //assert (ptr_sel sr m == s);
     // #1
     ptr_sel_interp pt m1;
@@ -522,15 +466,15 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : L
     let p3 = tree_sl' (get_right x) r in
     let p4 = pts_to_sl (get_size x) full_perm s in
     //let p12 = p1 `Mem.star` p2 in
-    let m123, m4 = elim_star_wit
+    let m123, m4 = id_elim_star
       (p1 `Mem.star` p2 `Mem.star` p3) p4 m in
     assert (join m123 m4 == m);
-    let m12, m3 = elim_star_wit
+    let m12, m3 = id_elim_star
       (p1 `Mem.star` p2) p3 m123 in
-    assert (join m12 m3 == m123);
-    let m1, m2 =  elim_star_wit
+    assert (hide (join m12 m3) == m123);
+    let m1, m2 = id_elim_star
       p1 p2 m12 in
-    assert (join m1 m2 == m12);
+    assert (hide (join m1 m2) == m12);
 
     // #1
     intro_ptr_interp pt (hide x) m1;
@@ -543,7 +487,7 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : L
       (ptr pt)
       (tree_sl (get_left x)) m1 m2;
     join_commutative m1 m2;
-    assert (m12 == join m1 m2);
+    assert (reveal m12 == join m1 m2);
     assert (interp (ptr pt `Mem.star` tree_sl (get_left x)) m12);
     // #3
     tree_sel_interp (get_right x) r m3;
@@ -552,7 +496,7 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : L
       (ptr pt `Mem.star` tree_sl (get_left x))
       (tree_sl (get_right x)) m12 m3;
     join_commutative m12 m3;
-    assert (m123 == join m12 m3);
+    assert (reveal m123 == join m12 m3);
     assert (interp (ptr pt `Mem.star`
       tree_sl (get_left x) `Mem.star`
       tree_sl (get_right x)
