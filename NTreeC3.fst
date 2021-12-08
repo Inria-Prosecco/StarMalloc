@@ -360,7 +360,41 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref nat)
 
     in
     //TODO:
-    admit();
+    //admit();
+    let p1 = ptr pt in
+    let p2 = tree_sl left in
+    let p3 = tree_sl right in
+    let p4 = ptr sr in
+    elim_star (p1 `Mem.star` p2 `Mem.star` p3) p4 m;
+    assert (exists m5 m6.
+      disjoint m5 m6 /\
+      m == join m5 m6 /\
+      interp (p1 `Mem.star` p2 `Mem.star` p3) m5 /\
+      interp p4 m6
+    );
+    //Classical.forall_intro (Classical.move_requires
+    elim_star (p1 `Mem.star` p2) p3 m;
+    //)
+    assert (exists m7 m8.
+      disjoint m7 m8 /\
+      m == join m7 m8 /\
+      interp (p1 `Mem.star` p2) m7 /\
+      interp p3 m8
+    );
+    //Classical.forall_intro
+    elim_star p1 p2 m;
+    assert (exists m9 m10.
+      disjoint m9 m10 /\
+      m == join m9 m10 /\
+      interp p1 m9 /\
+      interp p2 m10
+    );
+    //admit ();
+
+
+    //Classical.forall_intro (Classical.move_requires
+    //);
+
     //elim_star (ptr pt `Mem.star` tree_sl left) (tree_sl right) m;
     //Classical.forall_intro (Classical.move_requires
     //  (elim_star (ptr pt) (tree_sl left)));
@@ -368,6 +402,14 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref nat)
     // TODO : move_requires_4 / arbitrary arity
     //Classical.forall_intro_3 (Classical.move_requires_3 (aux m));
     Classical.forall_intro_4 (move_requires_4 (aux m));
+    assume (interp
+            (pts_to_sl pt full_perm x `Mem.star`
+         tree_sl' left l' `Mem.star`
+         tree_sl' right r' `Mem.star`
+         pts_to_sl sr full_perm s)
+       m);
+
+    //assert (interp (pts_to_sl pt full_perm x) m);
     let s = Spec.size_of_tree l' + Spec.size_of_tree r' + 1 in
     let t = Spec.Node x l' r' s in
     Spec.induction_wds x l' r';
@@ -610,13 +652,17 @@ let unpack_tree (#a: Type0) (ptr: t a)
     : Steel (node a)
       (linked_tree ptr)
       (fun node ->
-        linked_tree (get_left node) `star` linked_tree (get_right node) `star` vptr ptr)
+        vptr ptr `star`
+        linked_tree (get_left node) `star`
+        linked_tree (get_right node) `star`
+        vptr (get_size node))
       (requires (fun h0 -> not (is_null_t ptr)))
       (ensures (fun h0 node h1 ->
         v_linked_tree ptr h0 == Spec.Node
           (get_data (sel ptr h1))
           (v_linked_tree (get_left node) h1)
-          (v_linked_tree (get_right node) h1) (get_size node) /\
+          (v_linked_tree (get_right node) h1)
+          (sel (get_size node) h1) /\
         (sel ptr h1) == node
       ))
   = let h = get() in
