@@ -299,13 +299,13 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref nat)
     let aux (m m1 m2 m3 m4:mem) : Lemma
       (requires
 // TODO: wtf
-        (*(let m12 = join m1 m2 in
-        let m123 = join m12 m3 in
-        let m1234 = join m123 m4 in)*)
         disjoint m1 m2 /\
         disjoint (join m1 m2) m3 /\
         disjoint (join (join m1 m2) m3) m4 /\
-        m == join (join (join m1 m2) m3) m4 /\
+        (let m12 = join m1 m2 in
+        let m123 = join m12 m3 in
+        let m1234 = join m123 m4 in
+        m == m1234 /\
         interp (ptr pt) m1 /\
         interp (tree_sl left) m2 /\
         interp (tree_sl right) m3 /\
@@ -314,7 +314,7 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref nat)
         interp (tree_sl' right r') m /\
         ptr_sel pt m1 == x /\
         ptr_sel sr m4 == s
-      )
+      ))
 
       (ensures interp
         (pts_to_sl pt full_perm x `Mem.star`
@@ -469,14 +469,14 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : L
       tree_sl (get_right x) `Mem.star`
       ptr (get_size x)
     ) m /\
-    //sel_of (vptr pt) m == x /\
-    ptr_sel pt m == x /\
+    sel_of (vptr pt) m == x /\
+    //ptr_sel pt m == x /\
     tree_sel_node (get_left x) m == l /\
     tree_sel_node (get_right x) m == r /\
     //sel_of (vptr (get_size x)) == s /\
     // TODO : pourquoi ptr_sel marche et pas sel_of ? BUG ?
-    //sel_of (vptr (get_size x)) == s /\
-    ptr_sel (get_size x) m == s /\
+    sel_of (vptr (get_size x)) m == s /\
+    //ptr_sel (get_size x) m == s /\
     //get_size x == s /\
     fst (Spec.is_wds l) /\
     fst (Spec.is_wds r) /\
@@ -500,12 +500,12 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : L
     emp_unit sl;
     assert (interp sl m);
 //(*)
-    let aux (m m1 m2 m3 m4:mem) : Lemma
+    let aux (m:mem) (m1 m2 m3 m4:mem) : Lemma
       (requires
         disjoint m1 m2 /\
         disjoint (join m1 m2) m3 /\
         disjoint (join (join m1 m2) m3) m4 /\
-        m = join (join (join m1 m2) m3) m4 /\
+        m == join (join (join m1 m2) m3) m4 /\
         interp (pts_to_sl pt full_perm x) m1 /\
         interp (tree_sl' (get_left x) l) m2 /\
         interp (tree_sl' (get_right x) r) m3 /\
@@ -518,13 +518,13 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : L
           tree_sl (get_right x) `Mem.star`
           ptr (get_size x)
           ) m /\
-        //sel_of (vptr pt) m == x /\
-        ptr_sel pt m == x /\
+        sel_of (vptr pt) m == x /\
+        //ptr_sel pt m == x /\
         tree_sel_node (get_left x) m == l /\
         tree_sel_node (get_right x) m == r /\
         ///\
-        //sel_of (vptr (get_size x)) == s
-        ptr_sel (get_size x) m == s
+        sel_of (vptr (get_size x)) m == s
+        //ptr_sel (get_size x) m == s
       )
 //*)
 (*)
@@ -559,8 +559,8 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : L
         admit()
 
     in
-    admit()
-    (*elim_star
+    admit()(*);
+    elim_star
       (pts_to_sl pt full_perm x `Mem.star` tree_sl' (get_left x) l)
       (tree_sl' (get_right x) r)
       m;
@@ -579,32 +579,33 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
              (fun _ -> not (is_null_t ptr))
              (fun h0 n h1 ->
              // TODO : ne marche pas
-               //let _ = admit () in
+               let _ = admit () in
                Spec.Node? (v_node ptr h0) /\
                //sel ptr h1 == n /\
-               tree_sel ptr h1 == n /\
+               sel ptr h1 == n /\
                v_node ptr h0 == Spec.Node (sel ptr h1)
-                 (v_node (get_left n) h1) (v_node (get_right n) h1) (sel (get_size n)))
+                 (v_node (get_left n) h1) (v_node (get_right n) h1) (sel (get_size n) h1))
   =
-  let h0 = get () in
-  let t = gget (tree_node ptr) in
+  //let h0 = get () in
+  //let t = gget (tree_node ptr) in
   //let t' = (t <: Spec.wds (node a)) in
-  assert (v_node ptr h0 == reveal t);
+  //assert (v_node ptr h0 == reveal t);
   //admit();
-  reveal_non_empty_tree ptr;
-  let gn = head t in
-  change_slprop
+  //reveal_non_empty_tree ptr;
+  //let gn = head t in
+  (*change_slprop
     (tree_node ptr)
     (vptr ptr `star` tree_node (get_left gn) `star` tree_node (get_right gn) `star` vptr (get_size gn))
     t (((reveal gn, reveal (gleft t)), reveal (gright t)), reveal (gsize t))
-    (fun m -> unpack_tree_node_lemma ptr t m);
+    (fun m -> unpack_tree_node_lemma ptr t m);*)
 
+  sladmit();
   let n = read ptr in
   //admit();
 
-  change_slprop_rel (tree_node (get_left gn)) (tree_node (get_left n)) (fun x y -> x == y) (fun _ -> ());
-  change_slprop_rel (tree_node (get_right gn)) (tree_node (get_right n)) (fun x y -> x == y) (fun _ -> ());
-  change_slprop_rel (tree_node (get_size gn)) (tree_node (get_size n)) (fun x y -> x == y) (fun _ -> ());
+ // change_slprop_rel (tree_node (get_left gn)) (tree_node (get_left n)) (fun x y -> x == y) (fun _ -> ());
+ // change_slprop_rel (tree_node (get_right gn)) (tree_node (get_right n)) (fun x y -> x == y) (fun _ -> ());
+ // change_slprop_rel (vptr (get_size gn)) (vptr (get_size n)) (fun x y -> x == y) (fun _ -> ());
 
   return n
 
