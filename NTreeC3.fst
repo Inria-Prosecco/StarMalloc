@@ -578,34 +578,31 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
                vptr (get_size n))
              (fun _ -> not (is_null_t ptr))
              (fun h0 n h1 ->
-             // TODO : ne marche pas
-               let _ = admit () in
                Spec.Node? (v_node ptr h0) /\
-               //sel ptr h1 == n /\
                sel ptr h1 == n /\
                v_node ptr h0 == Spec.Node (sel ptr h1)
                  (v_node (get_left n) h1) (v_node (get_right n) h1) (sel (get_size n) h1))
   =
-  //let h0 = get () in
-  //let t = gget (tree_node ptr) in
+  let h0 = get () in
+  let t = hide (v_node ptr h0) in
+  // let t = gget (tree_node ptr) in
   //let t' = (t <: Spec.wds (node a)) in
   //assert (v_node ptr h0 == reveal t);
-  //admit();
-  //reveal_non_empty_tree ptr;
-  //let gn = head t in
-  (*change_slprop
+  // admit();
+  reveal_non_empty_tree ptr;
+  let gn = head t in
+  change_slprop
     (tree_node ptr)
     (vptr ptr `star` tree_node (get_left gn) `star` tree_node (get_right gn) `star` vptr (get_size gn))
     t (((reveal gn, reveal (gleft t)), reveal (gright t)), reveal (gsize t))
-    (fun m -> unpack_tree_node_lemma ptr t m);*)
+    (fun m -> unpack_tree_node_lemma ptr t m);
 
-  sladmit();
   let n = read ptr in
   //admit();
 
- // change_slprop_rel (tree_node (get_left gn)) (tree_node (get_left n)) (fun x y -> x == y) (fun _ -> ());
- // change_slprop_rel (tree_node (get_right gn)) (tree_node (get_right n)) (fun x y -> x == y) (fun _ -> ());
- // change_slprop_rel (vptr (get_size gn)) (vptr (get_size n)) (fun x y -> x == y) (fun _ -> ());
+  change_slprop_rel (tree_node (get_left gn)) (tree_node (get_left n)) (fun x y -> x == y) (fun _ -> ());
+  change_slprop_rel (tree_node (get_right gn)) (tree_node (get_right n)) (fun x y -> x == y) (fun _ -> ());
+  change_slprop_rel (vptr (get_size gn)) (vptr (get_size n)) (fun x y -> x == y) (fun _ -> ());
 
   return n
 
