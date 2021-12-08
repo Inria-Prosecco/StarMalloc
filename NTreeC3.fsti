@@ -1,4 +1,4 @@
-module NTreeC2
+module NTreeC3
 
 open Steel.Memory
 open Steel.Effect
@@ -27,8 +27,8 @@ let tree (a: Type0) = Spec.tree a
 val get_left (#a: Type0) (n: node a) : t a
 val get_right (#a: Type0) (n: node a) : t a
 val get_data (#a: Type0) (n: node a) : a
-val get_size (#a: Type0) (n: node a) : nat
-val mk_node (#a: Type0) (data: a) (left right: t a) (size: nat)
+val get_size (#a: Type0) (n: node a) : ref nat
+val mk_node (#a: Type0) (data: a) (left right: t a) (size: ref nat)
     : Pure (node a)
       (requires True)
       (ensures (fun n ->
@@ -96,25 +96,26 @@ val node_is_not_null (#a: Type0) (ptr: t a)
        (requires (fun h0 -> Spec.Node? (v_linked_tree ptr h0)))
        (ensures (fun h0 _ h1 -> not (is_null_t ptr) /\ v_linked_tree ptr h0 == v_linked_tree ptr h1))
 
-val pack_tree (#a: Type0) (ptr: t a) (left: t a) (right: t a) (size: nat)
+val pack_tree (#a: Type0) (ptr: t a) (left right: t a) (sr: ref nat)
     : Steel unit
-      (vptr ptr `star` linked_tree left `star` linked_tree right)
+      (vptr ptr `star` linked_tree left `star` linked_tree right `star` vptr sr)
       (fun _ -> linked_tree ptr)
       (requires (fun h0 ->
         get_left (sel ptr h0) == left /\
         get_right (sel ptr h0) == right /\
-        get_size (sel ptr h0) == size /\
-        size == Spec.size_of_tree (v_linked_tree left h0)
+        get_size (sel ptr h0) == sr /\
+        sel sr h0 == Spec.size_of_tree (v_linked_tree left h0)
               + Spec.size_of_tree (v_linked_tree right h0)
               + 1
         ))
       (ensures (fun h0 _ h1 ->
+        let x = get_data (sel ptr h0) in
         let l = v_linked_tree left h0 in
         let r = v_linked_tree right h0 in
+        let s = sel sr h0 in
         //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
-        v_linked_tree ptr h1 ==
-          Spec.Node (get_data (sel ptr h0)) l r size))
-
+        v_linked_tree ptr h1 == Spec.Node x l r s))
+(*)
 val unpack_tree (#a: Type0) (ptr: t a)
     : Steel (node a)
       (linked_tree ptr)
