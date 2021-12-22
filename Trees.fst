@@ -12,6 +12,9 @@ type tree (a: Type) =
   | Leaf : tree a
   | Node: data: a -> left: tree a -> right: tree a -> size: nat -> tree a
 
+let csize (#a: Type) (t: tree a{Node? t}) =
+  let Node _ _ _ s = t in s
+
 (**** Binary search trees *)
 
 type node_data (a b: Type) = {
@@ -80,9 +83,9 @@ let check #a (x: tree a) : Lemma
 //let check (#a: Type) (x: wds a) : Lemma
   (requires fst (is_wds x) /\ Node? x)
   //(requires Node? x)
-  (ensures (let Node _ _ _ s = x in s = size_of_tree x))
+  (ensures (let s = csize x in s = size_of_tree x))
   =
-  let Node _ _ _ s = x in
+  let s = csize x in
   assert (fst (is_wds x));
   equiv_sot_wds x
 
@@ -131,12 +134,45 @@ let rec height (#a: Type) (x: tree a) : nat =
     else (height right) + 1
 
 (**** Append *)
-(*)
-let rec append_left (#a: Type) (x: tree a) (v: a) : tree a =
-  match x with
-  | Leaf -> Node v Leaf Leaf
-  | Node x left right -> Node x (append_left left v) right
+let rec aux_size_left_subtree (#a: Type) (t1: tree a) (t2: tree a)
+  : Lemma
+  (requires (size_of_tree t2 == size_of_tree t1 + 1))
+  (ensures (
+    forall (x:a) (tr: tree a) (n:nat).
+    size_of_tree (Node x t2 tr n) == size_of_tree (Node x t1 tr n) + 1))
+  = ()
 
+let rec append_left_aux (#a: Type) (t: wds a) (v: a)
+  : tree a
+  = match t with
+  | Leaf -> Node v Leaf Leaf 1
+  | Node x left right size -> Node x (append_left_aux left v) right (size + 1)
+
+let rec append_left_aux_size (#a: Type) (t: wds a) (v: a)
+  : Lemma (size_of_tree (append_left_aux t v) == size_of_tree t + 1)
+  = match t with
+  | Leaf -> ()
+  | Node x left right size ->
+      append_left_aux_size left v;
+      aux_size_left_subtree left (append_left_aux left v)
+
+let rec append_left_aux_size2 (#a: Type) (t: wds a) (v: a)
+  : Lemma (fst (is_wds (append_left_aux t v)))
+  = match t with
+  | Leaf -> ()
+  | Node x left right size ->
+      let new_left = append_left_aux left v in
+      append_left_aux_size2 left v;
+      assert (fst (is_wds (append_left_aux left v)));
+      append_left_aux_size left v;
+      assert (size_of_tree new_left == size_of_tree left + 1);
+      aux_size_left_subtree left new_left
+
+let append_left (#a: Type) (t: wds a) (v: a)
+  : wds a
+  = append_left_aux_size2 t v; append_left_aux t v
+
+(*)
 let rec append_right (#a: Type) (x: tree a) (v: a) : tree a =
   match x with
   | Leaf -> Node v Leaf Leaf

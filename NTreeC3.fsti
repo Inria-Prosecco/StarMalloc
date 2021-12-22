@@ -115,14 +115,26 @@ val pack_tree (#a: Type0) (ptr: t a) (left right: t a) (sr: ref nat)
         let s = sel sr h0 in
         //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
         v_linked_tree ptr h1 == Spec.Node x l r s))
-(*)
+
 val unpack_tree (#a: Type0) (ptr: t a)
     : Steel (node a)
       (linked_tree ptr)
       (fun node ->
-        linked_tree (get_left node) `star` linked_tree (get_right node) `star` vptr ptr)
+        vptr ptr `star`
+        linked_tree (get_left node) `star`
+        linked_tree (get_right node) `star`
+        vptr (get_size node))
       (requires (fun h0 -> not (is_null_t ptr)))
       (ensures (fun h0 node h1 ->
+        v_linked_tree ptr h0 == Spec.Node
+          (get_data (sel ptr h1))
+          (v_linked_tree (get_left node) h1)
+          (v_linked_tree (get_right node) h1)
+          (sel (get_size node) h1) /\
+        sel ptr h1 == node
+      ))
+
+(*)
         let l = v_linked_tree (get_left node) h1 in
         let r = v_linked_tree (get_right node) h1 in
         let s = get_size node in

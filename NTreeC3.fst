@@ -59,6 +59,7 @@ let rec tree_view_aux (#a: Type0) (tree: Spec.wds (node a))
   | Spec.Node data left right size ->
     Spec.Node (get_data data) (tree_view_aux left) (tree_view_aux right) size
 
+(*)
 let rec tree_view_aux_same_size (#a: Type0) (tree: Spec.wds (node a))
   : Lemma (Spec.size_of_tree tree = Spec.size_of_tree (tree_view_aux tree))
   =
@@ -67,7 +68,7 @@ let rec tree_view_aux_same_size (#a: Type0) (tree: Spec.wds (node a))
   | Spec.Node _ l r _ ->
       tree_view_aux_same_size l;
       tree_view_aux_same_size r;
-      ()
+      ()*)
 
 let rec tree_view_aux_same_size2 (#a: Type0) (tree: Spec.wds (node a))
   : Lemma (fst (Spec.is_wds (tree_view_aux tree)))
@@ -169,7 +170,7 @@ let intro_leaf_lemma (a:Type0) (m:mem) : Lemma
       tree_sel_interp ptr Spec.Leaf m
 
 let intro_linked_tree_leaf #a _ =
-    change_slprop_2 emp (linked_tree (null_t #a)) (Spec.Leaf <: tree a) (intro_leaf_lemma a)
+    change_slprop_2 emp (linked_tree (null_t #a)) (Spec.Leaf <: Spec.wds a) (intro_leaf_lemma a)
 
 let elim_leaf_lemma (#a:Type0) (ptr:t a) (m:mem) : Lemma
     (requires interp (tree_sl ptr) m /\ ptr == null_t)
