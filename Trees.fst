@@ -142,11 +142,21 @@ let rec aux_size_left_subtree (#a: Type) (t1: tree a) (t2: tree a)
     size_of_tree (Node x t2 tr n) == size_of_tree (Node x t1 tr n) + 1))
   = ()
 
+let rec aux_size_right_subtree (#a: Type) (t1: tree a) (t2: tree a)
+  : Lemma
+  (requires (size_of_tree t2 == size_of_tree t1 + 1))
+  (ensures (
+    forall (x:a) (tl: tree a) (n:nat).
+    size_of_tree (Node x tl t2 n) == size_of_tree (Node x tl t1 n) + 1))
+  = ()
+
+
 let rec append_left_aux (#a: Type) (t: wds a) (v: a)
   : tree a
   = match t with
   | Leaf -> Node v Leaf Leaf 1
-  | Node x left right size -> Node x (append_left_aux left v) right (size + 1)
+  | Node x left right size ->
+    Node x (append_left_aux left v) right (size + 1)
 
 let rec append_left_aux_size (#a: Type) (t: wds a) (v: a)
   : Lemma (size_of_tree (append_left_aux t v) == size_of_tree t + 1)
@@ -172,13 +182,38 @@ let append_left (#a: Type) (t: wds a) (v: a)
   : wds a
   = append_left_aux_size2 t v; append_left_aux t v
 
+let rec append_right_aux (#a: Type) (t: tree a) (v: a)
+  : tree a =
+  match t with
+  | Leaf -> Node v Leaf Leaf 1
+  | Node x left right size ->
+    Node x left (append_right_aux right v) (size + 1)
+
+let rec append_right_aux_size (#a: Type) (t: wds a) (v: a)
+  : Lemma (size_of_tree (append_right_aux t v) == size_of_tree t + 1)
+  = match t with
+  | Leaf -> ()
+  | Node x left right size ->
+      append_right_aux_size right v;
+      aux_size_right_subtree right (append_right_aux right v)
+
+let rec append_right_aux_size2 (#a: Type) (t: wds a) (v: a)
+  : Lemma (fst (is_wds (append_right_aux t v)))
+  = match t with
+  | Leaf -> ()
+  | Node x left right size ->
+      let new_right = append_right_aux right v in
+      append_right_aux_size2 right v;
+      assert (fst (is_wds (append_right_aux right v)));
+      append_right_aux_size right v;
+      assert (size_of_tree new_right == size_of_tree right + 1);
+      aux_size_right_subtree right new_right
+
+let append_right (#a: Type) (t: wds a) (v: a)
+  : wds a
+  = append_right_aux_size2 t v; append_right_aux t v
+
 (*)
-let rec append_right (#a: Type) (x: tree a) (v: a) : tree a =
-  match x with
-  | Leaf -> Node v Leaf Leaf
-  | Node x left right -> Node x left (append_right right v)
-
-
 (**** Insertion *)
 
 (**** BST insertion *)
