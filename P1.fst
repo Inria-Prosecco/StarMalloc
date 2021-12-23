@@ -142,10 +142,9 @@ let rec append_right #a (ptr: t a) (v: a)
     let new_right_s = hide (Spec.size_of_tree (reveal new_right_t)) in
     assert (reveal ptr_s2
     == reveal old_left_s + reveal old_right_s + 1);
-    assert (old_left_t == new_left_t);
+    assert (reveal new_left_s == reveal old_left_s);
     Spec.append_right_aux_size (reveal old_right_t) v;
     assert (reveal new_right_s == reveal old_right_s + 1);
-    assert (reveal new_left_s == reveal old_left_s);
 
     let old_size = read (get_size node) in
     write (get_size node) (old_size + 1);
