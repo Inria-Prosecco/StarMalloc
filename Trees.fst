@@ -361,8 +361,8 @@ let rotate_right_left_wds (#a: Type) (r: wds a) : option (wds a) =
       induction_wds x t1 t2;
       assert (fst (is_wds t12));
       let s34 = sot_wds t3 + sot_wds t4 + 1 in
-      let t34 = Node x t3 t4 s34 in
-      induction_wds x t3 t4;
+      let t34 = Node z t3 t4 s34 in
+      induction_wds z t3 t4;
       assert (fst (is_wds t34));
       let s1234 = s12 + s34 + 1 in
       assert (s1234 == s);
@@ -386,8 +386,8 @@ let rotate_left_right_wds (#a: Type) (r: wds a) : option (wds a) =
   match r with
   | Node x (Node z t1 (Node y t2 t3 _) _) t4 s ->
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
-      let t12 = Node x t1 t2 s12 in
-      induction_wds x t1 t2;
+      let t12 = Node z t1 t2 s12 in
+      induction_wds z t1 t2;
       assert (fst (is_wds t12));
       let s34 = sot_wds t3 + sot_wds t4 + 1 in
       let t34 = Node x t3 t4 s34 in

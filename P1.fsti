@@ -32,23 +32,6 @@ val append_right (#a: Type0) (ptr: t a) (v: a)
         v_linked_tree ptr' h1 == Spec.append_right (v_linked_tree ptr h0) v
       ))
 
-(*** Rotation functions used internally to balance AVL trees ***)
-
-val rotate_left (#a: Type) (ptr: t a)
-    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-    (requires fun h0 -> Some? (Spec.rotate_left (v_linked_tree ptr h0)))
-    (ensures (fun h0 ptr' h1 ->
-        Spec.rotate_left (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
-    ))
-
-val rotate_right (#a: Type) (ptr: t a)
-    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-    (requires fun h0 -> Some? (Spec.rotate_right (v_linked_tree ptr h0)))
-    (ensures (fun h0 ptr' h1 ->
-        Spec.rotate_right (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
-    ))
-
-(*)
 /// Returns the height of the tree that [ptr] points to
 val height (#a: Type0) (ptr: t a)
     : Steel nat (linked_tree ptr) (fun _ -> linked_tree ptr)
@@ -56,6 +39,36 @@ val height (#a: Type0) (ptr: t a)
     (ensures fun h0 x h1 ->
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         Spec.height (v_linked_tree ptr h0) == x)
+
+(*** Rotation functions used internally to balance AVL trees ***)
+
+val rotate_left (#a: Type) (ptr: t a)
+    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+    (requires fun h0 -> Some? (Spec.rotate_left_wds (v_linked_tree ptr h0)))
+    (ensures (fun h0 ptr' h1 ->
+        Spec.rotate_left_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
+    ))
+
+val rotate_right (#a: Type) (ptr: t a)
+    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+    (requires fun h0 -> Some? (Spec.rotate_right_wds (v_linked_tree ptr h0)))
+    (ensures (fun h0 ptr' h1 ->
+        Spec.rotate_right_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
+    ))
+
+val rotate_right_left (#a: Type) (ptr: t a)
+    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+    (requires fun h0 -> Some? (Spec.rotate_right_left_wds (v_linked_tree ptr h0)))
+    (ensures (fun h0 ptr' h1 ->
+        Spec.rotate_right_left_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
+    ))
+
+val rotate_left_right (#a: Type) (ptr: t a)
+    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+    (requires fun h0 -> Some? (Spec.rotate_left_right_wds (v_linked_tree ptr h0)))
+    (ensures (fun h0 ptr' h1 ->
+        Spec.rotate_left_right_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
+    ))
 
 (*)
 /// Returns a boolean indicating whether element [v] belongs to the tree that [ptr] points to
@@ -65,20 +78,6 @@ val member (#a: eqtype) (ptr: t a) (v: a)
     (ensures fun h0 b h1 ->
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         (Spec.mem (v_linked_tree ptr h0) v <==> b))
-
-val rotate_right_left (#a: Type) (ptr: t a)
-    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-    (requires fun h0 -> Some? (Spec.rotate_right_left (v_linked_tree ptr h0)))
-    (ensures (fun h0 ptr' h1 ->
-        Spec.rotate_right_left (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
-    ))
-
-val rotate_left_right (#a: Type) (ptr: t a)
-    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-    (requires fun h0 -> Some? (Spec.rotate_left_right (v_linked_tree ptr h0)))
-    (ensures (fun h0 ptr' h1 ->
-        Spec.rotate_left_right (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
-    ))
 
 (*** Functions related to AVL trees ***)
 
