@@ -179,6 +179,29 @@ let rec height (#a: Type0) (ptr: t a)
      return hptr
    )
 
+let rec member (#a: eqtype) (ptr: t a) (v: a)
+  : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
+  (requires fun _ -> True)
+  (ensures fun h0 b h1 ->
+      v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+      (Spec.mem (v_linked_tree ptr h0) v <==> b))
+  =
+  if is_null_t ptr then (
+    (**) elim_linked_tree_leaf ptr;
+    false
+  ) else (
+    (**) let node = unpack_tree ptr in
+    if v = get_data node then (
+      (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
+      true
+    ) else (
+      let mleft = member (get_left node) v in
+      let mright = member (get_right node) v in
+      (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
+      mleft || mright
+    )
+  )
+
 let sot_wds (#a: Type) (ptr: t a)
   : Steel (nat)
   (linked_tree ptr)
@@ -419,25 +442,14 @@ let rotate_left_right (#a: Type) (ptr: t a)
   (get_right z_node)
 
 
-(*)
-let rec member ptr v =
-  if is_null_t ptr then (
-    (**) elim_linked_tree_leaf ptr;
-    false
-  ) else (
-    (**) let node = unpack_tree ptr in
-    if v = get_data node then (
-      (**) pack_tree ptr (get_left node) (get_right node);
-      true
-    ) else (
-      let mleft = member (get_left node) v in
-      let mright = member (get_right node) v in
-      (**) pack_tree ptr (get_left node) (get_right node);
-      mleft || mright
-    )
-  )
 
-let rec is_balanced #a ptr =
+let rec is_balanced (#a: Type) (ptr: t a)
+  : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
+  (requires fun h0 -> True)
+  (ensures (fun h0 b h1 ->
+      v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+      Spec.is_balanced (v_linked_tree ptr h0) == b))
+  =
   if is_null_t ptr then (
     (**) elim_linked_tree_leaf ptr;
     true
@@ -450,9 +462,11 @@ let rec is_balanced #a ptr =
   let lbal = is_balanced(get_left node) in
   let rbal = is_balanced(get_right node) in
 
-  (**) pack_tree ptr (get_left node) (get_right node);
+  (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
   (lbal && rbal) && ((rh - lh) >= -1 && (rh - lh) <= 1))
 
+
+(*)
 #push-options "--ifuel 2"
 let rebalance_avl #a cmp ptr =
   if is_balanced ptr then (

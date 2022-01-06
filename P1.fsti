@@ -40,6 +40,14 @@ val height (#a: Type0) (ptr: t a)
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         Spec.height (v_linked_tree ptr h0) == x)
 
+/// Returns a boolean indicating whether element [v] belongs to the tree that [ptr] points to
+val member (#a: eqtype) (ptr: t a) (v: a)
+    : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
+    (requires fun _ -> True)
+    (ensures fun h0 b h1 ->
+        v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+        (Spec.mem (v_linked_tree ptr h0) v <==> b))
+
 (*** Rotation functions used internally to balance AVL trees ***)
 
 val rotate_left (#a: Type) (ptr: t a)
@@ -70,15 +78,6 @@ val rotate_left_right (#a: Type) (ptr: t a)
         Spec.rotate_left_right_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
     ))
 
-(*)
-/// Returns a boolean indicating whether element [v] belongs to the tree that [ptr] points to
-val member (#a: eqtype) (ptr: t a) (v: a)
-    : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
-    (requires fun _ -> True)
-    (ensures fun h0 b h1 ->
-        v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-        (Spec.mem (v_linked_tree ptr h0) v <==> b))
-
 (*** Functions related to AVL trees ***)
 
 /// Returns a boolean indicating if the tree that [ptr] points to is balanced
@@ -89,6 +88,7 @@ val is_balanced (#a: Type) (ptr: t a)
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         Spec.is_balanced (v_linked_tree ptr h0) == b))
 
+(*)
 /// Rebalances a tree according to the comparison function [cmp] on the tree elements
 val rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
     : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
