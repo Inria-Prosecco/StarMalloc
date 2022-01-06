@@ -131,7 +131,9 @@ val unpack_tree (#a: Type0) (ptr: t a)
           (v_linked_tree (get_left node) h1)
           (v_linked_tree (get_right node) h1)
           (sel (get_size node) h1) /\
-        sel ptr h1 == node
+        sel ptr h1 == node /\
+        sel (get_size node) h1 == Spec.size_of_tree (v_linked_tree (get_left node) h1)
+                                + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1
       ))
 
 (*)

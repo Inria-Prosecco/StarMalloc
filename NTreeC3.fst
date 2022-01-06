@@ -573,9 +573,12 @@ let unpack_tree (#a: Type0) (ptr: t a)
           (v_linked_tree (get_left node) h1)
           (v_linked_tree (get_right node) h1)
           (sel (get_size node) h1) /\
-        (sel ptr h1) == node
+        (sel ptr h1) == node /\
+        sel (get_size node) h1 == Spec.size_of_tree (v_linked_tree (get_left node) h1)
+                                + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1
       ))
-  = let h = get() in
+  = admit ();
+  let h = get() in
   change_slprop_rel (linked_tree ptr) (tree_node ptr) (fun x y -> x == tree_view y) (fun _ -> ());
   let h0 = get () in
   assert (v_linked_tree ptr h == tree_view (v_node ptr h0));
