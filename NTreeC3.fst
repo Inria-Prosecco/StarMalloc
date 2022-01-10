@@ -59,7 +59,6 @@ let rec tree_view_aux (#a: Type0) (tree: Spec.wds (node a))
   | Spec.Node data left right size ->
     Spec.Node (get_data data) (tree_view_aux left) (tree_view_aux right) size
 
-(*)
 let rec tree_view_aux_same_size (#a: Type0) (tree: Spec.wds (node a))
   : Lemma (Spec.size_of_tree tree = Spec.size_of_tree (tree_view_aux tree))
   =
@@ -68,7 +67,7 @@ let rec tree_view_aux_same_size (#a: Type0) (tree: Spec.wds (node a))
   | Spec.Node _ l r _ ->
       tree_view_aux_same_size l;
       tree_view_aux_same_size r;
-      ()*)
+      ()
 
 let rec tree_view_aux_same_size2 (#a: Type0) (tree: Spec.wds (node a))
   : Lemma (fst (Spec.is_wds (tree_view_aux tree)))
@@ -522,6 +521,18 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : L
     ) m);
     ()
 
+let unpack_tree_node_lemma_size (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : Lemma
+  (requires
+    Spec.Node? t /\
+    interp (tree_sl pt) m /\
+    tree_sel_node pt m == t)
+  (ensures (
+    reveal (gsize t) == Spec.size_of_tree t
+    )
+  )
+  = unpack_tree_node_lemma pt t m
+
+
 let unpack_tree_node (#a:Type0) (ptr:t a)
   : Steel (node a)
              (tree_node ptr)
@@ -535,23 +546,28 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
                Spec.Node? (v_node ptr h0) /\
                sel ptr h1 == n /\
                v_node ptr h0 == Spec.Node (sel ptr h1)
-                 (v_node (get_left n) h1) (v_node (get_right n) h1) (sel (get_size n) h1))
+                 (v_node (get_left n) h1) (v_node (get_right n) h1) (sel (get_size n) h1) /\
+               sel (get_size n) h1 == Spec.size_of_tree (v_node (get_left n) h1)
+                                    + Spec.size_of_tree (v_node (get_right n) h1) + 1
+             )
   =
   let h0 = get () in
   let t = hide (v_node ptr h0) in
-  // let t = gget (tree_node ptr) in
-  //let t' = (t <: Spec.wds (node a)) in
-  //assert (v_node ptr h0 == reveal t);
   reveal_non_empty_tree ptr;
+
   let gn = head t in
+  extract_info (tree_node ptr) t
+    (reveal (gsize (reveal t)) == Spec.size_of_tree (reveal t))
+    (fun m -> unpack_tree_node_lemma_size ptr t m);
+  assert (reveal (gsize (reveal t)) == Spec.size_of_tree (reveal t));
+
   change_slprop
     (tree_node ptr)
     (vptr ptr `star` tree_node (get_left gn) `star` tree_node (get_right gn) `star` vptr (get_size gn))
-    t (((reveal gn, reveal (gleft t)), reveal (gright t)), reveal (gsize t))
+    t (((reveal gn, reveal (gleft t)), reveal (gright t)), Spec.size_of_tree (reveal t))
     (fun m -> unpack_tree_node_lemma ptr t m);
 
   let n = read ptr in
-
   change_slprop_rel (tree_node (get_left gn)) (tree_node (get_left n)) (fun x y -> x == y) (fun _ -> ());
   change_slprop_rel (tree_node (get_right gn)) (tree_node (get_right n)) (fun x y -> x == y) (fun _ -> ());
   change_slprop_rel (vptr (get_size gn)) (vptr (get_size n)) (fun x y -> x == y) (fun _ -> ());
@@ -577,12 +593,20 @@ let unpack_tree (#a: Type0) (ptr: t a)
         sel (get_size node) h1 == Spec.size_of_tree (v_linked_tree (get_left node) h1)
                                 + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1
       ))
-  = admit ();
-  let h = get() in
-  change_slprop_rel (linked_tree ptr) (tree_node ptr) (fun x y -> x == tree_view y) (fun _ -> ());
-  let h0 = get () in
-  assert (v_linked_tree ptr h == tree_view (v_node ptr h0));
+  =
+  let h0 = get() in
+  change_slprop_rel
+    (linked_tree ptr)
+    (tree_node ptr)
+    (fun x y -> x == tree_view y)
+    (fun _ -> ());
+  let h1 = get () in
+  assert (v_linked_tree ptr h0 == tree_view (v_node ptr h1));
   let n = unpack_tree_node ptr in
+  let h2 = get () in
+  assert (sel (get_size n) h2 ==
+    Spec.size_of_tree (v_node (get_left n) h2)
+  + Spec.size_of_tree (v_node (get_right n) h2) + 1);
 
   change_slprop_rel
     (tree_node (get_left n))
@@ -594,4 +618,9 @@ let unpack_tree (#a: Type0) (ptr: t a)
     (linked_tree (get_right n))
     (fun x y -> tree_view x == y)
     (fun _ -> ());
+  let h3 = get () in
+  assert (v_linked_tree (get_left n) h3 == tree_view (v_node (get_left n) h2));
+  assert (v_linked_tree (get_right n) h3 == tree_view (v_node (get_right n) h2));
+  tree_view_aux_same_size (v_node (get_left n) h2);
+  tree_view_aux_same_size (v_node (get_right n) h2);
   return n
