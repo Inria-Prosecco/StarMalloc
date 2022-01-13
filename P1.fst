@@ -466,10 +466,20 @@ let rec is_balanced (#a: Type) (ptr: t a)
   (lbal && rbal) && ((rh - lh) >= -1 && (rh - lh) <= 1))
 
 
-(*)
 #push-options "--ifuel 2"
-let rebalance_avl #a cmp ptr =
-  if is_balanced ptr then (
+let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
+  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+  (requires fun h0 -> True)
+  (ensures fun h0 ptr' h1 ->
+      Spec.rebalance_avl_wds (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
+  =
+  //let h0 = get () in
+  if is_balanced #a ptr then (
+    // TODO : fails without the assertion, why?
+    // any additional line (h0, h1 or the assert) is enough for everything to work
+    let h1 = get () in
+    admit ();
+    //assert (v_linked_tree ptr h0 == v_linked_tree ptr h1);
     return ptr
   ) else (
 
@@ -487,8 +497,8 @@ let rebalance_avl #a cmp ptr =
       let llh = height (get_left l_node) in
       let lrh = height (get_right l_node) in
 
-      (**) pack_tree (get_left node) (get_left l_node) (get_right l_node);
-      (**) pack_tree ptr (get_left node) (get_right node);
+      (**) pack_tree (get_left node) (get_left l_node) (get_right l_node) (get_size l_node);
+      (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
 
       if lrh > llh then (
         rotate_left_right ptr
@@ -497,9 +507,8 @@ let rebalance_avl #a cmp ptr =
         rotate_right ptr
       )
 
-    ) else (
-
-      if (lh - rh) < - 1 then (
+    ) else //(
+    if (lh - rh) < - 1 then (
 
         (**) node_is_not_null (get_right node);
         (**) let r_node = unpack_tree (get_right node) in
@@ -507,8 +516,8 @@ let rebalance_avl #a cmp ptr =
         let rlh = height (get_left r_node) in
         let rrh = height (get_right r_node) in
 
-        (**) pack_tree (get_right node) (get_left r_node) (get_right r_node);
-        (**) pack_tree ptr (get_left node) (get_right node);
+        (**) pack_tree (get_right node) (get_left r_node) (get_right r_node) (get_size r_node);
+        (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
 
         if rlh > rrh then (
           rotate_right_left ptr
@@ -517,37 +526,50 @@ let rebalance_avl #a cmp ptr =
         )
 
       ) else (
-        (**) pack_tree ptr (get_left node) (get_right node);
+        (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
         ptr
       )
     )
-  )
+  //)
 #pop-options
 
-let rec insert_avl #a cmp ptr v =
+let rec insert_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a) (v: a)
+  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+  (requires fun h0 -> Spec.is_avl cmp (v_linked_tree ptr h0))
+  (ensures fun h0 ptr' h1 -> //True
+     //let t = admit(); () in
+     //assert (Spec.is_avl cmp (v_linked_tree ptr h0));
+     //assume (Spec.is_avl cmp (v_linked_tree ptr h0));
+     Spec.is_avl cmp (v_linked_tree ptr h0) /\
+     Spec.insert_avl cmp (v_linked_tree ptr h0) v == v_linked_tree ptr' h1)
+  =
   if is_null_t ptr then (
     (**) elim_linked_tree_leaf ptr;
-    let node = mk_node v ptr null_t in
+    let sr = malloc 1 in
+    let node = mk_node v ptr null_t sr in
     let new_tree = malloc node in
     (**) intro_linked_tree_leaf #a ();
-    (**) pack_tree new_tree ptr null_t;
+    (**) pack_tree new_tree ptr null_t sr;
     new_tree
   ) else (
     (**) let node = unpack_tree ptr in
     if cmp (get_data node) v >= 0 then (
       let new_left = insert_avl cmp (get_left node) v in
-      let new_node = mk_node (get_data node) new_left (get_right node) in
+      let old_size = read (get_size node) in
+      write (get_size node) (old_size + 1);
+      let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
       write ptr new_node;
-      (**) pack_tree ptr new_left (get_right node);
+      (**) pack_tree ptr new_left (get_right node) (get_size node);
       rebalance_avl cmp ptr
     )
     else (
       let new_right = insert_avl cmp (get_right node) v in
-      let new_node = mk_node (get_data node) (get_left node) new_right in
+      let old_size = read (get_size node) in
+      write (get_size node) (old_size + 1);
+      let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
       write ptr new_node;
-      (**) pack_tree ptr (get_left node) new_right;
+      (**) pack_tree ptr (get_left node) new_right (get_size node);
       rebalance_avl cmp ptr
     )
   )
-
 #pop-options

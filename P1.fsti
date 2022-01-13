@@ -88,7 +88,7 @@ val is_balanced (#a: Type) (ptr: t a)
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         Spec.is_balanced (v_linked_tree ptr h0) == b))
 
-(*)
+(* TODO: fails when uncommented *)
 /// Rebalances a tree according to the comparison function [cmp] on the tree elements
 val rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
     : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
