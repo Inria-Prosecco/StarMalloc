@@ -66,23 +66,21 @@ extract: $(FILTERED_KRML_FILES)
 	$(KRML_EXE) -skip-compilation -skip-makefiles -bundle 'FStar.\*,Steel.\*' $^
 	touch $@
 
-ALL_C_FILES=$(addsuffix .c,$(ALL_MODULE_NAMES))
-
-$(ALL_C_FILES): %.c: extract
-	test -f $@
-	touch $@
-
-ALL_O_FILES=$(subst .c,.o,$(ALL_C_FILES))
-
-$(ALL_O_FILES): %.o: %.c
-	$(CC) $(CFLAGS) -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -o $@ -c $<
-
-test: $(ALL_O_FILES)
+#ALL_C_FILES=$(addsuffix .c,$(ALL_MODULE_NAMES))
+#
+#$(ALL_C_FILES): extract
+#	test -f $@
+#	touch $@
+#
+#ALL_O_FILES=$(subst .c,.o,$(ALL_C_FILES))
+#
+#$(ALL_O_FILES): %.o: %.c
+#	$(CC) $(CFLAGS) -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -o $@ -c $<
 
 else # no KREMLIN_HOME
 
-test:
-	echo KReMLin is not installed, skipping test
+extract:
+	@echo "KReMLin is not installed, skipping extraction"
 
 endif # KREMLIN_HOME
 
