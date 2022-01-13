@@ -9,10 +9,16 @@ ifdef KREMLIN_HOME
 KRML_EXE = $(KREMLIN_HOME)/krml
 endif
 
-world: verify test
+world: verify
+
+hints:
+	mkdir $@
+
+obj:
+	mkdir $@
 
 FSTAR_OPTIONS = --cache_checked_modules \
-		--cmi \
+		--cmi --odir obj --cache_dir obj \
 	        --already_cached 'Prims,FStar,LowStar,Steel' \
 		$(addprefix --include ,$(INCLUDE_PATH)) \
 		$(OTHERFLAGS)
@@ -50,21 +56,22 @@ verify: $(ALL_CHECKED_FILES)
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 clean:
-	-rm -rf *.checked *.krml .depend kremlin.rsp .depend.tmp *.c *.h *.o compile_flags.txt extract
+	-rm -rf .depend obj dist hints
 
 ifdef KREMLIN_HOME
 
 .PRECIOUS: %.krml
-%.krml:
+obj/%.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin \
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
-FILTERED_KRML_FILES=$(filter-out FStar_NMST.krml Steel_%.krml,$(ALL_KRML_FILES))
+FILTERED_KRML_FILES=$(filter-out obj/FStar_NMST.krml obj/Steel_%.krml,$(ALL_KRML_FILES))
 
 extract: $(FILTERED_KRML_FILES)
-	$(KRML_EXE) -skip-compilation -skip-makefiles -bundle 'FStar.\*,Steel.\*' $^
-	touch $@
+	mkdir -p dist
+	$(KRML_EXE) -skip-compilation -skip-makefiles -tmpdir dist \
+     -bundle 'FStar.\*,Steel.\*' $^
 
 #ALL_C_FILES=$(addsuffix .c,$(ALL_MODULE_NAMES))
 #
@@ -84,4 +91,4 @@ extract:
 
 endif # KREMLIN_HOME
 
-.PHONY: all world verify clean depend test
+.PHONY: all world verify clean depend hints obj

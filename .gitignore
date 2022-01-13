@@ -1,1 +1,7 @@
+.depend
 old/*
+dist/
+hints/
+obj/
+
+*.swp
