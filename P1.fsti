@@ -88,17 +88,17 @@ val is_balanced (#a: Type) (ptr: t a)
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         Spec.is_balanced (v_linked_tree ptr h0) == b))
 
-(* TODO: fails when uncommented *)
 /// Rebalances a tree according to the comparison function [cmp] on the tree elements
 val rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
     : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
     (requires fun h0 -> True)
     (ensures fun h0 ptr' h1 ->
-        Spec.rebalance_avl (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
+        Spec.rebalance_avl_wds (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
 
 /// Inserts an element [v] in an AVL tree, while preserving the AVL tree invariant
 val insert_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a) (v: a)
     : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
     (requires fun h0 -> Spec.is_avl cmp (v_linked_tree ptr h0))
     (ensures fun h0 ptr' h1 ->
+        Spec.is_avl cmp (v_linked_tree ptr h0) /\
         Spec.insert_avl cmp (v_linked_tree ptr h0) v == v_linked_tree ptr' h1)

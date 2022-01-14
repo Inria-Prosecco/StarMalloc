@@ -473,13 +473,12 @@ let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
   (ensures fun h0 ptr' h1 ->
       Spec.rebalance_avl_wds (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
   =
-  //let h0 = get () in
+  let h0 = get () in
   if is_balanced #a ptr then (
     // TODO : fails without the assertion, why?
-    // any additional line (h0, h1 or the assert) is enough for everything to work
+    // any additional line (h0, h1 or both and the assert) is enough for everything to work
     let h1 = get () in
-    admit ();
-    //assert (v_linked_tree ptr h0 == v_linked_tree ptr h1);
+    assert (v_linked_tree ptr h0 == v_linked_tree ptr h1);
     return ptr
   ) else (
 
