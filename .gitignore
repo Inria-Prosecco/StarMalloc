@@ -3,6 +3,7 @@ old/*
 dist/
 hints/
 obj/
+a.out
 
 *.swp
 *~
