@@ -83,17 +83,17 @@ val intro_linked_tree_leaf (#opened:inames) (#a: Type0) (_: unit)
       (requires (fun _ -> True))
       (ensures (fun _ _ h1 -> v_linked_tree #a null_t h1 == Spec.Leaf))
 
-val elim_linked_tree_leaf (#a: Type0) (ptr: t a)
-    : Steel unit
-       (linked_tree ptr) (fun _ -> linked_tree ptr)
+val elim_linked_tree_leaf (#opened:inames) (#a: Type0) (ptr: t a)
+    : SteelGhost unit
+       opened (linked_tree ptr) (fun _ -> linked_tree ptr)
        (requires (fun _ -> is_null_t ptr))
        (ensures (fun h0 _ h1 ->
          v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
          v_linked_tree ptr h1 == Spec.Leaf))
 
-val node_is_not_null (#a: Type0) (ptr: t a)
-    : Steel unit
-       (linked_tree ptr) (fun _ -> linked_tree ptr)
+val node_is_not_null (#opened:inames) (#a: Type0) (ptr: t a)
+    : SteelGhost unit
+       opened (linked_tree ptr) (fun _ -> linked_tree ptr)
        (requires (fun h0 -> Spec.Node? (v_linked_tree ptr h0)))
        (ensures (fun h0 _ h1 -> not (is_null_t ptr) /\ v_linked_tree ptr h0 == v_linked_tree ptr h1))
 

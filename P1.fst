@@ -188,7 +188,7 @@ let rec member (#a: eqtype) (ptr: t a) (v: a)
   =
   if is_null_t #a ptr then (
     (**) elim_linked_tree_leaf ptr;
-    false
+    return false
   ) else (
     (**) let node = unpack_tree ptr in
     if v = get_data node then (

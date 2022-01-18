@@ -178,7 +178,7 @@ let elim_leaf_lemma (#a:Type0) (ptr:t a) (m:mem) : Lemma
       pure_interp (ptr == null_t) m;
       tree_sel_interp ptr Spec.Leaf m
 
-let elim_linked_tree_leaf #a ptr =
+let elim_linked_tree_leaf #opened #a ptr =
   change_slprop_rel (linked_tree ptr) (linked_tree ptr)
     (fun x y -> x == y /\ y == Spec.Leaf)
     (fun m -> elim_leaf_lemma ptr m)
@@ -199,7 +199,7 @@ let lemma_node_not_null (#a:Type) (ptr:t a) (t:Spec.wds a) (m:mem) : Lemma
            Mem.affine_star (pts_to_sl ptr full_perm data) (tree_sl' (get_left data) left) m;
            pts_to_not_null ptr full_perm data m
 
-let node_is_not_null #a ptr =
+let node_is_not_null #opened #a ptr =
   let h = get () in
   let t = hide (v_linked_tree ptr h) in
   extract_info (linked_tree ptr) t (ptr =!= null_t) (lemma_node_not_null ptr t)
