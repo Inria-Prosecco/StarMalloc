@@ -45,7 +45,9 @@ val mk_node (#a: Type0) (data: a) (left right: t a) (size: ref nat)
 
 (**** Slprop and selector *)
 
+inline_for_extraction noextract
 val null_t (#a: Type0) : t a
+inline_for_extraction noextract
 val is_null_t (#a: Type0) (r: t a) : (b:bool{b <==> r == null_t})
 
 

@@ -26,7 +26,9 @@ let get_data = NTreeC3.get_data #U32.t
 //let is_null = is_null #U32.t
 //let null_t = null_t #U32.t
 //let null_t = null_t #U32.t
+inline_for_extraction noextract
 let null = Steel.Reference.null
+inline_for_extraction noextract
 let is_null_t = NTreeC3.is_null_t #U32.t
 let mk_node = NTreeC3.mk_node #U32.t
 let unpack_tree = NTreeC3.unpack_tree #U32.t
