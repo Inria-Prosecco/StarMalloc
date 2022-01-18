@@ -13,9 +13,16 @@ module B = LowStar.Buffer
 
 let t = NTreeC3.t
 let linked_tree = NTreeC3.linked_tree
-let get_left = NTreeC3.get_left
-let get_right = NTreeC3.get_right
-let get_size = NTreeC3.get_size
+
+inline_for_extraction noextract
+let get_left = NTreeC3.get_left #U32.t
+inline_for_extraction noextract
+let get_right = NTreeC3.get_right #U32.t
+inline_for_extraction noextract
+let get_size = NTreeC3.get_size #U32.t
+inline_for_extraction noextract
+let get_data = NTreeC3.get_data #U32.t
+
 //let is_null = is_null #U32.t
 //let null_t = null_t #U32.t
 //let null_t = null_t #U32.t

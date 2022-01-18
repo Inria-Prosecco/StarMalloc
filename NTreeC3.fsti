@@ -25,9 +25,13 @@ let tree (a: Type0) = Spec.tree a
 
 (**** Operations on nodes *)
 
+inline_for_extraction noextract
 val get_left (#a: Type0) (n: node a) : t a
+inline_for_extraction noextract
 val get_right (#a: Type0) (n: node a) : t a
+inline_for_extraction noextract
 val get_data (#a: Type0) (n: node a) : a
+inline_for_extraction noextract
 val get_size (#a: Type0) (n: node a) : ref nat
 val mk_node (#a: Type0) (data: a) (left right: t a) (size: ref nat)
     : Pure (node a)
