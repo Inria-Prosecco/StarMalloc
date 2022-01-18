@@ -30,7 +30,7 @@ let rec append_left #a (ptr: t a) (v: a)
     let sr = malloc 1 in
     let node = mk_node v ptr null_t sr in
     let new_tree = malloc node in
-    (**) intro_linked_tree_leaf #a ();
+    (**) intro_linked_tree_leaf ();
     (**) pack_tree new_tree ptr null_t sr;
     new_tree
     // return new_tree
@@ -114,7 +114,7 @@ let rec append_right #a (ptr: t a) (v: a)
     let sr = malloc 1 in
     let node = mk_node v null_t ptr sr in
     let new_tree = malloc node in
-    (**) intro_linked_tree_leaf #a ();
+    (**) intro_linked_tree_leaf ();
     (**) pack_tree new_tree null_t ptr sr;
     new_tree
   ) else (
@@ -547,7 +547,7 @@ let rec insert_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a) (v: a)
     let sr = malloc 1 in
     let node = mk_node v ptr null_t sr in
     let new_tree = malloc node in
-    (**) intro_linked_tree_leaf #a ();
+    (**) intro_linked_tree_leaf ();
     (**) pack_tree new_tree ptr null_t sr;
     new_tree
   ) else (

@@ -168,7 +168,7 @@ let intro_leaf_lemma (a:Type0) (m:mem) : Lemma
       assert (tree_sl' ptr Spec.Leaf == Mem.pure (ptr == null_t)) by (norm [delta; zeta; iota]);
       tree_sel_interp ptr Spec.Leaf m
 
-let intro_linked_tree_leaf #a _ =
+let intro_linked_tree_leaf #opened #a _ =
     change_slprop_2 emp (linked_tree (null_t #a)) (Spec.Leaf <: Spec.wds a) (intro_leaf_lemma a)
 
 let elim_leaf_lemma (#a:Type0) (ptr:t a) (m:mem) : Lemma
@@ -629,5 +629,7 @@ let create_leaf (#a: Type0) (_: unit) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 -> Trees.Leaf? (v_linked_tree ptr h1))
-  = intro_linked_tree_leaf #a ();
-    null_t #a
+  = intro_linked_tree_leaf ();
+    // TODO: it should be possible to remove next line
+    let h = get () in
+    return null_t

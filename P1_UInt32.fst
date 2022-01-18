@@ -25,7 +25,7 @@ let mk_node = NTreeC3.mk_node #U32.t
 let unpack_tree = NTreeC3.unpack_tree #U32.t
 
 //inline_for_extraction
-let intro_linked_tree_leaf = NTreeC3.intro_linked_tree_leaf #U32.t
+//let intro_linked_tree_leaf = NTreeC3.intro_linked_tree_leaf #U32.t
 
 let elim_linked_tree_leaf = NTreeC3.elim_linked_tree_leaf #U32.t
 let create_leaf = NTreeC3.create_leaf #U32.t

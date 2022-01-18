@@ -1,6 +1,7 @@
 module NTreeC3
 
 open Steel.Memory
+open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
@@ -76,9 +77,9 @@ let v_linked_tree
 
 (**** Low-level operations on trees *)
 
-val intro_linked_tree_leaf (#a: Type0) (_: unit)
-    : Steel unit
-      emp (fun _ -> linked_tree (null_t #a))
+val intro_linked_tree_leaf (#opened:inames) (#a: Type0) (_: unit)
+    : SteelGhost unit
+      opened emp (fun _ -> linked_tree (null_t #a))
       (requires (fun _ -> True))
       (ensures (fun _ _ h1 -> v_linked_tree #a null_t h1 == Spec.Leaf))
 
