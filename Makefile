@@ -73,6 +73,10 @@ extract: $(FILTERED_KRML_FILES)
 	$(KRML_EXE) -skip-compilation -skip-makefiles -tmpdir dist \
      -bundle 'FStar.\*,Steel.\*' $^
 
+test:
+	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist test.c
+
+
 #ALL_C_FILES=$(addsuffix .c,$(ALL_MODULE_NAMES))
 #
 #$(ALL_C_FILES): extract
@@ -91,4 +95,4 @@ extract:
 
 endif # KREMLIN_HOME
 
-.PHONY: all world verify clean depend hints obj
+.PHONY: all world verify clean depend hints obj test
