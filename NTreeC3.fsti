@@ -33,6 +33,7 @@ inline_for_extraction noextract
 val get_data (#a: Type0) (n: node a) : a
 inline_for_extraction noextract
 val get_size (#a: Type0) (n: node a) : ref nat
+inline_for_extraction noextract
 val mk_node (#a: Type0) (data: a) (left right: t a) (size: ref nat)
     : Pure (node a)
       (requires True)
