@@ -73,7 +73,7 @@ extract: $(FILTERED_KRML_FILES)
 	$(KRML_EXE) -skip-compilation -skip-makefiles -tmpdir dist \
      -bundle 'FStar.\*,Steel.\*' $^
 
-test:
+test: verify
 	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist test.c
 
 
