@@ -377,8 +377,8 @@ let v_node
     : GTot (Spec.wds (node a))
   = h (tree_node r)
 
-val reveal_non_empty_tree (#a:Type0) (ptr:t a)
-  : Steel unit (tree_node ptr) (fun _ -> tree_node ptr)
+val reveal_non_empty_tree (#opened:inames) (#a:Type0) (ptr:t a)
+  : SteelGhost unit opened (tree_node ptr) (fun _ -> tree_node ptr)
              (requires fun _ -> ptr =!= null_t)
              (ensures fun h0 _ h1 -> v_node ptr h0 == v_node ptr h1 /\
                Spec.Node? (v_node ptr h0))
@@ -394,10 +394,11 @@ let is_node (#a:Type) (t:Spec.wds (node a)) : prop = match t with
   | Spec.Leaf -> False
   | Spec.Node _ _ _ _ -> True
 
-let reveal_non_empty_tree #a ptr =
+let reveal_non_empty_tree #opened #a ptr =
   let h = get () in
   let t = hide (v_node ptr h) in
   extract_info (tree_node ptr) t (is_node t) (reveal_non_empty_lemma ptr t)
+
 let head (#a:Type0) (t:erased (Spec.wds (node a)))
   : Pure (erased (node a)) (requires Spec.Node? (reveal t)) (ensures fun _ -> True) =
   let Spec.Node n _ _ _ = reveal t in hide n
