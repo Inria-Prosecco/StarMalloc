@@ -31,7 +31,7 @@ let elim_linked_tree_leaf = NTreeC3.elim_linked_tree_leaf #U32.t
 let create_leaf = NTreeC3.create_leaf #U32.t
 
 //noextract
-let pack_tree = NTreeC3.pack_tree #U32.t
+//let pack_tree = NTreeC3.pack_tree #U32.t
 
 let member = P1.member #U32.t
 //inline_for_extraction
@@ -160,7 +160,7 @@ let main ()
   let v = 1ul in
   let n = mk_node v l r sr in
   let ptr = malloc n in
-  pack_tree ptr l r sr;
+  NTreeC3.pack_tree ptr l r sr;
   //let ptr = append_left ptr 0ul in
   //let vr = leftmost ptr 12ul in
   let b = member ptr 0ul in

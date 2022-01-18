@@ -10,8 +10,8 @@ dist/P1_UInt32.c:69:10: warning: implicit declaration of function ‘Steel_Refer
 dist/P1_UInt32.c:69:10: warning: returning ‘int’ from a function with return type ‘NTreeC3_node__uint32_t *’ {aka ‘struct NTreeC3_node__uint32_t_s *’} makes pointer from integer without a cast [-Wint-conversion]
    69 |   return Steel_Reference_null((void *)(uint8_t)0U);
       |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/usr/bin/ld: /tmp/ccCG7RR1.o: in function `NTreeC3_is_null_t__uint32_t':
+/usr/bin/ld: /tmp/cc2kkCYA.o: in function `NTreeC3_is_null_t__uint32_t':
 test.c:(.text+0x19): undefined reference to `Steel_Reference_is_null'
-/usr/bin/ld: /tmp/ccCG7RR1.o: in function `NTreeC3_null_t__uint32_t':
+/usr/bin/ld: /tmp/cc2kkCYA.o: in function `NTreeC3_null_t__uint32_t':
 test.c:(.text+0x14a): undefined reference to `Steel_Reference_null'
 collect2: error: ld returned 1 exit status

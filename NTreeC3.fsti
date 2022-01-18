@@ -97,9 +97,9 @@ val node_is_not_null (#a: Type0) (ptr: t a)
        (requires (fun h0 -> Spec.Node? (v_linked_tree ptr h0)))
        (ensures (fun h0 _ h1 -> not (is_null_t ptr) /\ v_linked_tree ptr h0 == v_linked_tree ptr h1))
 
-val pack_tree (#a: Type0) (ptr: t a) (left right: t a) (sr: ref nat)
-    : Steel unit
-      (vptr ptr `star` linked_tree left `star` linked_tree right `star` vptr sr)
+val pack_tree (#opened:inames) (#a: Type0) (ptr: t a) (left right: t a) (sr: ref nat)
+    : SteelGhost unit
+      opened (vptr ptr `star` linked_tree left `star` linked_tree right `star` vptr sr)
       (fun _ -> linked_tree ptr)
       (requires (fun h0 ->
         get_left (sel ptr h0) == left /\

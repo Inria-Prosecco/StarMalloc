@@ -32,7 +32,7 @@ let rec append_left #a (ptr: t a) (v: a)
     let new_tree = malloc node in
     (**) intro_linked_tree_leaf ();
     (**) pack_tree new_tree ptr null_t sr;
-    new_tree
+    return new_tree
     // return new_tree
   ) else (
     let h1 = get () in
@@ -116,7 +116,7 @@ let rec append_right #a (ptr: t a) (v: a)
     let new_tree = malloc node in
     (**) intro_linked_tree_leaf ();
     (**) pack_tree new_tree null_t ptr sr;
-    new_tree
+    return new_tree
   ) else (
     (**) let node = unpack_tree ptr in
     let h2 = get () in
@@ -156,7 +156,7 @@ let rec append_right #a (ptr: t a) (v: a)
     in
     write ptr new_node;
     (**) pack_tree ptr (get_left node) new_right (get_size node);
-    ptr
+    return ptr
   )
 
 //#push-options "--ifuel 1 --fuel 2 --z3rlimit 200"
@@ -193,12 +193,12 @@ let rec member (#a: eqtype) (ptr: t a) (v: a)
     (**) let node = unpack_tree ptr in
     if v = get_data node then (
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
-      true
+      return true
     ) else (
       let mleft = member (get_left node) v in
       let mright = member (get_right node) v in
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
-      mleft || mright
+      return (mleft || mright)
     )
   )
 
@@ -316,7 +316,7 @@ let rotate_left (#a: Type) (ptr: t a)
   write ptr new_subnode;
   (**) pack_tree ptr (get_left x_node) (get_left z_node) (get_size z_node);
   (**) pack_tree (get_right x_node) ptr (get_right z_node) (get_size x_node);
-  (get_right x_node)
+  return (get_right x_node)
 
 let rotate_right (#a: Type) (ptr: t a)
   : Steel (t a)
@@ -343,7 +343,7 @@ let rotate_right (#a: Type) (ptr: t a)
   write ptr new_subnode;
   (**) pack_tree ptr (get_right z_node) (get_right x_node) (get_size z_node);
   (**) pack_tree (get_left x_node) (get_left z_node) ptr (get_size x_node);
-  (get_left x_node)
+  return (get_left x_node)
 
 let rotate_right_left (#a: Type) (ptr: t a)
   : Steel (t a)
@@ -389,7 +389,7 @@ let rotate_right_left (#a: Type) (ptr: t a)
   (**) pack_tree (get_right x_node) (get_right y_node) (get_right z_node) (get_size z_node);
   (**) pack_tree (get_left z_node) ptr (get_right x_node) (get_size x_node);
 
-  (get_left z_node)
+  return (get_left z_node)
 
 let rotate_left_right (#a: Type) (ptr: t a)
   : Steel (t a)
@@ -439,7 +439,7 @@ let rotate_left_right (#a: Type) (ptr: t a)
   (**) pack_tree ptr (get_right y_node) (get_right x_node) (get_size z_node);
   (**) pack_tree (get_right z_node) (get_left x_node) ptr (get_size x_node);
 
-  (get_right z_node)
+  return (get_right z_node)
 
 
 
@@ -452,7 +452,7 @@ let rec is_balanced (#a: Type) (ptr: t a)
   =
   if is_null_t ptr then (
     (**) elim_linked_tree_leaf ptr;
-    true
+    return true
   ) else (
 
   (**) let node = unpack_tree ptr in
@@ -463,7 +463,9 @@ let rec is_balanced (#a: Type) (ptr: t a)
   let rbal = is_balanced(get_right node) in
 
   (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
-  (lbal && rbal) && ((rh - lh) >= -1 && (rh - lh) <= 1))
+  let v = (lbal && rbal) && ((rh - lh) >= -1 && (rh - lh) <= 1) in
+  return v
+  )
 
 
 #push-options "--ifuel 2"
@@ -526,7 +528,7 @@ let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
 
       ) else (
         (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
-        ptr
+        return ptr
       )
     )
   //)
@@ -536,9 +538,7 @@ let rec insert_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a) (v: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 -> Spec.is_avl cmp (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 -> //True
-     //let t = admit(); () in
-     //assert (Spec.is_avl cmp (v_linked_tree ptr h0));
-     //assume (Spec.is_avl cmp (v_linked_tree ptr h0));
+     //TODO: remove redundancy
      Spec.is_avl cmp (v_linked_tree ptr h0) /\
      Spec.insert_avl cmp (v_linked_tree ptr h0) v == v_linked_tree ptr' h1)
   =
@@ -549,7 +549,7 @@ let rec insert_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a) (v: a)
     let new_tree = malloc node in
     (**) intro_linked_tree_leaf ();
     (**) pack_tree new_tree ptr null_t sr;
-    new_tree
+    return new_tree
   ) else (
     (**) let node = unpack_tree ptr in
     if cmp (get_data node) v >= 0 then (

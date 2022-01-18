@@ -336,7 +336,7 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref nat)
     intro_h_exists t (tree_sl' pt) m;
     tree_sel_interp pt t m
 
-let pack_tree #a ptr left right sr =
+let pack_tree #opened #a ptr left right sr =
   let h = get () in
   let x = hide (sel ptr h) in
   let l:Spec.wds a = hide (v_linked_tree left h) in
