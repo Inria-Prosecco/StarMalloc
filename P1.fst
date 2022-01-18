@@ -186,7 +186,7 @@ let rec member (#a: eqtype) (ptr: t a) (v: a)
       v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
       (Spec.mem (v_linked_tree ptr h0) v <==> b))
   =
-  if is_null_t ptr then (
+  if is_null_t #a ptr then (
     (**) elim_linked_tree_leaf ptr;
     false
   ) else (

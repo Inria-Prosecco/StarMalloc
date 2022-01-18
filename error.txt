@@ -1,0 +1,20 @@
+In file included from test.c:1:
+dist/P1_UInt32.c: In function ‘NTreeC3_is_null_t__uint32_t’:
+dist/P1_UInt32.c:14:10: warning: implicit declaration of function ‘Steel_Reference_is_null’ [-Wimplicit-function-declaration]
+   14 |   return Steel_Reference_is_null(ptr);
+      |          ^~~~~~~~~~~~~~~~~~~~~~~
+dist/P1_UInt32.c: In function ‘NTreeC3_null_t__uint32_t’:
+dist/P1_UInt32.c:71:10: warning: implicit declaration of function ‘Steel_Reference_null’ [-Wimplicit-function-declaration]
+   71 |   return Steel_Reference_null((void *)(uint8_t)0U);
+      |          ^~~~~~~~~~~~~~~~~~~~
+dist/P1_UInt32.c:71:10: warning: returning ‘int’ from a function with return type ‘NTreeC3_node__uint32_t *’ {aka ‘struct NTreeC3_node__uint32_t_s *’} makes pointer from integer without a cast [-Wint-conversion]
+   71 |   return Steel_Reference_null((void *)(uint8_t)0U);
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/bin/ld: /tmp/ccFaWrY3.o: in function `NTreeC3_is_null_t__uint32_t':
+test.c:(.text+0x19): undefined reference to `Steel_Reference_is_null'
+/usr/bin/ld: /tmp/ccFaWrY3.o: in function `NTreeC3_null_t__uint32_t':
+test.c:(.text+0x14a): undefined reference to `Steel_Reference_null'
+/usr/bin/ld: /tmp/ccFaWrY3.o: in function `NTreeC3_create_leaf__uint32_t':
+test.c:(.text+0x15c): undefined reference to `NTreeC3_intro_linked_tree_leaf'
+/usr/bin/ld: /tmp/ccFaWrY3.o:(.data.rel+0x0): undefined reference to `NTreeC3_intro_linked_tree_leaf'
+collect2: error: ld returned 1 exit status
