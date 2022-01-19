@@ -136,6 +136,16 @@ let rec height (#a: Type) (x: tree a) : nat =
     if hleft > hright then hleft + 1
     else hright + 1
 
+let rec height_lte_size (#a: Type) (t: tree a)
+  : Lemma
+  (height t <= size_of_tree t)
+  =
+  match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+      height_lte_size left;
+      height_lte_size right
+
 (**** Append *)
 let aux_size_left_subtree (#a: Type) (t1: tree a) (t2: tree a)
   : Lemma

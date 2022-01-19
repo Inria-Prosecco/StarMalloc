@@ -5,6 +5,7 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 //open NTreeC3
 //open P1
 
@@ -36,10 +37,8 @@ let create_leaf = NTreeC3.create_leaf #U32.t
 (* stdlib *)
 (* TODO: failure wrt Prims addition *)
 let append_left = P1.append_left #U32.t
-(*
 let append_right = P1.append_right #U32.t
 let height = P1.height #U32.t
-*)
 let member = P1.member #U32.t
 (* TODO: another failure "nth" *)
 (*
@@ -111,3 +110,19 @@ let main ()
   //ptr
   destruct ptr;
   vr
+
+let main2 ()
+  //: Steel (t U32.t)
+  : Steel U64.t
+  (emp)
+  (fun n -> emp)
+  (requires fun _ -> True)
+  (ensures fun _ _ _-> True)
+  =
+  let ptr = create_leaf () in
+  let ptr = append_right ptr 0ul in
+  let ptr = append_right ptr 1ul in
+  let ptr = append_right ptr 2ul in
+  let h = height ptr in
+  destruct ptr;
+  h

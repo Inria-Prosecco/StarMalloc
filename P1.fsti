@@ -6,6 +6,7 @@ open Steel.Effect.Atomic
 open Steel.Effect
 
 module Spec = Trees
+module U = FStar.UInt64
 
 #set-options "--ide_id_info_off"
 
@@ -22,7 +23,6 @@ val append_left (#a: Type0) (ptr: t a) (v: a)
       (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c - 1))
       (ensures (fun h0 ptr' h1 -> v_linked_tree ptr' h1 == Spec.append_left (v_linked_tree ptr h0) v))
 
-(*)
 /// Appends value [v] at the rightmost leaf of the tree that [ptr] points to.
 val append_right (#a: Type0) (ptr: t a) (v: a)
     : Steel (t a)
@@ -35,12 +35,11 @@ val append_right (#a: Type0) (ptr: t a) (v: a)
 
 /// Returns the height of the tree that [ptr] points to
 val height (#a: Type0) (ptr: t a)
-    : Steel nat (linked_tree ptr) (fun _ -> linked_tree ptr)
+    : Steel U.t (linked_tree ptr) (fun _ -> linked_tree ptr)
     (requires fun _ -> True)
     (ensures fun h0 x h1 ->
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-        Spec.height (v_linked_tree ptr h0) == x)
-*)
+        Spec.height (v_linked_tree ptr h0) == U.v x)
 
 /// Returns a boolean indicating whether element [v] belongs to the tree that [ptr] points to
 val member (#a: eqtype) (ptr: t a) (v: a)
