@@ -6,6 +6,7 @@ open Steel.Effect
 open Steel.Reference
 
 module Spec = Trees
+module U = FStar.UInt64
 
 #set-options "--ide_id_info_off"
 
@@ -20,8 +21,11 @@ val node (a: Type0) : Type0
 let t (a: Type0) = ref (node a)
 
 (** This type reflects the contents of a tree without the memory layout *)
+// TODO: to be replaced with MAX_UINT64
+let c = 100
+let wds (a: Type0) = x:Spec.wds a{Spec.size_of_tree x < c}
 //let tree (a: Type0) = x:Spec.tree a{fst (Spec.is_wds x)}
-let tree (a: Type0) = Spec.tree a
+//let tree (a: Type0) = Spec.tree a
 
 (**** Operations on nodes *)
 
@@ -32,9 +36,9 @@ val get_right (#a: Type0) (n: node a) : t a
 inline_for_extraction noextract
 val get_data (#a: Type0) (n: node a) : a
 inline_for_extraction noextract
-val get_size (#a: Type0) (n: node a) : ref nat
+val get_size (#a: Type0) (n: node a) : ref U.t
 inline_for_extraction noextract
-val mk_node (#a: Type0) (data: a) (left right: t a) (size: ref nat)
+val mk_node (#a: Type0) (data: a) (left right: t a) (size: ref U.t)
     : Pure (node a)
       (requires True)
       (ensures (fun n ->
@@ -104,7 +108,7 @@ val node_is_not_null (#opened:inames) (#a: Type0) (ptr: t a)
        (requires (fun h0 -> Spec.Node? (v_linked_tree ptr h0)))
        (ensures (fun h0 _ h1 -> not (is_null_t ptr) /\ v_linked_tree ptr h0 == v_linked_tree ptr h1))
 
-val pack_tree (#opened:inames) (#a: Type0) (ptr: t a) (left right: t a) (sr: ref nat)
+val pack_tree (#opened:inames) (#a: Type0) (ptr: t a) (left right: t a) (sr: ref U.t)
     : SteelGhost unit
       opened (vptr ptr `star` linked_tree left `star` linked_tree right `star` vptr sr)
       (fun _ -> linked_tree ptr)
@@ -112,9 +116,10 @@ val pack_tree (#opened:inames) (#a: Type0) (ptr: t a) (left right: t a) (sr: ref
         get_left (sel ptr h0) == left /\
         get_right (sel ptr h0) == right /\
         get_size (sel ptr h0) == sr /\
-        sel sr h0 == Spec.size_of_tree (v_linked_tree left h0)
+        U.v (sel sr h0) == Spec.size_of_tree (v_linked_tree left h0)
               + Spec.size_of_tree (v_linked_tree right h0)
-              + 1
+              + 1 /\
+        U.v (sel sr h0) < c
         ))
       (ensures (fun h0 _ h1 ->
         let x = get_data (sel ptr h0) in
@@ -122,7 +127,7 @@ val pack_tree (#opened:inames) (#a: Type0) (ptr: t a) (left right: t a) (sr: ref
         let r = v_linked_tree right h0 in
         let s = sel sr h0 in
         //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
-        v_linked_tree ptr h1 == Spec.Node x l r s))
+        v_linked_tree ptr h1 == Spec.Node x l r (U.v s)))
 
 val unpack_tree (#a: Type0) (ptr: t a)
     : Steel (node a)
@@ -138,10 +143,11 @@ val unpack_tree (#a: Type0) (ptr: t a)
           (get_data (sel ptr h1))
           (v_linked_tree (get_left node) h1)
           (v_linked_tree (get_right node) h1)
-          (sel (get_size node) h1) /\
+          (U.v (sel (get_size node) h1)) /\
         sel ptr h1 == node /\
-        sel (get_size node) h1 == Spec.size_of_tree (v_linked_tree (get_left node) h1)
-                                + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1
+        U.v (sel (get_size node) h1) == Spec.size_of_tree (v_linked_tree (get_left node) h1)
+                                + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1 /\
+        U.v (sel (get_size node) h1) < c
       ))
 
 (*)

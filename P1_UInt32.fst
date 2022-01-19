@@ -35,8 +35,8 @@ let create_leaf = NTreeC3.create_leaf #U32.t
 
 (* stdlib *)
 (* TODO: failure wrt Prims addition *)
-(*
 let append_left = P1.append_left #U32.t
+(*
 let append_right = P1.append_right #U32.t
 let height = P1.height #U32.t
 *)
@@ -52,6 +52,7 @@ let rebalance_avl = P1.rebalance_avl #U32.t
 let insert_avl = P1.insert_avl #U32.t
 *)
 
+(*
 let one ()
   : Steel (ref nat)
   (emp)
@@ -61,6 +62,7 @@ let one ()
   =
   let v = 1 + 1 in
   let r = malloc v in r
+*)
 
 let destruct_linked_tree_leaf (ptr: t U32.t) : Steel unit
   (linked_tree ptr) (fun _ -> emp)
@@ -97,12 +99,12 @@ let main ()
   =
   let l = create_leaf () in
   let r = create_leaf () in
-  let sr = malloc 1 in
-  let v = 0ul in
+  let sr = malloc 1UL in
+  let v = 1ul in
   let n = mk_node v l r sr in
   let ptr = malloc n in
   NTreeC3.pack_tree ptr l r sr;
-  //let ptr = append_left ptr 0ul in
+  let ptr = append_left ptr 0ul in
   //let vr = leftmost ptr 12ul in
   let b = member ptr 0ul in
   let vr = if b then 42ul else 11ul in

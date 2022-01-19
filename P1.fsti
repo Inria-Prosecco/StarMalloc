@@ -19,15 +19,16 @@ val append_left (#a: Type0) (ptr: t a) (v: a)
     : Steel (t a)
       (linked_tree ptr)
       (fun ptr' ->  linked_tree ptr')
-      (requires (fun h0 -> True))
+      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c - 1))
       (ensures (fun h0 ptr' h1 -> v_linked_tree ptr' h1 == Spec.append_left (v_linked_tree ptr h0) v))
 
+(*)
 /// Appends value [v] at the rightmost leaf of the tree that [ptr] points to.
 val append_right (#a: Type0) (ptr: t a) (v: a)
     : Steel (t a)
       (linked_tree ptr)
       (fun ptr' ->  linked_tree ptr')
-      (requires (fun h0 -> True))
+      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c - 1))
       (ensures (fun h0 ptr' h1 ->
         v_linked_tree ptr' h1 == Spec.append_right (v_linked_tree ptr h0) v
       ))
@@ -39,6 +40,7 @@ val height (#a: Type0) (ptr: t a)
     (ensures fun h0 x h1 ->
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         Spec.height (v_linked_tree ptr h0) == x)
+*)
 
 /// Returns a boolean indicating whether element [v] belongs to the tree that [ptr] points to
 val member (#a: eqtype) (ptr: t a) (v: a)
@@ -48,6 +50,7 @@ val member (#a: eqtype) (ptr: t a) (v: a)
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         (Spec.mem (v_linked_tree ptr h0) v <==> b))
 
+(*)
 (*** Rotation functions used internally to balance AVL trees ***)
 
 val rotate_left (#a: Type) (ptr: t a)
