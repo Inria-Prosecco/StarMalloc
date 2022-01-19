@@ -1,4 +1,4 @@
-module Trees
+module Trees_U64
 
 module M = FStar.Math.Lib
 module I = FStar.UInt64
