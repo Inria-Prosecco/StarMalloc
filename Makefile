@@ -56,7 +56,7 @@ verify: $(ALL_CHECKED_FILES)
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 clean:
-	-rm -rf .depend obj dist hints
+	-rm -rf .depend obj dist hints a.out
 
 ifdef KREMLIN_HOME
 
