@@ -60,12 +60,12 @@ val is_null_t (#a: Type0) (r: t a) : (b:bool{b <==> r == null_t})
 val tree_sl (#a: Type0) (r: t a) : slprop u#1
 
 (** Selector retrieving the contents of a tree in memory *)
-val tree_sel (#a: Type0) (r: t a) : selector (Spec.wds a) (tree_sl r)
+val tree_sel (#a: Type0) (r: t a) : selector (wds a) (tree_sl r)
 
 [@@__steel_reduce__]
 let linked_tree' (#a: Type0) (r: t a) : vprop' = {
   hp = tree_sl r;
-  t = Spec.wds a;
+  t = wds a;
   sel = tree_sel r
 }
 

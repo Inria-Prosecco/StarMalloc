@@ -443,7 +443,6 @@ let rotate_left_right_wds (#a: Type) (r: wds a) : option (wds a) =
       Some (Node y t12 t34 s)
   | _ -> None
 
-(*
 let rotate_left_size (#a: Type) (r: wds a)
   : Lemma
   (requires Some? (rotate_left_wds r))
@@ -465,11 +464,10 @@ let rotate_right_left_size (#a: Type) (r: wds a)
 
 let rotate_left_right_size (#a: Type) (r: wds a)
   : Lemma
-  (requires Some? (rotate_right_left_wds r))
+  (requires Some? (rotate_left_right_wds r))
   (ensures
-  size_of_tree (get (rotate_right_left_wds r)) == size_of_tree r)
+  size_of_tree (get (rotate_left_right_wds r)) == size_of_tree r)
   = ()
-*)
 
 (** rotate preserves bst *)
 let rec forall_keys_trans (#a: Type) (t: tree a) (cond1 cond2: a -> bool)

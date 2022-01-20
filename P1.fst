@@ -224,17 +224,15 @@ let rec member (#a: eqtype) (ptr: t a) (v: a)
     )
   )
 
-(*)
 let sot_wds (#a: Type) (ptr: t a)
-  : Steel (nat)
+  : Steel (U.t)
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures (fun h0 s h1 ->
-    //s == Spec.sot_wds (v_linked_tree ptr h0) /\
     v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-    //s == Spec.sot_wds (v_linked_tree ptr h0)
-    s == Spec.size_of_tree (v_linked_tree ptr h0)
+    U.v s == Spec.sot_wds (v_linked_tree ptr h0) /\
+    U.v s == Spec.size_of_tree (v_linked_tree ptr h0)
   ))
   =
   if is_null_t ptr then (
@@ -242,7 +240,7 @@ let sot_wds (#a: Type) (ptr: t a)
     elim_linked_tree_leaf ptr;
     let h = get () in
     assert (0 == Spec.sot_wds (v_linked_tree ptr h));
-    return 0
+    return zero
   ) else (
     let h1 = get () in
     (**) let node = unpack_tree ptr in
@@ -252,7 +250,7 @@ let sot_wds (#a: Type) (ptr: t a)
       (get_data (sel ptr h2))
       (v_linked_tree (get_left node) h2)
       (v_linked_tree (get_right node) h2)
-      (sel (get_size node) h2)
+      (U.v (sel (get_size node) h2))
     ) in
     assert (reveal ptr_t1 == reveal ptr_t2);
     assert (fst (Spec.is_wds (reveal ptr_t1)));
@@ -262,7 +260,7 @@ let sot_wds (#a: Type) (ptr: t a)
     Spec.check (reveal ptr_t1);
     assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
     let s = read (get_size node) in
-    assert (s == Spec.sot_wds (v_linked_tree ptr h1));
+    assert (U.v s == Spec.sot_wds (v_linked_tree ptr h1));
     pack_tree ptr (get_left node) (get_right node) (get_size node);
     return s
   )
@@ -270,7 +268,7 @@ let sot_wds (#a: Type) (ptr: t a)
 
 // TODO : please prettify output after squash equiv...
 //#push-options "--ifuel 1 --fuel 2 --z3rlimit 200"
-(*)
+(*
 let rotate_left (#a: Type) (ptr: t a)
   : Steel (t a)
   (linked_tree ptr)
@@ -280,6 +278,10 @@ let rotate_left (#a: Type) (ptr: t a)
     Spec.rotate_left_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
   ))
   =
+  let h0 = get () in
+  Spec.rotate_left_size (v_linked_tree ptr h0);
+  assert (Spec.size_of_tree (Spec.get (Spec.rotate_left_wds (v_linked_tree ptr h0)))
+  == Spec.size_of_tree (v_linked_tree ptr h0));
   (**) node_is_not_null ptr;
   (**) let x_node = unpack_tree ptr in
   let x = get_data x_node in
@@ -288,39 +290,55 @@ let rotate_left (#a: Type) (ptr: t a)
   (**) node_is_not_null (get_right x_node);
   (**) let z_node = unpack_tree (get_right x_node) in
   let z = get_data z_node in
+  //let h1 = get () in
+  //let t1 = v_linked_tree (get_left x_node) h1 in
+  //let t2 = v_linked_tree (get_left z_node) h1 in
+  //let t3 = v_linked_tree (get_right z_node) h1 in
   let s1 = sot_wds (get_left x_node) in
   let s2 = sot_wds (get_left z_node) in
-  let sx = s1 + s2 + 1 in
+  let sx = U.add (U.add s1 s2) one in
+  //assert (U.v sx == (U.v s1) + (U.v s2) + 1);
+  //assert (U.v s1 = Spec.sot_wds (v_linked_tree (get_left x_node) h1));
+  //assert (U.v s2 = Spec.sot_wds (v_linked_tree (get_left z_node) h1));
   write (get_size z_node) sx;
   let tx = mk_node x (get_left x_node) (get_left z_node) (get_size z_node) in
   write ptr tx;
   //let h = get () in
   //assert (fst (Spec.is_wds (v_linked_tree ptr h)));
-  //assert (sel (get_size z_node) h == Spec.size_of_tree (v_linked_tree (get_left x_node) h)
-  //                                + Spec.size_of_tree (v_linked_tree (get_left z_node) h) + 1);
-  pack_tree ptr (get_left x_node) (get_left z_node) (get_size z_node);
+  //assert (U.v (sel (get_size z_node) h) == Spec.size_of_tree (v_linked_tree (get_left x_node) h)
+                                  //+ Spec.size_of_tree (v_linked_tree (get_left z_node) h) + 1);
   //let h = get () in
   //assert (fst (Spec.is_wds (v_linked_tree ptr h)));
+  pack_tree ptr (get_left x_node) (get_left z_node) (get_size z_node);
   let tz = mk_node z ptr (get_right z_node) (get_size x_node) in
   write (get_right x_node) tz;
+  //let h2 = get() in
+  //let t1' = v_linked_tree (get_left x_node) h2 in
   //let h = get () in
   //assert (fst (Spec.is_wds (v_linked_tree (get_right x_node) h)));
   //assert (sel (get_size x_node) h == Spec.size_of_tree (v_linked_tree ptr h)
   //                                 + Spec.size_of_tree (v_linked_tree (get_right z_node) h) + 1);
   pack_tree (get_right x_node) ptr (get_right z_node) (get_size x_node);
-  (get_right x_node)
+  //let h1 = get () in
+  //assert (Spec.size_of_tree (v_linked_tree ptr h1) == Spec.size_of_tree (v_linked_tree ptr h0));
+  return (get_right x_node)
 *)
+//(*)
+//#push-options "--ifuel 1 --fuel 2"
 
-#push-options "--ifuel 1 --fuel 2"
 let rotate_left (#a: Type) (ptr: t a)
   : Steel (t a)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
-  (requires fun h0 -> Some? (Spec.rotate_left_wds (v_linked_tree ptr h0)))
+  (requires (fun h0 ->
+    Some? (Spec.rotate_left_wds (v_linked_tree ptr h0))))
   (ensures (fun h0 ptr' h1 ->
     Spec.rotate_left_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
   ))
   =
+  let h = get () in
+  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+  Spec.rotate_left_size (v_linked_tree ptr h);
   (**) node_is_not_null ptr;
   (**) let x_node = unpack_tree ptr in
   let x = get_data x_node in
@@ -329,7 +347,7 @@ let rotate_left (#a: Type) (ptr: t a)
   let z = get_data z_node in
   let s1 = sot_wds (get_left x_node) in
   let s2 = sot_wds (get_left z_node) in
-  let sx = s1 + s2 + 1 in
+  let sx = U.add (U.add s1 s2) one in
   write (get_size z_node) sx;
   let new_subnode = mk_node x (get_left x_node) (get_left z_node) (get_size z_node) in
   let new_node = mk_node z ptr (get_right z_node) (get_size x_node) in
@@ -343,11 +361,15 @@ let rotate_right (#a: Type) (ptr: t a)
   : Steel (t a)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
-  (requires fun h0 -> Some? (Spec.rotate_right_wds (v_linked_tree ptr h0)))
+  (requires (fun h0 ->
+    Some? (Spec.rotate_right_wds (v_linked_tree ptr h0))))
   (ensures (fun h0 ptr' h1 ->
     Spec.rotate_right_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
   ))
   =
+  let h = get () in
+  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+  Spec.rotate_right_size (v_linked_tree ptr h);
   (**) node_is_not_null ptr;
   (**) let x_node = unpack_tree ptr in
   let x = get_data x_node in
@@ -356,7 +378,7 @@ let rotate_right (#a: Type) (ptr: t a)
   let z = get_data z_node in
   let s1 = sot_wds (get_right z_node) in
   let s2 = sot_wds (get_right x_node) in
-  let sx = s1 + s2 + 1 in
+  let sx = U.add (U.add s1 s2) one in
   write (get_size z_node) sx;
   let new_subnode = mk_node x (get_right z_node) (get_right x_node) (get_size z_node) in
   let new_node = mk_node z (get_left z_node) ptr (get_size x_node) in
@@ -366,15 +388,23 @@ let rotate_right (#a: Type) (ptr: t a)
   (**) pack_tree (get_left x_node) (get_left z_node) ptr (get_size x_node);
   return (get_left x_node)
 
+
+#push-options "--fuel 2 --ifuel 2"
 let rotate_right_left (#a: Type) (ptr: t a)
   : Steel (t a)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
-  (requires fun h0 -> Some? (Spec.rotate_right_left_wds (v_linked_tree ptr h0)))
+  (requires (fun h0 ->
+    Some? (Spec.rotate_right_left_wds (v_linked_tree ptr h0))))
   (ensures (fun h0 ptr' h1 ->
     Spec.rotate_right_left_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
   ))
   =
+  let h = get () in
+  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+  Spec.rotate_right_left_size (v_linked_tree ptr h);
+  assert (Spec.size_of_tree (Spec.get (Spec.rotate_right_left_wds (v_linked_tree ptr h)))
+  == Spec.size_of_tree (v_linked_tree ptr h));
   (**) node_is_not_null ptr;
   // original root node
   (**) let x_node = unpack_tree ptr in
@@ -393,8 +423,8 @@ let rotate_right_left (#a: Type) (ptr: t a)
   let s2 = sot_wds (get_left y_node) in
   let s3 = sot_wds (get_right y_node) in
   let s4 = sot_wds (get_right z_node) in
-  let s12 = s1 + s2 + 1 in
-  let s34 = s3 + s4 + 1 in
+  let s12 = U.add (U.add s1 s2) one in
+  let s34 = U.add (U.add s3 s4) one in
   write (get_size y_node) s12;
   write (get_size z_node) s34;
 
@@ -421,6 +451,11 @@ let rotate_left_right (#a: Type) (ptr: t a)
     Spec.rotate_left_right_wds (v_linked_tree ptr h0) == Some (v_linked_tree ptr' h1)
   ))
   =
+  let h = get () in
+  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+  Spec.rotate_left_right_size (v_linked_tree ptr h);
+  assert (Spec.size_of_tree (Spec.get (Spec.rotate_left_right_wds (v_linked_tree ptr h)))
+  == Spec.size_of_tree (v_linked_tree ptr h));
   (**) node_is_not_null ptr;
   // original root node
   (**) let x_node = unpack_tree ptr in
@@ -443,8 +478,8 @@ let rotate_left_right (#a: Type) (ptr: t a)
   let s2 = sot_wds (get_left y_node) in
   let s3 = sot_wds (get_right y_node) in
   let s4 = sot_wds (get_right x_node) in
-  let s12 = s1 + s2 + 1 in
-  let s34 = s3 + s4 + 1 in
+  let s12 = U.add (U.add s1 s2) one in
+  let s34 = U.add (U.add s3 s4) one in
   write (get_size y_node) s12;
   write (get_size z_node) s34;
 
@@ -461,7 +496,7 @@ let rotate_left_right (#a: Type) (ptr: t a)
   (**) pack_tree (get_right z_node) (get_left x_node) ptr (get_size x_node);
 
   return (get_right z_node)
-
+#pop-options
 
 
 let rec is_balanced (#a: Type) (ptr: t a)
@@ -475,20 +510,26 @@ let rec is_balanced (#a: Type) (ptr: t a)
     (**) elim_linked_tree_leaf ptr;
     return true
   ) else (
+    let h = get () in
+    Spec.height_lte_size (v_linked_tree ptr h);
+    (**) let node = unpack_tree ptr in
+    let lh = height (get_left node) in
+    let rh = height (get_right node) in
 
-  (**) let node = unpack_tree ptr in
-  let lh = height (get_left node) in
-  let rh = height (get_right node) in
+    let lbal = is_balanced(get_left node) in
+    let rbal = is_balanced(get_right node) in
 
-  let lbal = is_balanced(get_left node) in
-  let rbal = is_balanced(get_right node) in
-
-  (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
-  let v = (lbal && rbal) && ((rh - lh) >= -1 && (rh - lh) <= 1) in
-  return v
+    (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
+    //rh + 1 >= lh
+    //lh + 1 >= rh
+    //TODO: will fail when c is set to MAX_UINT64 - 1
+    let b1 = U.gte (U.add rh one) lh in
+    let b2 = U.gte (U.add lh one) rh in
+    let v = (lbal && rbal) && b1 && b2 in
+    return v
   )
 
-
+(*)
 #push-options "--ifuel 2"
 let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')

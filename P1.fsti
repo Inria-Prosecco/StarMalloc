@@ -49,7 +49,15 @@ val member (#a: eqtype) (ptr: t a) (v: a)
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         (Spec.mem (v_linked_tree ptr h0) v <==> b))
 
-(*)
+/// Returns the size of the tree that [ptr] points to, in O(1)
+val sot_wds (#a: Type) (ptr: t a)
+    : Steel (U.t) (linked_tree ptr) (fun _ -> linked_tree ptr)
+    (requires fun _ -> True)
+    (ensures (fun h0 s h1 ->
+        v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+        U.v s == Spec.sot_wds (v_linked_tree ptr h0) /\
+        U.v s == Spec.size_of_tree (v_linked_tree ptr h0)))
+
 (*** Rotation functions used internally to balance AVL trees ***)
 
 val rotate_left (#a: Type) (ptr: t a)
@@ -90,6 +98,7 @@ val is_balanced (#a: Type) (ptr: t a)
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         Spec.is_balanced (v_linked_tree ptr h0) == b))
 
+(*)
 /// Rebalances a tree according to the comparison function [cmp] on the tree elements
 val rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
     : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')

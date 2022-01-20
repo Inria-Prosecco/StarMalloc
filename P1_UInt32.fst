@@ -35,18 +35,18 @@ let unpack_tree = NTreeC3.unpack_tree #U32.t
 let create_leaf = NTreeC3.create_leaf #U32.t
 
 (* stdlib *)
-(* TODO: failure wrt Prims addition *)
 let append_left = P1.append_left #U32.t
 let append_right = P1.append_right #U32.t
 let height = P1.height #U32.t
 let member = P1.member #U32.t
-(* TODO: another failure "nth" *)
-(*
+let sot_wds = P1.sot_wds #U32.t
 let rotate_left = P1.rotate_left #U32.t
 let rotate_right = P1.rotate_right #U32.t
 let rotate_right_left = P1.rotate_right_left #U32.t
 let rotate_left_right = P1.rotate_left_right #U32.t
 let is_balanced = P1.is_balanced #U32.t
+(* TODO: another failure "nth" (?) *)
+(*
 let rebalance_avl = P1.rebalance_avl #U32.t
 let insert_avl = P1.insert_avl #U32.t
 *)
@@ -88,10 +88,8 @@ let rec destruct (ptr: t U32.t) : Steel unit
   )*)
 
 let main ()
-  //: Steel (t U32.t)
   : Steel U32.t
   (emp)
-  //(fun ptr -> linked_tree ptr)
   (fun _ -> emp)
   (requires fun _ -> True)
   (ensures fun _ _ _-> True)
@@ -104,15 +102,12 @@ let main ()
   let ptr = malloc n in
   NTreeC3.pack_tree ptr l r sr;
   let ptr = append_left ptr 0ul in
-  //let vr = leftmost ptr 12ul in
   let b = member ptr 0ul in
   let vr = if b then 42ul else 11ul in
-  //ptr
   destruct ptr;
   vr
 
 let main2 ()
-  //: Steel (t U32.t)
   : Steel U64.t
   (emp)
   (fun n -> emp)
@@ -124,5 +119,23 @@ let main2 ()
   let ptr = append_right ptr 1ul in
   let ptr = append_right ptr 2ul in
   let h = height ptr in
+  destruct ptr;
+  h
+
+let main3 ()
+  : Steel U64.t
+  (emp)
+  (fun n -> emp)
+  (requires fun _ -> True)
+  (ensures fun _ _ _-> True)
+  =
+  let ptr = create_leaf () in
+  let ptr = append_right ptr 0ul in
+  let ptr = append_right ptr 1ul in
+  let ptr = append_right ptr 2ul in
+  let ptr = append_left ptr 3ul in
+  let ptr = append_left ptr 4ul in
+  let ptr = append_left ptr 5ul in
+  let h = sot_wds ptr in
   destruct ptr;
   h
