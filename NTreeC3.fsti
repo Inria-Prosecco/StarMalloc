@@ -164,7 +164,3 @@ val unpack_tree (#a: Type0) (ptr: t a)
         (sel ptr h1) == node
       ))*)
 
-val create_leaf (#a: Type0) (_: unit) : Steel (t a)
-  emp (fun ptr -> linked_tree ptr)
-  (requires fun _ -> True)
-  (ensures fun _ ptr h1 -> Trees.Leaf? (v_linked_tree ptr h1))

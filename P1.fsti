@@ -4,11 +4,57 @@ open NTreeC3
 open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
+open Steel.Reference
 
 module Spec = Trees
 module U = FStar.UInt64
 
 #set-options "--ide_id_info_off"
+
+inline_for_extraction noextract
+let one = U.uint_to_t 1
+inline_for_extraction noextract
+let zero = U.uint_to_t 0
+
+val create_leaf (#a: Type0) (_: unit) : Steel (t a)
+  emp (fun ptr -> linked_tree ptr)
+  (requires fun _ -> True)
+  (ensures fun _ ptr h1 ->
+    v_linked_tree ptr h1 == Trees.Leaf)
+
+val create_tree (#a: Type0) (v: a) : Steel (t a)
+  emp (fun ptr -> linked_tree ptr)
+  (requires fun _ -> True)
+  (ensures fun _ ptr h1 ->
+    v_linked_tree ptr h1 ==
+    Trees.Node v Trees.Leaf Trees.Leaf (U.v one))
+
+/// Returns the size of the tree that [ptr] points to, in O(1)
+val sot_wds (#a: Type) (ptr: t a)
+    : Steel (U.t) (linked_tree ptr) (fun _ -> linked_tree ptr)
+    (requires fun _ -> True)
+    (ensures (fun h0 s h1 ->
+        v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+        U.v s == Spec.sot_wds (v_linked_tree ptr h0) /\
+        U.v s == Spec.size_of_tree (v_linked_tree ptr h0)))
+
+val merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
+  (linked_tree l `star` linked_tree r)
+  (fun ptr -> linked_tree ptr)
+  (requires fun h0 ->
+    let s1 = Spec.size_of_tree (v_linked_tree l h0) in
+    let s2 = Spec.size_of_tree (v_linked_tree r h0) in
+    s1 + s2 < c - 1)
+  (ensures fun h0 ptr h1 ->
+    let s1 = Spec.size_of_tree (v_linked_tree l h0) in
+    let s2 = Spec.size_of_tree (v_linked_tree r h0) in
+    let s = s1 + s2 + 1 in
+    s < c /\
+    v_linked_tree ptr h1 ==
+    Trees.Node v
+      (v_linked_tree l h0)
+      (v_linked_tree r h0)
+      s)
 
 /// This module provides a library of operations on trees.
 /// The definition of the `linked_tree` predicate is hidden behind the `Selectors.Tree.Core` interface.
@@ -48,15 +94,6 @@ val member (#a: eqtype) (ptr: t a) (v: a)
     (ensures fun h0 b h1 ->
         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
         (Spec.mem (v_linked_tree ptr h0) v <==> b))
-
-/// Returns the size of the tree that [ptr] points to, in O(1)
-val sot_wds (#a: Type) (ptr: t a)
-    : Steel (U.t) (linked_tree ptr) (fun _ -> linked_tree ptr)
-    (requires fun _ -> True)
-    (ensures (fun h0 s h1 ->
-        v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-        U.v s == Spec.sot_wds (v_linked_tree ptr h0) /\
-        U.v s == Spec.size_of_tree (v_linked_tree ptr h0)))
 
 (*** Rotation functions used internally to balance AVL trees ***)
 

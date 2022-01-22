@@ -651,11 +651,3 @@ let unpack_tree (#a: Type0) (ptr: t a)
   tree_view_aux_same_size (v_node (get_right n) h2);
   return n
 
-let create_leaf (#a: Type0) (_: unit) : Steel (t a)
-  emp (fun ptr -> linked_tree ptr)
-  (requires fun _ -> True)
-  (ensures fun _ ptr h1 -> Trees.Leaf? (v_linked_tree ptr h1))
-  = intro_linked_tree_leaf ();
-    // TODO: it should be possible to remove next line
-    let h = get () in
-    return null_t
