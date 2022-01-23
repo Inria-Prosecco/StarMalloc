@@ -201,7 +201,7 @@ let elim_linked_tree_leaf #opened #a ptr =
     (fun x y -> x == y /\ y == Spec.Leaf)
     (fun m -> elim_leaf_lemma ptr m)
 
-let lemma_node_not_null (#a:Type) (ptr:t a) (t:wds a) (m:mem) : Lemma
+let lemma_node_is_not_null (#a:Type) (ptr:t a) (t:wds a) (m:mem) : Lemma
     (requires interp (tree_sl ptr) m /\ tree_sel ptr m == t /\ Spec.Node? t)
     (ensures ptr =!= null_t)
     =
@@ -210,14 +210,37 @@ let lemma_node_not_null (#a:Type) (ptr:t a) (t:wds a) (m:mem) : Lemma
       tree_sel_interp ptr t' m;
        //match reveal (t' <: Spec.tree (node a)) with
        match reveal t' with
-      | Spec.Node data left right _ ->
+      | Spec.Node data left right size ->
            Spec.check (reveal t');
+//           let p1 = pts_to_sl ptr full_perm data in
+//           let p2 = tree_sl' (get_left data) left in
+//           let p3 = tree_sl' (get_right data) right in
+//           let p4 = pts_to_sl (get_size data) full_perm (U.uint_to_t size) in
+//           Mem.affine_star (p1 `Mem.star` p2 `Mem.star` p3) p4 m;
+//           Mem.affine_star (p1 `Mem.star` p2) p3 m;
+//           Mem.affine_star p1 p2 m;
            pts_to_not_null ptr full_perm data m
+
+let lemma_not_null_is_node (#a:Type) (ptr:t a) (t:wds a) (m:mem) : Lemma
+  (requires interp (tree_sl ptr) m /\ tree_sel ptr m == t /\ ptr =!= null_t)
+  (ensures Spec.Node? t)
+  =
+  let t': wds (node a) = id_elim_exists (tree_sl' ptr) m in
+  assert (interp (tree_sl' ptr t') m);
+  tree_sel_interp ptr t' m;
+  match reveal t' with
+  | Spec.Leaf -> Mem.pure_interp (ptr == null_t) m
+  | Spec.Node _ _ _ _ -> ()
 
 let node_is_not_null #opened #a ptr =
   let h = get () in
   let t = hide (v_linked_tree ptr h) in
-  extract_info (linked_tree ptr) t (ptr =!= null_t) (lemma_node_not_null ptr t)
+  extract_info (linked_tree ptr) t (ptr =!= null_t) (lemma_node_is_not_null ptr t)
+
+let not_null_is_node #opened #a ptr =
+  let h = get () in
+  let t = hide (v_linked_tree ptr h) in
+  extract_info (linked_tree ptr) t (Spec.Node? t == true) (lemma_not_null_is_node ptr t)
 
 let pack_tree_lemma_aux (#a:Type0) (pt:t a)
   (x: node a) (l r: wds (node a)) (s:nat) (m:mem) : Lemma

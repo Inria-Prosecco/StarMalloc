@@ -277,7 +277,7 @@ let rec height (#a: Type0) (ptr: t a)
     return zero
   ) else (
     let h = get () in
-    assume (Spec.Node? (v_linked_tree ptr h));
+    (**) not_null_is_node ptr;
     let s = hide (Spec.csize (v_linked_tree ptr h)) in
     (**) let node = unpack_tree ptr in
     assert (reveal s < c);
