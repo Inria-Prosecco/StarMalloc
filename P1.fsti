@@ -106,7 +106,7 @@ type cmp (a: Type) = compare: (a -> a -> I.t){
   squash (forall x y. I.gt (compare x y) I.zero
                  <==> I.lt (compare y x) I.zero) /\
   squash (forall x  y z. I.gte (compare x y) I.zero /\
-                         I.gte (compare y z) I.zero /\
+                         I.gte (compare y z) I.zero ==>
                          I.gte (compare x z) I.zero)
 }
 

@@ -132,7 +132,7 @@ let compare_is_cmp () : Lemma
   (forall x y. I64.gt (compare x y) I64.zero
                  <==> I64.lt (compare y x) I64.zero) /\
   (forall x  y z. I64.gte (compare x y) I64.zero /\
-                         I64.gte (compare y z) I64.zero /\
+                         I64.gte (compare y z) I64.zero ==>
                          I64.gte (compare x z) I64.zero)
 ) = admit ()
 
@@ -144,10 +144,14 @@ let main3 ()
   (ensures fun _ _ _-> True)
   =
   let ptr = create_leaf () in
-  let ptr = append_right ptr 3ul in
   let ptr = append_left ptr 0ul in
-  compare_is_cmp ();
+  let ptr = append_right ptr 3ul in
+  let h = get () in
+  //compare_is_cmp ();
+  assert (Trees.is_bst (P1.convert compare) (NTreeC3.v_linked_tree ptr h));
   let ptr = insert_bst compare ptr 2ul in
+  let h = get () in
+  assert (Trees.is_bst (P1.convert compare) (NTreeC3.v_linked_tree ptr h));
   let h = sot_wds ptr in
   let b = member ptr 2ul in
   let vr = if b then 42UL else 11UL in
