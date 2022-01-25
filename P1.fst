@@ -10,6 +10,7 @@ open Steel.Reference
 
 module Spec = Trees
 module U = FStar.UInt64
+module I = FStar.Int64
 
 open NTreeC3
 
@@ -316,6 +317,46 @@ let rec member (#a: eqtype) (ptr: t a) (v: a)
       let mright = member (get_right node) v in
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
       return (mleft || mright)
+    )
+  )
+
+let rec insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
+  : Steel (t a)
+  (linked_tree ptr)
+  (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
+  (ensures fun h0 ptr' h1 ->
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+    Spec.insert_bst (convert cmp) (v_linked_tree ptr h0) v
+    == v_linked_tree ptr' h1
+  )
+  =
+  if is_null_t #a ptr then (
+    (**) elim_linked_tree_leaf ptr;
+    (**) let ptr' = create_tree v in
+    return ptr'
+  ) else (
+    (**) let node = unpack_tree ptr in
+    let data = get_data node in
+    let delta = cmp data v in
+    if I.gte delta szero then (
+      let new_left = insert_bst cmp (get_left node) v in
+      let old_size = read (get_size node) in
+      write (get_size node) (U.add old_size one);
+      let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
+      write ptr new_node;
+      (**) pack_tree ptr new_left (get_right node) (get_size node);
+      return ptr
+    ) else (
+      let new_right = insert_bst cmp (get_right node) v in
+      let old_size = read (get_size node) in
+      write (get_size node) (U.add old_size one);
+      let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
+      write ptr new_node;
+      (**) pack_tree ptr (get_left node) new_right (get_size node);
+      return ptr
     )
   )
 

@@ -268,7 +268,8 @@ let rec insert_bst_aux_size (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a)
     end
 
 let insert_bst (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a)
-  : wds a =
+  : t:wds a{size_of_tree t == size_of_tree x + 1}
+  =
   insert_bst_aux_size cmp x key; insert_bst_aux cmp x key
 
 let rec insert_bst_preserves_forall_keys

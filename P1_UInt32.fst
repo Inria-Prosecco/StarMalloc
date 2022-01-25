@@ -6,6 +6,7 @@ open Steel.Effect
 open Steel.Reference
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
+module I64 = FStar.Int64
 //open NTreeC3
 //open P1
 
@@ -42,6 +43,7 @@ let append_left = P1.append_left #U32.t
 let append_right = P1.append_right #U32.t
 let height = P1.height #U32.t
 let member = P1.member #U32.t
+let insert_bst = P1.insert_bst #U32.t
 let rotate_left = P1.rotate_left #U32.t
 let rotate_right = P1.rotate_right #U32.t
 let rotate_right_left = P1.rotate_right_left #U32.t
@@ -118,6 +120,22 @@ let main2 ()
   destruct ptr;
   h
 
+let compare (x y: U32.t) : I64.t
+  =
+  if U32.gt x y then 1L
+  else if U32.eq x y then 0L
+  else -1L
+
+let compare_is_cmp () : Lemma
+(
+  (forall x. I64.eq (compare x x) I64.zero) /\
+  (forall x y. I64.gt (compare x y) I64.zero
+                 <==> I64.lt (compare y x) I64.zero) /\
+  (forall x  y z. I64.gte (compare x y) I64.zero /\
+                         I64.gte (compare y z) I64.zero /\
+                         I64.gte (compare x z) I64.zero)
+) = admit ()
+
 let main3 ()
   : Steel U64.t
   (emp)
@@ -126,12 +144,12 @@ let main3 ()
   (ensures fun _ _ _-> True)
   =
   let ptr = create_leaf () in
-  let ptr = append_right ptr 0ul in
-  let ptr = append_right ptr 1ul in
-  let ptr = append_right ptr 2ul in
-  let ptr = append_left ptr 3ul in
-  let ptr = append_left ptr 4ul in
-  let ptr = append_left ptr 5ul in
+  let ptr = append_right ptr 3ul in
+  let ptr = append_left ptr 0ul in
+  compare_is_cmp ();
+  let ptr = insert_bst compare ptr 2ul in
   let h = sot_wds ptr in
+  let b = member ptr 2ul in
+  let vr = if b then 42UL else 11UL in
   destruct ptr;
-  h
+  vr
