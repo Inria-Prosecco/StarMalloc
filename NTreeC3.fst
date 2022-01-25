@@ -224,10 +224,30 @@ let lemma_not_null_is_node (#a:Type) (ptr:t a) (t:wds a) (m:mem) : Lemma
   tree_sel_interp ptr t' m;
   match reveal t' with
   | Spec.Leaf -> Mem.pure_interp (ptr == null_t) m
-  | Spec.Node _ _ _ _ -> ()
+  | _ -> ()
 
-let null_is_leaf #opened #a ptr = sladmit ()
-let leaf_is_null #opened #a ptr = sladmit ()
+let null_is_leaf #opened #a ptr =
+  change_slprop_rel (linked_tree ptr) (linked_tree ptr)
+    (fun x y -> x == y /\ y == Spec.Leaf)
+    (fun m -> elim_leaf_lemma ptr m)
+
+let lemma_leaf_is_null (#a:Type) (ptr:t a) (t:wds a) (m:mem) : Lemma
+  (requires interp (tree_sl ptr) m /\ tree_sel ptr m == t /\
+    Spec.Leaf? t)
+  (ensures ptr == null_t)
+  =
+  let t':wds (node a) = id_elim_exists (tree_sl' ptr) m in
+  assert (interp (tree_sl' ptr t') m);
+  tree_sel_interp ptr t' m;
+  match reveal t' with
+  | Spec.Leaf -> Mem.pure_interp (ptr == null_t) m
+  | _ -> ()
+
+let leaf_is_null #opened #a ptr =
+  let h = get () in
+  let t = hide (v_linked_tree ptr h) in
+  extract_info (linked_tree ptr) t (ptr == null_t)
+    (lemma_leaf_is_null ptr t)
 
 let node_is_not_null #opened #a ptr =
   let h = get () in
