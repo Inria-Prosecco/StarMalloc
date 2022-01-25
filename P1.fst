@@ -57,7 +57,7 @@ let sot_wds (#a: Type) (ptr: t a)
   =
   if is_null_t ptr then (
     assert (is_null_t ptr);
-    elim_linked_tree_leaf ptr;
+    null_is_leaf ptr;
     let h = get () in
     assert (0 == Spec.sot_wds (v_linked_tree ptr h));
     return zero
@@ -128,12 +128,16 @@ let rec append_left #a (ptr: t a) (v: a)
   let h = get () in
   assert (Spec.size_of_tree (v_linked_tree ptr h) < c - 1);
   if is_null_t ptr then (
-    (**) elim_linked_tree_leaf ptr;
+    // TODO: use create_leaf?
+    //(**) elim_linked_tree_leaf ptr;
+    (**) null_is_leaf ptr;
+    (**) let second_leaf = create_leaf () in
     let sr = malloc one in
-    let node = mk_node v ptr null_t sr in
+    //let node = mk_node v ptr null_t sr in
+    let node = mk_node v ptr second_leaf sr in
     let new_tree = malloc node in
-    (**) intro_linked_tree_leaf ();
-    (**) pack_tree new_tree ptr null_t sr;
+    //(**) intro_linked_tree_leaf ();
+    (**) pack_tree new_tree ptr second_leaf sr;
     return new_tree
     // return new_tree
   ) else (
@@ -216,12 +220,14 @@ let rec append_right #a (ptr: t a) (v: a)
   let h = get () in
   assert (Spec.size_of_tree (v_linked_tree ptr h) < c - 1);
   if is_null_t ptr then (
-    (**) elim_linked_tree_leaf ptr;
+    //(**) elim_linked_tree_leaf ptr;
+    (**) null_is_leaf ptr;
+    (**) let second_leaf = create_leaf () in
     let sr = malloc one in
-    let node = mk_node v null_t ptr sr in
+    let node = mk_node v second_leaf ptr sr in
     let new_tree = malloc node in
-    (**) intro_linked_tree_leaf ();
-    (**) pack_tree new_tree null_t ptr sr;
+    //(**) intro_linked_tree_leaf ();
+    (**) pack_tree new_tree second_leaf ptr sr;
     return new_tree
   ) else (
     (**) let node = unpack_tree ptr in
@@ -273,7 +279,7 @@ let rec height (#a: Type0) (ptr: t a)
     Spec.height (v_linked_tree ptr h0) == U.v x)
   =
   if is_null_t ptr then (
-    (**) elim_linked_tree_leaf ptr;
+    (**) null_is_leaf ptr;
     return zero
   ) else (
     let h = get () in
@@ -298,7 +304,7 @@ let rec member (#a: eqtype) (ptr: t a) (v: a)
       (Spec.mem (v_linked_tree ptr h0) v <==> b))
   =
   if is_null_t #a ptr then (
-    (**) elim_linked_tree_leaf ptr;
+    (**) null_is_leaf ptr;
     return false
   ) else (
     (**) let node = unpack_tree ptr in
@@ -555,7 +561,7 @@ let rec is_balanced (#a: Type) (ptr: t a)
       Spec.is_balanced (v_linked_tree ptr h0) == b))
   =
   if is_null_t ptr then (
-    (**) elim_linked_tree_leaf ptr;
+    (**) null_is_leaf ptr;
     return true
   ) else (
     let h = get () in

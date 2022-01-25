@@ -96,23 +96,42 @@ val intro_linked_tree_leaf (#opened:inames) (#a: Type0) (_: unit)
 
 val elim_linked_tree_leaf (#opened:inames) (#a: Type0) (ptr: t a)
     : SteelGhost unit
+       opened (linked_tree ptr) (fun _ -> emp)
+       (requires (fun _ -> is_null_t ptr))
+       (ensures (fun h0 _ h1 ->
+         v_linked_tree ptr h0 == Spec.Leaf))
+
+val null_is_leaf (#opened:inames) (#a: Type0) (ptr: t a)
+    : SteelGhost unit
        opened (linked_tree ptr) (fun _ -> linked_tree ptr)
        (requires (fun _ -> is_null_t ptr))
        (ensures (fun h0 _ h1 ->
-         v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-         v_linked_tree ptr h1 == Spec.Leaf))
+         Spec.Leaf? (v_linked_tree ptr h0) /\
+         v_linked_tree ptr h0 == v_linked_tree ptr h1))
+
+val leaf_is_null (#opened:inames) (#a: Type0) (ptr: t a)
+    : SteelGhost unit
+       opened (linked_tree ptr) (fun _ -> linked_tree ptr)
+       (requires (fun h0 -> Spec.Leaf? (v_linked_tree ptr h0)))
+       (ensures (fun h0 _ h1 ->
+         is_null_t ptr /\
+         v_linked_tree ptr h0 == v_linked_tree ptr h1))
 
 val node_is_not_null (#opened:inames) (#a: Type0) (ptr: t a)
     : SteelGhost unit
        opened (linked_tree ptr) (fun _ -> linked_tree ptr)
        (requires (fun h0 -> Spec.Node? (v_linked_tree ptr h0)))
-       (ensures (fun h0 _ h1 -> not (is_null_t ptr) /\ v_linked_tree ptr h0 == v_linked_tree ptr h1))
+       (ensures (fun h0 _ h1 ->
+         not (is_null_t ptr) /\
+         v_linked_tree ptr h0 == v_linked_tree ptr h1))
 
 val not_null_is_node (#opened:inames) (#a: Type0) (ptr: t a)
     : SteelGhost unit
        opened (linked_tree ptr) (fun _ -> linked_tree ptr)
-       (requires (fun h0 -> not (is_null_t ptr)))
-       (ensures (fun h0 _ h1 -> Spec.Node? (v_linked_tree ptr h0) /\ v_linked_tree ptr h0 == v_linked_tree ptr h1))
+       (requires (fun _ -> not (is_null_t ptr)))
+       (ensures (fun h0 _ h1 ->
+         Spec.Node? (v_linked_tree ptr h0) /\
+         v_linked_tree ptr h0 == v_linked_tree ptr h1))
 
 val pack_tree (#opened:inames) (#a: Type0) (ptr: t a) (left right: t a) (sr: ref U.t)
     : SteelGhost unit
