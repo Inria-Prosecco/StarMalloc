@@ -74,11 +74,10 @@ let sot_wds (#a: Type) (ptr: t a)
       (U.v (sel (get_size node) h2))
     ) in
     assert (reveal ptr_t1 == reveal ptr_t2);
-    assert (fst (Spec.is_wds (reveal ptr_t1)));
-    let ptr_s1 = hide (Spec.csize ptr_t1) in
-    let ptr_s2 = hide (Spec.csize ptr_t2) in
+    assert (Spec.is_wds (reveal ptr_t1));
+    let ptr_s1 = hide (Spec.sot_wds ptr_t1) in
+    let ptr_s2 = hide (Spec.sot_wds ptr_t2) in
     assert (reveal ptr_s1 == reveal ptr_s2);
-    Spec.check (reveal ptr_t1);
     assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
     let s = read (get_size node) in
     assert (U.v s == Spec.sot_wds (v_linked_tree ptr h1));
@@ -153,12 +152,12 @@ let rec append_left #a (ptr: t a) (v: a)
       (v_linked_tree (get_right node) h2)
       (U.v (sel (get_size node) h2))) in
     assert (reveal ptr_t1 == reveal ptr_t2);
-    assert (fst (Spec.is_wds ptr_t1));
-    assert (fst (Spec.is_wds ptr_t2));
-    let ptr_s1 = hide (Spec.csize (reveal ptr_t1)) in
-    let ptr_s2 = hide (Spec.csize (reveal ptr_t2)) in
+    assert (Spec.is_wds ptr_t1);
+    assert (Spec.is_wds ptr_t2);
+    let ptr_s1 = hide (Spec.sot_wds (reveal ptr_t1)) in
+    let ptr_s2 = hide (Spec.sot_wds (reveal ptr_t2)) in
     assert (reveal ptr_s1 == reveal ptr_s2);
-    Spec.check (reveal ptr_t1);
+    //Spec.check (reveal ptr_t1);
     assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
 
     (**) let new_left = append_left (get_left node) v in
@@ -238,9 +237,9 @@ let rec append_right #a (ptr: t a) (v: a)
       (v_linked_tree (get_left node) h2)
       (v_linked_tree (get_right node) h2)
       (U.v (sel (get_size node) h2))) in
-    assert (fst (Spec.is_wds ptr_t2));
+    assert (Spec.is_wds ptr_t2);
     let ptr_s2 = hide (Spec.csize (reveal ptr_t2)) in
-    Spec.check (reveal ptr_t2);
+    //Spec.check (reveal ptr_t2);
     assert (reveal ptr_s2 == Spec.size_of_tree (reveal ptr_t2));
 
     (**) let new_right = append_right (get_right node) v in

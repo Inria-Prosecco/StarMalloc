@@ -60,51 +60,33 @@ let rec size_of_tree (#a: Type) (x: tree a) : Tot nat (decreases x) =
   | Node _ left right _ -> size_of_tree left + size_of_tree right + 1
 
 (* is with defined size *)
-let rec is_wds (#a: Type) (x: tree a) : Tot (bool & nat) (decreases x) =
+let rec is_wds (#a: Type) (x: tree a)
+  : Tot bool (decreases x) =
   match x with
-  | Leaf -> true, 0
+  | Leaf -> true
   | Node data left right size ->
-      let b1, s1 = is_wds left in
-      let b2, s2 = is_wds right in
+      let s1 = size_of_tree left in
+      let s2 = size_of_tree right in
+      let b1 = is_wds left in
+      let b2 = is_wds right in
       let s = s1 + s2 + 1 in
-      b1 && b2 && size = s, s
+      b1 && b2 && size = s
 
-let wds (a: Type) = x:tree a {fst (is_wds x)}
+let wds (a: Type) = x:tree a {is_wds x}
 
 let bst (a: Type) (cmp:cmp a) = x:wds a {is_bst cmp x}
-
-let rec equiv_sot_wds (#a: Type) (x: tree a) :
-  Lemma (let b, s = is_wds x in
-         not b \/ size_of_tree x = s) =
-  match x with
-  | Leaf -> ()
-  | Node _ l r s ->
-      equiv_sot_wds l;
-      equiv_sot_wds r
-
-let check #a (x: tree a) : Lemma
-//let check (#a: Type) (x: wds a) : Lemma
-  (requires fst (is_wds x) /\ Node? x)
-  //(requires Node? x)
-  (ensures (let s = csize x in s = size_of_tree x))
-  =
-  let s = csize x in
-  assert (fst (is_wds x));
-  equiv_sot_wds x
 
 let induction_wds (#a: Type) (x: a) (l r:wds a)
   : Lemma (let s = size_of_tree l + size_of_tree r + 1 in
            let t = Node x l r s in
-   fst (is_wds t))
+   is_wds t)
   =
-  assert (fst (is_wds l));
-  assert (fst (is_wds r));
+  assert (is_wds l);
+  assert (is_wds r);
   let s = size_of_tree l + size_of_tree r + 1 in
   let t = Node x l r s in
   assert (s == size_of_tree t);
-  equiv_sot_wds l;
-  equiv_sot_wds r;
-  assert (fst (is_wds t));
+  assert (is_wds t);
   ()
 (*** Operations *)
 
@@ -181,13 +163,13 @@ let rec append_left_aux_size (#a: Type) (t: wds a) (v: a)
 
 (* random *)
 let rec append_left_aux_size2 (#a: Type) (t: wds a) (v: a)
-  : Lemma (fst (is_wds (append_left_aux t v)))
+  : Lemma (is_wds (append_left_aux t v))
   = match t with
   | Leaf -> ()
   | Node x left right size ->
       let new_left = append_left_aux left v in
       append_left_aux_size2 left v;
-      assert (fst (is_wds (append_left_aux left v)));
+      assert (is_wds (append_left_aux left v));
       append_left_aux_size left v;
       assert (size_of_tree new_left == size_of_tree left + 1);
       aux_size_left_subtree left new_left
@@ -213,13 +195,13 @@ let rec append_right_aux_size (#a: Type) (t: wds a) (v: a)
 
 (* random *)
 let rec append_right_aux_size2 (#a: Type) (t: wds a) (v: a)
-  : Lemma (fst (is_wds (append_right_aux t v)))
+  : Lemma (is_wds (append_right_aux t v))
   = match t with
   | Leaf -> ()
   | Node x left right size ->
       let new_right = append_right_aux right v in
       append_right_aux_size2 right v;
-      assert (fst (is_wds (append_right_aux right v)));
+      assert (is_wds (append_right_aux right v));
       append_right_aux_size right v;
       assert (size_of_tree new_right == size_of_tree right + 1);
       aux_size_right_subtree right new_right
@@ -232,9 +214,9 @@ let append_right (#a: Type) (t: wds a) (v: a)
 
 (**** BST insertion *)
 
-let rec insert_bst_aux (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a)
+let rec insert_bst_aux (#a: Type) (cmp:cmp a) (t: bst a cmp) (key: a)
   : tree a =
-  match x with
+  match t with
   | Leaf -> Node key Leaf Leaf 1
   | Node data left right size ->
     let delta = cmp data key in
@@ -246,24 +228,24 @@ let rec insert_bst_aux (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a)
       Node data left new_right (size + 1)
     end
 
-let rec insert_bst_aux_size (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a)
+let rec insert_bst_aux_size (#a: Type) (cmp:cmp a) (t: bst a cmp) (new_data: a)
   : Lemma (
-    size_of_tree (insert_bst_aux cmp x key) == size_of_tree x + 1 /\
-    fst (is_wds (insert_bst_aux cmp x key))
-  )
-  = match x with
+    let new_t = insert_bst_aux cmp t new_data in
+    size_of_tree new_t == size_of_tree t + 1 /\
+    is_wds new_t)
+  = match t with
   | Leaf -> ()
   | Node data left right size ->
-    let delta = cmp data key in
+    let delta = cmp data new_data in
     if delta >= 0 then begin
-      let new_left = insert_bst_aux cmp left key in
-      insert_bst_aux_size cmp left key;
+      let new_left = insert_bst_aux cmp left new_data in
+      insert_bst_aux_size cmp left new_data;
       aux_size_left_subtree left new_left;
       induction_wds data new_left right
     end else begin
-      let new_right = insert_bst_aux cmp right key in
-      insert_bst_aux_size cmp right key;
-      aux_size_right_subtree right (insert_bst_aux cmp right key);
+      let new_right = insert_bst_aux cmp right new_data in
+      insert_bst_aux_size cmp right new_data;
+      aux_size_right_subtree right new_right;
       induction_wds data left new_right
     end
 
@@ -271,6 +253,12 @@ let insert_bst (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a)
   : t:wds a{size_of_tree t == size_of_tree x + 1}
   =
   insert_bst_aux_size cmp x key; insert_bst_aux cmp x key
+
+let sot_wds (#a: Type) (t: wds a)
+  : s:nat{size_of_tree t == s} =
+  match t with
+  | Leaf -> 0
+  | Node _ _ _ s -> s
 
 let rec insert_bst_preserves_forall_keys
   (#a: Type)
@@ -328,17 +316,6 @@ let avl (a: Type) (cmp:cmp a) = x: wds a {is_avl cmp x}
 let get (#a: Type) (v: option a{Some? v}) : a =
   let Some v' = v in v'
 
-let sot_wds (#a: Type) (r: wds a) : nat =
-  match r with
-  | Leaf -> 0
-  | Node _ _ _ s -> s
-
-let equiv_sot_sotwds (#a: Type) (t: wds a)
-  : Lemma (sot_wds t == size_of_tree t)
-  = match t with
-  | Leaf -> ()
-  | Node _ _ _ s -> check t
-
 (*
    x            z
 t1   z   =>   x   t3
@@ -356,7 +333,7 @@ let rotate_left_wds (#a: Type) (r: wds a) : option (wds a) =
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       let t12 = Node x t1 t2 s12 in
       induction_wds x t1 t2;
-      assert (fst (is_wds t12));
+      assert (is_wds t12);
       let s123 = s12 + sot_wds t3 + 1 in
       assert (s123 == s);
       Some (Node z t12 t3 s)
@@ -380,7 +357,7 @@ let rotate_right_wds (#a: Type) (r: wds a) : option (wds a) =
       let s23 = sot_wds t2 + sot_wds t3 + 1 in
       let t23 = Node x t2 t3 s23 in
       induction_wds x t2 t3;
-      assert (fst (is_wds t23));
+      assert (is_wds t23);
       let s123 = sot_wds t1 + s23 + 1 in
       assert (s123 == s);
       Some (Node z t1 t23 s)
@@ -405,11 +382,11 @@ let rotate_right_left_wds (#a: Type) (r: wds a) : option (wds a) =
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       let t12 = Node x t1 t2 s12 in
       induction_wds x t1 t2;
-      assert (fst (is_wds t12));
+      assert (is_wds t12);
       let s34 = sot_wds t3 + sot_wds t4 + 1 in
       let t34 = Node z t3 t4 s34 in
       induction_wds z t3 t4;
-      assert (fst (is_wds t34));
+      assert (is_wds t34);
       let s1234 = s12 + s34 + 1 in
       assert (s1234 == s);
       Some (Node y t12 t34 s)
@@ -434,11 +411,11 @@ let rotate_left_right_wds (#a: Type) (r: wds a) : option (wds a) =
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       let t12 = Node z t1 t2 s12 in
       induction_wds z t1 t2;
-      assert (fst (is_wds t12));
+      assert (is_wds t12);
       let s34 = sot_wds t3 + sot_wds t4 + 1 in
       let t34 = Node x t3 t4 s34 in
       induction_wds x t3 t4;
-      assert (fst (is_wds t34));
+      assert (is_wds t34);
       let s1234 = s12 + s34 + 1 in
       assert (s1234 == s);
       Some (Node y t12 t34 s)
@@ -738,8 +715,7 @@ let rebalance_avl_wds_size (#a: Type) (t: wds a)
   : Lemma (size_of_tree (rebalance_avl_wds t) == size_of_tree t)
   = ()
 
-#push-options "--fuel 2 --ifuel 2 --z3rlimit 20"
-
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 50"
 let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wds a)
   (root: a)
   : Lemma
@@ -805,8 +781,8 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wds a)
       assert (is_avl cmp t')
     )
 )
-
 #pop-options
+
 (** Insertion **)
 
 let rec insert_avl (#a: Type) (cmp:cmp a) (x: avl a cmp) (key: a)
@@ -820,7 +796,7 @@ let rec insert_avl (#a: Type) (cmp:cmp a) (x: avl a cmp) (key: a)
       let new_left = insert_avl cmp left key in
       let tmp = Node data new_left right (size + 1) in
       //aux_size_left_subtree left new_left;
-      check x;
+      assert (is_wds x);
       induction_wds data new_left right;
       let t = rebalance_avl_wds tmp in
       rebalance_avl_wds_size tmp;
@@ -829,7 +805,7 @@ let rec insert_avl (#a: Type) (cmp:cmp a) (x: avl a cmp) (key: a)
       let new_right = insert_avl cmp right key in
       let tmp = Node data left new_right (size + 1) in
       //aux_size_right_subtree right new_right;
-      check x;
+      assert (is_wds x);
       induction_wds data left new_right;
       let t = rebalance_avl_wds tmp in
       rebalance_avl_wds_size tmp;

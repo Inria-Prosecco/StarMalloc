@@ -46,7 +46,6 @@ let rec tree_sl' (#a: Type0) (ptr: t a) (tree: wds (node a))
   match tree with
   | Spec.Leaf -> Mem.pure (ptr == null_t)
   | Spec.Node data left right size ->
-    Spec.check tree;
     pts_to_sl ptr full_perm data `Mem.star`
     tree_sl' (get_left data) left `Mem.star`
     tree_sl' (get_right data) right `Mem.star`
@@ -73,7 +72,7 @@ let rec tree_view_aux_same_size (#a: Type0) (tree: wds (node a))
       ()
 
 let rec tree_view_aux_same_size2 (#a: Type0) (tree: wds (node a))
-  : Lemma (fst (Spec.is_wds (tree_view_aux tree)))
+  : Lemma (Spec.is_wds (tree_view_aux tree))
   =
   match tree with
   | Spec.Leaf -> ()
@@ -102,7 +101,6 @@ let tree_sl'_witinv (#a: Type0) (ptr: t a) : Lemma(is_witness_invariant (tree_sl
          | Spec.Leaf -> ()
          | Spec.Node data left right size ->
            Mem.pure_interp (ptr == null_t) m;
-           Spec.check y;
            let p1 = pts_to_sl ptr full_perm data in
            let p2 = tree_sl' (get_left data) left in
            let p3 = tree_sl' (get_right data) right in
@@ -115,7 +113,6 @@ let tree_sl'_witinv (#a: Type0) (ptr: t a) : Lemma(is_witness_invariant (tree_sl
       | Spec.Node data1 left1 right1 size1 -> begin match y with
         | Spec.Leaf ->
            Mem.pure_interp (ptr == null_t) m;
-           Spec.check x;
            let p1 = pts_to_sl ptr full_perm data1 in
            let p2 = tree_sl' (get_left data1) left1 in
            let p3 = tree_sl' (get_right data1) right1 in
@@ -126,14 +123,10 @@ let tree_sl'_witinv (#a: Type0) (ptr: t a) : Lemma(is_witness_invariant (tree_sl
            pts_to_not_null ptr full_perm data1 m
         | Spec.Node data2 left2 right2 size2 ->
            pts_to_witinv ptr full_perm;
-           Spec.check x;
-           Spec.check y;
            aux (get_left data1) left1 left2 m;
            aux (get_right data1) right1 right2 m;
            assert (left1 == left2);
            assert (right1 == right2);
-           Spec.equiv_sot_wds x;
-           Spec.equiv_sot_wds y;
            assert (size1 == Spec.size_of_tree x);
            assert (size2 == Spec.size_of_tree y);
            assert (size1 == size2);
@@ -212,7 +205,6 @@ let lemma_node_is_not_null (#a:Type) (ptr:t a) (t:wds a) (m:mem) : Lemma
       tree_sel_interp ptr t' m;
       match reveal t' with
       | Spec.Node data left right size ->
-           Spec.check (reveal t');
            pts_to_not_null ptr full_perm data m
 
 let lemma_not_null_is_node (#a:Type) (ptr:t a) (t:wds a) (m:mem) : Lemma
@@ -282,10 +274,10 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
     //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
     let t = Spec.Node x l r s in
     assert (s = Spec.size_of_tree t);
-    assert (fst (Spec.is_wds l));
-    assert (fst (Spec.is_wds r));
+    assert (Spec.is_wds l);
+    assert (Spec.is_wds r);
     Spec.induction_wds x l r;
-    assert (fst (Spec.is_wds t));
+    assert (Spec.is_wds t);
     let t: wds (node a) = t in
     affine_star (pts_to_sl pt full_perm x `Mem.star` tree_sl' (get_left x) l)
                 (tree_sl' (get_right x) r)
@@ -325,10 +317,10 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
     (
     //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
     let t = Spec.Node (get_data x) l r s in
-    assert (fst (Spec.is_wds l));
-    assert (fst (Spec.is_wds r));
+    assert (Spec.is_wds l);
+    assert (Spec.is_wds r);
     Spec.induction_wds (get_data x) l r;
-    assert (fst (Spec.is_wds t));
+    assert (Spec.is_wds t);
     //fst (Spec.is_wds t) /\
     interp (tree_sl pt) m /\
     tree_sel pt m == Spec.Node (get_data x) l r s)
@@ -337,7 +329,7 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
     //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
     let t = Spec.Node (get_data x) l r s in
     Spec.induction_wds (get_data x) l r;
-    assert (fst (Spec.is_wds t));
+    assert (Spec.is_wds t);
 
     //let l':Spec.wds a = id_elim_exists (tree_sl' left) m in
     //let r':Spec.wds a = id_elim_exists (tree_sl' right) m in
@@ -472,12 +464,6 @@ let gsize (#a:Type0) (t:erased (wds (node a)))
   : Pure (erased nat) (requires Spec.Node? (reveal t)) (ensures fun _ -> True) =
   let Spec.Node _ _ _ s = reveal t in hide s
 
-(* PLUS BESOIN : voir tree_view, à mon sens tout doit reposer dessus *)
-(*let check2 #a (t: Spec.wds (node a)) : Lemma
-  (requires Spec.Node? t)
-  (ensures (let Spec.Node x _ _ s = t in s = get_size x))
-*)
-
 let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:wds (node a)) (m:mem) : Lemma
   (requires
     Spec.Node? t /\
@@ -495,22 +481,19 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:wds (node a)) (m:mem) : Lemma
     tree_sel_node (get_left x) m == l /\
     tree_sel_node (get_right x) m == r /\
     U.v (sel_of (vptr (get_size x)) m) == s /\
-    fst (Spec.is_wds l) /\
-    fst (Spec.is_wds r) /\
+    Spec.is_wds l /\
+    Spec.is_wds r /\
     s == Spec.size_of_tree t /\
     s < c
     )
   )
   =
     let Spec.Node x l r s = t in
-    Spec.check t;
     assert (s < c);
-    assert (fst (Spec.is_wds l));
-    assert (fst (Spec.is_wds r));
-    assert (fst (Spec.is_wds t));
-    Spec.check t;
+    assert (Spec.is_wds l);
+    assert (Spec.is_wds r);
+    assert (Spec.is_wds t);
     assert (s == Spec.size_of_tree t);
-    //check2 t;
     tree_sel_interp pt t m;
 
     let sl = pts_to_sl pt full_perm x `Mem.star`
