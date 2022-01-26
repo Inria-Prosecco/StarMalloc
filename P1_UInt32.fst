@@ -78,8 +78,8 @@ let rotate_right = P1.rotate_right #a
 let rotate_right_left = P1.rotate_right_left #a
 let rotate_left_right = P1.rotate_left_right #a
 let is_balanced = P1.is_balanced #a
-(*
 let rebalance_avl = P1.rebalance_avl #U32.t
+(*
 let insert_avl = P1.insert_avl #U32.t
 *)
 

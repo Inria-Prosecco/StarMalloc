@@ -704,7 +704,6 @@ let rec is_balanced (#a: Type) (ptr: t a)
     return v
   )
 
-(*)
 #push-options "--ifuel 2"
 let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
@@ -723,11 +722,12 @@ let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
 
     (**) node_is_not_null ptr;
     (**) let node = unpack_tree ptr in
+    Spec.height_lte_size (v_linked_tree ptr h0);
 
     let lh = height (get_left node) in
     let rh = height (get_right node) in
 
-    if (lh - rh) > 1 then (
+    if U.gt lh (U.add rh one) then (
 
       (**) node_is_not_null (get_left node);
       (**) let l_node = unpack_tree (get_left node) in
@@ -738,7 +738,7 @@ let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
       (**) pack_tree (get_left node) (get_left l_node) (get_right l_node) (get_size l_node);
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
 
-      if lrh > llh then (
+      if U.gt lrh llh then (
         rotate_left_right ptr
 
       ) else (
@@ -746,7 +746,7 @@ let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
       )
 
     ) else //(
-    if (lh - rh) < - 1 then (
+    if U.gt rh (U.add lh one) then (
 
         (**) node_is_not_null (get_right node);
         (**) let r_node = unpack_tree (get_right node) in
@@ -757,7 +757,7 @@ let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
         (**) pack_tree (get_right node) (get_left r_node) (get_right r_node) (get_size r_node);
         (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
 
-        if rlh > rrh then (
+        if U.gt rlh rrh then (
           rotate_right_left ptr
         ) else (
           rotate_left ptr
@@ -771,6 +771,7 @@ let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
   //)
 #pop-options
 
+(*)
 let rec insert_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a) (v: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 -> Spec.is_avl cmp (v_linked_tree ptr h0))
