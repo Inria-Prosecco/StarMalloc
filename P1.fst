@@ -359,6 +359,87 @@ let rec insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
     )
   )
 
+let uincr (b: bool) (ptr: ref U.t)
+  : Steel unit
+  (vptr ptr)
+  (fun _ -> vptr ptr)
+  // TODO: bug with U.n_minus_one, type U32.t instead of U64.t
+  (requires fun h0 -> U.lt (sel ptr h0) (U.uint_to_t c))
+  (ensures fun h0 _ h1 ->
+    U.lt (sel ptr h0) (U.uint_to_t c) /\
+    (b ==> sel ptr h1 = U.add (sel ptr h0) one))
+  =
+  if b then (
+    let old_value = read ptr in
+    let new_value = U.add old_value one in
+    write ptr new_value;
+    return ()
+  ) else ( return () )
+
+#push-options "--ifuel 1 --fuel 1"
+let rec insert_bst2 (#a: eqtype)
+  (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
+  : Steel (t a)
+  (linked_tree ptr)
+  (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
+  (ensures fun h0 ptr' h1 ->
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+    Spec.insert_bst2 r (convert cmp) (v_linked_tree ptr h0) new_data
+    = v_linked_tree ptr' h1
+  )
+  =
+  if is_null_t #a ptr then (
+    (**) elim_linked_tree_leaf ptr;
+    (**) let ptr' = create_tree new_data in
+    return ptr'
+  ) else (
+    (**) let node = unpack_tree ptr in
+    let data = get_data node in
+    let delta = cmp data new_data in
+    if I.eq delta szero then (
+      if r then (
+        let new_node = mk_node new_data
+          (get_left node) (get_right node) (get_size node) in
+        write ptr new_node;
+        pack_tree ptr
+          (get_left node) (get_right node) (get_size node);
+        return ptr
+      ) else (
+        pack_tree ptr
+          (get_left node) (get_right node) (get_size node);
+        return ptr
+      )
+    ) else (
+      if I.gt delta szero then (
+        let old_left_s = sot_wds (get_left node) in
+        let new_left = insert_bst2 r cmp (get_left node) new_data in
+        let new_left_s = sot_wds new_left in
+        //assert (U.lte old_left_s new_left_s);
+        let diff = U.sub new_left_s old_left_s in
+        let old_size = read (get_size node) in
+        write (get_size node) (U.add old_size diff);
+        let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
+        write ptr new_node;
+        (**) pack_tree ptr new_left (get_right node) (get_size node);
+        return ptr
+      ) else (
+        let old_right_s = sot_wds (get_right node) in
+        let new_right = insert_bst2 r cmp (get_right node) new_data in
+        let new_right_s = sot_wds new_right in
+        //assert (U.lte old_left_s new_left_s);
+        let diff = U.sub new_right_s old_right_s in
+        let old_size = read (get_size node) in
+        write (get_size node) (U.add old_size diff);
+        let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
+        write ptr new_node;
+        (**) pack_tree ptr (get_left node) new_right (get_size node);
+        return ptr
+      )
+    )
+  )
 
 // TODO : please prettify output after squash equiv...
 //#push-options "--ifuel 1 --fuel 2 --z3rlimit 200"
