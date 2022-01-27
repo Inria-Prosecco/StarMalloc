@@ -196,3 +196,14 @@ val insert_avl (#a: Type) (cmp:cmp a) (ptr: t a) (new_data: a)
         Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
         Spec.insert_avl (convert cmp) (v_linked_tree ptr h0) new_data
         == v_linked_tree ptr' h1)
+
+val insert_avl2 (#a: eqtype)
+  (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)
+  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
+  (ensures fun h0 ptr' h1 ->
+     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+     Spec.insert_avl2 r (convert cmp) (v_linked_tree ptr h0) new_data
+     = v_linked_tree ptr' h1)

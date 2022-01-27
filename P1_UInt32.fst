@@ -80,6 +80,7 @@ let rotate_left_right = P1.rotate_left_right #a
 let is_balanced = P1.is_balanced #a
 let rebalance_avl = P1.rebalance_avl #a
 let insert_avl = P1.insert_avl #a
+let insert_avl2 = P1.insert_avl2 #a
 
 (*
 let one ()
@@ -193,8 +194,8 @@ let main4()
   // toggling this flag allow one to check
   // whether the r arg of insert_bst2 is taken into account
   let f = true in
-  let ptr = insert_bst2 f compare ptr valn1 in
-  let ptr = insert_bst2 f compare ptr valn2 in
+  let ptr = insert_avl2 f compare ptr valn1 in
+  let ptr = insert_avl2 f compare ptr valn2 in
   assert (I64.eq (compare valn1 valn2) I64.zero);
   let b = member ptr valn2 in
   let vr = if b then val42 else val0 in
