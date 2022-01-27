@@ -440,6 +440,7 @@ let rec insert_bst2 (#a: eqtype)
       )
     )
   )
+#pop-options
 
 // TODO : please prettify output after squash equiv...
 //#push-options "--ifuel 1 --fuel 2 --z3rlimit 200"
@@ -705,7 +706,7 @@ let rec is_balanced (#a: Type) (ptr: t a)
   )
 
 #push-options "--ifuel 2"
-let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
+let rebalance_avl (#a: Type) (ptr: t a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 -> True)
   (ensures fun h0 ptr' h1 ->
@@ -771,42 +772,45 @@ let rebalance_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a)
   //)
 #pop-options
 
-(*)
-let rec insert_avl (#a: Type) (cmp:Spec.cmp a) (ptr: t a) (v: a)
+let rec insert_avl (#a: Type)
+  (cmp:cmp a) (ptr: t a) (new_data: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-  (requires fun h0 -> Spec.is_avl cmp (v_linked_tree ptr h0))
+  (requires fun h0 ->
+    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 -> //True
      //TODO: remove redundancy
-     Spec.is_avl cmp (v_linked_tree ptr h0) /\
-     Spec.insert_avl cmp (v_linked_tree ptr h0) v == v_linked_tree ptr' h1)
+     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+     Spec.insert_avl (convert cmp) (v_linked_tree ptr h0) new_data
+     == v_linked_tree ptr' h1)
   =
   if is_null_t ptr then (
-    (**) elim_linked_tree_leaf ptr;
-    let sr = malloc 1 in
-    let node = mk_node v ptr null_t sr in
+    (**) null_is_leaf ptr;
+    (**) let second_leaf = create_leaf () in
+    let sr = malloc one in
+    let node = mk_node new_data ptr second_leaf sr in
     let new_tree = malloc node in
-    (**) intro_linked_tree_leaf ();
-    (**) pack_tree new_tree ptr null_t sr;
+    (**) pack_tree new_tree ptr second_leaf sr;
     return new_tree
   ) else (
     (**) let node = unpack_tree ptr in
-    if cmp (get_data node) v >= 0 then (
-      let new_left = insert_avl cmp (get_left node) v in
+    let delta = cmp (get_data node) new_data in
+    if I.gte delta szero then (
+      let new_left = insert_avl cmp (get_left node) new_data in
       let old_size = read (get_size node) in
-      write (get_size node) (old_size + 1);
+      write (get_size node) (U.add old_size one);
       let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
       write ptr new_node;
       (**) pack_tree ptr new_left (get_right node) (get_size node);
-      rebalance_avl cmp ptr
+      rebalance_avl ptr
     )
     else (
-      let new_right = insert_avl cmp (get_right node) v in
+      let new_right = insert_avl cmp (get_right node) new_data in
       let old_size = read (get_size node) in
-      write (get_size node) (old_size + 1);
+      write (get_size node) (U.add old_size one);
       let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
       write ptr new_node;
       (**) pack_tree ptr (get_left node) new_right (get_size node);
-      rebalance_avl cmp ptr
+      rebalance_avl ptr
     )
   )
-#pop-options

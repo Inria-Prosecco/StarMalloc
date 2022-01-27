@@ -78,10 +78,8 @@ let rotate_right = P1.rotate_right #a
 let rotate_right_left = P1.rotate_right_left #a
 let rotate_left_right = P1.rotate_left_right #a
 let is_balanced = P1.is_balanced #a
-let rebalance_avl = P1.rebalance_avl #U32.t
-(*
-let insert_avl = P1.insert_avl #U32.t
-*)
+let rebalance_avl = P1.rebalance_avl #a
+let insert_avl = P1.insert_avl #a
 
 (*
 let one ()
@@ -160,6 +158,7 @@ let compare_is_cmp () : Lemma
                          I64.gte (compare x z) I64.zero)
 ) = admit ()
 
+#set-options "--z3rlimit 50"
 let main3 ()
   : Steel U32.t
   emp (fun r_n -> emp)
@@ -169,6 +168,7 @@ let main3 ()
   let ptr = create_leaf () in
   let ptr = append_left ptr val0 in
   let ptr = append_right ptr val1 in
+  let ptr = insert_avl compare ptr val3 in
   //let h = get () in
   //compare_is_cmp ();
   //assert (Trees.is_bst (P1.convert compare) (NTreeC3.v_linked_tree ptr h));
@@ -176,7 +176,7 @@ let main3 ()
   //let h = get () in
   //assert (Trees.is_bst (P1.convert compare) (NTreeC3.v_linked_tree ptr h));
   let h = sot_wds ptr in
-  let b = member ptr val2 in
+  let b = member ptr val3 in
   let vr = if b then val42 else val0 in
   destruct ptr;
   return (fst vr)
