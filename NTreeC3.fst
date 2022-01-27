@@ -268,7 +268,7 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
      //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
      let t = Spec.Node x l r s in
      Spec.induction_wds x l r;
-     // let t: Spec.wds (node a) = t in
+     // let t: wds (node a) = t in
      interp (tree_sl' pt t) m))
   =
     //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
@@ -297,7 +297,7 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
 
 // Maintenant, tenter en ajoutant s (et sr) en paramètre(s)
 let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
-  (x: node a) (l r:Spec.wds a) (s:nat) (m:mem) : Lemma
+  (x: node a) (l r:wds a) (s:nat) (m:mem) : Lemma
   (requires
     s < c /\
     interp (ptr pt `Mem.star`
@@ -331,8 +331,8 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
     Spec.induction_wds (get_data x) l r;
     assert (Spec.is_wds t);
 
-    //let l':Spec.wds a = id_elim_exists (tree_sl' left) m in
-    //let r':Spec.wds a = id_elim_exists (tree_sl' right) m in
+    //let l':wds a = id_elim_exists (tree_sl' left) m in
+    //let r':wds a = id_elim_exists (tree_sl' right) m in
     let l':wds (node a) = id_elim_exists (tree_sl' left) m in
     let r':wds (node a) = id_elim_exists (tree_sl' right) m in
     let p1 = ptr pt in
@@ -388,8 +388,8 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
 let pack_tree #opened #a ptr left right sr =
   let h = get () in
   let x = hide (sel ptr h) in
-  let l:Spec.wds a = hide (v_linked_tree left h) in
-  let r:Spec.wds a = hide (v_linked_tree right h) in
+  let l:wds a = hide (v_linked_tree left h) in
+  let r:wds a = hide (v_linked_tree right h) in
   let s:U.t = hide (sel sr h) in
   //let s1 = Spec.size_of_tree (reveal l) in
   //let s2 = Spec.size_of_tree (reveal r) in
@@ -398,7 +398,7 @@ let pack_tree #opened #a ptr left right sr =
 // TODO : pourquoi inutile finalement ?
   //reveal_star_3 (vptr ptr) (linked_tree left) (linked_tree right);
   Spec.induction_wds (get_data x) l r;
-  //let t:Spec.wds a = Spec.Node (get_data x) l r s in
+  //let t:wds a = Spec.Node (get_data x) l r s in
   let t = Spec.Node (get_data x) l r (U.v s) in
 
   change_slprop
@@ -453,11 +453,11 @@ let head (#a:Type0) (t:erased (wds (node a)))
   let Spec.Node n _ _ _ = reveal t in hide n
 
 let gleft (#a:Type0) (t:erased (wds (node a)))
-  : Pure (erased (Spec.wds (node a))) (requires Spec.Node? (reveal t)) (ensures fun _ -> True) =
+  : Pure (erased (wds (node a))) (requires Spec.Node? (reveal t)) (ensures fun _ -> True) =
   let Spec.Node _ l _ _ = reveal t in hide l
 
 let gright (#a:Type0) (t:erased (wds (node a)))
-  : Pure (erased (Spec.wds (node a))) (requires Spec.Node? (reveal t)) (ensures fun _ -> True) =
+  : Pure (erased (wds (node a))) (requires Spec.Node? (reveal t)) (ensures fun _ -> True) =
   let Spec.Node _ _ r _ = reveal t in hide r
 
 let gsize (#a:Type0) (t:erased (wds (node a)))
@@ -566,7 +566,7 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:wds (node a)) (m:mem) : Lemma
     ) m);
     ()
 
-let unpack_tree_node_lemma_size (#a:Type0) (pt:t a) (t:Spec.wds (node a)) (m:mem) : Lemma
+let unpack_tree_node_lemma_size (#a:Type0) (pt:t a) (t:wds (node a)) (m:mem) : Lemma
   (requires
     Spec.Node? t /\
     interp (tree_sl pt) m /\

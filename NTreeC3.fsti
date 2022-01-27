@@ -81,7 +81,7 @@ let v_linked_tree
   (h:rmem p{
     FStar.Tactics.with_tactic selector_tactic (can_be_split p (linked_tree r) /\ True)
   })
-    : GTot (Spec.wds a)
+    : GTot (wds a)
   = h (linked_tree r)
 
 (*** Operations *)
