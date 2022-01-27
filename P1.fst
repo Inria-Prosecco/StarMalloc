@@ -238,7 +238,7 @@ let rec append_right #a (ptr: t a) (v: a)
       (v_linked_tree (get_right node) h2)
       (U.v (sel (get_size node) h2))) in
     assert (Spec.is_wds ptr_t2);
-    let ptr_s2 = hide (Spec.csize (reveal ptr_t2)) in
+    let ptr_s2 = hide (Spec.sot_wds (reveal ptr_t2)) in
     //Spec.check (reveal ptr_t2);
     assert (reveal ptr_s2 == Spec.size_of_tree (reveal ptr_t2));
 
@@ -284,7 +284,7 @@ let rec height (#a: Type0) (ptr: t a)
   ) else (
     let h = get () in
     (**) not_null_is_node ptr;
-    let s = hide (Spec.csize (v_linked_tree ptr h)) in
+    let s = hide (Spec.sot_wds (v_linked_tree ptr h)) in
     (**) let node = unpack_tree ptr in
     assert (reveal s < c);
     Spec.height_lte_size (v_linked_tree ptr h);

@@ -11,12 +11,12 @@ type tree (a: Type) =
   | Leaf : tree a
   | Node: data: a -> left: tree a -> right: tree a -> size: nat -> tree a
 
-let csize (#a: Type) (t: tree a{Node? t}) =
-  let Node _ _ _ s = t in s
-let cleft (#a: Type) (t: tree a{Node? t}) =
-  let Node _ l _ _ = t in l
-let cright (#a: Type) (t: tree a{Node? t}) =
-  let Node _ _ r _ = t in r
+//let csize (#a: Type) (t: tree a{Node? t}) =
+//  let Node _ _ _ s = t in s
+//let cleft (#a: Type) (t: tree a{Node? t}) =
+//  let Node _ l _ _ = t in l
+//let cright (#a: Type) (t: tree a{Node? t}) =
+//  let Node _ _ r _ = t in r
 
 (**** Binary search trees *)
 
