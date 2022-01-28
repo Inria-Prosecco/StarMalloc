@@ -22,8 +22,9 @@ let t (a: Type0) = ref (node a)
 
 (** This type reflects the contents of a tree without the memory layout *)
 // TODO: to be replaced with MAX_UINT64
-let c = 100
-let wds (a: Type0) = x:Spec.wds a{Spec.size_of_tree x < c}
+noextract
+let c = FStar.UInt.max_int 64
+let wds (a: Type0) = x:Spec.wds a{Spec.size_of_tree x <= c}
 //let tree (a: Type0) = x:Spec.tree a{fst (Spec.is_wds x)}
 //let tree (a: Type0) = Spec.tree a
 
@@ -144,7 +145,7 @@ val pack_tree (#opened:inames) (#a: Type0) (ptr: t a) (left right: t a) (sr: ref
         U.v (sel sr h0) == Spec.size_of_tree (v_linked_tree left h0)
               + Spec.size_of_tree (v_linked_tree right h0)
               + 1 /\
-        U.v (sel sr h0) < c
+        U.v (sel sr h0) <= c
         ))
       (ensures (fun h0 _ h1 ->
         let x = get_data (sel ptr h0) in
@@ -172,7 +173,7 @@ val unpack_tree (#a: Type0) (ptr: t a)
         sel ptr h1 == node /\
         U.v (sel (get_size node) h1) == Spec.size_of_tree (v_linked_tree (get_left node) h1)
                                 + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1 /\
-        U.v (sel (get_size node) h1) < c
+        U.v (sel (get_size node) h1) <= c
       ))
 
 (*)

@@ -254,7 +254,7 @@ let not_null_is_node #opened #a ptr =
 let pack_tree_lemma_aux (#a:Type0) (pt:t a)
   (x: node a) (l r: wds (node a)) (s:nat) (m:mem) : Lemma
   (requires
-    s < c /\
+    s <= c /\
     interp (pts_to_sl pt full_perm x `Mem.star`
       tree_sl' (get_left x) l `Mem.star`
       tree_sl' (get_right x) r `Mem.star`
@@ -299,7 +299,7 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
 let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
   (x: node a) (l r:wds a) (s:nat) (m:mem) : Lemma
   (requires
-    s < c /\
+    s <= c /\
     interp (ptr pt `Mem.star`
       tree_sl left `Mem.star`
       tree_sl right `Mem.star`
@@ -484,12 +484,12 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:wds (node a)) (m:mem) : Lemma
     Spec.is_wds l /\
     Spec.is_wds r /\
     s == Spec.size_of_tree t /\
-    s < c
+    s <= c
     )
   )
   =
     let Spec.Node x l r s = t in
-    assert (s < c);
+    assert (s <= c);
     assert (Spec.is_wds l);
     assert (Spec.is_wds r);
     assert (Spec.is_wds t);
@@ -594,7 +594,7 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
                  (v_node (get_left n) h1) (v_node (get_right n) h1) (U.v (sel (get_size n) h1)) /\
                U.v (sel (get_size n) h1) == Spec.size_of_tree (v_node (get_left n) h1)
                                     + Spec.size_of_tree (v_node (get_right n) h1) + 1 /\
-               U.v (sel (get_size n) h1) < c
+               U.v (sel (get_size n) h1) <= c
              )
   =
   let h0 = get () in
@@ -607,7 +607,7 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
     (fun m -> unpack_tree_node_lemma_size ptr t m);
   assert (reveal (gsize (reveal t)) == Spec.size_of_tree (reveal t));
   let s = hide (Spec.size_of_tree (reveal t)) in
-  assert (s < c);
+  assert (s <= c);
 
   change_slprop
     (tree_node ptr)
@@ -640,7 +640,7 @@ let unpack_tree (#a: Type0) (ptr: t a)
         (sel ptr h1) == node /\
         U.v (sel (get_size node) h1) == Spec.size_of_tree (v_linked_tree (get_left node) h1)
                                 + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1 /\
-        U.v (sel (get_size node) h1) < c
+        U.v (sel (get_size node) h1) <= c
       ))
   =
   let h0 = get() in

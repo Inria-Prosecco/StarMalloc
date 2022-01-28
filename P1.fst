@@ -91,12 +91,12 @@ let merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
   (requires fun h0 ->
     let s1 = Spec.size_of_tree (v_linked_tree l h0) in
     let s2 = Spec.size_of_tree (v_linked_tree r h0) in
-    s1 + s2 < c - 1)
+    s1 + s2 + 1 <= c)
   (ensures fun h0 ptr h1 ->
     let s1 = Spec.size_of_tree (v_linked_tree l h0) in
     let s2 = Spec.size_of_tree (v_linked_tree r h0) in
     let s = s1 + s2 + 1 in
-    s < c /\
+    s <= c /\
     v_linked_tree ptr h1 ==
     Trees.Node v
       (v_linked_tree l h0)
@@ -117,16 +117,16 @@ let rec append_left #a (ptr: t a) (v: a)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires (fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1))
+    Spec.size_of_tree (v_linked_tree ptr h0) < c))
   (ensures (fun h0 ptr' h1 ->
     v_linked_tree ptr' h1
     == Spec.append_left (v_linked_tree ptr h0) v /\
     Spec.size_of_tree (v_linked_tree ptr' h1)
     == Spec.size_of_tree (v_linked_tree ptr h0) + 1 /\
-    Spec.size_of_tree (v_linked_tree ptr' h1) < c))
+    Spec.size_of_tree (v_linked_tree ptr' h1) <= c))
   =
   let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) < c - 1);
+  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
   if is_null_t ptr then (
     // TODO: use create_leaf?
     //(**) elim_linked_tree_leaf ptr;
@@ -198,7 +198,7 @@ let rec append_left #a (ptr: t a) (v: a)
     //assert (get_size new_node == get_size node);
     (***) write ptr new_node;
     let h5 = get () in
-    //assert (U.v (sel (get_size node) h5) < c);
+    //assert (U.v (sel (get_size node) h5) <= c);
     (**) pack_tree ptr new_left (get_right node) (get_size node);
     return ptr
   )
@@ -212,13 +212,13 @@ let rec append_right #a (ptr: t a) (v: a)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires (fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1))
+    Spec.size_of_tree (v_linked_tree ptr h0) < c))
   (ensures (fun h0 ptr' h1 ->
     v_linked_tree ptr' h1
     == Spec.append_right (v_linked_tree ptr h0) v))
   =
   let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) < c - 1);
+  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
   if is_null_t ptr then (
     //(**) elim_linked_tree_leaf ptr;
     (**) null_is_leaf ptr;
@@ -286,9 +286,9 @@ let rec height (#a: Type0) (ptr: t a)
     (**) not_null_is_node ptr;
     let s = hide (Spec.sot_wds (v_linked_tree ptr h)) in
     (**) let node = unpack_tree ptr in
-    assert (reveal s < c);
+    assert (reveal s <= c);
     Spec.height_lte_size (v_linked_tree ptr h);
-    assert (Spec.height (v_linked_tree ptr h) < c);
+    assert (Spec.height (v_linked_tree ptr h) <= c);
     let hleft = height (get_left node) in
     let hright = height (get_right node) in
     (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
@@ -324,7 +324,7 @@ let rec insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
@@ -358,6 +358,7 @@ let rec insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
     )
   )
 
+(*
 let uincr (b: bool) (ptr: ref U.t)
   : Steel unit
   (vptr ptr)
@@ -374,6 +375,7 @@ let uincr (b: bool) (ptr: ref U.t)
     write ptr new_value;
     return ()
   ) else ( return () )
+*)
 
 let rec insert_bst2 (#a: eqtype)
   (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
@@ -381,7 +383,7 @@ let rec insert_bst2 (#a: eqtype)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
@@ -509,7 +511,7 @@ let rotate_left (#a: Type) (ptr: t a)
   ))
   =
   let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+  assert (Spec.size_of_tree (v_linked_tree ptr h) <= c);
   Spec.rotate_left_size (v_linked_tree ptr h);
   (**) node_is_not_null ptr;
   (**) let x_node = unpack_tree ptr in
@@ -540,7 +542,7 @@ let rotate_right (#a: Type) (ptr: t a)
   ))
   =
   let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+  assert (Spec.size_of_tree (v_linked_tree ptr h) <= c);
   Spec.rotate_right_size (v_linked_tree ptr h);
   (**) node_is_not_null ptr;
   (**) let x_node = unpack_tree ptr in
@@ -573,7 +575,7 @@ let rotate_right_left (#a: Type) (ptr: t a)
   ))
   =
   let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+  assert (Spec.size_of_tree (v_linked_tree ptr h) <= c);
   Spec.rotate_right_left_size (v_linked_tree ptr h);
   assert (Spec.size_of_tree (Spec.get (Spec.rotate_right_left_wds (v_linked_tree ptr h)))
   == Spec.size_of_tree (v_linked_tree ptr h));
@@ -624,7 +626,7 @@ let rotate_left_right (#a: Type) (ptr: t a)
   ))
   =
   let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+  assert (Spec.size_of_tree (v_linked_tree ptr h) <= c);
   Spec.rotate_left_right_size (v_linked_tree ptr h);
   assert (Spec.size_of_tree (Spec.get (Spec.rotate_left_right_wds (v_linked_tree ptr h)))
   == Spec.size_of_tree (v_linked_tree ptr h));
@@ -772,7 +774,7 @@ let rec insert_avl (#a: Type)
   (cmp:cmp a) (ptr: t a) (new_data: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 -> //True
      //TODO: remove redundancy
@@ -815,7 +817,7 @@ let rec insert_avl2 (#a: eqtype)
   (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 ->
      Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\

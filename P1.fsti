@@ -50,12 +50,12 @@ val merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
   (requires fun h0 ->
     let s1 = Spec.size_of_tree (v_linked_tree l h0) in
     let s2 = Spec.size_of_tree (v_linked_tree r h0) in
-    s1 + s2 < c - 1)
+    s1 + s2 + 1 <= c)
   (ensures fun h0 ptr h1 ->
     let s1 = Spec.size_of_tree (v_linked_tree l h0) in
     let s2 = Spec.size_of_tree (v_linked_tree r h0) in
     let s = s1 + s2 + 1 in
-    s < c /\
+    s <= c /\
     v_linked_tree ptr h1 ==
     Trees.Node v
       (v_linked_tree l h0)
@@ -72,7 +72,7 @@ val append_left (#a: Type0) (ptr: t a) (v: a)
     : Steel (t a)
       (linked_tree ptr)
       (fun ptr' ->  linked_tree ptr')
-      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c - 1))
+      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c))
       (ensures (fun h0 ptr' h1 -> v_linked_tree ptr' h1 == Spec.append_left (v_linked_tree ptr h0) v))
 
 /// Appends value [v] at the rightmost leaf of the tree that [ptr] points to.
@@ -80,7 +80,7 @@ val append_right (#a: Type0) (ptr: t a) (v: a)
     : Steel (t a)
       (linked_tree ptr)
       (fun ptr' ->  linked_tree ptr')
-      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c - 1))
+      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c))
       (ensures (fun h0 ptr' h1 ->
         v_linked_tree ptr' h1 == Spec.append_right (v_linked_tree ptr h0) v
       ))
@@ -118,7 +118,7 @@ val insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
@@ -131,7 +131,7 @@ val insert_bst2 (#a: eqtype)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
