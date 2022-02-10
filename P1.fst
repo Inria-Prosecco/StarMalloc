@@ -27,8 +27,16 @@ let create_leaf (#a: Type0) (_: unit) : Steel (t a)
     v_linked_tree ptr h1 == Trees.Leaf)
   = intro_linked_tree_leaf ();
     // TODO: it should be possible to remove next line
-    let h = get () in
+    //let h = get () in
+    //();
+    //return (null_t #a)
     return null_t
+
+let dummy (ptr: ref int) : SteelT (ref int)
+  emp (fun ptr -> vptr ptr)
+  =
+  let r = malloc 2 in
+  return null_t
 
 let create_tree (#a: Type0) (v: a) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
@@ -874,3 +882,116 @@ let rec insert_avl2 (#a: eqtype)
       )
     )
   )
+
+let csize (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
+  let Spec.Node _ _ _ s = t in s
+let cleft (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
+  let Spec.Node _ l _ _ = t in l
+let cright (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
+  let Spec.Node _ _ r _ = t in r
+
+let test (#a: eqtype) (ptr: ref a)
+  : Steel bool
+  (vptr ptr)
+  (fun _ -> vptr ptr)
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  =
+  if is_null #a ptr then (
+    return true
+  ) else (
+    return false
+  )
+
+let rec delete_avl (#a: eqtype)
+  (cmp:cmp a) (ptr:t a) (data_to_rm: a)
+  : Steel (t a)
+  (linked_tree ptr)
+  (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.size_of_tree (v_linked_tree ptr h0) <= c /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
+  (ensures fun h0 ptr' h1 ->
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+    Spec.delete_avl (convert cmp) (v_linked_tree ptr h0) data_to_rm
+    = v_linked_tree ptr' h1
+  )
+  =
+  let h0 = get () in
+  if is_null_t #a ptr then (
+    (**) null_is_leaf ptr;
+    // TODO: when the following line is missing, fails
+    let h = get () in
+    return ptr
+  ) else (
+//    sladmit ();
+//    return ptr
+//  )
+
+    (**) let node = unpack_tree ptr in
+    let delta = cmp (get_data node) data_to_rm in
+    let b1 = is_null_t #a (get_left node) in
+    let b2 = is_null_t #a (get_right node) in
+//    if b1 && b2 then (
+//      null_is_leaf (get_left node);
+//      null_is_leaf (get_right node);
+//      if I.eq delta szero then (
+//        (**) free (get_size node);
+//        (**) free ptr;
+//        (**) elim_linked_tree_leaf (get_right node);
+//        return (get_left node)
+//      ) else (
+//        (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
+//        return ptr
+//      )
+//    ) else (
+      if I.gt delta szero then (
+        let old_left_s = sot_wds (get_left node) in
+        let new_left = delete_avl cmp (get_left node) data_to_rm in
+        let new_left_s = sot_wds new_left in
+        assert (U.lte new_left_s old_left_s);
+        let diff = U.sub old_left_s new_left_s in
+        let old_size = read (get_size node) in
+        write (get_size node) (U.sub old_size diff);
+        let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
+        write ptr new_node;
+        (**) pack_tree ptr new_left (get_right node) (get_size node);
+        rebalance_avl ptr
+      ) else if I.lt delta szero then (
+        let old_right_s = sot_wds (get_right node) in
+        let new_right = delete_avl cmp (get_right node) data_to_rm in
+        let h = get () in
+        assert (v_linked_tree new_right h =
+        Spec.delete_avl
+          (convert cmp)
+          (cright (v_linked_tree ptr h0))
+          data_to_rm);
+        let new_right_s = sot_wds new_right in
+        assert (U.lte new_right_s old_right_s);
+        let diff = U.sub old_right_s new_right_s in
+        let old_size = read (get_size node) in
+        write (get_size node) (U.sub old_size diff);
+        let new_node = mk_node (get_data node)
+          (get_left node) new_right (get_size node) in
+        write ptr new_node;
+        (**) pack_tree ptr (get_left node) new_right (get_size node);
+        let h = get () in
+        let res = hide (Spec.delete_avl (convert cmp) (reveal (v_linked_tree ptr h0)) data_to_rm) in
+        let t' = hide (v_linked_tree ptr h) in
+        assert (Spec.is_wds (reveal t'));
+        assert (Spec.is_wds res);
+        //admit ();
+        //assert (csize (reveal t') == csize res);
+        //assert (cleft (reveal t') == cleft res);
+        //assert (cright (reveal t') == cright res);
+        assert (Spec.size_of_tree res <= Spec.size_of_tree (reveal t'));
+        assert (Spec.size_of_tree res = Spec.size_of_tree (reveal t'));
+        //admit ();
+        rebalance_avl ptr
+      ) else (
+        (**) pack_tree ptr (get_left node) (get_right node)
+          (get_size node);
+        return ptr
+      )
+    )
+  //)

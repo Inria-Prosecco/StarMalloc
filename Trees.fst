@@ -39,11 +39,11 @@ let rec forall_keys (#a: Type) (t: tree a) (cond: a -> bool) : bool =
   | Node data left right _ ->
     cond data && forall_keys left cond && forall_keys right cond
 
-let key_left (#a: Type) (compare:cmp a) (root key: a) =
-  compare root key >= 0
+let key_left (#a: Type) (compare:cmp a) (root key: a) : bool =
+  compare root key > 0
 
-let key_right (#a: Type) (compare : cmp a) (root key: a) =
-  compare root key <= 0
+let key_right (#a: Type) (compare : cmp a) (root key: a) : bool =
+  compare root key < 0
 
 let rec is_bst (#a: Type) (compare : cmp a) (x: tree a) : bool =
   match x with
@@ -92,11 +92,11 @@ let induction_wds (#a: Type) (x: a) (l r:wds a)
 
 (**** Lookup *)
 
-let rec mem (#a: Type) (r: tree a) (x: a) : prop =
+let rec mem (#a: eqtype) (r: tree a) (x: a) : bool =
   match r with
-  | Leaf -> False
+  | Leaf -> false
   | Node data left right _ ->
-    (data == x) \/ (mem right x) \/ (mem left x)
+    (data = x) || (mem right x) || (mem left x)
 
 let rec bst_search (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a) : option a =
   match x with
@@ -177,6 +177,21 @@ let rec append_left_aux_size2 (#a: Type) (t: wds a) (v: a)
 let append_left (#a: Type) (t: wds a) (v: a)
   : wds a
   = append_left_aux_size2 t v; append_left_aux t v
+
+let rec append_left_mem (#a: eqtype) (t: wds a) (v: a) (x: a)
+  : Lemma (
+    let r = append_left t v in
+    x <> v ==> mem t x = mem r x /\
+    mem r v
+  ) =
+  let r = append_left t v in
+  match t with
+  | Leaf ->
+      assert (mem t x = false);
+      assert (mem r v = true)
+  | Node data left right size ->
+      let new_left = append_left_aux left v in
+      append_left_mem left v x
 
 let rec append_right_aux (#a: Type) (t: tree a) (v: a)
   : tree a =
@@ -334,6 +349,7 @@ let insert_bst2 (#a: Type)
   insert_bst2_aux_size r cmp t new_data;
   fst (insert_bst2_aux r cmp t new_data)
 
+(*)
 let rec insert_bst_preserves_forall_keys
   (#a: Type)
   (cmp:cmp a)
@@ -371,6 +387,7 @@ let rec insert_bst_preserves_bst
       insert_bst_preserves_forall_keys cmp right key (key_right cmp data);
       insert_bst_preserves_bst cmp right key
     end
+*)
 
 (**** AVL insertion *)
 
@@ -927,6 +944,275 @@ let rec insert_avl2_aux (#a: Type)
       rebalance_avl_wds t, b
     end
 
+// snd result: whether an element has been found and deleted
+
+let cdata (#a: Type) (t: tree a{Node? t}) =
+  let Node d _ _ _ = t in d
+
+//let cleft (#a: Type) (t: tree a{Node? t}) =
+//  let Node _ l _ _ = t in l
+
+//let cright (#a: Type) (t: tree a{Node? t}) =
+//  let Node _ _ r _ = t in r
+
+(*)
+let neql2 (#a: eqtype) (cmp:cmp a) (x: a) (y: a)
+  : Lemma (
+    cmp x y <> 0
+    ==>
+    x <> y
+  )
+  = ()
+*)
+
+(*)
+let cmp_neq (#a: eqtype) (cmp:cmp a) (t: tree a) (v: a)
+  : Lemma (
+  (forall x. cmp x v <> 0)
+  <==>
+  (forall x. x <> v)
+  )
+  = ()
+*)
+let rec equivmem (#a: eqtype) (t: tree a) (cond: a -> bool)
+  : Lemma (
+  forall_keys t cond
+  <==>
+  (forall x. mem t x ==> cond x)
+  )
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+      assert (mem t data);
+      equivmem left cond;
+      equivmem right cond
+
+// x \in t1 => x \in t2 <=> t1 \subset t2
+let subset (#a: eqtype) (t1 t2: tree a)
+  = forall x. mem t1 x ==> mem t2 x
+
+// x \in t1 \/ x \in t2 <=> x \in t1 \cup t2
+//let union (#a: eqtype) (t1 t2: tree a)
+//  = forall x. mem t1 x \/ mem t2 x
+
+// t2 = x \cup t1
+//let add (#a: eqtype) (t1 t2: tree a) (v: a)
+//  = forall x. mem t1 x \/ x = v <==> mem t2 x
+
+//let empty (#a: eqtype) : tree a = Leaf
+//let is_empty (#a: eqtype) (t1: tree a)
+//  = forall x. mem t1 x = false
+
+//let equal (#a: eqtype) (t1 t2: tree a)
+//  = forall x. mem t1 x = mem t2 x
+
+// x \in t1 /\ x \in t2 <=> x \in t1 \cap t2
+//let intersect (#a: eqtype) (t1 t2: tree a)
+//  = forall x. mem t1 x /\ mem t2 x
+
+//let disjunct (#a: eqtype) (t1 t2: tree a)
+//= equal empty (intersect)
+
+//let xadd (#a: eqtype) (t1 t2: tree a) (v: a)
+//  = ()
+
+let subset_preserves_cond (#a: eqtype)
+  (t1 t2: tree a) (cond: a -> bool)
+  : Lemma
+  (requires
+    subset t1 t2 /\
+    forall_keys t2 cond
+  )
+  (ensures
+    forall_keys t1 cond
+  )
+  =
+  equivmem t2 cond;
+  assert (forall x. mem t2 x ==> cond x);
+  assert (forall x. mem t1 x ==> cond x);
+  equivmem t1 cond
+
+let rec remove_leftmost (#a: eqtype)
+  (cmp:cmp a)
+  (t: bst a cmp{Node? t})
+  : r:(bst a cmp & a){
+    // leftmost element removed
+    (forall x. x <> (snd r) ==> mem t x = mem (fst r) x) /\
+    mem t (snd r) = true /\
+    mem (fst r) (snd r) = false /\
+    size_of_tree (fst r) = size_of_tree t - 1 /\
+    // leftmost element is smaller than all of the elements
+    // of the remaining tree
+    forall_keys (fst r) (key_right cmp (snd r)) /\
+    // standard assumption
+    is_wds (fst r)
+  }
+  = match t with
+  | Node data Leaf right size ->
+      assert (forall_keys right (key_right cmp data));
+      equivmem right (key_right cmp data);
+      // TODO: introduce ?
+      assert (forall x. mem right x ==> key_right cmp data x);
+      //assert (forall x. mem right x ==> cmp data x <> 0);
+      //assert (forall x. mem right x ==> x <> data);
+      assert (mem right data = false);
+      right, data
+  | Node data left right size ->
+      //admit ();
+      let new_left, leftmost = remove_leftmost cmp left in
+      assert (is_bst cmp t);
+      assert (forall_keys left (key_left cmp data));
+      equivmem left (key_left cmp data);
+      assert (forall x. mem left x ==> key_left cmp data x);
+      assert (mem left leftmost);
+      assert (key_left cmp data leftmost);
+      assert (cmp leftmost data < 0);
+      assert (subset new_left left);
+      subset_preserves_cond new_left left (key_left cmp data);
+      assert (forall_keys new_left (key_left cmp data));
+      assert (forall_keys right (key_right cmp data));
+      assert (is_bst cmp new_left);
+      assert (is_bst cmp right);
+      let new_t = Node data new_left right (size - 1) in
+      assert (is_wds new_t);
+      assert (is_bst cmp new_t);
+      //assert (mem )
+      assert (mem t leftmost = true);
+      assert (forall_keys new_left (key_right cmp leftmost));
+      assert (cmp leftmost data < 0);
+      forall_keys_trans right
+        (key_right cmp data)
+        (key_right cmp leftmost);
+      assert (forall_keys right (key_right cmp leftmost));
+      equivmem right (key_right cmp leftmost);
+      assert (forall x. mem right x ==> key_right cmp leftmost x);
+
+      assert (mem new_t leftmost = false);
+      new_t, leftmost
+
+// https://en.wikipedia.org/wiki/Binary_search_tree#Deletion
+let delete_avl_aux0 (#a: eqtype)
+  (cmp:cmp a) (data_to_rm: a)
+  (t: avl a cmp{Node? t /\ cdata t = data_to_rm})
+  //(t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
+  : r:bst a cmp{
+    (forall x. x <> data_to_rm ==> mem t x = mem r x) /\
+    mem t data_to_rm = true /\
+    mem r data_to_rm = false /\
+    size_of_tree r = size_of_tree t - 1 /\
+    is_wds r
+  }
+  =
+  match t with
+  | Node data Leaf Leaf 1 -> Leaf
+  | Node data left Leaf size -> left
+  | Node data Leaf right size -> right
+  // successor of z = y
+  | Node z l (Node y Leaf x sy) sz ->
+      let r = Node y Leaf x sy in
+      assert (forall_keys x (key_right cmp y));
+      forall_keys_trans l
+        (key_left cmp z)
+        (key_left cmp y);
+      assert (forall_keys l (key_left cmp y));
+      let new_t = Node y l x (sz - 1) in
+      // mem r data_to_rm = false
+      // TODO: beurk, copypasta
+      assert (forall_keys l (key_left cmp z));
+      equivmem l (key_left cmp z);
+      assert (forall x. mem l x ==> key_left cmp z x);
+      assert (forall_keys r (key_right cmp z));
+      equivmem r (key_right cmp z);
+      assert (forall x. mem r x ==> key_right cmp z x);
+      new_t
+  // successor of z = to be retrieved
+  | Node z l r sz ->
+      assert (Node? r);
+      let new_right, succ_z = remove_leftmost cmp r in
+      // right
+      assert (subset new_right r);
+      assert (forall_keys r (key_right cmp z));
+      subset_preserves_cond new_right r (key_right cmp z);
+      assert (forall_keys new_right (key_right cmp z));
+      // left
+      assert (mem r succ_z);
+      assert (forall_keys r (key_right cmp z));
+      equivmem r (key_right cmp z);
+      assert (key_right cmp z succ_z);
+      forall_keys_trans l
+        (key_left cmp z)
+        (key_left cmp succ_z);
+      let new_t = Node succ_z l new_right (sz - 1) in
+      // mem r data_to_rm = false
+      // TODO: beurk, copypasta
+      assert (forall_keys l (key_left cmp z));
+      equivmem l (key_left cmp z);
+      assert (forall x. mem l x ==> key_left cmp z x);
+      assert (forall_keys r (key_right cmp z));
+      equivmem r (key_right cmp z);
+      assert (forall x. mem r x ==> key_right cmp z x);
+      new_t
+
+let rec delete_avl_aux (#a: eqtype)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
+  : result:(wds a & bool){
+    let t',b = result in
+    size_of_tree t' = size_of_tree t - (int_of_bool b) /\
+    is_wds t'
+  }
+  =
+  match t with
+  | Leaf -> Leaf, false
+  | Node data left right size ->
+      let delta = cmp data data_to_rm in
+      if delta > 0 then begin
+        let new_left, b = delete_avl_aux cmp left data_to_rm in
+        let new_size = size - (int_of_bool b) in
+        let t, b = Node data new_left right new_size, b in
+        rebalance_avl_wds_size t;
+        rebalance_avl_wds t, b
+      end
+      else if delta < 0 then begin
+        let new_right, b = delete_avl_aux cmp right data_to_rm in
+        let new_size = size - (int_of_bool b) in
+        let t, b = Node data left new_right new_size, b in
+        rebalance_avl_wds_size t;
+        rebalance_avl_wds t, b
+      end else begin
+        assume (data = data_to_rm);
+        let t = delete_avl_aux0 cmp data_to_rm t in
+        t, true
+      end
+
+(*)
+let rec delete_avl_aux_deprecated (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
+  : result:(wds a & bool){
+    let t',b = result in
+    size_of_tree t' = size_of_tree t - (int_of_bool b) /\
+    is_wds t'
+  }
+  =
+  match t with
+  | Leaf -> Leaf, false
+  | Node data left right size ->
+      let delta = cmp data data_to_rm in
+      if delta > 0 then begin
+        let new_left, b = delete_avl_aux cmp left data_to_rm in
+        let new_size = size - (int_of_bool b) in
+        let t, b = Node data new_left right new_size, b in
+        rebalance_avl_wds_size t;
+        rebalance_avl_wds t, b
+      end
+      else if delta < 0 then begin
+        let new_right, b = delete_avl_aux cmp right data_to_rm in
+        let new_size = size - (int_of_bool b) in
+        let t, b = Node data left new_right new_size, b in
+        rebalance_avl_wds_size t;
+        rebalance_avl_wds t, b
+      end else t, false
+*)
+
 (*
 let rec insert_avl_aux_height (#a: Type)
   (cmp: cmp a) (x: avl a cmp) (key: a)
@@ -958,7 +1244,7 @@ let insert_avl_aux_height2 (#a: Type)
   | Node data left right size -> ()
 *)
 
-let rec insert_avl2 (#a: Type)
+let insert_avl2 (#a: Type)
   (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
   : t':wds a{
     let _,b = insert_avl2_aux r cmp t new_data in
@@ -967,6 +1253,18 @@ let rec insert_avl2 (#a: Type)
   }
   = fst (insert_avl2_aux r cmp t new_data)
 
+(*)
+let delete_avl (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
+  : t':wds a{
+    let _,b = delete_avl_aux cmp t data_to_rm in
+    size_of_tree t' = size_of_tree t - (int_of_bool b) /\
+    is_wds t'
+  }
+  = fst (delete_avl_aux cmp t data_to_rm)
+*)
+
+(*
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let rec insert_avl_proof_aux (#a: Type)
   (cmp:cmp a) (x: avl a cmp) (key: a) (root:a)
@@ -1000,6 +1298,7 @@ let rec insert_avl_proof_aux (#a: Type)
       rebalance_avl_wds_proof cmp tmp root
     )
 #pop-options
+*)
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec insert_avl2_proof_aux (#a: Type)
@@ -1049,6 +1348,48 @@ let rec insert_avl2_proof_aux (#a: Type)
     end
 #pop-options
 
+(*
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
+let rec delete_avl_proof_aux (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a) (root:a)
+  : Lemma (requires is_avl cmp t)
+    (ensures (
+      let res = delete_avl cmp t data_to_rm  in
+      is_avl cmp res /\
+      height t - 1 <= height res /\
+      height res <= height t /\
+      (forall_keys t (key_left cmp root) /\
+        key_left cmp root data_to_rm
+        ==> forall_keys res (key_left cmp root)) /\
+      (forall_keys t (key_right cmp root) /\
+        key_right cmp root data_to_rm
+        ==> forall_keys res (key_right cmp root)))
+    )
+  = match t with
+  | Leaf -> ()
+  //| Node data Leaf Leaf 1 -> ()
+  | Node data left right size ->
+    let delta = cmp data data_to_rm in
+    if delta > 0 then (
+      let new_left = delete_avl cmp left data_to_rm in
+      let tmp = Node data new_left right (size-1) in
+      assume (is_wds tmp);
+      delete_avl_proof_aux cmp left data_to_rm data;
+      delete_avl_proof_aux cmp left data_to_rm root;
+      rebalance_avl_wds_proof cmp tmp root
+
+    ) else if delta < 0 then (
+      let new_right = delete_avl cmp right data_to_rm in
+      let tmp = Node data left new_right (size-1) in
+      assume (is_wds tmp);
+      delete_avl_proof_aux cmp right data_to_rm data;
+      delete_avl_proof_aux cmp right data_to_rm root;
+      rebalance_avl_wds_proof cmp tmp root
+    ) else ()
+#pop-options
+*)
+
+(*
 let insert_avl_proof (#a: Type)
   (cmp:cmp a) (t: avl a cmp) (new_data: a)
   : Lemma
@@ -1059,6 +1400,7 @@ let insert_avl_proof (#a: Type)
         insert_avl_proof_aux cmp t new_data
       )
     )
+*)
 
 let insert_avl2_proof (#a: Type)
   (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
@@ -1070,3 +1412,16 @@ let insert_avl2_proof (#a: Type)
         insert_avl2_proof_aux r cmp t new_data
       )
     )
+
+(*
+let delete_avl_proof (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (new_data: a)
+  : Lemma
+  (requires is_avl cmp t)
+  (ensures is_avl cmp (delete_avl cmp t new_data))
+  = Classical.forall_intro (
+      Classical.move_requires (
+        delete_avl_proof_aux cmp t new_data
+      )
+    )
+*)
