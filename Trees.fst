@@ -92,11 +92,11 @@ let induction_wds (#a: Type) (x: a) (l r:wds a)
 
 (**** Lookup *)
 
-let rec mem (#a: eqtype) (r: tree a) (x: a) : bool =
+let rec mem_eq (#a: eqtype)  (r: tree a) (x: a) : bool =
   match r with
   | Leaf -> false
   | Node data left right _ ->
-    (data = x) || (mem right x) || (mem left x)
+    (data = x) || (mem_eq right x) || (mem_eq left x)
 
 let rec bst_search (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a) : option a =
   match x with
@@ -181,14 +181,14 @@ let append_left (#a: Type) (t: wds a) (v: a)
 let rec append_left_mem (#a: eqtype) (t: wds a) (v: a) (x: a)
   : Lemma (
     let r = append_left t v in
-    x <> v ==> mem t x = mem r x /\
-    mem r v
+    x <> v ==> mem_eq t x = mem_eq r x /\
+    mem_eq r v
   ) =
   let r = append_left t v in
   match t with
   | Leaf ->
-      assert (mem t x = false);
-      assert (mem r v = true)
+      assert (mem_eq t x = false);
+      assert (mem_eq r v = true)
   | Node data left right size ->
       let new_left = append_left_aux left v in
       append_left_mem left v x
@@ -949,11 +949,11 @@ let rec insert_avl2_aux (#a: Type)
 let cdata (#a: Type) (t: tree a{Node? t}) =
   let Node d _ _ _ = t in d
 
-//let cleft (#a: Type) (t: tree a{Node? t}) =
-//  let Node _ l _ _ = t in l
+let cleft (#a: Type) (t: tree a{Node? t}) =
+  let Node _ l _ _ = t in l
 
-//let cright (#a: Type) (t: tree a{Node? t}) =
-//  let Node _ _ r _ = t in r
+let cright (#a: Type) (t: tree a{Node? t}) =
+  let Node _ _ r _ = t in r
 
 (*)
 let neql2 (#a: eqtype) (cmp:cmp a) (x: a) (y: a)
@@ -974,141 +974,346 @@ let cmp_neq (#a: eqtype) (cmp:cmp a) (t: tree a) (v: a)
   )
   = ()
 *)
-let rec equivmem (#a: eqtype) (t: tree a) (cond: a -> bool)
-  : Lemma (
-  forall_keys t cond
-  <==>
-  (forall x. mem t x ==> cond x)
-  )
+
+let rec mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a) : bool =
+  match t with
+  | Leaf -> false
+  | Node data left right _ ->
+      let delta = cmp x data in
+      (delta = 0) || (mem cmp left x) || (mem cmp right x)
+
+type cond (a: Type) (cmp:cmp a) = c: (a -> bool){
+  squash (forall x y. cmp x y = 0 ==> (c x = c y))
+}
+
+let key_left2 (#a: Type) (cmp:cmp a) (root: a) : cond a cmp
+  = key_left cmp root
+
+let key_right2 (#a: Type) (cmp:cmp a) (root: a) : cond a cmp
+  = key_right cmp root
+
+let rec equiv_aux (#a: Type)
+  (cmp:cmp a) (t: bst a cmp) (cond:cond a cmp) (x: a)
+  : Lemma
+  (requires forall_keys t cond /\ mem cmp t x)
+  (ensures cond x)
   = match t with
   | Leaf -> ()
   | Node data left right _ ->
-      assert (mem t data);
-      equivmem left cond;
-      equivmem right cond
+      let delta = cmp x data in
+      assert (mem cmp t x);
+      if delta = 0 then ()
+      else begin
+        if mem cmp left x then begin
+          equiv_aux cmp left cond x
+        end else begin
+          equiv_aux cmp right cond x
+        end
+      end
+
+let equiv_aux2 (#a: Type)
+  (cmp:cmp a) (cond:cond a cmp) (t: bst a cmp{forall_keys t cond})
+  (x: a)
+  : Lemma (mem cmp t x ==> cond x)
+  = if mem cmp t x then equiv_aux cmp t cond x
+
+let equiv_aux3 (#a: Type)
+  (cmp: cmp a) (cond:cond a cmp) (t: bst a cmp{forall_keys t cond})
+  : squash (forall x. mem cmp t x ==> cond x)
+  = introduce forall x. mem cmp t x ==> cond x
+    // TODO: shoud be doable with equiv_aux
+    with equiv_aux2 cmp cond t x
+
+let equiv_aux4 (#a: Type)
+  (cmp:cmp a) (t: bst a cmp)
+  (cond: cond a cmp)
+  : Lemma (
+  forall_keys t cond
+  ==>
+  (forall x. mem cmp t x ==> cond x))
+  =
+  if forall_keys t cond then equiv_aux3 cmp cond t
+
+let rec equiv_aux5 (#a: Type)
+  (cmp:cmp a) (t: bst a cmp)
+  (cond: cond a cmp)
+  : Lemma
+  (requires (forall x. mem cmp t x ==> cond x))
+  (ensures forall_keys t cond)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+      assert (mem cmp t data);
+      assert (cond data);
+      equiv_aux5 cmp left cond;
+      equiv_aux5 cmp right cond
+
+let equiv_aux6 (#a: Type)
+  (cmp:cmp a) (t: bst a cmp)
+  (cond: cond a cmp)
+  : Lemma
+  ((forall x. mem cmp t x ==> cond x)
+  ==>
+  forall_keys t cond)
+  =
+  introduce (forall x. mem cmp t x ==> cond x) ==> forall_keys t cond
+  with _. equiv_aux5 cmp t cond
+
+
+let equiv (#a: Type)
+  (cmp:cmp a) (t: bst a cmp)
+  (cond: cond a cmp)
+  : Lemma (
+  forall_keys t cond
+  <==>
+  (forall x. mem cmp t x ==> cond x))
+  =
+  equiv_aux4 cmp t cond;
+  equiv_aux6 cmp t cond
+
+let rec memopt (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a) : bool =
+  match t with
+  | Leaf -> false
+  | Node data left right _ ->
+      let delta = cmp x data in
+      if delta = 0 then begin
+        true
+      end else if delta < 0 then begin
+        memopt cmp left x
+      end else begin
+        memopt cmp right x
+      end
+
+let p = int_of_bool
+
+let unicity_left (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
+  (x: a{mem cmp t x})
+  : Lemma (
+    let delta = cmp x (cdata t) in
+    delta < 0 <==> mem cmp (cleft t) x
+  )
+  = match t with
+  | Node data left right _ ->
+      let delta = cmp x data in
+      if delta < 0 then begin
+        if mem cmp right x then begin
+          assert (forall_keys right (key_right2 cmp data));
+          equiv cmp right (key_right2 cmp data);
+          assert (key_right2 cmp data x);
+          assert (not (mem cmp right x))
+        end;
+        assert (mem cmp left x)
+      end;
+      assert (delta < 0 ==> mem cmp (cleft t) x);
+
+      if mem cmp left x then begin
+        assert (forall_keys left (key_left2 cmp data));
+        equiv cmp left (key_left2 cmp data);
+        assert (key_left2 cmp data x);
+        assert (delta < 0)
+      end;
+      assert (mem cmp (cleft t) x ==> delta < 0)
+
+let unicity_right (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
+  (x: a{mem cmp t x})
+  : Lemma (
+    let delta = cmp x (cdata t) in
+    delta > 0 <==> mem cmp (cright t) x
+  )
+  = match t with
+  | Node data left right _ ->
+      let delta = cmp x data in
+
+      if delta > 0 then begin
+        if mem cmp left x then begin
+          assert (forall_keys left (key_left2 cmp data));
+          equiv cmp left (key_left2 cmp data);
+          assert (key_left2 cmp data x);
+          assert (not (mem cmp left x))
+        end;
+        assert (mem cmp right x)
+      end;
+      assert (delta > 0 ==> mem cmp (cright t) x);
+
+      if mem cmp right x then begin
+        assert (forall_keys right (key_right2 cmp data));
+        equiv cmp right (key_right2 cmp data);
+        assert (key_right2 cmp data x);
+        assert (delta > 0)
+      end;
+      assert (mem cmp (cright t) x ==> delta > 0)
+
+let rec equivmem1 (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
+  : Lemma
+  (memopt cmp t x ==> mem cmp t x)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+      equivmem1 cmp left x;
+      equivmem1 cmp right x
+
+let rec equivmem2 (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
+  : Lemma
+  (requires mem cmp t x)
+  (ensures memopt cmp t x)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+      let delta = cmp x data in
+      if mem cmp left x then begin
+        unicity_left cmp t x;
+        assert (delta < 0);
+        equivmem2 cmp left x
+      end;
+      if mem cmp right x then begin
+        unicity_right cmp t x;
+        assert (delta > 0);
+        equivmem2 cmp right x
+      end
+
+let equivmem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
+  : Lemma
+  (mem cmp t x <==> memopt cmp t x)
+  =
+  if mem cmp t x then equivmem2 cmp t x;
+  equivmem1 cmp t x
 
 // x \in t1 => x \in t2 <=> t1 \subset t2
-let subset (#a: eqtype) (t1 t2: tree a)
-  = forall x. mem t1 x ==> mem t2 x
+let subset (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp)
+  = forall x. mem cmp t1 x ==> mem cmp t2 x
 
-// x \in t1 \/ x \in t2 <=> x \in t1 \cup t2
-//let union (#a: eqtype) (t1 t2: tree a)
-//  = forall x. mem t1 x \/ mem t2 x
-
-// t2 = x \cup t1
-//let add (#a: eqtype) (t1 t2: tree a) (v: a)
-//  = forall x. mem t1 x \/ x = v <==> mem t2 x
-
-//let empty (#a: eqtype) : tree a = Leaf
-//let is_empty (#a: eqtype) (t1: tree a)
-//  = forall x. mem t1 x = false
-
-//let equal (#a: eqtype) (t1 t2: tree a)
-//  = forall x. mem t1 x = mem t2 x
-
-// x \in t1 /\ x \in t2 <=> x \in t1 \cap t2
-//let intersect (#a: eqtype) (t1 t2: tree a)
-//  = forall x. mem t1 x /\ mem t2 x
-
-//let disjunct (#a: eqtype) (t1 t2: tree a)
-//= equal empty (intersect)
-
-//let xadd (#a: eqtype) (t1 t2: tree a) (v: a)
-//  = ()
-
-let subset_preserves_cond (#a: eqtype)
-  (t1 t2: tree a) (cond: a -> bool)
+let subset_preserves_cond (#a: Type0)
+  (cmp:cmp a)
+  (t1 t2: bst a cmp) (cond: cond a cmp)
   : Lemma
   (requires
-    subset t1 t2 /\
+    subset cmp t1 t2 /\
     forall_keys t2 cond
   )
   (ensures
     forall_keys t1 cond
   )
   =
-  equivmem t2 cond;
-  assert (forall x. mem t2 x ==> cond x);
-  assert (forall x. mem t1 x ==> cond x);
-  equivmem t1 cond
+  equiv cmp t2 cond;
+  assert (forall x. mem cmp t2 x ==> cond x);
+  assert (forall x. mem cmp t1 x ==> cond x);
+  equiv cmp t1 cond
 
-let rec remove_leftmost (#a: eqtype)
+let smaller_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
+  : Lemma
+  (requires forall_keys t (key_right cmp x))
+  (ensures mem cmp t x = false)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+    // ad absurdum
+    if mem cmp t x then begin
+      assert (forall_keys t (key_right cmp x));
+      equiv cmp t (key_right cmp x);
+      assert (mem cmp t x);
+      assert (key_right cmp x x);
+      assert (cmp x x < 0)
+    end;
+    assert (mem cmp t x = false)
+
+let greater_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
+  : Lemma
+  (requires forall_keys t (key_left cmp x))
+  (ensures mem cmp t x = false)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+    // ad absurdum
+    if mem cmp t x then begin
+      assert (forall_keys t (key_left cmp x));
+      equiv cmp t (key_left cmp x);
+      assert (mem cmp t x);
+      assert (key_left cmp x x);
+      assert (cmp x x < 0)
+    end;
+    assert (mem cmp t x = false)
+
+ let rec remove_leftmost (#a: Type0)
   (cmp:cmp a)
   (t: bst a cmp{Node? t})
   : r:(bst a cmp & a){
-    // leftmost element removed
-    (forall x. x <> (snd r) ==> mem t x = mem (fst r) x) /\
-    mem t (snd r) = true /\
-    mem (fst r) (snd r) = false /\
-    size_of_tree (fst r) = size_of_tree t - 1 /\
-    // leftmost element is smaller than all of the elements
-    // of the remaining tree
+    //1 returned element was part of the tree
+    mem cmp t (snd r) = true /\
+    //2 returned element smaller than all elements of the new tree
     forall_keys (fst r) (key_right cmp (snd r)) /\
-    // standard assumption
-    is_wds (fst r)
-  }
+    //3 returned element has been removed
+    mem cmp (fst r) (snd r) = false /\
+    //4 rest of the tree preserved
+    (forall x. cmp x (snd r) <> 0
+      ==> mem cmp t x = mem cmp (fst r) x) /\
+    //5 subset
+    subset cmp (fst r) t /\
+    //6 size decreased by 1
+    size_of_tree (fst r) = size_of_tree t - 1
+ }
   = match t with
   | Node data Leaf right size ->
+      // (1 : trivial)
+      // (2)
       assert (forall_keys right (key_right cmp data));
-      equivmem right (key_right cmp data);
-      // TODO: introduce ?
-      assert (forall x. mem right x ==> key_right cmp data x);
-      //assert (forall x. mem right x ==> cmp data x <> 0);
-      //assert (forall x. mem right x ==> x <> data);
-      assert (mem right data = false);
+      // (3)
+      equiv cmp right (key_right cmp data);
+      assert (mem cmp right data = false);
+      // (4 5 6 : trivial)
       right, data
   | Node data left right size ->
       //admit ();
       let new_left, leftmost = remove_leftmost cmp left in
-      assert (is_bst cmp t);
-      assert (forall_keys left (key_left cmp data));
-      equivmem left (key_left cmp data);
-      assert (forall x. mem left x ==> key_left cmp data x);
-      assert (mem left leftmost);
-      assert (key_left cmp data leftmost);
-      assert (cmp leftmost data < 0);
-      assert (subset new_left left);
-      subset_preserves_cond new_left left (key_left cmp data);
-      assert (forall_keys new_left (key_left cmp data));
-      assert (forall_keys right (key_right cmp data));
-      assert (is_bst cmp new_left);
-      assert (is_bst cmp right);
+      // (1 : IH)
+      assert (mem cmp left leftmost = true);
+      assert (mem cmp t leftmost = true);
+      // (2 : IH)
       let new_t = Node data new_left right (size - 1) in
-      assert (is_wds new_t);
-      assert (is_bst cmp new_t);
-      //assert (mem )
-      assert (mem t leftmost = true);
-      assert (forall_keys new_left (key_right cmp leftmost));
-      assert (cmp leftmost data < 0);
+      // new_left <= data
+      assert (subset cmp new_left left);
+      subset_preserves_cond cmp new_left left (key_left cmp data);
+      assert (forall_keys new_left (key_left cmp data));
+      // data <= right
+      assert (forall_keys right (key_right cmp data));
+      // new_left < right
       forall_keys_trans right
         (key_right cmp data)
         (key_right cmp leftmost);
-      assert (forall_keys right (key_right cmp leftmost));
-      equivmem right (key_right cmp leftmost);
-      assert (forall x. mem right x ==> key_right cmp leftmost x);
-
-      assert (mem new_t leftmost = false);
+      // (3 : use 2)
+      smaller_not_mem cmp new_t leftmost;
+      // (4 5 6 : trivial)
       new_t, leftmost
 
+(*)
 // https://en.wikipedia.org/wiki/Binary_search_tree#Deletion
-let delete_avl_aux0 (#a: eqtype)
+let delete_bst_aux0 (#a: Type0)
   (cmp:cmp a) (data_to_rm: a)
-  (t: avl a cmp{Node? t /\ cdata t = data_to_rm})
+  (t: bst a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
   //(t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
   : r:bst a cmp{
-    (forall x. x <> data_to_rm ==> mem t x = mem r x) /\
-    mem t data_to_rm = true /\
-    mem r data_to_rm = false /\
+    (forall x. cmp x data_to_rm <> 0
+      ==> mem cmp t x = mem cmp r x) /\
+    // mem t data_to_rm = true /\
+    (forall x. cmp x data_to_rm = 0
+      ==> mem cmp t x = true) /\
+    // mem r data_to_rm = false /\
+    (forall x. cmp x data_to_rm = 0
+      ==> mem cmp r x = false) /\
     size_of_tree r = size_of_tree t - 1 /\
     is_wds r
   }
   =
   match t with
   | Node data Leaf Leaf 1 -> Leaf
-  | Node data left Leaf size -> left
+  | Node data left Leaf size ->
+      unicity_left cmp t data; left
   | Node data Leaf right size -> right
+  | _ -> admit (); t
+
+(*)
   // successor of z = y
   | Node z l (Node y Leaf x sy) sz ->
+      admit ();
       let r = Node y Leaf x sy in
       assert (forall_keys x (key_right cmp y));
       forall_keys_trans l
@@ -1118,26 +1323,28 @@ let delete_avl_aux0 (#a: eqtype)
       let new_t = Node y l x (sz - 1) in
       // mem r data_to_rm = false
       // TODO: beurk, copypasta
+      unicity_left cmp l y;
+      unicity_right cmp r y;
       assert (forall_keys l (key_left cmp z));
-      equivmem l (key_left cmp z);
-      assert (forall x. mem l x ==> key_left cmp z x);
+      equiv cmp l (key_left cmp z);
+      assert (forall x. mem cmp l x ==> key_left cmp z x);
       assert (forall_keys r (key_right cmp z));
-      equivmem r (key_right cmp z);
-      assert (forall x. mem r x ==> key_right cmp z x);
+      equiv cmp r (key_right cmp z);
+      assert (forall x. mem cmp r x ==> key_right cmp z x);
       new_t
   // successor of z = to be retrieved
   | Node z l r sz ->
       assert (Node? r);
       let new_right, succ_z = remove_leftmost cmp r in
       // right
-      assert (subset new_right r);
+      assert (subset cmp new_right r);
       assert (forall_keys r (key_right cmp z));
-      subset_preserves_cond new_right r (key_right cmp z);
+      subset_preserves_cond cmp new_right r (key_right cmp z);
       assert (forall_keys new_right (key_right cmp z));
       // left
-      assert (mem r succ_z);
+      assert (mem cmp r succ_z);
       assert (forall_keys r (key_right cmp z));
-      equivmem r (key_right cmp z);
+      equiv cmp r (key_right cmp z);
       assert (key_right cmp z succ_z);
       forall_keys_trans l
         (key_left cmp z)
@@ -1146,11 +1353,11 @@ let delete_avl_aux0 (#a: eqtype)
       // mem r data_to_rm = false
       // TODO: beurk, copypasta
       assert (forall_keys l (key_left cmp z));
-      equivmem l (key_left cmp z);
-      assert (forall x. mem l x ==> key_left cmp z x);
+      equiv cmp l (key_left cmp z);
+      assert (forall x. mem cmp l x ==> key_left cmp z x);
       assert (forall_keys r (key_right cmp z));
-      equivmem r (key_right cmp z);
-      assert (forall x. mem r x ==> key_right cmp z x);
+      equiv cmp r (key_right cmp z);
+      assert (forall x. mem cmp r x ==> key_right cmp z x);
       new_t
 
 let rec delete_avl_aux (#a: eqtype)
