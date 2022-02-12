@@ -27,16 +27,8 @@ let create_leaf (#a: Type0) (_: unit) : Steel (t a)
     v_linked_tree ptr h1 == Trees.Leaf)
   = intro_linked_tree_leaf ();
     // TODO: it should be possible to remove next line
-    //let h = get () in
-    //();
-    //return (null_t #a)
+    let h = get () in
     return null_t
-
-let dummy (ptr: ref int) : SteelT (ref int)
-  emp (fun ptr -> vptr ptr)
-  =
-  let r = malloc 2 in
-  return null_t
 
 let create_tree (#a: Type0) (v: a) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
@@ -883,26 +875,27 @@ let rec insert_avl2 (#a: eqtype)
     )
   )
 
-let csize (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
-  let Spec.Node _ _ _ s = t in s
-let cleft (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
-  let Spec.Node _ l _ _ = t in l
-let cright (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
-  let Spec.Node _ _ r _ = t in r
+//let csize (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
+//  let Spec.Node _ _ _ s = t in s
+//let cleft (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
+//  let Spec.Node _ l _ _ = t in l
+//let cright (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
+//  let Spec.Node _ _ r _ = t in r
 
-let test (#a: eqtype) (ptr: ref a)
-  : Steel bool
-  (vptr ptr)
-  (fun _ -> vptr ptr)
-  (requires fun _ -> True)
-  (ensures fun _ _ _ -> True)
-  =
-  if is_null #a ptr then (
-    return true
-  ) else (
-    return false
-  )
+//let test (#a: eqtype) (ptr: ref a)
+//  : Steel bool
+//  (vptr ptr)
+//  (fun _ -> vptr ptr)
+//  (requires fun _ -> True)
+//  (ensures fun _ _ _ -> True)
+//  =
+//  if is_null #a ptr then (
+//    return true
+//  ) else (
+//    return false
+//  )
 
+(*
 let rec delete_avl (#a: eqtype)
   (cmp:cmp a) (ptr:t a) (data_to_rm: a)
   : Steel (t a)
@@ -995,3 +988,4 @@ let rec delete_avl (#a: eqtype)
       )
     )
   //)
+*)
