@@ -439,3 +439,64 @@ let delete_avl_proof (#a: Type)
       )
     )
 *)
+(*
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+let rec insert_avl2_proof_aux (#a: Type)
+  (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a) (root:a)
+  : Lemma (requires is_avl cmp t)
+    (ensures (
+      let res, _ = insert_avl2_aux r cmp t new_data in
+      is_avl cmp res /\
+      height t <= height res /\
+      height res <= height t + 1 /\
+      (forall_keys t (key_left cmp root) /\
+        key_left cmp root new_data
+        ==> forall_keys res (key_left cmp root)) /\
+      (forall_keys t (key_right cmp root) /\
+        key_right cmp root new_data
+        ==> forall_keys res (key_right cmp root)))
+    )
+  =
+  match t with
+  | Leaf -> ()
+  | Node data left right size ->
+    let delta = cmp data new_data in
+    if delta = 0 then begin
+      if r then begin
+        let t = Node new_data left right size in
+        forall_keys_trans left
+          (key_left cmp data) (key_left cmp new_data);
+        forall_keys_trans right
+          (key_right cmp data) (key_right cmp new_data);
+        assert (is_bst cmp t)
+      end else ()
+    end
+    else if delta > 0 then begin
+      let new_left, b = insert_avl2_aux r cmp left new_data in
+      let new_size = size + (int_of_bool b) in
+      let t, b = Node data new_left right new_size, b in
+      insert_avl2_proof_aux r cmp left new_data data;
+      insert_avl2_proof_aux r cmp left new_data root;
+      rebalance_avl_wds_proof cmp t root
+    end else begin
+      let new_right, b = insert_avl2_aux r cmp right new_data in
+      let new_size = size + (int_of_bool b) in
+      let t, b = Node data left new_right new_size, b in
+      insert_avl2_proof_aux r cmp right new_data data;
+      insert_avl2_proof_aux r cmp right new_data root;
+      rebalance_avl_wds_proof cmp t root
+    end
+#pop-options
+
+let insert_avl2_proof (#a: Type)
+  (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
+  : Lemma
+  (requires is_avl cmp t)
+  (ensures is_avl cmp (insert_avl2 r cmp t new_data))
+  = Classical.forall_intro (
+      Classical.move_requires (
+        insert_avl2_proof_aux r cmp t new_data
+      )
+    )
+*)
+

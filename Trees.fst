@@ -728,47 +728,6 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wds a)
 //      t
 //    )
 
-(*
-- r: in case of equality with an already existing element,
-  true = replace, false = do not replace
-- snd (result): whether a new element has been added,
-  that is whether the size has increased
-  => bad idea/bad design?
-*)
-
-let rec insert_avl2_aux (#a: Type)
-  (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
-  : result:(wds a & bool){
-    let t',b = result in
-    size_of_tree t' = size_of_tree t + (int_of_bool b) /\
-    is_wds t'
-  }
-  =
-  match t with
-  | Leaf -> Node new_data Leaf Leaf 1, true
-  | Node data left right size ->
-    let delta = cmp data new_data in
-    if delta = 0 then begin
-      if r
-      then
-        Node new_data left right size, false
-      else
-        t, false
-    end
-    else if delta > 0 then begin
-      let new_left, b = insert_avl2_aux r cmp left new_data in
-      let new_size = size + (int_of_bool b) in
-      let t, b = Node data new_left right new_size, b in
-      rebalance_avl_wds_size t;
-      rebalance_avl_wds t, b
-    end else begin
-      let new_right, b = insert_avl2_aux r cmp right new_data in
-      let new_size = size + (int_of_bool b) in
-      let t, b = Node data left new_right new_size, b in
-      rebalance_avl_wds_size t;
-      rebalance_avl_wds t, b
-    end
-
 //@BST
 let rec mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a) : bool =
   match t with
@@ -1051,10 +1010,90 @@ let greater_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
 
 //@AVL
 let rebalance_equal (#a: Type) (cmp: cmp a) (t1: bst a cmp)
-  : Lemma (
-  assume (is_avl cmp (rebalance_avl_wds t1));
-  equal cmp t1 (rebalance_avl_wds t1))
+  : Lemma
+  (requires is_avl cmp (rebalance_avl_wds t1))
+  (ensures equal cmp t1 (rebalance_avl_wds t1))
   = admit ()
+
+
+
+
+(*
+- r: in case of equality with an already existing element,
+  true = replace, false = do not replace
+- snd (result): whether a new element has been added,
+  that is whether the size has increased
+  => bad idea/bad design?
+*)
+
+#push-options "--z3rlimit 100"
+let rec insert_avl2_aux (#a: Type)
+  (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
+  : result:(avl a cmp & bool){
+    let t',b = result in
+    size_of_tree t' = size_of_tree t + (int_of_bool b) /\
+    subset cmp t t' /\
+    height t <= height t' /\
+    height t' <= height t + 1 /\
+    (b ==> add cmp t t' new_data) /\
+    (not b ==> equal cmp t t')
+  }
+  =
+  match t with
+  | Leaf -> Node new_data Leaf Leaf 1, true
+  | Node data left right size ->
+    let delta = cmp data new_data in
+    if delta = 0 then begin
+      if r
+      then
+        let new_t = Node new_data left right size in
+        assume (is_bst cmp new_t);
+        new_t, false
+      else
+        t, false
+    end
+    else if delta > 0 then begin
+      let new_left, b = insert_avl2_aux r cmp left new_data in
+      let new_size = size + (int_of_bool b) in
+      let new_t = Node data new_left right new_size in
+      assert (is_avl cmp new_left);
+      assert (is_avl cmp right);
+      assert (height t <= height new_t);
+      assert (height new_t <= height t + 1);
+      assume (is_bst cmp new_t);
+      rebalance_avl_wds_proof cmp new_t data;
+      assert (is_avl cmp (rebalance_avl_wds new_t));
+      rebalance_avl_wds_size new_t;
+      let new_t2 = rebalance_avl_wds new_t in
+      rebalance_equal cmp new_t;
+      assert (subset cmp t new_t2);
+      assert (b ==> add cmp t new_t2 new_data);
+      assert (not b ==> equal cmp t new_t2);
+      assert (height t <= height new_t2);
+      assert (height new_t2 <= height t + 1);
+      new_t2, b
+    end else begin
+      let new_right, b = insert_avl2_aux r cmp right new_data in
+      let new_size = size + (int_of_bool b) in
+      let new_t = Node data left new_right new_size in
+      assert (is_avl cmp new_right);
+      assert (is_avl cmp left);
+      assert (height t <= height new_t);
+      assert (height new_t <= height t + 1);
+      assume (is_bst cmp new_t);
+      rebalance_avl_wds_proof cmp new_t data;
+      assert (is_avl cmp (rebalance_avl_wds new_t));
+      rebalance_avl_wds_size new_t;
+      let new_t2 = rebalance_avl_wds new_t in
+      rebalance_equal cmp new_t;
+      assert (subset cmp t new_t2);
+      assert (b ==> add cmp t new_t2 new_data);
+      assert (not b ==> equal cmp t new_t2);
+      assert (height t <= height new_t2);
+      assert (height new_t2 <= height t + 1);
+      new_t2, b
+    end
+#pop-options
 
 #push-options "--z3rlimit 50"
 let rec remove_leftmost (#a: Type0)
@@ -1361,6 +1400,7 @@ let rec delete_avl_aux (#a: Type0)
       else
         let new_t = delete_bst_aux0 cmp data_to_rm t in
         new_t, true
+#pop-options
 
 let insert_avl2 (#a: Type)
   (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
@@ -1371,62 +1411,68 @@ let insert_avl2 (#a: Type)
   }
   = fst (insert_avl2_aux r cmp t new_data)
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let rec insert_avl2_proof_aux (#a: Type)
-  (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a) (root:a)
-  : Lemma (requires is_avl cmp t)
-    (ensures (
-      let res, _ = insert_avl2_aux r cmp t new_data in
-      is_avl cmp res /\
-      height t <= height res /\
-      height res <= height t + 1 /\
-      (forall_keys t (key_left cmp root) /\
-        key_left cmp root new_data
-        ==> forall_keys res (key_left cmp root)) /\
-      (forall_keys t (key_right cmp root) /\
-        key_right cmp root new_data
-        ==> forall_keys res (key_right cmp root)))
-    )
-  =
-  match t with
-  | Leaf -> ()
-  | Node data left right size ->
-    let delta = cmp data new_data in
-    if delta = 0 then begin
-      if r then begin
-        let t = Node new_data left right size in
-        forall_keys_trans left
-          (key_left cmp data) (key_left cmp new_data);
-        forall_keys_trans right
-          (key_right cmp data) (key_right cmp new_data);
-        assert (is_bst cmp t)
-      end else ()
-    end
-    else if delta > 0 then begin
-      let new_left, b = insert_avl2_aux r cmp left new_data in
-      let new_size = size + (int_of_bool b) in
-      let t, b = Node data new_left right new_size, b in
-      insert_avl2_proof_aux r cmp left new_data data;
-      insert_avl2_proof_aux r cmp left new_data root;
-      rebalance_avl_wds_proof cmp t root
-    end else begin
-      let new_right, b = insert_avl2_aux r cmp right new_data in
-      let new_size = size + (int_of_bool b) in
-      let t, b = Node data left new_right new_size, b in
-      insert_avl2_proof_aux r cmp right new_data data;
-      insert_avl2_proof_aux r cmp right new_data root;
-      rebalance_avl_wds_proof cmp t root
-    end
-#pop-options
 
-let insert_avl2_proof (#a: Type)
-  (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
+let proj (x: int) : r:int{-1 <= r /\ r <= 1}
+  = if x < 0 then -1
+    else if x = 0 then 0
+    else 1
+
+let rec test_aux0 (#a: Type)
+  (cmp:cmp a) (t: bst a cmp) (x y: a)
   : Lemma
-  (requires is_avl cmp t)
-  (ensures is_avl cmp (insert_avl2 r cmp t new_data))
-  = Classical.forall_intro (
-      Classical.move_requires (
-        insert_avl2_proof_aux r cmp t new_data
-      )
-    )
+  (requires mem cmp t x /\ cmp x y = 0)
+  (ensures mem cmp t y)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+let delta = cmp x data in
+match (proj delta) with
+| 0 -> ()
+| 1 -> unicity_right cmp t x; test_aux0 cmp right x y
+| _ -> unicity_left cmp t x; test_aux0 cmp left x y
 
+let test_aux (#a: Type)
+  (cmp: cmp a) (t1 t2 t3: bst a cmp) (v x: a)
+  : Lemma
+  (requires
+    (mem cmp t1 v = false) /\
+    (mem cmp t3 v = false) /\
+    (mem cmp t1 x \/ cmp v x = 0 <==> mem cmp t2 x) /\
+    (mem cmp t3 x \/ cmp v x = 0 <==> mem cmp t2 x)
+  )
+  (ensures mem cmp t1 x = mem cmp t3 x)
+  =
+  if cmp x v <> 0 then ()
+  else begin
+    assert (cmp x v = 0);
+    if mem cmp t1 x then test_aux0 cmp t1 x v;
+    assert (mem cmp t1 x = false);
+    if mem cmp t3 x then test_aux0 cmp t3 x v;
+    assert (mem cmp t3 x = false);
+    ()
+  end
+
+let test (#a: Type)
+  (cmp: cmp a) (t1 t2 t3: bst a cmp) (v: a)
+  : Lemma
+  (requires
+  mem cmp t1 v = false /\
+  mem cmp t3 v = false /\
+  // t2 = add t1 v
+  add cmp t1 t2 v /\
+  // t2 = add t3 v
+  add cmp t3 t2 v
+  )
+  (ensures equal cmp t1 t3)
+  =
+  introduce forall x. (mem cmp t1 x = mem cmp t3 x)
+  with test_aux cmp t1 t2 t3 v x
+
+let functional_correctness (#a: Type)
+  (cmp: cmp a) (t: avl a cmp) (v: a)
+  : Lemma (
+  let new_t, b = insert_avl2_aux true cmp t v in
+  let new_t2, b = delete_avl_aux cmp new_t v in
+  equal cmp t new_t2
+  )
+  = admit ()
