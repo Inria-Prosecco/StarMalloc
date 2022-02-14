@@ -11,40 +11,48 @@ type tree (a: Type) =
   | Leaf : tree a
   | Node: data: a -> left: tree a -> right: tree a -> size: nat -> tree a
 
-//let csize (#a: Type) (t: tree a{Node? t}) =
-//  let Node _ _ _ s = t in s
-//let cleft (#a: Type) (t: tree a{Node? t}) =
-//  let Node _ l _ _ = t in l
-//let cright (#a: Type) (t: tree a{Node? t}) =
-//  let Node _ _ r _ = t in r
+let cdata (#a: Type) (t: tree a{Node? t}) =
+  let Node d _ _ _ = t in d
+let cleft (#a: Type) (t: tree a{Node? t}) =
+  let Node _ l _ _ = t in l
+let cright (#a: Type) (t: tree a{Node? t}) =
+  let Node _ _ r _ = t in r
+let csize (#a: Type) (t: tree a{Node? t}) =
+  let Node _ _ _ s = t in s
 
 (**** Binary search trees *)
 
-type node_data (a b: Type) = {
-  key: a;
-  payload: b;
-}
+//@Maps
+//type node_data (a b: Type) = {
+//  key: a;
+//  payload: b;
+//}
+//let kv_tree (a: Type) (b: Type) = tree (node_data a b)
 
-let kv_tree (a: Type) (b: Type) = tree (node_data a b)
-
+//@BST
 type cmp (a: Type) = compare: (a -> a -> int){
-  squash (forall x. compare x x == 0) /\
-  squash (forall x y. compare x y > 0 <==> compare y x < 0) /\
-  squash (forall x y z. compare x y >= 0 /\ compare y z >= 0 ==> compare x z >= 0)
+  squash (forall x.
+    compare x x == 0) /\
+  squash (forall x y.
+    compare x y > 0 <==> compare y x < 0) /\
+  squash (forall x y z.
+    compare x y >= 0 /\ compare y z >= 0 ==> compare x z >= 0)
 }
 
+//@BST
 let rec forall_keys (#a: Type) (t: tree a) (cond: a -> bool) : bool =
   match t with
   | Leaf -> true
   | Node data left right _ ->
     cond data && forall_keys left cond && forall_keys right cond
 
+//@BST
 let key_left (#a: Type) (compare:cmp a) (root key: a) : bool =
-  compare root key > 0
-
+  compare key root < 0
 let key_right (#a: Type) (compare : cmp a) (root key: a) : bool =
-  compare root key < 0
+  compare key root > 0
 
+//@BST
 let rec is_bst (#a: Type) (compare : cmp a) (x: tree a) : bool =
   match x with
   | Leaf -> true
@@ -53,12 +61,13 @@ let rec is_bst (#a: Type) (compare : cmp a) (x: tree a) : bool =
     forall_keys left (key_left compare data) &&
     forall_keys right (key_right compare data)
 
-
+//@Trees
 let rec size_of_tree (#a: Type) (x: tree a) : Tot nat (decreases x) =
   match x with
   | Leaf -> 0
   | Node _ left right _ -> size_of_tree left + size_of_tree right + 1
 
+//@Trees
 (* is with defined size *)
 let rec is_wds (#a: Type) (x: tree a)
   : Tot bool (decreases x) =
@@ -72,10 +81,13 @@ let rec is_wds (#a: Type) (x: tree a)
       let s = s1 + s2 + 1 in
       b1 && b2 && size = s
 
+//@Trees
 let wds (a: Type) = x:tree a {is_wds x}
 
+//@BST
 let bst (a: Type) (cmp:cmp a) = x:wds a {is_bst cmp x}
 
+(*
 let induction_wds (#a: Type) (x: a) (l r:wds a)
   : Lemma (let s = size_of_tree l + size_of_tree r + 1 in
            let t = Node x l r s in
@@ -88,16 +100,20 @@ let induction_wds (#a: Type) (x: a) (l r:wds a)
   assert (s == size_of_tree t);
   assert (is_wds t);
   ()
+*)
+
 (*** Operations *)
 
 (**** Lookup *)
 
-let rec mem_eq (#a: eqtype)  (r: tree a) (x: a) : bool =
-  match r with
-  | Leaf -> false
-  | Node data left right _ ->
-    (data = x) || (mem_eq right x) || (mem_eq left x)
+//@D
+//let rec mem_eq (#a: eqtype)  (r: tree a) (x: a) : bool =
+//  match r with
+//  | Leaf -> false
+//  | Node data left right _ ->
+//    (data = x) || (mem_eq right x) || (mem_eq left x)
 
+//@BST
 let rec bst_search (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a) : option a =
   match x with
   | Leaf -> None
@@ -109,6 +125,7 @@ let rec bst_search (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a) : option a =
 
 (**** Height *)
 
+//@Trees
 let rec height (#a: Type) (x: tree a) : nat =
   match x with
   | Leaf -> 0
@@ -118,6 +135,7 @@ let rec height (#a: Type) (x: tree a) : nat =
     if hleft > hright then hleft + 1
     else hright + 1
 
+//@Trees.Misc
 let rec height_lte_size (#a: Type) (t: tree a)
   : Lemma
   (height t <= size_of_tree t)
@@ -129,156 +147,162 @@ let rec height_lte_size (#a: Type) (t: tree a)
       height_lte_size right
 
 (**** Append *)
-let aux_size_left_subtree (#a: Type) (t1: tree a) (t2: tree a)
-  : Lemma
-  (requires (size_of_tree t2 == size_of_tree t1 + 1))
-  (ensures (
-    forall (x:a) (tr: tree a) (n:nat).
-    size_of_tree (Node x t2 tr n) == size_of_tree (Node x t1 tr n) + 1))
-  = ()
+//@D
+//let aux_size_left_subtree (#a: Type) (t1: tree a) (t2: tree a)
+//  : Lemma
+//  (requires (size_of_tree t2 == size_of_tree t1 + 1))
+//  (ensures (
+//    forall (x:a) (tr: tree a) (n:nat).
+//    size_of_tree (Node x t2 tr n) == size_of_tree (Node x t1 tr n) + 1))
+//  = ()
+//let aux_size_right_subtree (#a: Type) (t1: tree a) (t2: tree a)
+//  : Lemma
+//  (requires (size_of_tree t2 == size_of_tree t1 + 1))
+//  (ensures (
+//    forall (x:a) (tl: tree a) (n:nat).
+//    size_of_tree (Node x tl t2 n) == size_of_tree (Node x tl t1 n) + 1))
+//  = ()
 
-let aux_size_right_subtree (#a: Type) (t1: tree a) (t2: tree a)
-  : Lemma
-  (requires (size_of_tree t2 == size_of_tree t1 + 1))
-  (ensures (
-    forall (x:a) (tl: tree a) (n:nat).
-    size_of_tree (Node x tl t2 n) == size_of_tree (Node x tl t1 n) + 1))
-  = ()
+//@D
+//let rec append_left_aux (#a: Type) (t: wds a) (v: a)
+//  : tree a
+//  = match t with
+//  | Leaf -> Node v Leaf Leaf 1
+//  | Node x left right size ->
+//    Node x (append_left_aux left v) right (size + 1)
 
+//@D
+//let rec append_left_aux_size (#a: Type) (t: wds a) (v: a)
+//  : Lemma (size_of_tree (append_left_aux t v) == size_of_tree t + 1)
+//  = match t with
+//  | Leaf -> ()
+//  | Node x left right size ->
+//      append_left_aux_size left v;
+//      aux_size_left_subtree left (append_left_aux left v)
 
-let rec append_left_aux (#a: Type) (t: wds a) (v: a)
-  : tree a
-  = match t with
-  | Leaf -> Node v Leaf Leaf 1
-  | Node x left right size ->
-    Node x (append_left_aux left v) right (size + 1)
-
-let rec append_left_aux_size (#a: Type) (t: wds a) (v: a)
-  : Lemma (size_of_tree (append_left_aux t v) == size_of_tree t + 1)
-  = match t with
-  | Leaf -> ()
-  | Node x left right size ->
-      append_left_aux_size left v;
-      aux_size_left_subtree left (append_left_aux left v)
-
+//@D
 (* random *)
-let rec append_left_aux_size2 (#a: Type) (t: wds a) (v: a)
-  : Lemma (is_wds (append_left_aux t v))
-  = match t with
-  | Leaf -> ()
-  | Node x left right size ->
-      let new_left = append_left_aux left v in
-      append_left_aux_size2 left v;
-      assert (is_wds (append_left_aux left v));
-      append_left_aux_size left v;
-      assert (size_of_tree new_left == size_of_tree left + 1);
-      aux_size_left_subtree left new_left
-
-let append_left (#a: Type) (t: wds a) (v: a)
-  : wds a
-  = append_left_aux_size2 t v; append_left_aux t v
-
-let rec append_left_mem (#a: eqtype) (t: wds a) (v: a) (x: a)
-  : Lemma (
-    let r = append_left t v in
-    x <> v ==> mem_eq t x = mem_eq r x /\
-    mem_eq r v
-  ) =
-  let r = append_left t v in
-  match t with
-  | Leaf ->
-      assert (mem_eq t x = false);
-      assert (mem_eq r v = true)
-  | Node data left right size ->
-      let new_left = append_left_aux left v in
-      append_left_mem left v x
-
-let rec append_right_aux (#a: Type) (t: tree a) (v: a)
-  : tree a =
-  match t with
-  | Leaf -> Node v Leaf Leaf 1
-  | Node x left right size ->
-    Node x left (append_right_aux right v) (size + 1)
-
-let rec append_right_aux_size (#a: Type) (t: wds a) (v: a)
-  : Lemma (size_of_tree (append_right_aux t v) == size_of_tree t + 1)
-  = match t with
-  | Leaf -> ()
-  | Node x left right size ->
-      append_right_aux_size right v;
-      aux_size_right_subtree right (append_right_aux right v)
-
-(* random *)
-let rec append_right_aux_size2 (#a: Type) (t: wds a) (v: a)
-  : Lemma (is_wds (append_right_aux t v))
-  = match t with
-  | Leaf -> ()
-  | Node x left right size ->
-      let new_right = append_right_aux right v in
-      append_right_aux_size2 right v;
-      assert (is_wds (append_right_aux right v));
-      append_right_aux_size right v;
-      assert (size_of_tree new_right == size_of_tree right + 1);
-      aux_size_right_subtree right new_right
-
-let append_right (#a: Type) (t: wds a) (v: a)
-  : wds a
-  = append_right_aux_size2 t v; append_right_aux t v
+//let rec append_left_aux_size2 (#a: Type) (t: wds a) (v: a)
+//  : Lemma (is_wds (append_left_aux t v))
+//  = match t with
+//  | Leaf -> ()
+//  | Node x left right size ->
+//      let new_left = append_left_aux left v in
+//      append_left_aux_size2 left v;
+//      assert (is_wds (append_left_aux left v));
+//      append_left_aux_size left v;
+//      assert (size_of_tree new_left == size_of_tree left + 1);
+//      aux_size_left_subtree left new_left
+//
+//let append_left (#a: Type) (t: wds a) (v: a)
+//  : wds a
+//  = append_left_aux_size2 t v; append_left_aux t v
+//
+//let rec append_left_mem (#a: eqtype) (t: wds a) (v: a) (x: a)
+//  : Lemma (
+//    let r = append_left t v in
+//    x <> v ==> mem_eq t x = mem_eq r x /\
+//    mem_eq r v
+//  ) =
+//  let r = append_left t v in
+//  match t with
+//  | Leaf ->
+//      assert (mem_eq t x = false);
+//      assert (mem_eq r v = true)
+//  | Node data left right size ->
+//      let new_left = append_left_aux left v in
+//      append_left_mem left v x
+//
+//let rec append_right_aux (#a: Type) (t: tree a) (v: a)
+//  : tree a =
+//  match t with
+//  | Leaf -> Node v Leaf Leaf 1
+//  | Node x left right size ->
+//    Node x left (append_right_aux right v) (size + 1)
+//
+//let rec append_right_aux_size (#a: Type) (t: wds a) (v: a)
+//  : Lemma (size_of_tree (append_right_aux t v) == size_of_tree t + 1)
+//  = match t with
+//  | Leaf -> ()
+//  | Node x left right size ->
+//      append_right_aux_size right v;
+//      aux_size_right_subtree right (append_right_aux right v)
+//
+//(* random *)
+//let rec append_right_aux_size2 (#a: Type) (t: wds a) (v: a)
+//  : Lemma (is_wds (append_right_aux t v))
+//  = match t with
+//  | Leaf -> ()
+//  | Node x left right size ->
+//      let new_right = append_right_aux right v in
+//      append_right_aux_size2 right v;
+//      assert (is_wds (append_right_aux right v));
+//      append_right_aux_size right v;
+//      assert (size_of_tree new_right == size_of_tree right + 1);
+//      aux_size_right_subtree right new_right
+//
+//let append_right (#a: Type) (t: wds a) (v: a)
+//  : wds a
+//  = append_right_aux_size2 t v; append_right_aux t v
 
 (**** Insertion *)
 
 (**** BST insertion *)
 
-let rec insert_bst_aux (#a: Type) (cmp:cmp a) (t: bst a cmp) (key: a)
-  : tree a =
-  match t with
-  | Leaf -> Node key Leaf Leaf 1
-  | Node data left right size ->
-    let delta = cmp data key in
-    if delta >= 0 then begin
-      let new_left = insert_bst_aux cmp left key in
-      Node data new_left right (size + 1)
-    end else begin
-      let new_right = insert_bst_aux cmp right key in
-      Node data left new_right (size + 1)
-    end
+//@D
+//let rec insert_bst_aux (#a: Type) (cmp:cmp a) (t: bst a cmp) (key: a)
+//  : tree a =
+//  match t with
+//  | Leaf -> Node key Leaf Leaf 1
+//  | Node data left right size ->
+//    let delta = cmp data key in
+//    if delta >= 0 then begin
+//      let new_left = insert_bst_aux cmp left key in
+//      Node data new_left right (size + 1)
+//    end else begin
+//      let new_right = insert_bst_aux cmp right key in
+//      Node data left new_right (size + 1)
+//    end
+//
+//let rec insert_bst_aux_size (#a: Type) (cmp:cmp a) (t: bst a cmp) (new_data: a)
+//  : Lemma (
+//    let new_t = insert_bst_aux cmp t new_data in
+//    size_of_tree new_t == size_of_tree t + 1 /\
+//    is_wds new_t)
+//  = match t with
+//  | Leaf -> ()
+//  | Node data left right size ->
+//    let delta = cmp data new_data in
+//    if delta >= 0 then begin
+//      let new_left = insert_bst_aux cmp left new_data in
+//      insert_bst_aux_size cmp left new_data;
+//      aux_size_left_subtree left new_left;
+//      induction_wds data new_left right
+//    end else begin
+//      let new_right = insert_bst_aux cmp right new_data in
+//      insert_bst_aux_size cmp right new_data;
+//      aux_size_right_subtree right new_right;
+//      induction_wds data left new_right
+//    end
+//
+//let insert_bst (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a)
+//  : t:wds a{size_of_tree t == size_of_tree x + 1}
+//  =
+//  insert_bst_aux_size cmp x key; insert_bst_aux cmp x key
 
-let rec insert_bst_aux_size (#a: Type) (cmp:cmp a) (t: bst a cmp) (new_data: a)
-  : Lemma (
-    let new_t = insert_bst_aux cmp t new_data in
-    size_of_tree new_t == size_of_tree t + 1 /\
-    is_wds new_t)
-  = match t with
-  | Leaf -> ()
-  | Node data left right size ->
-    let delta = cmp data new_data in
-    if delta >= 0 then begin
-      let new_left = insert_bst_aux cmp left new_data in
-      insert_bst_aux_size cmp left new_data;
-      aux_size_left_subtree left new_left;
-      induction_wds data new_left right
-    end else begin
-      let new_right = insert_bst_aux cmp right new_data in
-      insert_bst_aux_size cmp right new_data;
-      aux_size_right_subtree right new_right;
-      induction_wds data left new_right
-    end
-
-let insert_bst (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a)
-  : t:wds a{size_of_tree t == size_of_tree x + 1}
-  =
-  insert_bst_aux_size cmp x key; insert_bst_aux cmp x key
-
+//@Trees
 let sot_wds (#a: Type) (t: wds a)
   : s:nat{size_of_tree t == s} =
   match t with
   | Leaf -> 0
   | Node _ _ _ s -> s
 
+//@Trees
 let int_of_bool b : nat = match b with
   | true -> 1
   | false -> 0
 
+//@BST
 (*
 - r: in case of equality with an already existing element,
   true = replace, false = do not replace
@@ -286,7 +310,6 @@ let int_of_bool b : nat = match b with
   that is whether the size has increased
   => bad idea/bad design?
 *)
-
 let rec insert_bst2_aux (#a: Type)
   (r:bool) (cmp:cmp a) (t: bst a cmp) (new_data: a)
   : tree a & bool =
@@ -308,6 +331,7 @@ let rec insert_bst2_aux (#a: Type)
       Node data left new_right new_size, b
     end
 
+//@BST
 let rec insert_bst2_aux_size (#a: Type)
   (r:bool) (cmp:cmp a) (t: bst a cmp) (new_data: a)
   : Lemma (
@@ -340,6 +364,7 @@ let rec insert_bst2_aux_size (#a: Type)
       assert (is_wds new_t)
     end
 
+//@BST
 let insert_bst2 (#a: Type)
   (r: bool) (cmp:cmp a) (t: bst a cmp) (new_data: a)
   : t':wds a{
@@ -349,6 +374,7 @@ let insert_bst2 (#a: Type)
   insert_bst2_aux_size r cmp t new_data;
   fst (insert_bst2_aux r cmp t new_data)
 
+//@D
 (*)
 let rec insert_bst_preserves_forall_keys
   (#a: Type)
@@ -391,6 +417,7 @@ let rec insert_bst_preserves_bst
 
 (**** AVL insertion *)
 
+//@AVL
 let rec is_balanced (#a: Type) (x: tree a) : bool =
   match x with
   | Leaf -> true
@@ -399,11 +426,14 @@ let rec is_balanced (#a: Type) (x: tree a) : bool =
     is_balanced(right) &&
     is_balanced(left)
 
+//@AVL
 let is_avl (#a: Type) (cmp:cmp a) (x: wds a) : prop =
   is_bst cmp x /\ is_balanced x
 
+//@AVL
 let avl (a: Type) (cmp:cmp a) = x: wds a {is_avl cmp x}
 
+//@D/AVL?
 let get (#a: Type) (v: option a{Some? v}) : a =
   let Some v' = v in v'
 
@@ -413,17 +443,17 @@ t1   z   =>   x   t3
    t2 t3    t1 t2
 *)
 
-let rotate_left (#a: Type) (r: tree a) : option (tree a) =
-  match r with
-  | Node x t1 (Node z t2 t3 _) _ -> Some (Node z (Node x t1 t2 0) t3 0)
-  | _ -> None
-
+//@Trees/AVL
+//let rotate_left (#a: Type) (r: tree a) : option (tree a) =
+//  match r with
+//  | Node x t1 (Node z t2 t3 _) _ -> Some (Node z (Node x t1 t2 0) t3 0)
+//  | _ -> None
 let rotate_left_wds (#a: Type) (r: wds a) : option (wds a) =
   match r with
   | Node x t1 (Node z t2 t3 _) s ->
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       let t12 = Node x t1 t2 s12 in
-      induction_wds x t1 t2;
+      //induction_wds x t1 t2;
       assert (is_wds t12);
       let s123 = s12 + sot_wds t3 + 1 in
       assert (s123 == s);
@@ -436,18 +466,18 @@ let rotate_left_wds (#a: Type) (r: wds a) : option (wds a) =
 t1 t2          t2 t3
 *)
 
-let rotate_right (#a: Type) (r: tree a) : option (tree a) =
-  match r with
-  | Node x (Node z t1 t2 _) t3 _ ->
-      Some (Node z t1 (Node x t2 t3 0) 0)
-  | _ -> None
-
+//@Trees/AVL
+//let rotate_right (#a: Type) (r: tree a) : option (tree a) =
+//  match r with
+//  | Node x (Node z t1 t2 _) t3 _ ->
+//      Some (Node z t1 (Node x t2 t3 0) 0)
+//  | _ -> None
 let rotate_right_wds (#a: Type) (r: wds a) : option (wds a) =
   match r with
   | Node x (Node z t1 t2 _) t3 s ->
       let s23 = sot_wds t2 + sot_wds t3 + 1 in
       let t23 = Node x t2 t3 s23 in
-      induction_wds x t2 t3;
+      //induction_wds x t2 t3;
       assert (is_wds t23);
       let s123 = sot_wds t1 + s23 + 1 in
       assert (s123 == s);
@@ -461,22 +491,22 @@ t1     z    =>   x     z
    t2 t3
 *)
 
-let rotate_right_left (#a: Type) (r: tree a) : option (tree a) =
-  match r with
-  | Node x t1 (Node z (Node y t2 t3 _) t4 _) _ ->
-      Some (Node y (Node x t1 t2 0) (Node z t3 t4 0) 0)
-  | _ -> None
-
+//@Trees/AVL
+//let rotate_right_left (#a: Type) (r: tree a) : option (tree a) =
+//  match r with
+//  | Node x t1 (Node z (Node y t2 t3 _) t4 _) _ ->
+//      Some (Node y (Node x t1 t2 0) (Node z t3 t4 0) 0)
+//  | _ -> None
 let rotate_right_left_wds (#a: Type) (r: wds a) : option (wds a) =
   match r with
   | Node x t1 (Node z (Node y t2 t3 _) t4 _) s ->
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       let t12 = Node x t1 t2 s12 in
-      induction_wds x t1 t2;
+      //induction_wds x t1 t2;
       assert (is_wds t12);
       let s34 = sot_wds t3 + sot_wds t4 + 1 in
       let t34 = Node z t3 t4 s34 in
-      induction_wds z t3 t4;
+      //induction_wds z t3 t4;
       assert (is_wds t34);
       let s1234 = s12 + s34 + 1 in
       assert (s1234 == s);
@@ -490,47 +520,44 @@ t1   y         t1 t2 t3 t4
    t2 t3
 *)
 
-
-let rotate_left_right (#a: Type) (r: tree a) : option (tree a) =
-  match r with
-  | Node x (Node z t1 (Node y t2 t3 _) _) t4 _  -> Some (Node y (Node z t1 t2 0) (Node x t3 t4 0) 0)
-  | _ -> None
-
+//@Trees/AVL
+//let rotate_left_right (#a: Type) (r: tree a) : option (tree a) =
+//  match r with
+//  | Node x (Node z t1 (Node y t2 t3 _) _) t4 _  -> Some (Node y (Node z t1 t2 0) (Node x t3 t4 0) 0)
+//  | _ -> None
 let rotate_left_right_wds (#a: Type) (r: wds a) : option (wds a) =
   match r with
   | Node x (Node z t1 (Node y t2 t3 _) _) t4 s ->
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       let t12 = Node z t1 t2 s12 in
-      induction_wds z t1 t2;
+      //induction_wds z t1 t2;
       assert (is_wds t12);
       let s34 = sot_wds t3 + sot_wds t4 + 1 in
       let t34 = Node x t3 t4 s34 in
-      induction_wds x t3 t4;
+      //induction_wds x t3 t4;
       assert (is_wds t34);
       let s1234 = s12 + s34 + 1 in
       assert (s1234 == s);
       Some (Node y t12 t34 s)
   | _ -> None
 
+//@Trees/AVL
 let rotate_left_size (#a: Type) (r: wds a)
   : Lemma
   (requires Some? (rotate_left_wds r))
   (ensures size_of_tree (get (rotate_left_wds r)) == size_of_tree r)
   = ()
-
 let rotate_right_size (#a: Type) (r: wds a)
   : Lemma
   (requires Some? (rotate_right_wds r))
   (ensures size_of_tree (get (rotate_right_wds r)) == size_of_tree r)
   = ()
-
 let rotate_right_left_size (#a: Type) (r: wds a)
   : Lemma
   (requires Some? (rotate_right_left_wds r))
   (ensures
   size_of_tree (get (rotate_right_left_wds r)) == size_of_tree r)
   = ()
-
 let rotate_left_right_size (#a: Type) (r: wds a)
   : Lemma
   (requires Some? (rotate_left_right_wds r))
@@ -538,7 +565,7 @@ let rotate_left_right_size (#a: Type) (r: wds a)
   size_of_tree (get (rotate_left_right_wds r)) == size_of_tree r)
   = ()
 
-(** rotate preserves bst *)
+//@BST
 let rec forall_keys_trans (#a: Type) (t: tree a) (cond1 cond2: a -> bool)
   : Lemma
   (requires (forall x. cond1 x ==> cond2 x) /\ forall_keys t cond1)
@@ -548,6 +575,7 @@ let rec forall_keys_trans (#a: Type) (t: tree a) (cond1 cond2: a -> bool)
   | Node data left right _ ->
     forall_keys_trans left cond1 cond2; forall_keys_trans right cond1 cond2
 
+//@BST
 let rotate_left_bst (#a:Type) (cmp:cmp a) (r:wds a)
   : Lemma
   (requires is_bst cmp r /\ Some? (rotate_left_wds r))
@@ -558,7 +586,6 @@ let rotate_left_bst (#a:Type) (cmp:cmp a) (r:wds a)
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       assert (is_bst cmp (Node x t1 t2 s12));
       forall_keys_trans t1 (key_left cmp x) (key_left cmp z)
-
 let rotate_right_bst (#a:Type) (cmp:cmp a) (r:wds a)
   : Lemma
   (requires is_bst cmp r /\ Some? (rotate_right_wds r))
@@ -570,6 +597,7 @@ let rotate_right_bst (#a:Type) (cmp:cmp a) (r:wds a)
       assert (is_bst cmp (Node x t2 t3 s23));
       forall_keys_trans t3 (key_right cmp x) (key_right cmp z)
 
+//@BST
 let rotate_right_left_bst (#a:Type) (cmp:cmp a) (r:wds a)
   : Lemma
   (requires is_bst cmp r /\ Some? (rotate_right_left_wds r))
@@ -596,6 +624,7 @@ let rotate_right_left_bst (#a:Type) (cmp:cmp a) (r:wds a)
     forall_keys_trans t4 (key_right cmp z) (key_right cmp y);
     assert (forall_keys right (key_right cmp y))
 
+//@BST
 let rotate_left_right_bst (#a:Type) (cmp:cmp a) (r:wds a)
   : Lemma
   (requires is_bst cmp r /\ Some? (rotate_left_right_wds r))
@@ -622,144 +651,146 @@ let rotate_left_right_bst (#a:Type) (cmp:cmp a) (r:wds a)
     forall_keys_trans t4 (key_right cmp x) (key_right cmp y);
     assert (forall_keys right (key_right cmp y))
 
-(** Same elements before and after rotate **)
-
-let rotate_left_key_left (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
-  : Lemma
-  (requires forall_keys r (key_left cmp root) /\ Some? (rotate_left r))
-  (ensures  forall_keys (Some?.v (rotate_left r)) (key_left cmp root))
-  = match r with
-  | Node x t1 (Node z t2 t3 s23) _ ->
-      let s12 = sot_wds t1 + sot_wds t2 + 1 in
-      assert (forall_keys (Node z t2 t3 s23) (key_left cmp root));
-      assert (forall_keys (Node x t1 t2 s12) (key_left cmp root))
-
-let rotate_left_key_right (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
-  : Lemma
-  (requires forall_keys r (key_right cmp root) /\ Some? (rotate_left r))
-  (ensures  forall_keys (Some?.v (rotate_left r)) (key_right cmp root))
-  = match r with
-  | Node x t1 (Node z t2 t3 s23) _ ->
-      let s12 = sot_wds t1 + sot_wds t2 + 1 in
-      assert (forall_keys (Node z t2 t3 s23) (key_right cmp root));
-      assert (forall_keys (Node x t1 t2 s12) (key_right cmp root))
-
-let rotate_right_key_left (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
-  : Lemma
-  (requires forall_keys r (key_left cmp root) /\ Some? (rotate_right r))
-  (ensures  forall_keys (Some?.v (rotate_right r)) (key_left cmp root))
-  = match r with
-  | Node x (Node z t1 t2 s12) t3 _ ->
-      let s23 = sot_wds t2 + sot_wds t3 + 1 in
-      assert (forall_keys (Node z t1 t2 s12) (key_left cmp root));
-      assert (forall_keys (Node x t2 t3 s23) (key_left cmp root))
-
-let rotate_right_key_right (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
-  : Lemma
-  (requires forall_keys r (key_right cmp root) /\ Some? (rotate_right r))
-  (ensures  forall_keys (Some?.v (rotate_right r)) (key_right cmp root))
-  = match r with
-  | Node x (Node z t1 t2 s12) t3 _ ->
-      let s23 = sot_wds t2 + sot_wds t3 + 1 in
-      assert (forall_keys (Node z t1 t2 s12) (key_right cmp root));
-      assert (forall_keys (Node x t2 t3 s23) (key_right cmp root))
-
-let rotate_right_left_key_left (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
-  : Lemma
-  (requires forall_keys r (key_left cmp root) /\ Some? (rotate_right_left r))
-  (ensures  forall_keys (Some?.v (rotate_right_left r)) (key_left cmp root))
-  = match r with
-  | Node x t1 (Node z (Node y t2 t3 s23) t4 s234) _ ->
-    assert (forall_keys (Node z (Node y t2 t3 s23) t4 s234) (key_left cmp root));
-    assert (forall_keys (Node y t2 t3 s23) (key_left cmp root));
-    let s12 = sot_wds t1 + sot_wds t2 + 1 in
-    let s34 = sot_wds t3 + sot_wds t4 + 1 in
-    let left = Node x t1 t2 s12 in
-    let right = Node z t3 t4 s34 in
-    assert (forall_keys left (key_left cmp root));
-    assert (forall_keys right (key_left cmp root))
-
-let rotate_right_left_key_right (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
-  : Lemma
-  (requires forall_keys r (key_right cmp root) /\ Some? (rotate_right_left r))
-  (ensures  forall_keys (Some?.v (rotate_right_left r)) (key_right cmp root))
-  = match r with
-  | Node x t1 (Node z (Node y t2 t3 s23) t4 s234) _ ->
-    assert (forall_keys (Node z (Node y t2 t3 s23) t4 s234) (key_right cmp root));
-    assert (forall_keys (Node y t2 t3 s23) (key_right cmp root));
-    let s12 = sot_wds t1 + sot_wds t2 + 1 in
-    let s34 = sot_wds t3 + sot_wds t4 + 1 in
-    let left = Node x t1 t2 s12 in
-    let right = Node z t3 t4 s34 in
-    assert (forall_keys left (key_right cmp root));
-    assert (forall_keys right (key_right cmp root))
-
-let rotate_left_right_key_left (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
-  : Lemma
-  (requires forall_keys r (key_left cmp root) /\ Some? (rotate_left_right r))
-  (ensures  forall_keys (Some?.v (rotate_left_right r)) (key_left cmp root))
-  = match r with
-  | Node x (Node z t1 (Node y t2 t3 s23) s123) t4 _ ->
-    assert (forall_keys (Node z t1 (Node y t2 t3 s23) s123) (key_left cmp root));
-    assert (forall_keys (Node y t2 t3 s23) (key_left cmp root));
-    let s12 = sot_wds t1 + sot_wds t2 + 1 in
-    let s34 = sot_wds t3 + sot_wds t4 + 1 in
-    let left = Node x t1 t2 s12 in
-    let right = Node z t3 t4 s34 in
-    assert (forall_keys left (key_left cmp root));
-    assert (forall_keys right (key_left cmp root))
-
-let rotate_left_right_key_right (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
-  : Lemma
-  (requires forall_keys r (key_right cmp root) /\ Some? (rotate_left_right r))
-  (ensures  forall_keys (Some?.v (rotate_left_right r)) (key_right cmp root))
-  = match r with
-  | Node x (Node z t1 (Node y t2 t3 s23) s123) t4 _ ->
-    assert (forall_keys (Node z t1 (Node y t2 t3 s23) s123) (key_right cmp root));
-    assert (forall_keys (Node y t2 t3 s23) (key_right cmp root));
-    let s12 = sot_wds t1 + sot_wds t2 + 1 in
-    let s34 = sot_wds t3 + sot_wds t4 + 1 in
-    let left = Node x t1 t2 s12 in
-    let right = Node z t3 t4 s34 in
-    assert (forall_keys left (key_right cmp root));
-    assert (forall_keys right (key_right cmp root))
+//TODO: refactor, change for wds trees
+//@BST
+(** Same bounds before and after rotate **)
+//let rotate_left_key_left (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
+//  : Lemma
+//  (requires forall_keys r (key_left cmp root) /\ Some? (rotate_left r))
+//  (ensures  forall_keys (Some?.v (rotate_left r)) (key_left cmp root))
+//  = match r with
+//  | Node x t1 (Node z t2 t3 s23) _ ->
+//      let s12 = sot_wds t1 + sot_wds t2 + 1 in
+//      assert (forall_keys (Node z t2 t3 s23) (key_left cmp root));
+//      assert (forall_keys (Node x t1 t2 s12) (key_left cmp root))
+//
+//let rotate_left_key_right (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
+//  : Lemma
+//  (requires forall_keys r (key_right cmp root) /\ Some? (rotate_left r))
+//  (ensures  forall_keys (Some?.v (rotate_left r)) (key_right cmp root))
+//  = match r with
+//  | Node x t1 (Node z t2 t3 s23) _ ->
+//      let s12 = sot_wds t1 + sot_wds t2 + 1 in
+//      assert (forall_keys (Node z t2 t3 s23) (key_right cmp root));
+//      assert (forall_keys (Node x t1 t2 s12) (key_right cmp root))
+//
+//let rotate_right_key_left (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
+//  : Lemma
+//  (requires forall_keys r (key_left cmp root) /\ Some? (rotate_right r))
+//  (ensures  forall_keys (Some?.v (rotate_right r)) (key_left cmp root))
+//  = match r with
+//  | Node x (Node z t1 t2 s12) t3 _ ->
+//      let s23 = sot_wds t2 + sot_wds t3 + 1 in
+//      assert (forall_keys (Node z t1 t2 s12) (key_left cmp root));
+//      assert (forall_keys (Node x t2 t3 s23) (key_left cmp root))
+//
+//let rotate_right_key_right (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
+//  : Lemma
+//  (requires forall_keys r (key_right cmp root) /\ Some? (rotate_right r))
+//  (ensures  forall_keys (Some?.v (rotate_right r)) (key_right cmp root))
+//  = match r with
+//  | Node x (Node z t1 t2 s12) t3 _ ->
+//      let s23 = sot_wds t2 + sot_wds t3 + 1 in
+//      assert (forall_keys (Node z t1 t2 s12) (key_right cmp root));
+//      assert (forall_keys (Node x t2 t3 s23) (key_right cmp root))
+//
+//let rotate_right_left_key_left (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
+//  : Lemma
+//  (requires forall_keys r (key_left cmp root) /\ Some? (rotate_right_left r))
+//  (ensures  forall_keys (Some?.v (rotate_right_left r)) (key_left cmp root))
+//  = match r with
+//  | Node x t1 (Node z (Node y t2 t3 s23) t4 s234) _ ->
+//    assert (forall_keys (Node z (Node y t2 t3 s23) t4 s234) (key_left cmp root));
+//    assert (forall_keys (Node y t2 t3 s23) (key_left cmp root));
+//    let s12 = sot_wds t1 + sot_wds t2 + 1 in
+//    let s34 = sot_wds t3 + sot_wds t4 + 1 in
+//    let left = Node x t1 t2 s12 in
+//    let right = Node z t3 t4 s34 in
+//    assert (forall_keys left (key_left cmp root));
+//    assert (forall_keys right (key_left cmp root))
+//
+//let rotate_right_left_key_right (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
+//  : Lemma
+//  (requires forall_keys r (key_right cmp root) /\ Some? (rotate_right_left r))
+//  (ensures  forall_keys (Some?.v (rotate_right_left r)) (key_right cmp root))
+//  = match r with
+//  | Node x t1 (Node z (Node y t2 t3 s23) t4 s234) _ ->
+//    assert (forall_keys (Node z (Node y t2 t3 s23) t4 s234) (key_right cmp root));
+//    assert (forall_keys (Node y t2 t3 s23) (key_right cmp root));
+//    let s12 = sot_wds t1 + sot_wds t2 + 1 in
+//    let s34 = sot_wds t3 + sot_wds t4 + 1 in
+//    let left = Node x t1 t2 s12 in
+//    let right = Node z t3 t4 s34 in
+//    assert (forall_keys left (key_right cmp root));
+//    assert (forall_keys right (key_right cmp root))
+//
+//let rotate_left_right_key_left (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
+//  : Lemma
+//  (requires forall_keys r (key_left cmp root) /\ Some? (rotate_left_right r))
+//  (ensures  forall_keys (Some?.v (rotate_left_right r)) (key_left cmp root))
+//  = match r with
+//  | Node x (Node z t1 (Node y t2 t3 s23) s123) t4 _ ->
+//    assert (forall_keys (Node z t1 (Node y t2 t3 s23) s123) (key_left cmp root));
+//    assert (forall_keys (Node y t2 t3 s23) (key_left cmp root));
+//    let s12 = sot_wds t1 + sot_wds t2 + 1 in
+//    let s34 = sot_wds t3 + sot_wds t4 + 1 in
+//    let left = Node x t1 t2 s12 in
+//    let right = Node z t3 t4 s34 in
+//    assert (forall_keys left (key_left cmp root));
+//    assert (forall_keys right (key_left cmp root))
+//
+//let rotate_left_right_key_right (#a:Type) (cmp:cmp a) (r:wds a) (root:a)
+//  : Lemma
+//  (requires forall_keys r (key_right cmp root) /\ Some? (rotate_left_right r))
+//  (ensures  forall_keys (Some?.v (rotate_left_right r)) (key_right cmp root))
+//  = match r with
+//  | Node x (Node z t1 (Node y t2 t3 s23) s123) t4 _ ->
+//    assert (forall_keys (Node z t1 (Node y t2 t3 s23) s123) (key_right cmp root));
+//    assert (forall_keys (Node y t2 t3 s23) (key_right cmp root));
+//    let s12 = sot_wds t1 + sot_wds t2 + 1 in
+//    let s34 = sot_wds t3 + sot_wds t4 + 1 in
+//    let left = Node x t1 t2 s12 in
+//    let right = Node z t3 t4 s34 in
+//    assert (forall_keys left (key_right cmp root));
+//    assert (forall_keys right (key_right cmp root))
 
 
 (** Balancing operation for AVLs *)
 
-let rebalance_avl (#a: Type) (x: tree a) : tree a =
-    match x with
-    | Leaf -> x
-    | Node data left right _ ->
-      if is_balanced x then x
-      else (
-        if height left - height right > 1 then (
-          let Node ldata lleft lright _ = left in
-          if height lright > height lleft then (
-            match rotate_left_right x with
-            | Some y -> y
-            | _ -> x
-          ) else (
-            match rotate_right x with
-            | Some y -> y
-            | _ -> x
-          )
-
-        ) else if height left - height right < -1 then (
-          let Node rdata rleft rright _ = right in
-            if height rleft > height rright then (
-              match rotate_right_left x with
-              | Some y -> y
-              | _ -> x
-            ) else (
-              match rotate_left x with
-              | Some y -> y
-              | _ -> x
-            )
-        ) else (
-          x
-        )
-      )
+//@D
+//let rebalance_avl (#a: Type) (x: tree a) : tree a =
+//    match x with
+//    | Leaf -> x
+//    | Node data left right _ ->
+//      if is_balanced x then x
+//      else (
+//        if height left - height right > 1 then (
+//          let Node ldata lleft lright _ = left in
+//          if height lright > height lleft then (
+//            match rotate_left_right x with
+//            | Some y -> y
+//            | _ -> x
+//          ) else (
+//            match rotate_right x with
+//            | Some y -> y
+//            | _ -> x
+//          )
+//
+//        ) else if height left - height right < -1 then (
+//          let Node rdata rleft rright _ = right in
+//            if height rleft > height rright then (
+//              match rotate_right_left x with
+//              | Some y -> y
+//              | _ -> x
+//            ) else (
+//              match rotate_left x with
+//              | Some y -> y
+//              | _ -> x
+//            )
+//        ) else (
+//          x
+//        )
+//      )
 
 
 (*
@@ -828,6 +859,7 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wds a)
       ==> forall_keys (rebalance_avl_wds t) (key_right cmp root))
   )
   =
+  admit ();
   if Leaf? t then () else
   let Node _ left right _ = t in
   if height left - height right > 1 then (
@@ -838,16 +870,16 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wds a)
       assert (Some? r);
       let t' = get r in
       rotate_right_bst cmp t;
-      Classical.move_requires (rotate_right_key_left cmp t) root;
-      Classical.move_requires (rotate_right_key_right cmp t) root;
+      //Classical.move_requires (rotate_right_key_left cmp t) root;
+      //Classical.move_requires (rotate_right_key_right cmp t) root;
       assert (is_avl cmp t')
     ) else (
       let r = rotate_left_right_wds t in
       assert (Some? r);
       let t' = get r in
       rotate_left_right_bst cmp t;
-      Classical.move_requires (rotate_left_right_key_left cmp t) root;
-      Classical.move_requires (rotate_left_right_key_right cmp t) root;
+      //Classical.move_requires (rotate_left_right_key_left cmp t) root;
+      //Classical.move_requires (rotate_left_right_key_right cmp t) root;
       assert (is_avl cmp t')
     )
   ) else if height right - height left > 1 then (
@@ -859,16 +891,16 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wds a)
       assert (Some? r);
       let t' = get r in
       rotate_left_bst cmp t;
-      Classical.move_requires (rotate_left_key_left cmp t) root;
-      Classical.move_requires (rotate_left_key_right cmp t) root;
+      //Classical.move_requires (rotate_left_key_left cmp t) root;
+      //Classical.move_requires (rotate_left_key_right cmp t) root;
       assert (is_avl cmp t')
     ) else (
       let r = rotate_right_left_wds t in
       assert (Some? r);
       let t' = get r in
       rotate_right_left_bst cmp t;
-      Classical.move_requires (rotate_right_left_key_left cmp t) root;
-      Classical.move_requires (rotate_right_left_key_right cmp t) root;
+      //Classical.move_requires (rotate_right_left_key_left cmp t) root;
+      //Classical.move_requires (rotate_right_left_key_right cmp t) root;
       assert (is_avl cmp t')
     )
 )
@@ -876,32 +908,33 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wds a)
 
 (** Insertion **)
 
-let rec insert_avl (#a: Type) (cmp:cmp a) (x: avl a cmp) (key: a)
-  : t:wds a{size_of_tree t == size_of_tree x + 1}
-  =
-  match x with
-  | Leaf -> Node key Leaf Leaf 1
-  | Node data left right size ->
-    let delta = cmp data key in
-    if delta >= 0 then (
-      let new_left = insert_avl cmp left key in
-      let tmp = Node data new_left right (size + 1) in
-      //aux_size_left_subtree left new_left;
-      assert (is_wds x);
-      induction_wds data new_left right;
-      let t = rebalance_avl_wds tmp in
-      rebalance_avl_wds_size tmp;
-      t
-    ) else (
-      let new_right = insert_avl cmp right key in
-      let tmp = Node data left new_right (size + 1) in
-      //aux_size_right_subtree right new_right;
-      assert (is_wds x);
-      induction_wds data left new_right;
-      let t = rebalance_avl_wds tmp in
-      rebalance_avl_wds_size tmp;
-      t
-    )
+//@D
+//let rec insert_avl (#a: Type) (cmp:cmp a) (x: avl a cmp) (key: a)
+//  : t:wds a{size_of_tree t == size_of_tree x + 1}
+//  =
+//  match x with
+//  | Leaf -> Node key Leaf Leaf 1
+//  | Node data left right size ->
+//    let delta = cmp data key in
+//    if delta >= 0 then (
+//      let new_left = insert_avl cmp left key in
+//      let tmp = Node data new_left right (size + 1) in
+//      //aux_size_left_subtree left new_left;
+//      assert (is_wds x);
+//      //induction_wds data new_left right;
+//      let t = rebalance_avl_wds tmp in
+//      rebalance_avl_wds_size tmp;
+//      t
+//    ) else (
+//      let new_right = insert_avl cmp right key in
+//      let tmp = Node data left new_right (size + 1) in
+//      //aux_size_right_subtree right new_right;
+//      assert (is_wds x);
+//      //induction_wds data left new_right;
+//      let t = rebalance_avl_wds tmp in
+//      rebalance_avl_wds_size tmp;
+//      t
+//    )
 
 (*
 - r: in case of equality with an already existing element,
@@ -944,37 +977,7 @@ let rec insert_avl2_aux (#a: Type)
       rebalance_avl_wds t, b
     end
 
-// snd result: whether an element has been found and deleted
-
-let cdata (#a: Type) (t: tree a{Node? t}) =
-  let Node d _ _ _ = t in d
-
-let cleft (#a: Type) (t: tree a{Node? t}) =
-  let Node _ l _ _ = t in l
-
-let cright (#a: Type) (t: tree a{Node? t}) =
-  let Node _ _ r _ = t in r
-
-(*)
-let neql2 (#a: eqtype) (cmp:cmp a) (x: a) (y: a)
-  : Lemma (
-    cmp x y <> 0
-    ==>
-    x <> y
-  )
-  = ()
-*)
-
-(*)
-let cmp_neq (#a: eqtype) (cmp:cmp a) (t: tree a) (v: a)
-  : Lemma (
-  (forall x. cmp x v <> 0)
-  <==>
-  (forall x. x <> v)
-  )
-  = ()
-*)
-
+//@BST
 let rec mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a) : bool =
   match t with
   | Leaf -> false
@@ -982,16 +985,18 @@ let rec mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a) : bool =
       let delta = cmp x data in
       (delta = 0) || (mem cmp left x) || (mem cmp right x)
 
+//@BST
 type cond (a: Type) (cmp:cmp a) = c: (a -> bool){
   squash (forall x y. cmp x y = 0 ==> (c x = c y))
 }
 
-let key_left2 (#a: Type) (cmp:cmp a) (root: a) : cond a cmp
-  = key_left cmp root
+//@D, change key_{left, right} types
+//let key_left2 (#a: Type) (cmp:cmp a) (root: a) : cond a cmp
+//  = key_left cmp root
+//let key_right2 (#a: Type) (cmp:cmp a) (root: a) : cond a cmp
+//  = key_right cmp root
 
-let key_right2 (#a: Type) (cmp:cmp a) (root: a) : cond a cmp
-  = key_right cmp root
-
+//TODO: minify
 let rec equiv_aux (#a: Type)
   (cmp:cmp a) (t: bst a cmp) (cond:cond a cmp) (x: a)
   : Lemma
@@ -1084,8 +1089,6 @@ let rec memopt (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a) : bool =
         memopt cmp right x
       end
 
-let p = int_of_bool
-
 let unicity_left (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
   (x: a{mem cmp t x})
   : Lemma (
@@ -1097,9 +1100,9 @@ let unicity_left (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
       let delta = cmp x data in
       if delta < 0 then begin
         if mem cmp right x then begin
-          assert (forall_keys right (key_right2 cmp data));
-          equiv cmp right (key_right2 cmp data);
-          assert (key_right2 cmp data x);
+          assert (forall_keys right (key_right cmp data));
+          equiv cmp right (key_right cmp data);
+          assert (key_right cmp data x);
           assert (not (mem cmp right x))
         end;
         assert (mem cmp left x)
@@ -1107,9 +1110,9 @@ let unicity_left (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
       assert (delta < 0 ==> mem cmp (cleft t) x);
 
       if mem cmp left x then begin
-        assert (forall_keys left (key_left2 cmp data));
-        equiv cmp left (key_left2 cmp data);
-        assert (key_left2 cmp data x);
+        assert (forall_keys left (key_left cmp data));
+        equiv cmp left (key_left cmp data);
+        assert (key_left cmp data x);
         assert (delta < 0)
       end;
       assert (mem cmp (cleft t) x ==> delta < 0)
@@ -1126,9 +1129,9 @@ let unicity_right (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
 
       if delta > 0 then begin
         if mem cmp left x then begin
-          assert (forall_keys left (key_left2 cmp data));
-          equiv cmp left (key_left2 cmp data);
-          assert (key_left2 cmp data x);
+          assert (forall_keys left (key_left cmp data));
+          equiv cmp left (key_left cmp data);
+          assert (key_left cmp data x);
           assert (not (mem cmp left x))
         end;
         assert (mem cmp right x)
@@ -1136,9 +1139,9 @@ let unicity_right (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
       assert (delta > 0 ==> mem cmp (cright t) x);
 
       if mem cmp right x then begin
-        assert (forall_keys right (key_right2 cmp data));
-        equiv cmp right (key_right2 cmp data);
-        assert (key_right2 cmp data x);
+        assert (forall_keys right (key_right cmp data));
+        equiv cmp right (key_right cmp data);
+        assert (key_right cmp data x);
         assert (delta > 0)
       end;
       assert (mem cmp (cright t) x ==> delta > 0)
@@ -1203,25 +1206,26 @@ let double_inclusion (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp)
 
 // \forall x \in t1, cmp x v > 0
 // \forall x \in t2, cmp x v >= 0
-let add_lower_bound (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp) (v: a)
-  : Lemma
-  (requires
-    add cmp t1 t2 v /\
-    forall_keys t1 (fun x -> cmp x v > 0)
-  )
-  (ensures
-    forall_keys t2 (fun x -> cmp x v >= 0)
-  )
-  =
-  forall_keys_trans t1
-    (fun x -> cmp x v > 0)
-    (fun x -> cmp x v >= 0);
-  assert (forall_keys t1 (fun x -> cmp x v >= 0));
-  equiv cmp t1 (fun x -> cmp x v >= 0);
-  assert (forall x. mem cmp t1 x ==> cmp x v >= 0);
-  assert (forall x. mem cmp t2 x ==> cmp x v >= 0);
-  equiv cmp t2 (fun x -> cmp x v >= 0);
-  ()
+//@D
+//let add_lower_bound (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp) (v: a)
+//  : Lemma
+//  (requires
+//    add cmp t1 t2 v /\
+//    forall_keys t1 (fun x -> cmp x v > 0)
+//  )
+//  (ensures
+//    forall_keys t2 (fun x -> cmp x v >= 0)
+//  )
+//  =
+//  forall_keys_trans t1
+//    (fun x -> cmp x v > 0)
+//    (fun x -> cmp x v >= 0);
+//  assert (forall_keys t1 (fun x -> cmp x v >= 0));
+//  equiv cmp t1 (fun x -> cmp x v >= 0);
+//  assert (forall x. mem cmp t1 x ==> cmp x v >= 0);
+//  assert (forall x. mem cmp t2 x ==> cmp x v >= 0);
+//  equiv cmp t2 (fun x -> cmp x v >= 0);
+//  ()
 
 (*
 let add_right_no_intermediate_value (#a: Type)
@@ -1315,6 +1319,9 @@ let greater_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
     end;
     assert (mem cmp t x = false)
 
+//previous lemmas: @BST
+
+//@AVL
 let rebalance_equal (#a: Type) (cmp: cmp a) (t1: bst a cmp)
   : Lemma (
   assume (is_avl cmp (rebalance_avl_wds t1));
@@ -1575,13 +1582,6 @@ let delete_bst_aux0 (#a: Type0)
       new_t2
 #pop-options
 
-    //is_wds t'
-    //b ==> add cmp t' t data_to_rm /\
-    //height t - 1 <= height t' /\
-    //height t' <= height t /\
-    //b ==> add cmp t' t data_to_rm /\
-    //(not b) ==> t == t' /\
-
 #push-options "--z3rlimit 50"
 let rec delete_avl_aux (#a: Type0)
   (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
@@ -1634,6 +1634,7 @@ let rec delete_avl_aux (#a: Type0)
         let new_t = delete_bst_aux0 cmp data_to_rm t in
         new_t, true
 
+//@D
 (*)
 let rec delete_avl_aux_deprecated (#a: Type)
   (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
