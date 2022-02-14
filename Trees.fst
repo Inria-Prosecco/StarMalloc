@@ -1193,6 +1193,14 @@ let add_is_subset (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp) (v: a)
   )
   = ()
 
+let equal (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp)
+  = forall x. mem cmp t1 x = mem cmp t2 x
+
+let double_inclusion (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp)
+  : Lemma (equal cmp t1 t2
+  <==> subset cmp t1 t2 /\ subset cmp t2 t1)
+  = ()
+
 // \forall x \in t1, cmp x v > 0
 // \forall x \in t2, cmp x v >= 0
 let add_lower_bound (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp) (v: a)
@@ -1307,10 +1315,17 @@ let greater_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
     end;
     assert (mem cmp t x = false)
 
+let rebalance_equal (#a: Type) (cmp: cmp a) (t1: bst a cmp)
+  : Lemma (
+  assume (is_avl cmp (rebalance_avl_wds t1));
+  equal cmp t1 (rebalance_avl_wds t1))
+  = admit ()
+
+#push-options "--z3rlimit 50"
 let rec remove_leftmost (#a: Type0)
   (cmp:cmp a)
   (t: avl a cmp{Node? t})
-  : r:(bst a cmp & a){
+  : r:(avl a cmp & a){
     //1 returned element was part of the tree
     mem cmp t (snd r) = true /\
     //2 returned element smaller than all elements of the new tree
@@ -1327,10 +1342,9 @@ let rec remove_leftmost (#a: Type0)
     size_of_tree (fst r) = size_of_tree t - 1 /\
     //7
     height t - 1 <= height (fst r) /\
-    height (fst r) <= height t /\
+    height (fst r) <= height t
     //Node? (fst r) ==> is_balanced (cleft (fst r)) /\
     //Node? (fst r) ==> is_balanced (cright (fst r)) /\
-    True
  }
   =
   match t with
@@ -1341,16 +1355,14 @@ let rec remove_leftmost (#a: Type0)
       // (3)
       equiv cmp right (key_right cmp data);
       assert (mem cmp right data = false);
-      assert (is_balanced t);
-      assert (height right - height #a Leaf <= 1);
-      assert (height right <= 1);
+      //assert (is_balanced t);
+      //assert (height right - height #a Leaf <= 1);
+      //assert (height right <= 1);
       // (4 5 6 : trivial)
       right, data
   | Node data left right size ->
       let new_left, leftmost = remove_leftmost cmp left in
       // (1 : IH)
-      //assume (Node? new_left ==> is_balanced (cleft new_left));
-      //assume (Node? new_left ==> is_balanced (cright new_left));
       assert (mem cmp left leftmost = true);
       assert (mem cmp t leftmost = true);
       // (2 : IH)
@@ -1362,22 +1374,51 @@ let rec remove_leftmost (#a: Type0)
       assert (forall_keys new_left (key_left cmp data));
       // data <= right
       assert (forall_keys right (key_right cmp data));
+      assert (is_bst cmp new_t);
       // new_left < right
       forall_keys_trans right
         (key_right cmp data)
         (key_right cmp leftmost);
       // (3 : use 2)
-      smaller_not_mem cmp new_t leftmost;
-      // (4 5 6 : trivial)
-      new_t, leftmost
+      //smaller_not_mem cmp new_t leftmost;
+      let new_t2 = rebalance_avl_wds new_t in
+      assert (is_balanced new_left);
+      assert (is_balanced right);
+      assert (height left - 1 <= height new_left);
+      assert (height new_left <= height left);
+      assert (height right - height new_left <= 2);
+      assert (height new_left - height right <= 1);
+      rebalance_avl_wds_proof cmp new_t data;
+
+      // 1
+      assert (mem cmp t leftmost = true);
+      // 2
+      rebalance_equal cmp new_t;
+      assert (subset cmp new_t2 new_t);
+      subset_preserves_cond cmp
+        new_t2 new_t (key_right cmp leftmost);
+      // 3
+      smaller_not_mem cmp new_t2 leftmost;
+      assert (mem cmp new_t2 leftmost = false);
+      // 5
+      assert (add cmp new_t2 t leftmost);
+      // 6
+      rebalance_avl_wds_size new_t;
+      assert (size_of_tree new_t2 = size_of_tree t - 1);
+      // 7
+      assert (height new_t2 <= height t);
+      assert (height t - 1 <= height new_t2);
+      assert (is_avl cmp new_t2);
+      new_t2, leftmost
+#pop-options
 
 // https://en.wikipedia.org/wiki/Binary_search_tree#Deletion
-#push-options "--z3rlimit 50"
+#push-options "--z3rlimit 80"
 let delete_bst_aux0 (#a: Type0)
   (cmp:cmp a) (data_to_rm: a)
   (t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
   //(t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
-  : r:bst a cmp{
+  : r:avl a cmp{
     // 1 a b removal of one element
     mem cmp t data_to_rm = true /\
     //?data_to_rm = true /\
@@ -1446,7 +1487,26 @@ let delete_bst_aux0 (#a: Type0)
       // 2
       assert (add cmp (cright new_t) (cright t) y);
       assert (add cmp new_t t data_to_rm);
-      new_t
+
+      // ###
+      assert (is_balanced l);
+      assert (is_balanced r);
+      assert (height l - height r <= 2);
+      assert (height r - height l <= 2);
+      let new_t2 = rebalance_avl_wds new_t in
+      rebalance_avl_wds_proof cmp new_t y;
+      assert (is_avl cmp new_t2);
+      // 1
+      assert (mem cmp t data_to_rm = true);
+      rebalance_equal cmp new_t;
+      assert (mem cmp new_t2 data_to_rm = false);
+      // 2
+      assert (add cmp new_t2 t data_to_rm);
+      // 3
+      rebalance_avl_wds_size new_t;
+      assert (size_of_tree new_t2 = size_of_tree t - 1);
+      new_t2
+
   // successor of z = to be retrieved
   | Node z l r sz ->
       assert (Node? r);
@@ -1493,7 +1553,26 @@ let delete_bst_aux0 (#a: Type0)
       assert (mem cmp new_t data_to_rm = false);
       // 2
       assert (add cmp new_t t data_to_rm);
-      new_t
+
+      // ###
+      assert (is_balanced l);
+      assert (is_balanced new_right);
+      assert (height l - height new_right <= 2);
+      assert (height new_right - height l <= 2);
+      let new_t2 = rebalance_avl_wds new_t in
+      rebalance_avl_wds_proof cmp new_t succ_z;
+      assert (is_avl cmp new_t2);
+      // 1
+      assert (mem cmp t data_to_rm = true);
+      rebalance_equal cmp new_t;
+      assert (mem cmp new_t2 data_to_rm = false);
+      // 2
+      assert (add cmp new_t2 t data_to_rm);
+      // 3
+      rebalance_avl_wds_size new_t;
+      assert (size_of_tree new_t2 = size_of_tree t - 1);
+
+      new_t2
 #pop-options
 
     //is_wds t'
@@ -1511,7 +1590,9 @@ let rec delete_avl_aux (#a: Type0)
     size_of_tree t' = size_of_tree t - (int_of_bool b) /\
     subset cmp t' t /\
     height t - 1 <= height t' /\
-    height t' <= height t
+    height t' <= height t /\
+    (b ==> add cmp t' t data_to_rm) /\
+    ((not b) ==> equal cmp t' t)
   }
   =
   match t with
@@ -1519,7 +1600,6 @@ let rec delete_avl_aux (#a: Type0)
   | Node data left right size ->
       let delta = cmp data data_to_rm in
       if delta > 0 then begin
-        admit ();
         let new_left, b = delete_avl_aux cmp left data_to_rm in
         assert (is_avl cmp new_left);
         assert (forall_keys left (key_left cmp data));
@@ -1528,13 +1608,14 @@ let rec delete_avl_aux (#a: Type0)
         assert (forall_keys new_left (key_left cmp data));
         let new_size = size - (int_of_bool b) in
         let new_t = Node data new_left right new_size in
+
         rebalance_avl_wds_size new_t;
         rebalance_avl_wds_proof cmp new_t data;
         let new_t2 = rebalance_avl_wds new_t in
+        rebalance_equal cmp new_t;
         new_t2, b
       end
       else if delta < 0 then begin
-        admit ();
         let new_right, b = delete_avl_aux cmp right data_to_rm in
         assert (is_avl cmp new_right);
         assert (forall_keys right (key_right cmp data));
@@ -1546,40 +1627,12 @@ let rec delete_avl_aux (#a: Type0)
         rebalance_avl_wds_size new_t;
         rebalance_avl_wds_proof cmp new_t data;
         let new_t2 = rebalance_avl_wds new_t in
+        rebalance_equal cmp new_t;
         new_t2, b
       end
-      else begin
+      else
         let new_t = delete_bst_aux0 cmp data_to_rm t in
-        assume (height t - 1 <= height new_t);
-        assume (height new_t <= height t);
-        rebalance_avl_wds_size new_t;
-        if size_of_tree new_t = 0 then new_t, true
-        else begin
-        assume (is_balanced (cleft new_t));
-        assume (is_balanced (cright new_t));
-        rebalance_avl_wds_proof cmp new_t (cdata new_t);
-        let new_t2 = rebalance_avl_wds new_t in
-        new_t2, true
-        end
-      end
-
-(*)
-      admit (); t, false end
-
-(*)
-      else if delta < 0 then begin
-        admit ();
-        let new_right, b = delete_avl_aux cmp right data_to_rm in
-        let new_size = size - (int_of_bool b) in
-        let t, b = Node data left new_right new_size, b in
-        rebalance_avl_wds_size t;
-        rebalance_avl_wds t, b
-      end else begin
-        //assume (data = data_to_rm);
-        admit ();
-        let t = delete_bst_aux0 cmp data_to_rm t in
-        t, true
-      end
+        new_t, true
 
 (*)
 let rec delete_avl_aux_deprecated (#a: Type)
