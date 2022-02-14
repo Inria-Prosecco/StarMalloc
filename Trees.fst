@@ -1182,6 +1182,80 @@ let equivmem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
 let subset (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp)
   = forall x. mem cmp t1 x ==> mem cmp t2 x
 
+// x \in t2 => x \in t1 or x = v
+let add (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp) (v: a)
+  //= forall x. (mem cmp t1 x \/ cmp v x = 0) ==> mem cmp t2 x
+  = forall x. (mem cmp t1 x \/ cmp v x = 0) <==> mem cmp t2 x
+
+let add_is_subset (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp) (v: a)
+  : Lemma (
+    add cmp t1 t2 v ==> subset cmp t1 t2
+  )
+  = ()
+
+// \forall x \in t1, cmp x v > 0
+// \forall x \in t2, cmp x v >= 0
+let add_lower_bound (#a: Type) (cmp:cmp a) (t1 t2: bst a cmp) (v: a)
+  : Lemma
+  (requires
+    add cmp t1 t2 v /\
+    forall_keys t1 (fun x -> cmp x v > 0)
+  )
+  (ensures
+    forall_keys t2 (fun x -> cmp x v >= 0)
+  )
+  =
+  forall_keys_trans t1
+    (fun x -> cmp x v > 0)
+    (fun x -> cmp x v >= 0);
+  assert (forall_keys t1 (fun x -> cmp x v >= 0));
+  equiv cmp t1 (fun x -> cmp x v >= 0);
+  assert (forall x. mem cmp t1 x ==> cmp x v >= 0);
+  assert (forall x. mem cmp t2 x ==> cmp x v >= 0);
+  equiv cmp t2 (fun x -> cmp x v >= 0);
+  ()
+
+(*
+let add_right_no_intermediate_value (#a: Type)
+  (cmp:cmp a) (t1 t2: bst a cmp) (v: a) (t3: bst a cmp{Node? t3})
+  : Lemma
+  (requires
+    t2 == cright t3 /\
+    cmp (cdata t3) v < 0 /\
+    add cmp t1 t2 v /\
+    forall_keys t1 (fun x -> cmp x v > 0)
+  )
+  (ensures
+    forall_keys t3 (fun x -> cmp x (cdata t3) <= 0
+                          || cmp x v >= 0)
+  )
+  =
+  assert (forall x. mem cmp t3 x =
+    (cmp (cdata t3) x = 0) ||
+    mem cmp (cleft t3) x ||
+    mem cmp (cright t3) x
+  );
+  // left + center
+  assert (forall_keys (cleft t3) (key_left cmp (cdata t3)));
+  forall_keys_trans (cleft t3)
+    (key_left cmp (cdata t3))
+    (fun x -> cmp x (cdata t3) <= 0);
+  assert (forall_keys (cleft t3) (fun x -> cmp x (cdata t3) <= 0));
+  equiv cmp (cleft t3) (fun x -> cmp x (cdata t3) <= 0);
+  assert (forall x. (cmp (cdata t3) x = 0 || (mem cmp (cleft t3) x))
+    ==> cmp x (cdata t3) <= 0);
+  // right
+  add_lower_bound cmp t1 t2 v;
+  assert (forall_keys t2 (fun x -> cmp x v >= 0));
+  equiv cmp (cright t3) (fun x -> cmp x v >= 0);
+  // conclusion
+  assert (forall x. mem cmp t3 x
+    ==> cmp x (cdata t3) <= 0 || cmp x v >= 0);
+  equiv cmp t3 (fun x -> cmp x (cdata t3) <= 0 || cmp x v >= 0);
+  assert (forall_keys t3 (fun x -> cmp x (cdata t3) <= 0
+                               || cmp x v >= 0))
+*)
+
 let subset_preserves_cond (#a: Type0)
   (cmp:cmp a)
   (t1 t2: bst a cmp) (cond: cond a cmp)
@@ -1233,9 +1307,9 @@ let greater_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
     end;
     assert (mem cmp t x = false)
 
- let rec remove_leftmost (#a: Type0)
+let rec remove_leftmost (#a: Type0)
   (cmp:cmp a)
-  (t: bst a cmp{Node? t})
+  (t: avl a cmp{Node? t})
   : r:(bst a cmp & a){
     //1 returned element was part of the tree
     mem cmp t (snd r) = true /\
@@ -1244,14 +1318,22 @@ let greater_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
     //3 returned element has been removed
     mem cmp (fst r) (snd r) = false /\
     //4 rest of the tree preserved
-    (forall x. cmp x (snd r) <> 0
-      ==> mem cmp t x = mem cmp (fst r) x) /\
+    //(forall x. cmp x (snd r) <> 0
+    //  ==> mem cmp t x = mem cmp (fst r) x) /\
     //5 subset
-    subset cmp (fst r) t /\
+    //subset cmp (fst r) t /\
+    add cmp (fst r) t (snd r) /\
     //6 size decreased by 1
-    size_of_tree (fst r) = size_of_tree t - 1
+    size_of_tree (fst r) = size_of_tree t - 1 /\
+    //7
+    height t - 1 <= height (fst r) /\
+    height (fst r) <= height t /\
+    //Node? (fst r) ==> is_balanced (cleft (fst r)) /\
+    //Node? (fst r) ==> is_balanced (cright (fst r)) /\
+    True
  }
-  = match t with
+  =
+  match t with
   | Node data Leaf right size ->
       // (1 : trivial)
       // (2)
@@ -1259,17 +1341,22 @@ let greater_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
       // (3)
       equiv cmp right (key_right cmp data);
       assert (mem cmp right data = false);
+      assert (is_balanced t);
+      assert (height right - height #a Leaf <= 1);
+      assert (height right <= 1);
       // (4 5 6 : trivial)
       right, data
   | Node data left right size ->
-      //admit ();
       let new_left, leftmost = remove_leftmost cmp left in
       // (1 : IH)
+      //assume (Node? new_left ==> is_balanced (cleft new_left));
+      //assume (Node? new_left ==> is_balanced (cright new_left));
       assert (mem cmp left leftmost = true);
       assert (mem cmp t leftmost = true);
       // (2 : IH)
       let new_t = Node data new_left right (size - 1) in
       // new_left <= data
+      add_is_subset cmp new_left left leftmost;
       assert (subset cmp new_left left);
       subset_preserves_cond cmp new_left left (key_left cmp data);
       assert (forall_keys new_left (key_left cmp data));
@@ -1284,88 +1371,147 @@ let greater_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
       // (4 5 6 : trivial)
       new_t, leftmost
 
-(*)
 // https://en.wikipedia.org/wiki/Binary_search_tree#Deletion
+#push-options "--z3rlimit 50"
 let delete_bst_aux0 (#a: Type0)
   (cmp:cmp a) (data_to_rm: a)
-  (t: bst a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
+  (t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
   //(t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
   : r:bst a cmp{
-    (forall x. cmp x data_to_rm <> 0
-      ==> mem cmp t x = mem cmp r x) /\
-    // mem t data_to_rm = true /\
-    (forall x. cmp x data_to_rm = 0
-      ==> mem cmp t x = true) /\
-    // mem r data_to_rm = false /\
-    (forall x. cmp x data_to_rm = 0
-      ==> mem cmp r x = false) /\
+    // 1 a b removal of one element
+    mem cmp t data_to_rm = true /\
+    //?data_to_rm = true /\
+    mem cmp r data_to_rm = false /\
+    // 2 remaining tree unchanged
+    //(forall x. cmp x data_to_rm <> 0
+    //  ==> mem cmp t x = mem cmp r x) /\
+    add cmp r t data_to_rm /\
+    // 3 size decreased by one
     size_of_tree r = size_of_tree t - 1 /\
-    is_wds r
+    // 4
+    height t - 1 <= height r /\
+    height r <= height t
   }
   =
   match t with
   | Node data Leaf Leaf 1 -> Leaf
   | Node data left Leaf size ->
-      unicity_left cmp t data; left
-  | Node data Leaf right size -> right
-  | _ -> admit (); t
-
-(*)
+      assert (forall_keys left (key_left cmp data));
+      equiv cmp left (key_left cmp data);
+      //greater_not_mem cmp left data;
+      assert (mem cmp left data = false);
+      left
+  | Node data Leaf right size ->
+      assert (forall_keys right (key_right cmp data));
+      equiv cmp right (key_right cmp data);
+      //smaller_not_mem cmp right data;
+      assert (mem cmp right data = false);
+      right
   // successor of z = y
   | Node z l (Node y Leaf x sy) sz ->
-      admit ();
       let r = Node y Leaf x sy in
+      // y <= x
       assert (forall_keys x (key_right cmp y));
+      // l <= z <= y
       forall_keys_trans l
         (key_left cmp z)
         (key_left cmp y);
       assert (forall_keys l (key_left cmp y));
       let new_t = Node y l x (sz - 1) in
-      // mem r data_to_rm = false
-      // TODO: beurk, copypasta
-      unicity_left cmp l y;
-      unicity_right cmp r y;
-      assert (forall_keys l (key_left cmp z));
-      equiv cmp l (key_left cmp z);
-      assert (forall x. mem cmp l x ==> key_left cmp z x);
-      assert (forall_keys r (key_right cmp z));
-      equiv cmp r (key_right cmp z);
-      assert (forall x. mem cmp r x ==> key_right cmp z x);
+      // 3 is included
+      assert (is_bst cmp new_t);
+      //assert (size_of_tree new_t = size_of_tree t - 1);
+      // 1a
+      assert (mem cmp t data_to_rm = true);
+      // 1b : removal l
+      assert (cmp z data_to_rm = 0);
+      forall_keys_trans l
+        (key_left cmp z)
+        (key_left cmp data_to_rm);
+      assert (forall_keys l (key_left cmp data_to_rm));
+      greater_not_mem cmp l data_to_rm;
+      assert (mem cmp l data_to_rm = false);
+      // 1b : removal x
+      assert (cmp z data_to_rm = 0);
+      forall_keys_trans r
+        (key_right cmp z)
+        (key_right cmp data_to_rm);
+      assert (forall_keys r (key_right cmp data_to_rm));
+      assert (subset cmp x r);
+      subset_preserves_cond cmp x r (key_right cmp data_to_rm);
+      smaller_not_mem cmp x data_to_rm;
+      assert (mem cmp x data_to_rm = false);
+      // 1b
+      assert (mem cmp new_t data_to_rm = false);
+      // 2
+      assert (add cmp (cright new_t) (cright t) y);
+      assert (add cmp new_t t data_to_rm);
       new_t
   // successor of z = to be retrieved
   | Node z l r sz ->
       assert (Node? r);
+      // 1a
+      assert (mem cmp t data_to_rm = true);
+      // call to aux function, building new tree
       let new_right, succ_z = remove_leftmost cmp r in
-      // right
-      assert (subset cmp new_right r);
-      assert (forall_keys r (key_right cmp z));
-      subset_preserves_cond cmp new_right r (key_right cmp z);
-      assert (forall_keys new_right (key_right cmp z));
-      // left
-      assert (mem cmp r succ_z);
+      let new_t = Node succ_z l new_right (sz - 1) in
+      // left: l <= z <= succ_z
+      // z <= succ_z
       assert (forall_keys r (key_right cmp z));
       equiv cmp r (key_right cmp z);
       assert (key_right cmp z succ_z);
+      // l <= succ_z
       forall_keys_trans l
         (key_left cmp z)
         (key_left cmp succ_z);
-      let new_t = Node succ_z l new_right (sz - 1) in
-      // mem r data_to_rm = false
-      // TODO: beurk, copypasta
-      assert (forall_keys l (key_left cmp z));
-      equiv cmp l (key_left cmp z);
-      assert (forall x. mem cmp l x ==> key_left cmp z x);
-      assert (forall_keys r (key_right cmp z));
-      equiv cmp r (key_right cmp z);
-      assert (forall x. mem cmp r x ==> key_right cmp z x);
+      // right: succ_z <= new_right
+      assert (forall_keys new_right (key_right cmp succ_z));
+      // 3 included
+      assert (is_bst cmp new_t);
+      // 1b: left
+      assert (cmp z data_to_rm = 0);
+      forall_keys_trans l
+        (key_left cmp z)
+        (key_left cmp data_to_rm);
+      greater_not_mem cmp l data_to_rm;
+      assert (mem cmp l data_to_rm = false);
+      // 1b: right
+      assert (cmp z data_to_rm = 0);
+      assert (forall_keys new_right (key_right cmp succ_z));
+      forall_keys_trans new_right
+        (key_right cmp succ_z)
+        (key_right cmp data_to_rm);
+      smaller_not_mem cmp new_right data_to_rm;
+      assert (mem cmp new_right data_to_rm = false);
+      // 1b
+      assert (key_right cmp z succ_z);
+      assert (cmp data_to_rm succ_z <> 0);
+      assert (mem cmp new_t data_to_rm
+      = (cmp succ_z data_to_rm = 0)
+      || (mem cmp l data_to_rm)
+      || (mem cmp new_right data_to_rm));
+      assert (mem cmp new_t data_to_rm = false);
+      // 2
+      assert (add cmp new_t t data_to_rm);
       new_t
+#pop-options
 
-let rec delete_avl_aux (#a: eqtype)
+    //is_wds t'
+    //b ==> add cmp t' t data_to_rm /\
+    //height t - 1 <= height t' /\
+    //height t' <= height t /\
+    //b ==> add cmp t' t data_to_rm /\
+    //(not b) ==> t == t' /\
+
+#push-options "--z3rlimit 50"
+let rec delete_avl_aux (#a: Type0)
   (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
-  : result:(wds a & bool){
+  : result:(avl a cmp & bool){
     let t',b = result in
     size_of_tree t' = size_of_tree t - (int_of_bool b) /\
-    is_wds t'
+    subset cmp t' t /\
+    height t - 1 <= height t' /\
+    height t' <= height t
   }
   =
   match t with
@@ -1373,21 +1519,65 @@ let rec delete_avl_aux (#a: eqtype)
   | Node data left right size ->
       let delta = cmp data data_to_rm in
       if delta > 0 then begin
+        admit ();
         let new_left, b = delete_avl_aux cmp left data_to_rm in
+        assert (is_avl cmp new_left);
+        assert (forall_keys left (key_left cmp data));
+        assert (subset cmp new_left left);
+        subset_preserves_cond cmp new_left left (key_left cmp data);
+        assert (forall_keys new_left (key_left cmp data));
         let new_size = size - (int_of_bool b) in
-        let t, b = Node data new_left right new_size, b in
-        rebalance_avl_wds_size t;
-        rebalance_avl_wds t, b
+        let new_t = Node data new_left right new_size in
+        rebalance_avl_wds_size new_t;
+        rebalance_avl_wds_proof cmp new_t data;
+        let new_t2 = rebalance_avl_wds new_t in
+        new_t2, b
       end
       else if delta < 0 then begin
+        admit ();
+        let new_right, b = delete_avl_aux cmp right data_to_rm in
+        assert (is_avl cmp new_right);
+        assert (forall_keys right (key_right cmp data));
+        assert (subset cmp new_right right);
+        subset_preserves_cond cmp new_right right (key_right cmp data);
+        assert (forall_keys new_right (key_right cmp data));
+        let new_size = size - (int_of_bool b) in
+        let new_t = Node data left new_right new_size in
+        rebalance_avl_wds_size new_t;
+        rebalance_avl_wds_proof cmp new_t data;
+        let new_t2 = rebalance_avl_wds new_t in
+        new_t2, b
+      end
+      else begin
+        let new_t = delete_bst_aux0 cmp data_to_rm t in
+        assume (height t - 1 <= height new_t);
+        assume (height new_t <= height t);
+        rebalance_avl_wds_size new_t;
+        if size_of_tree new_t = 0 then new_t, true
+        else begin
+        assume (is_balanced (cleft new_t));
+        assume (is_balanced (cright new_t));
+        rebalance_avl_wds_proof cmp new_t (cdata new_t);
+        let new_t2 = rebalance_avl_wds new_t in
+        new_t2, true
+        end
+      end
+
+(*)
+      admit (); t, false end
+
+(*)
+      else if delta < 0 then begin
+        admit ();
         let new_right, b = delete_avl_aux cmp right data_to_rm in
         let new_size = size - (int_of_bool b) in
         let t, b = Node data left new_right new_size, b in
         rebalance_avl_wds_size t;
         rebalance_avl_wds t, b
       end else begin
-        assume (data = data_to_rm);
-        let t = delete_avl_aux0 cmp data_to_rm t in
+        //assume (data = data_to_rm);
+        admit ();
+        let t = delete_bst_aux0 cmp data_to_rm t in
         t, true
       end
 
