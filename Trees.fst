@@ -1042,7 +1042,7 @@ let rec insert_avl2_aux (#a: Type)
   match t with
   | Leaf -> Node new_data Leaf Leaf 1, true
   | Node data left right size ->
-    let delta = cmp data new_data in
+    let delta = cmp new_data data in
     if delta = 0 then begin
       if r
       then
@@ -1052,7 +1052,7 @@ let rec insert_avl2_aux (#a: Type)
       else
         t, false
     end
-    else if delta > 0 then begin
+    else if delta < 0 then begin
       let new_left, b = insert_avl2_aux r cmp left new_data in
       let new_size = size + (int_of_bool b) in
       let new_t = Node data new_left right new_size in
@@ -1359,14 +1359,15 @@ let rec delete_avl_aux (#a: Type0)
     height t - 1 <= height t' /\
     height t' <= height t /\
     (b ==> add cmp t' t data_to_rm) /\
-    ((not b) ==> equal cmp t' t)
+    ((not b) ==> equal cmp t' t) /\
+    mem cmp t' data_to_rm = false
   }
   =
   match t with
   | Leaf -> Leaf, false
   | Node data left right size ->
-      let delta = cmp data data_to_rm in
-      if delta > 0 then begin
+      let delta = cmp data_to_rm data in
+      if delta < 0 then begin
         let new_left, b = delete_avl_aux cmp left data_to_rm in
         assert (is_avl cmp new_left);
         assert (forall_keys left (key_left cmp data));
@@ -1380,9 +1381,18 @@ let rec delete_avl_aux (#a: Type0)
         rebalance_avl_wds_proof cmp new_t data;
         let new_t2 = rebalance_avl_wds new_t in
         rebalance_equal cmp new_t;
+
+        assert (mem cmp new_left data_to_rm = false);
+        forall_keys_trans right
+          (key_right cmp data)
+          (key_right cmp data_to_rm);
+        smaller_not_mem cmp right data_to_rm;
+        assert (mem cmp new_t data_to_rm = false);
+        assert (mem cmp new_t2 data_to_rm = false);
+
         new_t2, b
       end
-      else if delta < 0 then begin
+      else if delta > 0 then begin
         let new_right, b = delete_avl_aux cmp right data_to_rm in
         assert (is_avl cmp new_right);
         assert (forall_keys right (key_right cmp data));
@@ -1395,6 +1405,15 @@ let rec delete_avl_aux (#a: Type0)
         rebalance_avl_wds_proof cmp new_t data;
         let new_t2 = rebalance_avl_wds new_t in
         rebalance_equal cmp new_t;
+
+        assert (mem cmp new_right data_to_rm = false);
+        forall_keys_trans left
+          (key_left cmp data)
+          (key_left cmp data_to_rm);
+        greater_not_mem cmp left data_to_rm;
+        assert (mem cmp new_t data_to_rm = false);
+        assert (mem cmp new_t2 data_to_rm = false);
+
         new_t2, b
       end
       else
@@ -1426,10 +1445,11 @@ let rec test_aux0 (#a: Type)
   | Leaf -> ()
   | Node data left right _ ->
 let delta = cmp x data in
-match (proj delta) with
+begin match (proj delta) with
 | 0 -> ()
 | 1 -> unicity_right cmp t x; test_aux0 cmp right x y
 | _ -> unicity_left cmp t x; test_aux0 cmp left x y
+end
 
 let test_aux (#a: Type)
   (cmp: cmp a) (t1 t2 t3: bst a cmp) (v x: a)
@@ -1452,12 +1472,46 @@ let test_aux (#a: Type)
     ()
   end
 
+let test2_aux (#a: Type)
+  (cmp: cmp a) (t1 t2 t3: bst a cmp) (v x: a)
+  : Lemma
+  (requires
+    (mem cmp t1 v = true) /\
+    (mem cmp t3 v = true) /\
+    (mem cmp t1 x \/ cmp v x = 0 <==> mem cmp t2 x) /\
+    (mem cmp t3 x \/ cmp v x = 0 <==> mem cmp t2 x)
+  )
+  (ensures mem cmp t1 x = mem cmp t3 x)
+  =
+  if cmp x v <> 0 then ()
+  else begin
+    assert (mem cmp t1 x ==> mem cmp t2 x);
+    test_aux0 cmp t1 v x;
+    assert (mem cmp t2 x ==> mem cmp t1 x);
+    assert (mem cmp t3 x ==> mem cmp t2 x);
+    test_aux0 cmp t3 v x;
+    assert (mem cmp t2 x ==> mem cmp t3 x)
+  end
+
+let test3_aux (#a: Type)
+  (cmp: cmp a) (t1 t2 t3: bst a cmp) (v x: a)
+  : Lemma
+  (requires
+    (mem cmp t1 v = mem cmp t3 v = true) /\
+    (mem cmp t1 x \/ cmp v x = 0 <==> mem cmp t2 x) /\
+    (mem cmp t3 x \/ cmp v x = 0 <==> mem cmp t2 x)
+  )
+  (ensures mem cmp t1 x = mem cmp t3 x)
+  =
+  if mem cmp t1 v
+  then test2_aux cmp t1 t2 t3 v x
+  else test_aux cmp t1 t2 t3 v x
+
 let test (#a: Type)
   (cmp: cmp a) (t1 t2 t3: bst a cmp) (v: a)
   : Lemma
   (requires
-  mem cmp t1 v = false /\
-  mem cmp t3 v = false /\
+  mem cmp t1 v = mem cmp t3 v /\
   // t2 = add t1 v
   add cmp t1 t2 v /\
   // t2 = add t3 v
@@ -1466,13 +1520,64 @@ let test (#a: Type)
   (ensures equal cmp t1 t3)
   =
   introduce forall x. (mem cmp t1 x = mem cmp t3 x)
-  with test_aux cmp t1 t2 t3 v x
+  with test3_aux cmp t1 t2 t3 v x
+
+let rec lemma_insert (#a: Type)
+  (r: bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
+  : Lemma
+  (requires mem cmp t new_data = false)
+  (ensures snd (insert_avl2_aux r cmp t new_data) = true)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+      let delta = cmp new_data data in
+      if delta = 0 then begin
+        test_aux0 cmp t data new_data;
+        assert (mem cmp t new_data)
+      end else if delta < 0 then
+        lemma_insert r cmp left new_data
+      else
+        lemma_insert  r cmp right new_data
+
+let rec lemma_delete (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
+  : Lemma
+  (requires mem cmp t data_to_rm = true)
+  (ensures snd (delete_avl_aux cmp t data_to_rm) = true)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ ->
+      let delta = cmp data_to_rm data in
+      if delta < 0 then begin
+        unicity_left cmp t data_to_rm;
+        lemma_delete cmp left data_to_rm
+      end else if delta > 0 then begin
+        unicity_right cmp t data_to_rm;
+        lemma_delete cmp right data_to_rm
+      end else ()
 
 let functional_correctness (#a: Type)
-  (cmp: cmp a) (t: avl a cmp) (v: a)
-  : Lemma (
-  let new_t, b = insert_avl2_aux true cmp t v in
-  let new_t2, b = delete_avl_aux cmp new_t v in
-  equal cmp t new_t2
-  )
-  = admit ()
+  (r: bool) (cmp: cmp a) (t: avl a cmp) (v: a)
+  : Lemma
+  (requires mem cmp t v = false)
+  (ensures (
+    let new_t, b = insert_avl2_aux r cmp t v in
+    let new_t2, b = delete_avl_aux cmp new_t v in
+    equal cmp t new_t2
+  ))
+  =
+  let new_t, b1 = insert_avl2_aux r cmp t v in
+  assert (mem cmp t v = false);
+  lemma_insert r cmp t v;
+  assert (b1 = true);
+  assert (add cmp t new_t v);
+  let new_t2, b2 = delete_avl_aux cmp new_t v in
+  assert (mem cmp new_t v = true);
+  lemma_delete cmp new_t v;
+  assert (b2 = true);
+  assert (mem cmp new_t2 v = false);
+  assert (mem cmp t v = mem cmp new_t2 v);
+  assert (add cmp new_t2 new_t v);
+  test cmp t new_t new_t2 v;
+  assert (equal cmp t new_t2);
+  ()
