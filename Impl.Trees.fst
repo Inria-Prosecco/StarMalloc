@@ -1,10 +1,10 @@
-module NTreeC3
+module Impl.Trees
 
 open FStar.Ghost
 open Steel.FractionalPermission
 
 module Mem = Steel.Memory
-module Spec = Trees
+//module Spec = Trees
 module U = FStar.UInt64
 
 open Steel.Effect.Atomic
@@ -267,7 +267,6 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
      (
      //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
      let t = Spec.Node x l r s in
-     Spec.induction_wds x l r;
      // let t: wds (node a) = t in
      interp (tree_sl' pt t) m))
   =
@@ -275,8 +274,6 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
     let t = Spec.Node x l r s in
     assert (s = Spec.size_of_tree t);
     assert (Spec.is_wds l);
-    assert (Spec.is_wds r);
-    Spec.induction_wds x l r;
     assert (Spec.is_wds t);
     let t: wds (node a) = t in
     affine_star (pts_to_sl pt full_perm x `Mem.star` tree_sl' (get_left x) l)
@@ -319,7 +316,6 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
     let t = Spec.Node (get_data x) l r s in
     assert (Spec.is_wds l);
     assert (Spec.is_wds r);
-    Spec.induction_wds (get_data x) l r;
     assert (Spec.is_wds t);
     //fst (Spec.is_wds t) /\
     interp (tree_sl pt) m /\
@@ -328,7 +324,6 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
   =
     //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
     let t = Spec.Node (get_data x) l r s in
-    Spec.induction_wds (get_data x) l r;
     assert (Spec.is_wds t);
 
     //let l':wds a = id_elim_exists (tree_sl' left) m in
@@ -380,7 +375,6 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr: ref U.t)
 
     let s = Spec.size_of_tree l' + Spec.size_of_tree r' + 1 in
     let t = Spec.Node x l' r' s in
-    Spec.induction_wds x l' r';
     pack_tree_lemma_aux pt x l' r' s m;
     intro_h_exists t (tree_sl' pt) m;
     tree_sel_interp pt t m
@@ -397,7 +391,6 @@ let pack_tree #opened #a ptr left right sr =
 // TODO : reveal_star_4 / arbitrary arity
 // TODO : pourquoi inutile finalement ?
   //reveal_star_3 (vptr ptr) (linked_tree left) (linked_tree right);
-  Spec.induction_wds (get_data x) l r;
   //let t:wds a = Spec.Node (get_data x) l r s in
   let t = Spec.Node (get_data x) l r (U.v s) in
 

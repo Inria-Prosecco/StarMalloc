@@ -1,11 +1,11 @@
-module NTreeC3
+module Impl.Trees
 
 open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
-module Spec = Trees
+//module Spec = Trees
 module U = FStar.UInt64
 
 #set-options "--ide_id_info_off"

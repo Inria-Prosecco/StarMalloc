@@ -500,3 +500,38 @@ let insert_avl2_proof (#a: Type)
     )
 *)
 
+//@D
+//let rebalance_avl (#a: Type) (x: tree a) : tree a =
+//    match x with
+//    | Leaf -> x
+//    | Node data left right _ ->
+//      if is_balanced x then x
+//      else (
+//        if height left - height right > 1 then (
+//          let Node ldata lleft lright _ = left in
+//          if height lright > height lleft then (
+//            match rotate_left_right x with
+//            | Some y -> y
+//            | _ -> x
+//          ) else (
+//            match rotate_right x with
+//            | Some y -> y
+//            | _ -> x
+//          )
+//
+//        ) else if height left - height right < -1 then (
+//          let Node rdata rleft rright _ = right in
+//            if height rleft > height rright then (
+//              match rotate_right_left x with
+//              | Some y -> y
+//              | _ -> x
+//            ) else (
+//              match rotate_left x with
+//              | Some y -> y
+//              | _ -> x
+//            )
+//        ) else (
+//          x
+//        )
+//      )
+
