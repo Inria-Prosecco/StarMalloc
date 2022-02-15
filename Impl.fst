@@ -20,6 +20,7 @@ open Impl.Core
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
+//@Trees
 let create_leaf (#a: Type0) (_: unit) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
@@ -30,6 +31,7 @@ let create_leaf (#a: Type0) (_: unit) : Steel (t a)
     let h = get () in
     return null_t
 
+//@Trees
 #push-options "--fuel 1 --ifuel 1"
 let create_tree (#a: Type0) (v: a) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
@@ -47,6 +49,7 @@ let create_tree (#a: Type0) (v: a) : Steel (t a)
   return ptr
 #pop-options
 
+//@Trees
 let sot_wds (#a: Type) (ptr: t a)
   : Steel (U.t)
   (linked_tree ptr)
@@ -87,6 +90,7 @@ let sot_wds (#a: Type) (ptr: t a)
     return s
   )
 
+//@Trees
 let merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
   (linked_tree l `star` linked_tree r)
   (fun ptr -> linked_tree ptr)
@@ -273,6 +277,7 @@ let merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
 //    return ptr
 //  )
 
+//@Trees
 #push-options "--fuel 1 --ifuel 1"
 let rec height (#a: Type0) (ptr: t a)
   : Steel U.t (linked_tree ptr) (fun _ -> linked_tree ptr)
@@ -300,6 +305,7 @@ let rec height (#a: Type0) (ptr: t a)
   )
 #pop-options
 
+//@BST
 let rec member (#a: eqtype) (cmp:cmp a) (ptr: t a) (v: a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 ->
@@ -384,6 +390,7 @@ let uincr (b: bool) (ptr: ref U.t)
   ) else ( return () )
 *)
 
+//@BST
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let rec insert_bst2 (#a: eqtype)
   (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
@@ -509,6 +516,7 @@ let rotate_left (#a: Type) (ptr: t a)
 //(*)
 //#push-options "--ifuel 1 --fuel 2"
 
+//@Trees (rotate*)
 #push-options "--fuel 1 --ifuel 1"
 let rotate_left (#a: Type) (ptr: t a)
   : Steel (t a)
@@ -686,6 +694,7 @@ let rotate_left_right (#a: Type) (ptr: t a)
   return (get_right z_node)
 #pop-options
 
+//@AVL (?)
 #push-options "--fuel 1 --ifuel 1"
 let rec is_balanced (#a: Type) (ptr: t a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
@@ -718,6 +727,8 @@ let rec is_balanced (#a: Type) (ptr: t a)
   )
 #pop-options
 
+//@AVL
+//#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 #push-options "--fuel 1 --ifuel 1"
 let rebalance_avl (#a: Type) (ptr: t a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
@@ -725,6 +736,7 @@ let rebalance_avl (#a: Type) (ptr: t a)
   (ensures fun h0 ptr' h1 ->
       Spec.rebalance_avl_wds (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
   =
+  admit ();
   let h0 = get () in
   if is_balanced #a ptr then (
     // TODO : fails without the assertion, why?
@@ -828,6 +840,7 @@ let rebalance_avl (#a: Type) (ptr: t a)
 //    )
 //  )
 
+//@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let rec insert_avl2 (#a: eqtype)
   (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)

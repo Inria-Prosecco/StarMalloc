@@ -127,19 +127,19 @@ val member (#a: eqtype) (cmp: cmp a) (ptr: t a) (v: a)
 //    Spec.insert_bst (convert cmp) (v_linked_tree ptr h0) v
 //    == v_linked_tree ptr' h1)
 //
-//val insert_bst2 (#a: eqtype)
-//  (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
-//  : Steel (t a)
-//  (linked_tree ptr)
-//  (fun ptr' -> linked_tree ptr')
-//  (requires fun h0 ->
-//    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
-//    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
-//  (ensures fun h0 ptr' h1 ->
-//    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
-//    Spec.insert_bst2 r (convert cmp) (v_linked_tree ptr h0) new_data
-//    = v_linked_tree ptr' h1
-//  )
+val insert_bst2 (#a: eqtype)
+  (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
+  : Steel (t a)
+  (linked_tree ptr)
+  (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
+  (ensures fun h0 ptr' h1 ->
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+    Spec.insert_bst2 r (convert cmp) (v_linked_tree ptr h0) new_data
+    = v_linked_tree ptr' h1
+  )
 
 (*** Rotation functions used internally to balance AVL trees ***)
 
