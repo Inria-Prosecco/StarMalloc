@@ -1,12 +1,12 @@
-module P1
+module Impl
 
-open NTreeC3
+open Impl.Core
 open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
-module Spec = Trees
+//module Spec = Trees
 module U = FStar.UInt64
 module I = FStar.Int64
 
@@ -26,14 +26,14 @@ val create_leaf (#a: Type0) (_: unit) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
-    v_linked_tree ptr h1 == Trees.Leaf)
+    v_linked_tree ptr h1 == Spec.Leaf)
 
 val create_tree (#a: Type0) (v: a) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
     v_linked_tree ptr h1 ==
-    Trees.Node v Trees.Leaf Trees.Leaf (U.v one))
+    Spec.Node v Spec.Leaf Spec.Leaf (U.v one))
 
 /// Returns the size of the tree that [ptr] points to, in O(1)
 val sot_wds (#a: Type) (ptr: t a)
@@ -57,7 +57,7 @@ val merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
     let s = s1 + s2 + 1 in
     s <= c /\
     v_linked_tree ptr h1 ==
-    Trees.Node v
+    Spec.Node v
       (v_linked_tree l h0)
       (v_linked_tree r h0)
       s)
@@ -68,22 +68,22 @@ val merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
 
 (**** Stateful operations on generic trees *)
 /// Appends value [v] at the leftmost leaf of the tree that [ptr] points to.
-val append_left (#a: Type0) (ptr: t a) (v: a)
-    : Steel (t a)
-      (linked_tree ptr)
-      (fun ptr' ->  linked_tree ptr')
-      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c))
-      (ensures (fun h0 ptr' h1 -> v_linked_tree ptr' h1 == Spec.append_left (v_linked_tree ptr h0) v))
-
-/// Appends value [v] at the rightmost leaf of the tree that [ptr] points to.
-val append_right (#a: Type0) (ptr: t a) (v: a)
-    : Steel (t a)
-      (linked_tree ptr)
-      (fun ptr' ->  linked_tree ptr')
-      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c))
-      (ensures (fun h0 ptr' h1 ->
-        v_linked_tree ptr' h1 == Spec.append_right (v_linked_tree ptr h0) v
-      ))
+//val append_left (#a: Type0) (ptr: t a) (v: a)
+//    : Steel (t a)
+//      (linked_tree ptr)
+//      (fun ptr' ->  linked_tree ptr')
+//      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c))
+//      (ensures (fun h0 ptr' h1 -> v_linked_tree ptr' h1 == Spec.append_left (v_linked_tree ptr h0) v))
+//
+///// Appends value [v] at the rightmost leaf of the tree that [ptr] points to.
+//val append_right (#a: Type0) (ptr: t a) (v: a)
+//    : Steel (t a)
+//      (linked_tree ptr)
+//      (fun ptr' ->  linked_tree ptr')
+//      (requires (fun h0 -> Spec.size_of_tree (v_linked_tree ptr h0) < c))
+//      (ensures (fun h0 ptr' h1 ->
+//        v_linked_tree ptr' h1 == Spec.append_right (v_linked_tree ptr h0) v
+//      ))
 
 /// Returns the height of the tree that [ptr] points to
 val height (#a: Type0) (ptr: t a)
@@ -94,13 +94,6 @@ val height (#a: Type0) (ptr: t a)
         Spec.height (v_linked_tree ptr h0) == U.v x)
 
 /// Returns a boolean indicating whether element [v] belongs to the tree that [ptr] points to
-val member (#a: eqtype) (ptr: t a) (v: a)
-    : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
-    (requires fun _ -> True)
-    (ensures fun h0 b h1 ->
-        v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-        (Spec.mem (v_linked_tree ptr h0) v <==> b))
-
 type cmp (a: Type) = compare: (a -> a -> I.t){
   squash (forall x. I.eq (compare x x) I.zero) /\
   squash (forall x y. I.gt (compare x y) I.zero
@@ -113,31 +106,40 @@ type cmp (a: Type) = compare: (a -> a -> I.t){
 let convert (#a: Type) (cmp: cmp a) : GTot (Spec.cmp a)
   = fun x y -> I.v (cmp x y)
 
-val insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
-  : Steel (t a)
-  (linked_tree ptr)
-  (fun ptr' -> linked_tree ptr')
-  (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
-  (ensures fun h0 ptr' h1 ->
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
-    Spec.insert_bst (convert cmp) (v_linked_tree ptr h0) v
-    == v_linked_tree ptr' h1)
+val member (#a: eqtype) (cmp: cmp a) (ptr: t a) (v: a)
+    : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
+    (requires fun h0 ->
+      Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
+    (ensures fun h0 b h1 ->
+      v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+      Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+      (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b))
 
-val insert_bst2 (#a: eqtype)
-  (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
-  : Steel (t a)
-  (linked_tree ptr)
-  (fun ptr' -> linked_tree ptr')
-  (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
-  (ensures fun h0 ptr' h1 ->
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
-    Spec.insert_bst2 r (convert cmp) (v_linked_tree ptr h0) new_data
-    = v_linked_tree ptr' h1
-  )
+//val insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
+//  : Steel (t a)
+//  (linked_tree ptr)
+//  (fun ptr' -> linked_tree ptr')
+//  (requires fun h0 ->
+//    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
+//    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
+//  (ensures fun h0 ptr' h1 ->
+//    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+//    Spec.insert_bst (convert cmp) (v_linked_tree ptr h0) v
+//    == v_linked_tree ptr' h1)
+//
+//val insert_bst2 (#a: eqtype)
+//  (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
+//  : Steel (t a)
+//  (linked_tree ptr)
+//  (fun ptr' -> linked_tree ptr')
+//  (requires fun h0 ->
+//    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
+//    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
+//  (ensures fun h0 ptr' h1 ->
+//    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+//    Spec.insert_bst2 r (convert cmp) (v_linked_tree ptr h0) new_data
+//    = v_linked_tree ptr' h1
+//  )
 
 (*** Rotation functions used internally to balance AVL trees ***)
 
@@ -187,15 +189,15 @@ val rebalance_avl (#a: Type) (ptr: t a)
         Spec.rebalance_avl_wds (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
 
 /// Inserts an element [v] in an AVL tree, while preserving the AVL tree invariant
-val insert_avl (#a: Type) (cmp:cmp a) (ptr: t a) (new_data: a)
-    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-    (requires fun h0 ->
-      Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
-      Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
-    (ensures fun h0 ptr' h1 ->
-        Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
-        Spec.insert_avl (convert cmp) (v_linked_tree ptr h0) new_data
-        == v_linked_tree ptr' h1)
+//val insert_avl (#a: Type) (cmp:cmp a) (ptr: t a) (new_data: a)
+//    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+//    (requires fun h0 ->
+//      Spec.size_of_tree (v_linked_tree ptr h0) < c - 1 /\
+//      Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
+//    (ensures fun h0 ptr' h1 ->
+//        Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+//        Spec.insert_avl (convert cmp) (v_linked_tree ptr h0) new_data
+//        == v_linked_tree ptr' h1)
 
 val insert_avl2 (#a: eqtype)
   (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)

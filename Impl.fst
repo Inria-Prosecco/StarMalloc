@@ -1,4 +1,4 @@
-module P1
+module Impl
 
 
 open FStar.Ghost
@@ -8,42 +8,44 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
-module Spec = Trees
+//module Spec = Trees
 module U = FStar.UInt64
 module I = FStar.Int64
 
-open NTreeC3
+open Impl.Core
 
 
 /// The implementation of the Selectors.Tree interface.
 /// Predicates prefixed by (**) correspond to stateful lemmas for folding and unfolding the tree predicate
 
-#set-options "--fuel 1 --ifuel 1 --z3rlimit 50 --ide_id_info_off"
+#set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
 let create_leaf (#a: Type0) (_: unit) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
-    v_linked_tree ptr h1 == Trees.Leaf)
+    v_linked_tree ptr h1 == Spec.Leaf)
   = intro_linked_tree_leaf ();
     // TODO: it should be possible to remove next line
     let h = get () in
     return null_t
 
+#push-options "--fuel 1 --ifuel 1"
 let create_tree (#a: Type0) (v: a) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
     v_linked_tree ptr h1 ==
-    Trees.Node v Trees.Leaf Trees.Leaf (U.v one))
+    Spec.Node v Spec.Leaf Spec.Leaf (U.v one))
   =
   let l = create_leaf () in
   let r = create_leaf () in
   let sr = malloc 1UL in
   let n = mk_node v l r sr in
   let ptr = malloc n in
-  NTreeC3.pack_tree ptr l r sr;
+  pack_tree ptr l r sr;
   return ptr
+#pop-options
 
 let sot_wds (#a: Type) (ptr: t a)
   : Steel (U.t)
@@ -98,7 +100,7 @@ let merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
     let s = s1 + s2 + 1 in
     s <= c /\
     v_linked_tree ptr h1 ==
-    Trees.Node v
+    Spec.Node v
       (v_linked_tree l h0)
       (v_linked_tree r h0)
       s)
@@ -112,165 +114,166 @@ let merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
   pack_tree ptr l r sr;
   return ptr
 
-let rec append_left #a (ptr: t a) (v: a)
-  : Steel (t a)
-  (linked_tree ptr)
-  (fun ptr' -> linked_tree ptr')
-  (requires (fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c))
-  (ensures (fun h0 ptr' h1 ->
-    v_linked_tree ptr' h1
-    == Spec.append_left (v_linked_tree ptr h0) v /\
-    Spec.size_of_tree (v_linked_tree ptr' h1)
-    == Spec.size_of_tree (v_linked_tree ptr h0) + 1 /\
-    Spec.size_of_tree (v_linked_tree ptr' h1) <= c))
-  =
-  let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
-  if is_null_t ptr then (
-    // TODO: use create_leaf?
-    //(**) elim_linked_tree_leaf ptr;
-    (**) null_is_leaf ptr;
-    (**) let second_leaf = create_leaf () in
-    let sr = malloc one in
-    //let node = mk_node v ptr null_t sr in
-    let node = mk_node v ptr second_leaf sr in
-    let new_tree = malloc node in
-    //(**) intro_linked_tree_leaf ();
-    (**) pack_tree new_tree ptr second_leaf sr;
-    return new_tree
-    // return new_tree
-  ) else (
-    let h1 = get () in
-    (**) let node = NTreeC3.unpack_tree ptr in
-    let h2 = get () in
+//let rec append_left #a (ptr: t a) (v: a)
+//  : Steel (t a)
+//  (linked_tree ptr)
+//  (fun ptr' -> linked_tree ptr')
+//  (requires (fun h0 ->
+//    Spec.size_of_tree (v_linked_tree ptr h0) < c))
+//  (ensures (fun h0 ptr' h1 ->
+//    v_linked_tree ptr' h1
+//    == Spec.append_left (v_linked_tree ptr h0) v /\
+//    Spec.size_of_tree (v_linked_tree ptr' h1)
+//    == Spec.size_of_tree (v_linked_tree ptr h0) + 1 /\
+//    Spec.size_of_tree (v_linked_tree ptr' h1) <= c))
+//  =
+//  let h = get () in
+//  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+//  if is_null_t ptr then (
+//    // TODO: use create_leaf?
+//    //(**) elim_linked_tree_leaf ptr;
+//    (**) null_is_leaf ptr;
+//    (**) let second_leaf = create_leaf () in
+//    let sr = malloc one in
+//    //let node = mk_node v ptr null_t sr in
+//    let node = mk_node v ptr second_leaf sr in
+//    let new_tree = malloc node in
+//    //(**) intro_linked_tree_leaf ();
+//    (**) pack_tree new_tree ptr second_leaf sr;
+//    return new_tree
+//    // return new_tree
+//  ) else (
+//    let h1 = get () in
+//    (**) let node = NTreeC3.unpack_tree ptr in
+//    let h2 = get () in
+//
+//    let ptr_t1 = hide (v_linked_tree ptr h1) in
+//    let ptr_t2 = hide (Spec.Node
+//      (get_data (sel ptr h2))
+//      (v_linked_tree (get_left node) h2)
+//      (v_linked_tree (get_right node) h2)
+//      (U.v (sel (get_size node) h2))) in
+//    assert (reveal ptr_t1 == reveal ptr_t2);
+//    assert (Spec.is_wds ptr_t1);
+//    assert (Spec.is_wds ptr_t2);
+//    let ptr_s1 = hide (Spec.sot_wds (reveal ptr_t1)) in
+//    let ptr_s2 = hide (Spec.sot_wds (reveal ptr_t2)) in
+//    assert (reveal ptr_s1 == reveal ptr_s2);
+//    //Spec.check (reveal ptr_t1);
+//    assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
+//
+//    (**) let new_left = append_left (get_left node) v in
+//    let h3 = get () in
+//    let old_left_t = hide (v_linked_tree (get_left node) h2) in
+//    let new_left_t = hide (v_linked_tree new_left h3) in
+//    let old_right_t = hide (v_linked_tree (get_right node) h2) in
+//    let new_right_t = hide (v_linked_tree (get_right node) h3) in
+//    //let old_left_s = hide (Spec.size_of_tree (reveal old_left_t)) in
+//    //let new_left_s = hide (Spec.size_of_tree (reveal new_left_t)) in
+//    //let old_right_s = hide (Spec.size_of_tree (reveal old_right_t)) in
+//    //let new_right_s = hide (Spec.size_of_tree (reveal new_right_t)) in
+//    //assert (fst (Spec.is_wds (reveal ptr_t2)));
+//    //assert (reveal ptr_s2 ==
+//    //reveal old_left_s + reveal old_right_s + 1);
+//
+//    //assert (fst (Spec.is_wds (reveal old_left_t)));
+//    //assert (fst (Spec.is_wds (reveal new_left_t)));
+//    //assert (old_right_t == new_right_t);
+//    //assert (fst (Spec.is_wds old_right_t));
+//    Spec.append_left_aux_size (reveal old_left_t) v;
+//    //assert (reveal new_left_s == reveal old_left_s + 1);
+//    //assert (reveal old_right_s == reveal new_right_s);
+//
+//    // TODO : incr (get_size node);
+//    let old_size = read (get_size node) in
+//    (***) write (get_size node) (U.add old_size one);
+//    let h4 = get () in
+//    //assert (sel (get_size node) h4 == U.add (sel (get_size node) h3) one);
+//    //assert (U.v (sel (get_size node) h4) == new_left_s + new_right_s + 1);
+//
+//    let new_node = mk_node
+//      (get_data node)
+//      new_left
+//      (get_right node)
+//      (get_size node)
+//    in
+//    //assert (get_size new_node == get_size node);
+//    (***) write ptr new_node;
+//    let h5 = get () in
+//    //assert (U.v (sel (get_size node) h5) <= c);
+//    (**) pack_tree ptr new_left (get_right node) (get_size node);
+//    return ptr
+//  )
+//
+//// Alternative possible dans le corps de la fonction suivante
+////free old_sr;
+////let new_sr = malloc (old_size + 1) in
+//
+//let rec append_right #a (ptr: t a) (v: a)
+//  : Steel (t a)
+//  (linked_tree ptr)
+//  (fun ptr' -> linked_tree ptr')
+//  (requires (fun h0 ->
+//    Spec.size_of_tree (v_linked_tree ptr h0) < c))
+//  (ensures (fun h0 ptr' h1 ->
+//    v_linked_tree ptr' h1
+//    == Spec.append_right (v_linked_tree ptr h0) v))
+//  =
+//  let h = get () in
+//  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
+//  if is_null_t ptr then (
+//    //(**) elim_linked_tree_leaf ptr;
+//    (**) null_is_leaf ptr;
+//    (**) let second_leaf = create_leaf () in
+//    let sr = malloc one in
+//    let node = mk_node v second_leaf ptr sr in
+//    let new_tree = malloc node in
+//    //(**) intro_linked_tree_leaf ();
+//    (**) pack_tree new_tree second_leaf ptr sr;
+//    return new_tree
+//  ) else (
+//    (**) let node = unpack_tree ptr in
+//    let h2 = get () in
+//    let ptr_t2 = hide (Spec.Node
+//      (get_data (sel ptr h2))
+//      (v_linked_tree (get_left node) h2)
+//      (v_linked_tree (get_right node) h2)
+//      (U.v (sel (get_size node) h2))) in
+//    assert (Spec.is_wds ptr_t2);
+//    let ptr_s2 = hide (Spec.sot_wds (reveal ptr_t2)) in
+//    //Spec.check (reveal ptr_t2);
+//    assert (reveal ptr_s2 == Spec.size_of_tree (reveal ptr_t2));
+//
+//    (**) let new_right = append_right (get_right node) v in
+//    let h3 = get () in
+//    let old_left_t = hide (v_linked_tree (get_left node) h2) in
+//    let new_left_t = hide (v_linked_tree (get_left node) h3) in
+//    let old_right_t = hide (v_linked_tree (get_right node) h2) in
+//    let new_right_t = hide (v_linked_tree new_right h3) in
+//    //let old_left_s = hide (Spec.size_of_tree (reveal old_left_t)) in
+//    //let new_left_s = hide (Spec.size_of_tree (reveal new_left_t)) in
+//    //let old_right_s = hide (Spec.size_of_tree (reveal old_right_t)) in
+//    //let new_right_s = hide (Spec.size_of_tree (reveal new_right_t)) in
+//    //assert (reveal ptr_s2
+//    //== reveal old_left_s + reveal old_right_s + 1);
+//    //assert (reveal new_left_s == reveal old_left_s);
+//    Spec.append_right_aux_size (reveal old_right_t) v;
+//    //assert (reveal new_right_s == reveal old_right_s + 1);
+//
+//    let old_size = read (get_size node) in
+//    write (get_size node) (U.add old_size one);
+//    let new_node = mk_node
+//      (get_data node)
+//      (get_left node)
+//      new_right
+//      (get_size node)
+//    in
+//    write ptr new_node;
+//    (**) pack_tree ptr (get_left node) new_right (get_size node);
+//    return ptr
+//  )
 
-    let ptr_t1 = hide (v_linked_tree ptr h1) in
-    let ptr_t2 = hide (Spec.Node
-      (get_data (sel ptr h2))
-      (v_linked_tree (get_left node) h2)
-      (v_linked_tree (get_right node) h2)
-      (U.v (sel (get_size node) h2))) in
-    assert (reveal ptr_t1 == reveal ptr_t2);
-    assert (Spec.is_wds ptr_t1);
-    assert (Spec.is_wds ptr_t2);
-    let ptr_s1 = hide (Spec.sot_wds (reveal ptr_t1)) in
-    let ptr_s2 = hide (Spec.sot_wds (reveal ptr_t2)) in
-    assert (reveal ptr_s1 == reveal ptr_s2);
-    //Spec.check (reveal ptr_t1);
-    assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
-
-    (**) let new_left = append_left (get_left node) v in
-    let h3 = get () in
-    let old_left_t = hide (v_linked_tree (get_left node) h2) in
-    let new_left_t = hide (v_linked_tree new_left h3) in
-    let old_right_t = hide (v_linked_tree (get_right node) h2) in
-    let new_right_t = hide (v_linked_tree (get_right node) h3) in
-    //let old_left_s = hide (Spec.size_of_tree (reveal old_left_t)) in
-    //let new_left_s = hide (Spec.size_of_tree (reveal new_left_t)) in
-    //let old_right_s = hide (Spec.size_of_tree (reveal old_right_t)) in
-    //let new_right_s = hide (Spec.size_of_tree (reveal new_right_t)) in
-    //assert (fst (Spec.is_wds (reveal ptr_t2)));
-    //assert (reveal ptr_s2 ==
-    //reveal old_left_s + reveal old_right_s + 1);
-
-    //assert (fst (Spec.is_wds (reveal old_left_t)));
-    //assert (fst (Spec.is_wds (reveal new_left_t)));
-    //assert (old_right_t == new_right_t);
-    //assert (fst (Spec.is_wds old_right_t));
-    Spec.append_left_aux_size (reveal old_left_t) v;
-    //assert (reveal new_left_s == reveal old_left_s + 1);
-    //assert (reveal old_right_s == reveal new_right_s);
-
-    // TODO : incr (get_size node);
-    let old_size = read (get_size node) in
-    (***) write (get_size node) (U.add old_size one);
-    let h4 = get () in
-    //assert (sel (get_size node) h4 == U.add (sel (get_size node) h3) one);
-    //assert (U.v (sel (get_size node) h4) == new_left_s + new_right_s + 1);
-
-    let new_node = mk_node
-      (get_data node)
-      new_left
-      (get_right node)
-      (get_size node)
-    in
-    //assert (get_size new_node == get_size node);
-    (***) write ptr new_node;
-    let h5 = get () in
-    //assert (U.v (sel (get_size node) h5) <= c);
-    (**) pack_tree ptr new_left (get_right node) (get_size node);
-    return ptr
-  )
-
-// Alternative possible dans le corps de la fonction suivante
-//free old_sr;
-//let new_sr = malloc (old_size + 1) in
-
-let rec append_right #a (ptr: t a) (v: a)
-  : Steel (t a)
-  (linked_tree ptr)
-  (fun ptr' -> linked_tree ptr')
-  (requires (fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c))
-  (ensures (fun h0 ptr' h1 ->
-    v_linked_tree ptr' h1
-    == Spec.append_right (v_linked_tree ptr h0) v))
-  =
-  let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) < c);
-  if is_null_t ptr then (
-    //(**) elim_linked_tree_leaf ptr;
-    (**) null_is_leaf ptr;
-    (**) let second_leaf = create_leaf () in
-    let sr = malloc one in
-    let node = mk_node v second_leaf ptr sr in
-    let new_tree = malloc node in
-    //(**) intro_linked_tree_leaf ();
-    (**) pack_tree new_tree second_leaf ptr sr;
-    return new_tree
-  ) else (
-    (**) let node = unpack_tree ptr in
-    let h2 = get () in
-    let ptr_t2 = hide (Spec.Node
-      (get_data (sel ptr h2))
-      (v_linked_tree (get_left node) h2)
-      (v_linked_tree (get_right node) h2)
-      (U.v (sel (get_size node) h2))) in
-    assert (Spec.is_wds ptr_t2);
-    let ptr_s2 = hide (Spec.sot_wds (reveal ptr_t2)) in
-    //Spec.check (reveal ptr_t2);
-    assert (reveal ptr_s2 == Spec.size_of_tree (reveal ptr_t2));
-
-    (**) let new_right = append_right (get_right node) v in
-    let h3 = get () in
-    let old_left_t = hide (v_linked_tree (get_left node) h2) in
-    let new_left_t = hide (v_linked_tree (get_left node) h3) in
-    let old_right_t = hide (v_linked_tree (get_right node) h2) in
-    let new_right_t = hide (v_linked_tree new_right h3) in
-    //let old_left_s = hide (Spec.size_of_tree (reveal old_left_t)) in
-    //let new_left_s = hide (Spec.size_of_tree (reveal new_left_t)) in
-    //let old_right_s = hide (Spec.size_of_tree (reveal old_right_t)) in
-    //let new_right_s = hide (Spec.size_of_tree (reveal new_right_t)) in
-    //assert (reveal ptr_s2
-    //== reveal old_left_s + reveal old_right_s + 1);
-    //assert (reveal new_left_s == reveal old_left_s);
-    Spec.append_right_aux_size (reveal old_right_t) v;
-    //assert (reveal new_right_s == reveal old_right_s + 1);
-
-    let old_size = read (get_size node) in
-    write (get_size node) (U.add old_size one);
-    let new_node = mk_node
-      (get_data node)
-      (get_left node)
-      new_right
-      (get_size node)
-    in
-    write ptr new_node;
-    (**) pack_tree ptr (get_left node) new_right (get_size node);
-    return ptr
-  )
-
+#push-options "--fuel 1 --ifuel 1"
 let rec height (#a: Type0) (ptr: t a)
   : Steel U.t (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun _ -> True)
@@ -295,14 +298,18 @@ let rec height (#a: Type0) (ptr: t a)
     let hptr = if U.gt hleft hright then U.add hleft one else U.add hright one in
     return hptr
   )
+#pop-options
 
-let rec member (#a: eqtype) (ptr: t a) (v: a)
+let rec member (#a: eqtype) (cmp:cmp a) (ptr: t a) (v: a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
-  (requires fun _ -> True)
+  (requires fun h0 ->
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 b h1 ->
-      v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-      (Spec.mem (v_linked_tree ptr h0) v <==> b))
+    v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+    (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b))
   =
+  admit ();
   if is_null_t #a ptr then (
     (**) null_is_leaf ptr;
     return false
@@ -312,51 +319,51 @@ let rec member (#a: eqtype) (ptr: t a) (v: a)
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
       return true
     ) else (
-      let mleft = member (get_left node) v in
-      let mright = member (get_right node) v in
+      let mleft = member cmp (get_left node) v in
+      let mright = member cmp (get_right node) v in
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
       return (mleft || mright)
     )
   )
 
-let rec insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
-  : Steel (t a)
-  (linked_tree ptr)
-  (fun ptr' -> linked_tree ptr')
-  (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
-  (ensures fun h0 ptr' h1 ->
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
-    Spec.insert_bst (convert cmp) (v_linked_tree ptr h0) v
-    == v_linked_tree ptr' h1
-  )
-  =
-  if is_null_t #a ptr then (
-    (**) elim_linked_tree_leaf ptr;
-    (**) let ptr' = create_tree v in
-    return ptr'
-  ) else (
-    (**) let node = unpack_tree ptr in
-    let delta = cmp (get_data node) v in
-    if I.gte delta szero then (
-      let new_left = insert_bst cmp (get_left node) v in
-      let old_size = read (get_size node) in
-      write (get_size node) (U.add old_size one);
-      let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
-      write ptr new_node;
-      (**) pack_tree ptr new_left (get_right node) (get_size node);
-      return ptr
-    ) else (
-      let new_right = insert_bst cmp (get_right node) v in
-      let old_size = read (get_size node) in
-      write (get_size node) (U.add old_size one);
-      let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
-      write ptr new_node;
-      (**) pack_tree ptr (get_left node) new_right (get_size node);
-      return ptr
-    )
-  )
+//let rec insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
+//  : Steel (t a)
+//  (linked_tree ptr)
+//  (fun ptr' -> linked_tree ptr')
+//  (requires fun h0 ->
+//    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
+//    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
+//  (ensures fun h0 ptr' h1 ->
+//    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+//    Spec.insert_bst (convert cmp) (v_linked_tree ptr h0) v
+//    == v_linked_tree ptr' h1
+//  )
+//  =
+//  if is_null_t #a ptr then (
+//    (**) elim_linked_tree_leaf ptr;
+//    (**) let ptr' = create_tree v in
+//    return ptr'
+//  ) else (
+//    (**) let node = unpack_tree ptr in
+//    let delta = cmp (get_data node) v in
+//    if I.gte delta szero then (
+//      let new_left = insert_bst cmp (get_left node) v in
+//      let old_size = read (get_size node) in
+//      write (get_size node) (U.add old_size one);
+//      let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
+//      write ptr new_node;
+//      (**) pack_tree ptr new_left (get_right node) (get_size node);
+//      return ptr
+//    ) else (
+//      let new_right = insert_bst cmp (get_right node) v in
+//      let old_size = read (get_size node) in
+//      write (get_size node) (U.add old_size one);
+//      let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
+//      write ptr new_node;
+//      (**) pack_tree ptr (get_left node) new_right (get_size node);
+//      return ptr
+//    )
+//  )
 
 (*
 let uincr (b: bool) (ptr: ref U.t)
@@ -377,6 +384,7 @@ let uincr (b: bool) (ptr: ref U.t)
   ) else ( return () )
 *)
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let rec insert_bst2 (#a: eqtype)
   (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
   : Steel (t a)
@@ -439,6 +447,7 @@ let rec insert_bst2 (#a: eqtype)
       )
     )
   )
+#pop-options
 
 // TODO : please prettify output after squash equiv...
 //#push-options "--ifuel 1 --fuel 2 --z3rlimit 200"
@@ -500,6 +509,7 @@ let rotate_left (#a: Type) (ptr: t a)
 //(*)
 //#push-options "--ifuel 1 --fuel 2"
 
+#push-options "--fuel 1 --ifuel 1"
 let rotate_left (#a: Type) (ptr: t a)
   : Steel (t a)
   (linked_tree ptr)
@@ -530,7 +540,9 @@ let rotate_left (#a: Type) (ptr: t a)
   (**) pack_tree ptr (get_left x_node) (get_left z_node) (get_size z_node);
   (**) pack_tree (get_right x_node) ptr (get_right z_node) (get_size x_node);
   return (get_right x_node)
+#pop-options
 
+#push-options "--fuel 1 --ifuel 1"
 let rotate_right (#a: Type) (ptr: t a)
   : Steel (t a)
   (linked_tree ptr)
@@ -561,9 +573,9 @@ let rotate_right (#a: Type) (ptr: t a)
   (**) pack_tree ptr (get_right z_node) (get_right x_node) (get_size z_node);
   (**) pack_tree (get_left x_node) (get_left z_node) ptr (get_size x_node);
   return (get_left x_node)
+#pop-options
 
-
-#push-options "--fuel 2 --ifuel 2"
+#push-options "--fuel 1 --ifuel 1"
 let rotate_right_left (#a: Type) (ptr: t a)
   : Steel (t a)
   (linked_tree ptr)
@@ -615,7 +627,9 @@ let rotate_right_left (#a: Type) (ptr: t a)
   (**) pack_tree (get_left z_node) ptr (get_right x_node) (get_size x_node);
 
   return (get_left z_node)
+#pop-options
 
+#push-options "--fuel 1 --ifuel 1"
 let rotate_left_right (#a: Type) (ptr: t a)
   : Steel (t a)
   (linked_tree ptr)
@@ -672,7 +686,7 @@ let rotate_left_right (#a: Type) (ptr: t a)
   return (get_right z_node)
 #pop-options
 
-
+#push-options "--fuel 1 --ifuel 1"
 let rec is_balanced (#a: Type) (ptr: t a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 -> True)
@@ -702,8 +716,9 @@ let rec is_balanced (#a: Type) (ptr: t a)
     let v = (lbal && rbal) && b1 && b2 in
     return v
   )
+#pop-options
 
-#push-options "--ifuel 2"
+#push-options "--fuel 1 --ifuel 1"
 let rebalance_avl (#a: Type) (ptr: t a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 -> True)
@@ -770,49 +785,50 @@ let rebalance_avl (#a: Type) (ptr: t a)
   //)
 #pop-options
 
-let rec insert_avl (#a: Type)
-  (cmp:cmp a) (ptr: t a) (new_data: a)
-  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-  (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
-    Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
-  (ensures fun h0 ptr' h1 -> //True
-     //TODO: remove redundancy
-     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
-     Spec.insert_avl (convert cmp) (v_linked_tree ptr h0) new_data
-     == v_linked_tree ptr' h1)
-  =
-  if is_null_t ptr then (
-    (**) null_is_leaf ptr;
-    (**) let second_leaf = create_leaf () in
-    let sr = malloc one in
-    let node = mk_node new_data ptr second_leaf sr in
-    let new_tree = malloc node in
-    (**) pack_tree new_tree ptr second_leaf sr;
-    return new_tree
-  ) else (
-    (**) let node = unpack_tree ptr in
-    let delta = cmp (get_data node) new_data in
-    if I.gte delta szero then (
-      let new_left = insert_avl cmp (get_left node) new_data in
-      let old_size = read (get_size node) in
-      write (get_size node) (U.add old_size one);
-      let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
-      write ptr new_node;
-      (**) pack_tree ptr new_left (get_right node) (get_size node);
-      rebalance_avl ptr
-    )
-    else (
-      let new_right = insert_avl cmp (get_right node) new_data in
-      let old_size = read (get_size node) in
-      write (get_size node) (U.add old_size one);
-      let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
-      write ptr new_node;
-      (**) pack_tree ptr (get_left node) new_right (get_size node);
-      rebalance_avl ptr
-    )
-  )
+//let rec insert_avl (#a: Type)
+//  (cmp:cmp a) (ptr: t a) (new_data: a)
+//  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+//  (requires fun h0 ->
+//    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
+//    Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
+//  (ensures fun h0 ptr' h1 -> //True
+//     //TODO: remove redundancy
+//     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+//     Spec.insert_avl (convert cmp) (v_linked_tree ptr h0) new_data
+//     == v_linked_tree ptr' h1)
+//  =
+//  if is_null_t ptr then (
+//    (**) null_is_leaf ptr;
+//    (**) let second_leaf = create_leaf () in
+//    let sr = malloc one in
+//    let node = mk_node new_data ptr second_leaf sr in
+//    let new_tree = malloc node in
+//    (**) pack_tree new_tree ptr second_leaf sr;
+//    return new_tree
+//  ) else (
+//    (**) let node = unpack_tree ptr in
+//    let delta = cmp (get_data node) new_data in
+//    if I.gte delta szero then (
+//      let new_left = insert_avl cmp (get_left node) new_data in
+//      let old_size = read (get_size node) in
+//      write (get_size node) (U.add old_size one);
+//      let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
+//      write ptr new_node;
+//      (**) pack_tree ptr new_left (get_right node) (get_size node);
+//      rebalance_avl ptr
+//    )
+//    else (
+//      let new_right = insert_avl cmp (get_right node) new_data in
+//      let old_size = read (get_size node) in
+//      write (get_size node) (U.add old_size one);
+//      let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
+//      write ptr new_node;
+//      (**) pack_tree ptr (get_left node) new_right (get_size node);
+//      rebalance_avl ptr
+//    )
+//  )
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let rec insert_avl2 (#a: eqtype)
   (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
@@ -874,26 +890,7 @@ let rec insert_avl2 (#a: eqtype)
       )
     )
   )
-
-//let csize (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
-//  let Spec.Node _ _ _ s = t in s
-//let cleft (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
-//  let Spec.Node _ l _ _ = t in l
-//let cright (#a: Type) (t: Spec.tree a{Spec.Node? t}) =
-//  let Spec.Node _ _ r _ = t in r
-
-//let test (#a: eqtype) (ptr: ref a)
-//  : Steel bool
-//  (vptr ptr)
-//  (fun _ -> vptr ptr)
-//  (requires fun _ -> True)
-//  (ensures fun _ _ _ -> True)
-//  =
-//  if is_null #a ptr then (
-//    return true
-//  ) else (
-//    return false
-//  )
+#pop-options
 
 (*
 let rec delete_avl (#a: eqtype)

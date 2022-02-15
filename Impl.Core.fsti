@@ -1,4 +1,4 @@
-module Impl.Trees
+module Impl.Core
 
 open Steel.Memory
 open Steel.Effect.Atomic

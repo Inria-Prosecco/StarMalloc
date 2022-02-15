@@ -1,4 +1,4 @@
-module Impl.Trees
+module Impl.Core
 
 open FStar.Ghost
 open Steel.FractionalPermission
