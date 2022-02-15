@@ -1,1 +1,0 @@
-gcc -DKRML_VERIFIED_UINT128 -I /home/atn/fs/kremlin/include -I /home/atn/fs/kremlin/kremlib/dist/minimal -I dist test.c
