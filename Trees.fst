@@ -972,6 +972,30 @@ let subset_preserves_cond (#a: Type0)
   assert (forall x. mem cmp t1 x ==> cond x);
   equiv cmp t1 cond
 
+let add_preserves_cond (#a: Type0)
+  (cmp:cmp a)
+  (t1 t2: bst a cmp) (v: a) (cond: cond a cmp)
+  : Lemma
+  (requires
+    add cmp t1 t2 v /\
+    forall_keys t1 cond /\
+    cond v
+  )
+  (ensures
+    forall_keys t2 cond
+  )
+  = equiv cmp t1 cond;
+    equiv cmp t2 cond
+
+let equal_preserves_cond (#a: Type)
+  (cmp:cmp a)
+  (t1 t2: bst a cmp) (cond: cond a cmp)
+  : Lemma
+  (requires forall_keys t1 cond /\ equal cmp t1 t2)
+  (ensures forall_keys t2 cond)
+  = equiv cmp t1 cond;
+    equiv cmp t2 cond
+
 let smaller_not_mem (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a)
   : Lemma
   (requires forall_keys t (key_right cmp x))
@@ -1032,11 +1056,11 @@ let rec insert_avl2_aux (#a: Type)
   : result:(avl a cmp & bool){
     let t',b = result in
     size_of_tree t' = size_of_tree t + (int_of_bool b) /\
-    subset cmp t t' /\
     height t <= height t' /\
     height t' <= height t + 1 /\
     (b ==> add cmp t t' new_data) /\
-    (not b ==> equal cmp t t')
+    (not b ==> equal cmp t t') /\
+    (subset cmp t t')
   }
   =
   match t with
@@ -1047,50 +1071,82 @@ let rec insert_avl2_aux (#a: Type)
       if r
       then
         let new_t = Node new_data left right size in
-        assume (is_bst cmp new_t);
+        forall_keys_trans left
+          (key_left cmp data)
+          (key_left cmp new_data);
+        forall_keys_trans right
+          (key_right cmp data)
+          (key_right cmp new_data);
         new_t, false
       else
         t, false
     end
     else if delta < 0 then begin
+      //assert (subset cmp (fst (insert_avl2_aux r cmp left new_data))
+      //left);
       let new_left, b = insert_avl2_aux r cmp left new_data in
       let new_size = size + (int_of_bool b) in
       let new_t = Node data new_left right new_size in
+      // is_bst new_t
+      if b then begin
+        assert (add cmp left new_left new_data);
+        add_preserves_cond cmp left new_left new_data
+          (key_left cmp data)
+      end else begin
+        assert (equal cmp new_left left);
+        equal_preserves_cond cmp left new_left
+          (key_left cmp data)
+      end;
+      assert (forall_keys new_left (key_left cmp data));
+      assert (is_bst cmp new_t);
+
+
       assert (is_avl cmp new_left);
       assert (is_avl cmp right);
       assert (height t <= height new_t);
       assert (height new_t <= height t + 1);
-      assume (is_bst cmp new_t);
       rebalance_avl_wds_proof cmp new_t data;
       assert (is_avl cmp (rebalance_avl_wds new_t));
       rebalance_avl_wds_size new_t;
       let new_t2 = rebalance_avl_wds new_t in
       rebalance_equal cmp new_t;
-      assert (subset cmp t new_t2);
-      assert (b ==> add cmp t new_t2 new_data);
-      assert (not b ==> equal cmp t new_t2);
-      assert (height t <= height new_t2);
-      assert (height new_t2 <= height t + 1);
+      //assert (subset cmp t new_t2);
+      //assert (b ==> add cmp t new_t2 new_data);
+      //assert (not b ==> equal cmp t new_t2);
+      //assert (height t <= height new_t2);
+      //assert (height new_t2 <= height t + 1);
       new_t2, b
     end else begin
       let new_right, b = insert_avl2_aux r cmp right new_data in
       let new_size = size + (int_of_bool b) in
       let new_t = Node data left new_right new_size in
+       // is_bst new_t
+      if b then begin
+        assert (add cmp right new_right new_data);
+        add_preserves_cond cmp right new_right new_data
+          (key_right cmp data)
+      end else begin
+        assert (equal cmp new_right right);
+        equal_preserves_cond cmp right new_right
+          (key_right cmp data)
+      end;
+      assert (forall_keys new_right (key_right cmp data));
+      assert (is_bst cmp new_t);
+
       assert (is_avl cmp new_right);
       assert (is_avl cmp left);
       assert (height t <= height new_t);
       assert (height new_t <= height t + 1);
-      assume (is_bst cmp new_t);
       rebalance_avl_wds_proof cmp new_t data;
       assert (is_avl cmp (rebalance_avl_wds new_t));
       rebalance_avl_wds_size new_t;
       let new_t2 = rebalance_avl_wds new_t in
       rebalance_equal cmp new_t;
-      assert (subset cmp t new_t2);
-      assert (b ==> add cmp t new_t2 new_data);
-      assert (not b ==> equal cmp t new_t2);
-      assert (height t <= height new_t2);
-      assert (height new_t2 <= height t + 1);
+      //assert (subset cmp t new_t2);
+      //assert (b ==> add cmp t new_t2 new_data);
+      //assert (not b ==> equal cmp t new_t2);
+      //assert (height t <= height new_t2);
+      //assert (height new_t2 <= height t + 1);
       new_t2, b
     end
 #pop-options
