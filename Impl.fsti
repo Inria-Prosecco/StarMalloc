@@ -106,14 +106,15 @@ type cmp (a: Type) = compare: (a -> a -> I.t){
 let convert (#a: Type) (cmp: cmp a) : GTot (Spec.cmp a)
   = fun x y -> I.v (cmp x y)
 
-val member (#a: eqtype) (cmp: cmp a) (ptr: t a) (v: a)
+val member (#a: Type) (cmp: cmp a) (ptr: t a) (v: a)
     : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
     (requires fun h0 ->
       Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
     (ensures fun h0 b h1 ->
       v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
       Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
-      (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b))
+      (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b) /\
+      (Spec.memopt (convert cmp) (v_linked_tree ptr h0) v <==> b))
 
 //val insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
 //  : Steel (t a)
@@ -127,7 +128,7 @@ val member (#a: eqtype) (cmp: cmp a) (ptr: t a) (v: a)
 //    Spec.insert_bst (convert cmp) (v_linked_tree ptr h0) v
 //    == v_linked_tree ptr' h1)
 //
-val insert_bst2 (#a: eqtype)
+val insert_bst2 (#a: Type0)
   (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
   : Steel (t a)
   (linked_tree ptr)
@@ -199,7 +200,7 @@ val rebalance_avl (#a: Type) (ptr: t a)
 //        Spec.insert_avl (convert cmp) (v_linked_tree ptr h0) new_data
 //        == v_linked_tree ptr' h1)
 
-val insert_avl2 (#a: eqtype)
+val insert_avl2 (#a: Type0)
   (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->

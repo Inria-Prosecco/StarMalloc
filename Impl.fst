@@ -306,31 +306,40 @@ let rec height (#a: Type0) (ptr: t a)
 #pop-options
 
 //@BST
-let rec member (#a: eqtype) (cmp:cmp a) (ptr: t a) (v: a)
+#push-options "--fuel 1 --ifuel 1"
+let rec member (#a: Type) (cmp:cmp a) (ptr: t a) (v: a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 b h1 ->
     v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
-    (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b))
+    (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b) /\
+    (Spec.memopt (convert cmp) (v_linked_tree ptr h0) v <==> b))
   =
-  admit ();
+  let h = get () in
+  Spec.equivmem (convert cmp) (v_linked_tree ptr h) v;
   if is_null_t #a ptr then (
     (**) null_is_leaf ptr;
     return false
   ) else (
     (**) let node = unpack_tree ptr in
-    if v = get_data node then (
+    let data = get_data node in
+    let delta = cmp v data in
+    if I.eq delta I.zero then begin
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
       return true
-    ) else (
-      let mleft = member cmp (get_left node) v in
-      let mright = member cmp (get_right node) v in
+    end else if I.lt delta I.zero then begin
+      let b = member cmp (get_left node) v in
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
-      return (mleft || mright)
-    )
+      return b
+    end else begin
+      let b = member cmp (get_right node) v in
+      (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
+      return b
+    end
   )
+#pop-options
 
 //let rec insert_bst (#a: Type0) (cmp:cmp a) (ptr:t a) (v: a)
 //  : Steel (t a)
@@ -392,7 +401,7 @@ let uincr (b: bool) (ptr: ref U.t)
 
 //@BST
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
-let rec insert_bst2 (#a: eqtype)
+let rec insert_bst2 (#a: Type)
   (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
   : Steel (t a)
   (linked_tree ptr)
@@ -842,7 +851,7 @@ let rebalance_avl (#a: Type) (ptr: t a)
 
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
-let rec insert_avl2 (#a: eqtype)
+let rec insert_avl2 (#a: Type)
   (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
@@ -902,6 +911,45 @@ let rec insert_avl2 (#a: eqtype)
         rebalance_avl ptr
       )
     )
+  )
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
+let rec remove_leftmost (#a: Type0) (cmp:cmp a) (ptr: t a)
+  : Steel (t a & a)
+  (linked_tree ptr)
+  (fun r -> linked_tree (fst r))
+  (requires fun h0 ->
+    Spec.Node? (v_linked_tree ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
+  (ensures fun h0 r h1 ->
+    Spec.Node? (v_linked_tree ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+    (let r2 = Spec.remove_leftmost
+      (convert cmp) (v_linked_tree ptr h0) in
+    v_linked_tree (fst r) h1 == fst r2 /\
+    I.eq (cmp (snd r) (snd r2)) I.zero))
+  =
+  (**) node_is_not_null ptr;
+  (**) let node = unpack_tree ptr in
+  if is_null_t (get_left node) then (
+    let data = get_data node in
+    elim_linked_tree_leaf (get_left node);
+    free (get_size node);
+    free ptr;
+    return (get_right node, data)
+  ) else (
+    (**) not_null_is_node (get_left node);
+    let r0 = remove_leftmost cmp (get_left node) in
+    let old_size = read (get_size node) in
+    write (get_size node) (U.sub old_size one);
+    let new_node = mk_node (get_data node)
+      (fst r0) (get_right node) (get_size node) in
+    write ptr new_node;
+    (**) pack_tree ptr
+      (fst r0) (get_right node) (get_size node);
+    let new_ptr = rebalance_avl ptr in
+    return (new_ptr, snd r0)
   )
 #pop-options
 
