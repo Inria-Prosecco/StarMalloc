@@ -977,7 +977,7 @@ let delete_avl_aux0 (#a: Type0)
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
     (convert cmp) (Spec.cdata (v_linked_tree ptr h0)) data_to_rm = 0 /\
     (v_linked_tree ptr' h1
-    == Spec.delete_avl_aux0
+    == Spec.delete_avl_aux0_wo_refinement
       (convert cmp) (v_linked_tree ptr h0) data_to_rm) /\
     Spec.size_of_tree (v_linked_tree ptr' h1)
     == Spec.size_of_tree (v_linked_tree ptr h0) - 1)
@@ -986,28 +986,23 @@ let delete_avl_aux0 (#a: Type0)
   (**) node_is_not_null ptr;
   (**) let node = unpack_tree ptr in
   if is_null_t (get_left node) && is_null_t (get_right node) then (
-    //sladmit (); admit ();
     elim_linked_tree_leaf (get_left node);
     free (get_size node);
     free ptr;
     return (get_right node)
   ) else if is_null_t (get_right node) then (
-    //sladmit (); admit ();
     elim_linked_tree_leaf (get_right node);
     free (get_size node);
     free ptr;
     return (get_left node)
   ) else if is_null_t (get_left node) then (
-    //sladmit (); admit ();
     elim_linked_tree_leaf (get_left node);
     free (get_size node);
     free ptr;
     return (get_right node)
   ) else (
-    //let h01 = get () in
     let right_node = unpack_tree (get_right node) in
     if is_null_t (get_left right_node) then (
-      //sladmit (); admit ();
       let y = get_data right_node in
       elim_linked_tree_leaf (get_left right_node);
       free (get_size right_node);
@@ -1024,34 +1019,11 @@ let delete_avl_aux0 (#a: Type0)
       pack_tree (get_right node)
         (get_left right_node) (get_right right_node)
         (get_size right_node);
-      //let h02 = get () in
-      //assert (
-      //  v_linked_tree (get_right node) h01
-      //  ==
-      //  v_linked_tree (get_right node) h02
-      //);
-      //assert (
-      //  v_linked_tree (get_left node) h01
-      //  ==
-      //  v_linked_tree (get_left node) h02
-      //);
-      //admit (); //sladmit ();
       let h0 = get () in
-      //assume (Spec.is_avl (convert cmp) (v_linked_tree (get_right node) h0));
-      //assume (Spec.Node? (v_linked_tree (get_right node) h0));
       let result_spec = hide (Spec.remove_leftmost_avl
         (convert cmp) (v_linked_tree (get_right node) h0)) in
       let result = remove_leftmost_avl cmp (get_right node) in
       assert (snd result == snd (reveal result_spec));
-      //admit ();
-      //assume (v_linked_tree (fst result) h1 == fst (reveal result_spec));
-            //let h0 = get () in
-      //let h1 = get () in
-      //assert (let r2 = Spec.remove_leftmost
-      //(convert cmp) (v_linked_tree (get_right node) h0) in
-      //v_linked_tree (fst result) h1 == fst r2 /\
-    //I.eq (cmp (snd result) (snd r2)) I.zero);
-      //admit ();
       let sz = read (get_size node) in
       write (get_size node) (U.sub sz one);
       let h1 = get () in
@@ -1074,11 +1046,10 @@ let delete_avl_aux0 (#a: Type0)
       == Spec.size_of_tree (v_linked_tree (get_left node) h)
        + Spec.size_of_tree (v_linked_tree (fst result) h)
        + 1);
-      //admit ();
       pack_tree ptr
         (get_left node) (fst result) (get_size node);
       let orig = hide (v_linked_tree ptr h00) in
-      let result_spec = hide (Spec.delete_avl_aux0
+      let result_spec = hide (Spec.delete_avl_aux0_wo_refinement
         (convert cmp) (reveal orig) data_to_rm) in
       let h = get () in
       let result = hide (v_linked_tree ptr h) in
@@ -1089,6 +1060,34 @@ let delete_avl_aux0 (#a: Type0)
     )
   )
 #pop-options
+
+let delete_avl_aux1 (#a: Type0)
+  (cmp:cmp a) (ptr: t a) (data_to_rm: a)
+  : Steel (t a)
+  (linked_tree ptr)
+  (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.Node? (v_linked_tree ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+    (convert cmp) (Spec.cdata (v_linked_tree ptr h0)) data_to_rm = 0)
+  (ensures fun h0 ptr' h1 ->
+    Spec.Node? (v_linked_tree ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+    (convert cmp) (Spec.cdata (v_linked_tree ptr h0)) data_to_rm = 0 /\
+    (v_linked_tree ptr' h1
+    == Spec.delete_avl_aux1
+      (convert cmp) (v_linked_tree ptr h0) data_to_rm) /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr' h1) /\
+    Spec.size_of_tree (v_linked_tree ptr' h1)
+    == Spec.size_of_tree (v_linked_tree ptr h0) - 1)
+  =
+  let h0 = get () in
+  assert (Spec.is_avl (convert cmp) (
+    Spec.delete_avl_aux1
+      (convert cmp) (v_linked_tree ptr h0) data_to_rm)
+  );
+  let ptr = delete_avl_aux0 cmp ptr data_to_rm in
+  rebalance_avl ptr
 
 let u_of_bool (b:bool) : x:U.t{U.v x = Spec.int_of_bool b}
 = match b with
@@ -1180,7 +1179,7 @@ let rec delete_avl_aux (#a: Type0)
     ) else (
       pack_tree ptr
         (get_left node) (get_right node) (get_size node);
-      let ptr = delete_avl_aux0 cmp ptr data_to_rm in
+      let ptr = delete_avl_aux1 cmp ptr data_to_rm in
       return (ptr, true)
     )
   )

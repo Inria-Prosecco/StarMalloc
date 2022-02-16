@@ -389,25 +389,23 @@ let delete_avl_aux0 (#a: Type0)
   (cmp:cmp a)
   (t: avl a cmp{Node? t})
   (data_to_rm: a{cmp (cdata t) data_to_rm = 0})
-  //(t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
   : r:bst a cmp
-//  {
-//    // 1 a b removal of one element
-//    mem cmp t data_to_rm = true /\
-//    //?data_to_rm = true /\
-//    mem cmp r data_to_rm = false /\
-//    // 2 remaining tree unchanged
-//    //(forall x. cmp x data_to_rm <> 0
-//    //  ==> mem cmp t x = mem cmp r x) /\
-//    add cmp r t data_to_rm /\
-//    // 3 size decreased by one
-//    size_of_tree r = size_of_tree t - 1 /\
-//    // 4
-//    height t - 1 <= height r /\
-//    height r <= height t
-//  }
+  {
+    // 1 a b removal of one element
+    mem cmp t data_to_rm = true /\
+    //?data_to_rm = true /\
+    mem cmp r data_to_rm = false /\
+    // 2 remaining tree unchanged
+    //(forall x. cmp x data_to_rm <> 0
+    //  ==> mem cmp t x = mem cmp r x) /\
+    add cmp r t data_to_rm /\
+    // 3 size decreased by one
+    size_of_tree r = size_of_tree t - 1 /\
+    // 4
+    height t - 1 <= height r /\
+    height r <= height t
+  }
   =
-  admit ();
   match t with
   | Node data Leaf Leaf 1 -> Leaf
   | Node data left Leaf size ->
@@ -511,6 +509,16 @@ let delete_avl_aux0 (#a: Type0)
       assert (add cmp new_t t data_to_rm);
       new_t
 #pop-options
+
+let delete_avl_aux0_wo_refinement (#a: Type0)
+  (cmp:cmp a)
+  (t: avl a cmp{Node? t})
+  (data_to_rm: a{cmp (cdata t) data_to_rm = 0})
+  : r:bst a cmp
+  {
+    size_of_tree r = size_of_tree t - 1
+  }
+  = delete_avl_aux0 cmp t data_to_rm
 
 let delete_avl_aux1 (#a: Type0)
   (cmp:cmp a)
