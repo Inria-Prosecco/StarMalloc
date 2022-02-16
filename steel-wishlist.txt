@@ -4,9 +4,9 @@
 #2 [#2459] fst/snd issues
 
 #3 [#2435] Steel requires precond should be usable in ensures postcond
-  -> discussion
 
 #4 faster lax check of Steel functions
+  -> discussion
 
 #5 pack_tree should not require inlined values
   -> minimization
