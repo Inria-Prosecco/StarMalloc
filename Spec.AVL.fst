@@ -2,6 +2,7 @@ module Spec.AVL
 
 module M = FStar.Math.Lib
 
+open FStar.Ghost
 open Spec.Trees
 open Spec.BST
 
@@ -520,6 +521,7 @@ let delete_avl_aux0_wo_refinement (#a: Type0)
   }
   = delete_avl_aux0 cmp t data_to_rm
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let delete_avl_aux1 (#a: Type0)
   (cmp:cmp a)
   (t: avl a cmp{Node? t})
@@ -541,9 +543,66 @@ let delete_avl_aux1 (#a: Type0)
     height r <= height t
   }
   =
-  admit ();
-  let new_t = delete_avl_aux0 cmp t data_to_rm in
-  rebalance_avl_wds new_t
+  let new_t1 = delete_avl_aux0 #a cmp t data_to_rm in
+  match t with
+  | Node data Leaf Leaf 1 ->
+      let new_t0 = Leaf
+      in assert (new_t0 == new_t1);
+      new_t0
+  | Node data left Leaf size ->
+      let new_t0 = left
+      in assert (new_t0 == new_t1);
+      new_t0
+  | Node data Leaf right size ->
+      let new_t0 = right
+      in assert (new_t0 == new_t1);
+      new_t0
+  | _ ->
+  let new_t0 = begin match t with
+  | Node z l (Node y Leaf x sy) sz ->
+      let new_t0 = Node y l x (sz - 1) in
+      assert (is_balanced t);
+      assert (is_balanced (cright t));
+      assert (is_balanced (cright (cright t)));
+      assert (is_balanced (cleft new_t0));
+      assert (is_balanced (cright new_t0));
+      new_t0
+  | Node z l r sz ->
+      let new_right, succ_z = remove_leftmost_avl cmp r in
+      let new_t0 = Node succ_z l new_right (sz - 1) in
+      assert (is_balanced (cleft new_t0));
+      assert (is_balanced (cright new_t0));
+      new_t0
+  end
+  in
+  assert (new_t0 == new_t1);
+  assert (is_balanced (cleft new_t0));
+  assert (is_balanced (cright new_t0));
+  assert (height (cleft new_t0) - height (cright new_t0) <= 2);
+  assert (height (cright new_t0) - height (cleft new_t0) <= 2);
+  let new_t2 = rebalance_avl_wds new_t0 in
+  assert (is_bst cmp new_t0);
+  rebalance_avl_wds_proof cmp new_t0 (cdata new_t0);
+  assert (is_avl cmp new_t2);
+  // 1a
+  assert (mem cmp t data_to_rm = true);
+  // 1b
+  assert (mem cmp new_t0 data_to_rm = false);
+  rebalance_equal cmp new_t0;
+  assert (mem cmp new_t2 data_to_rm = false);
+  // 2
+  assert (add cmp new_t2 t data_to_rm);
+  // 3
+  rebalance_avl_wds_size new_t0;
+  assert (size_of_tree new_t2 = size_of_tree new_t0);
+  // 4
+  assert (height t - 1 <= height new_t0);
+  assert (height new_t0 <= height t);
+  assert (height t - 1 <= height new_t2);
+  assert (height new_t2 <= height t);
+
+  new_t2
+#pop-options
 
 #push-options "--z3rlimit 50"
 let rec delete_avl_aux (#a: Type0)
