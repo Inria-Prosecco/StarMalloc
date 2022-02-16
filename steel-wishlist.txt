@@ -1,0 +1,22 @@
+#1 better SMT encoding
+  -> issue?
+
+#2 [#2459] fst/snd issues
+
+#3 [#2435] Steel requires precond should be usable in ensures postcond
+  -> discussion
+
+#4 faster lax check of Steel functions
+
+#5 pack_tree should not require inlined values
+  -> minimization
+
+#6 [#2455] when clauses
+
+#7 working timing to check for perf regressions
+  -> fstar-hackery
+
+solved
+- #2447 - return issues (workaround: let h = get () in)
+- #2369 - subcomp framing issue (workaround: add ())
+
