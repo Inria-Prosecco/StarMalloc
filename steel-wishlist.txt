@@ -6,7 +6,7 @@
 #3 [#2435] Steel requires precond should be usable in ensures postcond
 
 #4 faster lax check of Steel functions
-  -> discussion
+  -> discussion, unlikely
 
 #5 pack_tree should not require inlined values
   -> minimization
@@ -14,7 +14,8 @@
 #6 [#2455] when clauses
 
 #7 working timing to check for perf regressions
-  -> fstar-hackery
+  [fstar-hackery]
+  fstar --profile MyModule --profile_group_by_decl --profile_component FStar MyModule.fst
 
 solved
 - #2447 - return issues (workaround: let h = get () in)
