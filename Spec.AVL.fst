@@ -293,7 +293,7 @@ let rec insert_avl2_aux (#a: Type)
 #pop-options
 
 #push-options "--z3rlimit 50"
-let rec remove_leftmost (#a: Type0)
+let rec remove_leftmost_avl (#a: Type0)
   (cmp:cmp a)
   (t: avl a cmp{Node? t})
   : r:(avl a cmp & a){
@@ -332,7 +332,7 @@ let rec remove_leftmost (#a: Type0)
       // (4 5 6 : trivial)
       right, data
   | Node data left right size ->
-      let new_left, leftmost = remove_leftmost cmp left in
+      let new_left, leftmost = remove_leftmost_avl cmp left in
       // (1 : IH)
       assert (mem cmp left leftmost = true);
       assert (mem cmp t leftmost = true);
@@ -390,22 +390,24 @@ let delete_avl_aux0 (#a: Type0)
   (t: avl a cmp{Node? t})
   (data_to_rm: a{cmp (cdata t) data_to_rm = 0})
   //(t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
-  : r:avl a cmp{
-    // 1 a b removal of one element
-    mem cmp t data_to_rm = true /\
-    //?data_to_rm = true /\
-    mem cmp r data_to_rm = false /\
-    // 2 remaining tree unchanged
-    //(forall x. cmp x data_to_rm <> 0
-    //  ==> mem cmp t x = mem cmp r x) /\
-    add cmp r t data_to_rm /\
-    // 3 size decreased by one
-    size_of_tree r = size_of_tree t - 1 /\
-    // 4
-    height t - 1 <= height r /\
-    height r <= height t
-  }
+  : r:bst a cmp
+//  {
+//    // 1 a b removal of one element
+//    mem cmp t data_to_rm = true /\
+//    //?data_to_rm = true /\
+//    mem cmp r data_to_rm = false /\
+//    // 2 remaining tree unchanged
+//    //(forall x. cmp x data_to_rm <> 0
+//    //  ==> mem cmp t x = mem cmp r x) /\
+//    add cmp r t data_to_rm /\
+//    // 3 size decreased by one
+//    size_of_tree r = size_of_tree t - 1 /\
+//    // 4
+//    height t - 1 <= height r /\
+//    height r <= height t
+//  }
   =
+  admit ();
   match t with
   | Node data Leaf Leaf 1 -> Leaf
   | Node data left Leaf size ->
@@ -459,25 +461,7 @@ let delete_avl_aux0 (#a: Type0)
       // 2
       assert (add cmp (cright new_t) (cright t) y);
       assert (add cmp new_t t data_to_rm);
-
-      // ###
-      assert (is_balanced l);
-      assert (is_balanced r);
-      assert (height l - height r <= 2);
-      assert (height r - height l <= 2);
-      let new_t2 = rebalance_avl_wds new_t in
-      rebalance_avl_wds_proof cmp new_t y;
-      assert (is_avl cmp new_t2);
-      // 1
-      assert (mem cmp t data_to_rm = true);
-      rebalance_equal cmp new_t;
-      assert (mem cmp new_t2 data_to_rm = false);
-      // 2
-      assert (add cmp new_t2 t data_to_rm);
-      // 3
-      rebalance_avl_wds_size new_t;
-      assert (size_of_tree new_t2 = size_of_tree t - 1);
-      new_t2
+      new_t
 
   // successor of z = to be retrieved
   | Node z l r sz ->
@@ -485,7 +469,7 @@ let delete_avl_aux0 (#a: Type0)
       // 1a
       assert (mem cmp t data_to_rm = true);
       // call to aux function, building new tree
-      let new_right, succ_z = remove_leftmost cmp r in
+      let new_right, succ_z = remove_leftmost_avl cmp r in
       let new_t = Node succ_z l new_right (sz - 1) in
       // left: l <= z <= succ_z
       // z <= succ_z
@@ -525,27 +509,33 @@ let delete_avl_aux0 (#a: Type0)
       assert (mem cmp new_t data_to_rm = false);
       // 2
       assert (add cmp new_t t data_to_rm);
-
-      // ###
-      assert (is_balanced l);
-      assert (is_balanced new_right);
-      assert (height l - height new_right <= 2);
-      assert (height new_right - height l <= 2);
-      let new_t2 = rebalance_avl_wds new_t in
-      rebalance_avl_wds_proof cmp new_t succ_z;
-      assert (is_avl cmp new_t2);
-      // 1
-      assert (mem cmp t data_to_rm = true);
-      rebalance_equal cmp new_t;
-      assert (mem cmp new_t2 data_to_rm = false);
-      // 2
-      assert (add cmp new_t2 t data_to_rm);
-      // 3
-      rebalance_avl_wds_size new_t;
-      assert (size_of_tree new_t2 = size_of_tree t - 1);
-
-      new_t2
+      new_t
 #pop-options
+
+let delete_avl_aux1 (#a: Type0)
+  (cmp:cmp a)
+  (t: avl a cmp{Node? t})
+  (data_to_rm: a{cmp (cdata t) data_to_rm = 0})
+  //(t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
+  : r:avl a cmp{
+    // 1 a b removal of one element
+    mem cmp t data_to_rm = true /\
+    //?data_to_rm = true /\
+    mem cmp r data_to_rm = false /\
+    // 2 remaining tree unchanged
+    //(forall x. cmp x data_to_rm <> 0
+    //  ==> mem cmp t x = mem cmp r x) /\
+    add cmp r t data_to_rm /\
+    // 3 size decreased by one
+    size_of_tree r = size_of_tree t - 1 /\
+    // 4
+    height t - 1 <= height r /\
+    height r <= height t
+  }
+  =
+  admit ();
+  let new_t = delete_avl_aux0 cmp t data_to_rm in
+  rebalance_avl_wds new_t
 
 #push-options "--z3rlimit 50"
 let rec delete_avl_aux (#a: Type0)
@@ -615,7 +605,7 @@ let rec delete_avl_aux (#a: Type0)
         new_t2, b
       end
       else
-        let new_t = delete_avl_aux0 cmp t data_to_rm in
+        let new_t = delete_avl_aux1 cmp t data_to_rm in
         new_t, true
 #pop-options
 
