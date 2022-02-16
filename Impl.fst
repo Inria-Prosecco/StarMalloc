@@ -953,6 +953,76 @@ let rec remove_leftmost (#a: Type0) (cmp:cmp a) (ptr: t a)
   )
 #pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
+let delete_avl_aux0 (#a: Type0)
+  (cmp:cmp a) (ptr: t a) (data_to_rm: a)
+  : Steel (t a)
+  (linked_tree ptr)
+  (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.Node? (v_linked_tree ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+    (convert cmp) (Spec.cdata (v_linked_tree ptr h0)) data_to_rm = 0)
+  (ensures fun h0 ptr' h1 ->
+    Spec.Node? (v_linked_tree ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+    (convert cmp) (Spec.cdata (v_linked_tree ptr h0)) data_to_rm = 0 /\
+    (v_linked_tree ptr' h1
+    == Spec.delete_avl_aux0
+      (convert cmp) (v_linked_tree ptr h0) data_to_rm) /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr' h1))
+  =
+  (**) node_is_not_null ptr;
+  (**) let node = unpack_tree ptr in
+  if is_null_t (get_left node) && is_null_t (get_right node) then (
+    elim_linked_tree_leaf (get_left node);
+    free (get_size node);
+    free ptr;
+    return (get_right node)
+  ) else if is_null_t (get_right node) then (
+    elim_linked_tree_leaf (get_right node);
+    free (get_size node);
+    free ptr;
+    return (get_left node)
+  ) else if is_null_t (get_left node) then (
+    elim_linked_tree_leaf (get_left node);
+    free (get_size node);
+    free ptr;
+    return (get_right node)
+  ) else (
+    let right_node = unpack_tree (get_right node) in
+    if is_null_t (get_left right_node) then (
+      let y = get_data right_node in
+      elim_linked_tree_leaf (get_left right_node);
+      free (get_size right_node);
+      free (get_right node);
+      let sz = read (get_size node) in
+      write (get_size node) (U.sub sz one);
+      let new_node = mk_node
+        y (get_left node) (get_right right_node) (get_size node) in
+      write ptr new_node;
+      pack_tree ptr
+        (get_left node) (get_right right_node) (get_size node);
+      rebalance_avl ptr
+    ) else (
+      pack_tree (get_right node)
+        (get_left right_node) (get_right right_node)
+        (get_size right_node);
+      let result = remove_leftmost cmp (get_right node) in
+      let sz = read (get_size node) in
+      write (get_size node) (U.sub sz one);
+      let new_node = mk_node (snd result)
+        (get_right node) (fst result) (get_size node) in
+      write ptr new_node;
+      // @AF: this sladmit should be removed
+      sladmit ();
+      pack_tree ptr
+        (get_right node) (fst result) (get_size node);
+      rebalance_avl ptr
+    )
+  )
+#pop-options
+
 (*
 let rec delete_avl (#a: eqtype)
   (cmp:cmp a) (ptr:t a) (data_to_rm: a)

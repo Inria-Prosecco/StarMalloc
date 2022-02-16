@@ -385,9 +385,10 @@ let rec remove_leftmost (#a: Type0)
 
 // https://en.wikipedia.org/wiki/Binary_search_tree#Deletion
 #push-options "--z3rlimit 80"
-let delete_bst_aux0 (#a: Type0)
-  (cmp:cmp a) (data_to_rm: a)
-  (t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
+let delete_avl_aux0 (#a: Type0)
+  (cmp:cmp a)
+  (t: avl a cmp{Node? t})
+  (data_to_rm: a{cmp (cdata t) data_to_rm = 0})
   //(t: avl a cmp{Node? t /\ cmp (cdata t) data_to_rm = 0})
   : r:avl a cmp{
     // 1 a b removal of one element
@@ -614,7 +615,7 @@ let rec delete_avl_aux (#a: Type0)
         new_t2, b
       end
       else
-        let new_t = delete_bst_aux0 cmp data_to_rm t in
+        let new_t = delete_avl_aux0 cmp t data_to_rm in
         new_t, true
 #pop-options
 
