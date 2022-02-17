@@ -139,7 +139,7 @@ val insert_bst2 (#a: Type0)
   (ensures fun h0 ptr' h1 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
     Spec.insert_bst2 r (convert cmp) (v_linked_tree ptr h0) new_data
-    = v_linked_tree ptr' h1
+    == v_linked_tree ptr' h1
   )
 
 (*** Rotation functions used internally to balance AVL trees ***)
@@ -189,7 +189,8 @@ val rebalance_avl (#a: Type) (ptr: t a)
     (ensures fun h0 ptr' h1 ->
         Spec.rebalance_avl_wds (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
 
-/// Inserts an element [v] in an AVL tree, while preserving the AVL tree invariant
+/// Inserts an element [v] in an AVL tree,
+/// while preserving the AVL tree invariant
 //val insert_avl (#a: Type) (cmp:cmp a) (ptr: t a) (new_data: a)
 //    : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
 //    (requires fun h0 ->
@@ -209,4 +210,21 @@ val insert_avl2 (#a: Type0)
   (ensures fun h0 ptr' h1 ->
      Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
      Spec.insert_avl2 r (convert cmp) (v_linked_tree ptr h0) new_data
-     = v_linked_tree ptr' h1)
+     == v_linked_tree ptr' h1 /\
+     Spec.is_avl (convert cmp) (v_linked_tree ptr' h1))
+
+/// Deletes an element [v] in an AVL tree,
+/// while preserving the AVL tree invariant
+
+val delete_avl (#a: Type0)
+  (cmp:cmp a) (ptr: t a) (data_to_rm: a)
+  : Steel (t a)
+  (linked_tree ptr)
+  (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
+  (ensures fun h0 ptr' h1 ->
+    Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
+    Spec.delete_avl (convert cmp) (v_linked_tree ptr h0) data_to_rm
+    == v_linked_tree ptr' h1 /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr' h1))

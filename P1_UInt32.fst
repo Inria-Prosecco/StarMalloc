@@ -81,6 +81,7 @@ let rotate_left_right = Impl.rotate_left_right #a
 let is_balanced = Impl.is_balanced #a
 let rebalance_avl = Impl.rebalance_avl #a
 let insert_avl2 = Impl.insert_avl2 #a
+let delete_avl = Impl.delete_avl #a
 
 (*
 let one ()

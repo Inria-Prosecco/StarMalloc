@@ -678,12 +678,18 @@ let rec delete_avl_aux (#a: Type0)
 
 let insert_avl2 (#a: Type)
   (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
-  : t':wds a{
-    let _,b = insert_avl2_aux r cmp t new_data in
-    size_of_tree t' = size_of_tree t + (int_of_bool b) /\
-    is_wds t'
-  }
+  : avl a cmp
+//  {
+//    let _,b = insert_avl2_aux r cmp t new_data in
+//    size_of_tree t' = size_of_tree t + (int_of_bool b) /\
+//    add cmp t t' new_data
+//  }
   = fst (insert_avl2_aux r cmp t new_data)
+
+let delete_avl (#a: Type0)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
+  : avl a cmp
+  = fst (delete_avl_aux cmp t data_to_rm)
 
 let rec lemma_insert (#a: Type)
   (r: bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)

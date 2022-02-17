@@ -326,10 +326,10 @@ let rec member (#a: Type) (cmp:cmp a) (ptr: t a) (v: a)
     (**) let node = unpack_tree ptr in
     let data = get_data node in
     let delta = cmp v data in
-    if I.eq delta I.zero then begin
+    if I.eq delta szero then begin
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
       return true
-    end else if I.lt delta I.zero then begin
+    end else if I.lt delta szero then begin
       let b = member cmp (get_left node) v in
       (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
       return b
@@ -412,7 +412,7 @@ let rec insert_bst2 (#a: Type)
   (ensures fun h0 ptr' h1 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
     Spec.insert_bst2 r (convert cmp) (v_linked_tree ptr h0) new_data
-    = v_linked_tree ptr' h1
+    == v_linked_tree ptr' h1
   )
   =
   if is_null_t #a ptr then (
@@ -860,7 +860,8 @@ let rec insert_avl2 (#a: Type)
   (ensures fun h0 ptr' h1 ->
      Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
      Spec.insert_avl2 r (convert cmp) (v_linked_tree ptr h0) new_data
-     = v_linked_tree ptr' h1)
+     == v_linked_tree ptr' h1 /\
+     Spec.is_avl (convert cmp) (v_linked_tree ptr' h1))
   =
   if is_null_t ptr then (
     (**) null_is_leaf ptr;
@@ -1053,14 +1054,15 @@ let delete_avl_aux0 (#a: Type0)
         (convert cmp) (reveal orig) data_to_rm) in
       let h = get () in
       let result = hide (v_linked_tree ptr h) in
-      assert (cdata (reveal result) == cdata (reveal result_spec));
-      assert (cleft (reveal result) == cleft (reveal result_spec));
-      assert (cright (reveal result) == cright (reveal result_spec));
+      //assert (cdata (reveal result) == cdata (reveal result_spec));
+      //assert (cleft (reveal result) == cleft (reveal result_spec));
+      //assert (cright (reveal result) == cright (reveal result_spec));
       return ptr
     )
   )
 #pop-options
 
+#push-options "--fuel 1 --ifuel 1"
 let delete_avl_aux1 (#a: Type0)
   (cmp:cmp a) (ptr: t a) (data_to_rm: a)
   : Steel (t a)
@@ -1088,6 +1090,7 @@ let delete_avl_aux1 (#a: Type0)
   );
   let ptr = delete_avl_aux0 cmp ptr data_to_rm in
   rebalance_avl ptr
+#pop-options
 
 let u_of_bool (b:bool) : x:U.t{U.v x = Spec.int_of_bool b}
 = match b with
@@ -1118,7 +1121,7 @@ let dincr
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec delete_avl_aux (#a: Type0)
-  (cmp:cmp  a) (ptr: t a) (data_to_rm: a)
+  (cmp:cmp a) (ptr: t a) (data_to_rm: a)
   : Steel (t a & bool)
   (linked_tree ptr)
   (fun r -> linked_tree (fst r))
@@ -1139,7 +1142,7 @@ let rec delete_avl_aux (#a: Type0)
   ) else (
     (**) let node = unpack_tree ptr in
     let delta = cmp data_to_rm (get_data node) in
-    if I.lt delta I.zero then (
+    if I.lt delta szero then (
       let h0 = get () in
       let result = delete_avl_aux cmp (get_left node) data_to_rm in
       let h1 = get () in
@@ -1158,7 +1161,7 @@ let rec delete_avl_aux (#a: Type0)
         (fst result) (get_right node) (get_size node);
       let ptr = rebalance_avl ptr in
       return (ptr, snd result)
-    ) else if I.gt delta I.zero then (
+    ) else if I.gt delta szero then (
       let h0 = get () in
       let result = delete_avl_aux cmp (get_right node) data_to_rm in
       dincr (snd result) (get_size node);
@@ -1184,97 +1187,18 @@ let rec delete_avl_aux (#a: Type0)
     )
   )
 
-(*
-let rec delete_avl (#a: eqtype)
-  (cmp:cmp a) (ptr:t a) (data_to_rm: a)
+let delete_avl (#a: Type0)
+  (cmp:cmp a) (ptr: t a) (data_to_rm: a)
   : Steel (t a)
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) <= c /\
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 ->
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
     Spec.delete_avl (convert cmp) (v_linked_tree ptr h0) data_to_rm
-    = v_linked_tree ptr' h1
-  )
+    == v_linked_tree ptr' h1 /\
+    Spec.is_avl (convert cmp) (v_linked_tree ptr' h1))
   =
-  let h0 = get () in
-  if is_null_t #a ptr then (
-    (**) null_is_leaf ptr;
-    // TODO: when the following line is missing, fails
-    let h = get () in
-    return ptr
-  ) else (
-//    sladmit ();
-//    return ptr
-//  )
-
-    (**) let node = unpack_tree ptr in
-    let delta = cmp (get_data node) data_to_rm in
-    let b1 = is_null_t #a (get_left node) in
-    let b2 = is_null_t #a (get_right node) in
-//    if b1 && b2 then (
-//      null_is_leaf (get_left node);
-//      null_is_leaf (get_right node);
-//      if I.eq delta szero then (
-//        (**) free (get_size node);
-//        (**) free ptr;
-//        (**) elim_linked_tree_leaf (get_right node);
-//        return (get_left node)
-//      ) else (
-//        (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
-//        return ptr
-//      )
-//    ) else (
-      if I.gt delta szero then (
-        let old_left_s = sot_wds (get_left node) in
-        let new_left = delete_avl cmp (get_left node) data_to_rm in
-        let new_left_s = sot_wds new_left in
-        assert (U.lte new_left_s old_left_s);
-        let diff = U.sub old_left_s new_left_s in
-        let old_size = read (get_size node) in
-        write (get_size node) (U.sub old_size diff);
-        let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
-        write ptr new_node;
-        (**) pack_tree ptr new_left (get_right node) (get_size node);
-        rebalance_avl ptr
-      ) else if I.lt delta szero then (
-        let old_right_s = sot_wds (get_right node) in
-        let new_right = delete_avl cmp (get_right node) data_to_rm in
-        let h = get () in
-        assert (v_linked_tree new_right h =
-        Spec.delete_avl
-          (convert cmp)
-          (cright (v_linked_tree ptr h0))
-          data_to_rm);
-        let new_right_s = sot_wds new_right in
-        assert (U.lte new_right_s old_right_s);
-        let diff = U.sub old_right_s new_right_s in
-        let old_size = read (get_size node) in
-        write (get_size node) (U.sub old_size diff);
-        let new_node = mk_node (get_data node)
-          (get_left node) new_right (get_size node) in
-        write ptr new_node;
-        (**) pack_tree ptr (get_left node) new_right (get_size node);
-        let h = get () in
-        let res = hide (Spec.delete_avl (convert cmp) (reveal (v_linked_tree ptr h0)) data_to_rm) in
-        let t' = hide (v_linked_tree ptr h) in
-        assert (Spec.is_wds (reveal t'));
-        assert (Spec.is_wds res);
-        //admit ();
-        //assert (csize (reveal t') == csize res);
-        //assert (cleft (reveal t') == cleft res);
-        //assert (cright (reveal t') == cright res);
-        assert (Spec.size_of_tree res <= Spec.size_of_tree (reveal t'));
-        assert (Spec.size_of_tree res = Spec.size_of_tree (reveal t'));
-        //admit ();
-        rebalance_avl ptr
-      ) else (
-        (**) pack_tree ptr (get_left node) (get_right node)
-          (get_size node);
-        return ptr
-      )
-    )
-  //)
-*)
+  let r = delete_avl_aux cmp ptr data_to_rm in
+  fst r
