@@ -414,6 +414,7 @@ let u_of_bool (b:bool) : x:U.t{U.v x = Spec.int_of_bool b}
 | false -> zero
 
 #push-options "--fuel 1 --ifuel 1"
+inline_for_extraction noextract
 let dincr
   (b: bool)
   (ptr: ref U.t)
@@ -433,6 +434,7 @@ let dincr
   ) else (
     return ()
   )
+#pop-options
 
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
@@ -502,6 +504,7 @@ let rec delete_avl_aux (#a: Type0)
       return (ptr, true)
     )
   )
+#pop-options
 
 let delete_avl (#a: Type0)
   (cmp:cmp a) (ptr: t a) (data_to_rm: a)
