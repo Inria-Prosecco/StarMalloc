@@ -10,6 +10,7 @@ open Steel.Reference
 //module Spec = Trees
 module U = FStar.UInt64
 module I = FStar.Int64
+module M = FStar.Math.Lib
 
 open Impl.Core
 open Impl.Common
@@ -34,14 +35,15 @@ let create_tree (#a: Type0) (v: a) : Steel (t a)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
     v_linked_tree ptr h1 ==
-    Spec.Node v Spec.Leaf Spec.Leaf (U.v one))
+    Spec.Node v Spec.Leaf Spec.Leaf (U.v one) (U.v one))
   =
   let l = create_leaf () in
   let r = create_leaf () in
   let sr = malloc 1UL in
-  let n = mk_node v l r sr in
+  let hr = malloc 1UL in
+  let n = mk_node v l r sr hr in
   let ptr = malloc n in
-  pack_tree ptr l r sr;
+  pack_tree ptr l r sr hr;
   return ptr
 #pop-options
 
@@ -73,6 +75,7 @@ let sot_wds (#a: Type) (ptr: t a)
       (v_linked_tree (get_left node) h2)
       (v_linked_tree (get_right node) h2)
       (U.v (sel (get_size node) h2))
+      (U.v (sel (get_height node) h2))
     ) in
     assert (reveal ptr_t1 == reveal ptr_t2);
     assert (Spec.is_wds (reveal ptr_t1));
@@ -82,36 +85,97 @@ let sot_wds (#a: Type) (ptr: t a)
     assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
     let s = read (get_size node) in
     assert (U.v s == Spec.sot_wds (v_linked_tree ptr h1));
-    pack_tree ptr (get_left node) (get_right node) (get_size node);
+    pack_tree ptr
+      (get_left node)
+      (get_right node)
+      (get_size node)
+      (get_height node);
     return s
   )
 
+let hot_wdh (#a: Type) (ptr: t a)
+  : Steel (U.t)
+  (linked_tree ptr)
+  (fun _ -> linked_tree ptr)
+  (requires fun _ -> True)
+  (ensures (fun h0 h h1 ->
+    v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+    U.v h == Spec.hot_wdh (v_linked_tree ptr h0) /\
+    U.v h == Spec.height_of_tree (v_linked_tree ptr h0)
+  ))
+  =
+  if is_null_t ptr then (
+    assert (is_null_t ptr);
+    null_is_leaf ptr;
+    let h = get () in
+    assert (0 == Spec.hot_wdh (v_linked_tree ptr h));
+    return zero
+  ) else (
+    let h1 = get () in
+    (**) let node = unpack_tree ptr in
+    let h2 = get () in
+    let ptr_t1 = hide (v_linked_tree ptr h1) in
+    let ptr_t2 = hide (Spec.Node
+      (get_data (sel ptr h2))
+      (v_linked_tree (get_left node) h2)
+      (v_linked_tree (get_right node) h2)
+      (U.v (sel (get_size node) h2))
+      (U.v (sel (get_height node) h2))
+    ) in
+    assert (reveal ptr_t1 == reveal ptr_t2);
+    assert (Spec.is_wds (reveal ptr_t1));
+    let ptr_s1 = hide (Spec.sot_wds ptr_t1) in
+    let ptr_s2 = hide (Spec.sot_wds ptr_t2) in
+    assert (reveal ptr_s1 == reveal ptr_s2);
+    assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
+    let h = read (get_height node) in
+    assert (U.v h == Spec.hot_wdh (v_linked_tree ptr h1));
+    pack_tree ptr
+      (get_left node)
+      (get_right node)
+      (get_size node)
+      (get_height node);
+    return h
+  )
+
+
 //@Trees
-let merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
+let merge_tree (#a: Type0) (v: a) (l r: t a) : Steel (t a)
   (linked_tree l `star` linked_tree r)
   (fun ptr -> linked_tree ptr)
   (requires fun h0 ->
-    let s1 = Spec.size_of_tree (v_linked_tree l h0) in
-    let s2 = Spec.size_of_tree (v_linked_tree r h0) in
-    s1 + s2 + 1 <= c)
+    let sl = Spec.size_of_tree (v_linked_tree l h0) in
+    let sr = Spec.size_of_tree (v_linked_tree r h0) in
+    let hl = Spec.height_of_tree (v_linked_tree l h0) in
+    let hr = Spec.height_of_tree (v_linked_tree r h0) in
+    sl + sr + 1 <= c /\
+    M.max hl hr + 1 <= c)
   (ensures fun h0 ptr h1 ->
-    let s1 = Spec.size_of_tree (v_linked_tree l h0) in
-    let s2 = Spec.size_of_tree (v_linked_tree r h0) in
-    let s = s1 + s2 + 1 in
+    let sl = Spec.size_of_tree (v_linked_tree l h0) in
+    let sr = Spec.size_of_tree (v_linked_tree r h0) in
+    let s = sl + sr + 1 in
+    let hl = Spec.height_of_tree (v_linked_tree l h0) in
+    let hr = Spec.height_of_tree (v_linked_tree r h0) in
+    let h = M.max hl hr + 1 in
     s <= c /\
+    h <= c /\
     v_linked_tree ptr h1 ==
     Spec.Node v
       (v_linked_tree l h0)
       (v_linked_tree r h0)
-      s)
+      s h)
   =
   let s1 = sot_wds l in
   let s2 = sot_wds r in
   let s = U.add (U.add s1 s2) one in
   let sr = malloc s in
-  let n = mk_node v l r sr in
+  let h1 = hot_wdh l in
+  let h2 = hot_wdh r in
+  let h = if U.gt h1 h2 then U.add h1 one else U.add h2 one in
+  let hr = malloc h in
+  let n = mk_node v l r sr hr in
   let ptr = malloc n in
-  pack_tree ptr l r sr;
+  pack_tree ptr l r sr hr;
   return ptr
 
 //let rec append_left #a (ptr: t a) (v: a)
@@ -273,6 +337,7 @@ let merge_tree (#a: Type0) (v: a) (l: t a) (r: t a) : Steel (t a)
 //    return ptr
 //  )
 
+(*)
 //@Trees
 #push-options "--fuel 1 --ifuel 1"
 let rec height (#a: Type0) (ptr: t a)

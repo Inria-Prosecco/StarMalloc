@@ -51,7 +51,8 @@ val mk_node (#a: Type0)
         get_left n == left
      /\ get_right n == right
      /\ get_data n == data
-     /\ get_size n == size))
+     /\ get_size n == size
+     /\ get_height n == height))
 
 
 (**** Slprop and selector *)
@@ -199,18 +200,3 @@ val unpack_tree (#a: Type0) (ptr: t a)
         U.v (sel (get_size node) h1) <= c /\
         U.v (sel (get_height node) h1) <= c
       ))
-
-(*)
-        let l = v_linked_tree (get_left node) h1 in
-        let r = v_linked_tree (get_right node) h1 in
-        let s = get_size node in
-        //let s = Spec.size_of_tree l + Spec.size_of_tree r + 1 in
-
-        v_linked_tree ptr h0 == Spec.Node
-          (get_data (sel ptr h1))
-          l r s /\
-          //(v_linked_tree (get_left node) h1)
-          //(v_linked_tree (get_right node) h1) /\
-        (sel ptr h1) == node
-      ))*)
-
