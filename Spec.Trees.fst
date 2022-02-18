@@ -34,7 +34,7 @@ let proj (x: int) : r:int{-1 <= r /\ r <= 1}
 //@Trees
 (* is with defined size *)
 let rec is_wds (#a: Type) (x: tree a)
-  : Tot bool (decreases x) =
+  : GTot bool (decreases x) =
   match x with
   | Leaf -> true
   | Node data left right size ->

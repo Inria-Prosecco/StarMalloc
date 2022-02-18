@@ -21,7 +21,8 @@ type cond (a: Type) (cmp:cmp a) = c: (a -> bool){
 
 
 //@BST
-let rec forall_keys (#a: Type) (t: tree a) (cond: a -> bool) : bool =
+let rec forall_keys (#a: Type) (t: tree a) (cond: a -> bool)
+  : GTot bool =
   match t with
   | Leaf -> true
   | Node data left right _ ->
@@ -34,7 +35,8 @@ let key_right (#a: Type) (compare : cmp a) (root key: a) : bool =
   compare key root > 0
 
 //@BST
-let rec is_bst (#a: Type) (compare : cmp a) (x: tree a) : bool =
+let rec is_bst (#a: Type) (compare : cmp a) (x: tree a)
+  : GTot bool =
   match x with
   | Leaf -> true
   | Node data left right _ ->
@@ -697,5 +699,3 @@ let rotate_left_right_bst (#a:Type) (cmp:cmp a) (r:wds a)
 //    let right = Node z t3 t4 s34 in
 //    assert (forall_keys left (key_right cmp root));
 //    assert (forall_keys right (key_right cmp root))
-
-

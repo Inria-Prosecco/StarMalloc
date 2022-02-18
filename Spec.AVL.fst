@@ -9,6 +9,7 @@ open Spec.BST
 (**** AVL insertion *)
 
 //@AVL
+//will be GTot, is_balanced check should be local
 let rec is_balanced (#a: Type) (x: tree a) : bool =
   match x with
   | Leaf -> true
@@ -18,8 +19,8 @@ let rec is_balanced (#a: Type) (x: tree a) : bool =
     is_balanced(left)
 
 //@AVL
-let is_avl (#a: Type) (cmp:cmp a) (x: wds a) : prop =
-  is_bst cmp x /\ is_balanced x
+let is_avl (#a: Type) (cmp:cmp a) (x: wds a) : GTot bool =
+  is_bst cmp x && is_balanced x
 
 //@AVL
 let avl (a: Type) (cmp:cmp a) = x: wds a {is_avl cmp x}
