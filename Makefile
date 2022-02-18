@@ -71,6 +71,8 @@ extract: $(FILTERED_KRML_FILES)
 test: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist test.c
 
+testopt: verify extract
+	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist -O2 test.c
 
 #ALL_C_FILES=$(addsuffix .c,$(ALL_MODULE_NAMES))
 #
