@@ -216,7 +216,7 @@ let rebalance_equal (#a: Type) (cmp: cmp a) (t1: bst a cmp)
   => bad idea/bad design?
 *)
 //TODO: possibly a stronger invariant, not b ==> same "skeleton"
-#push-options "--z3rlimit 100"
+#push-options "--z3rlimit 200"
 let rec insert_avl2_aux (#a: Type)
   (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
   : Pure (avl a cmp & bool)
@@ -582,7 +582,7 @@ let delete_avl_aux0 (#a: Type0)
 //  }
 //  = delete_avl_aux0 cmp t data_to_rm
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 25"
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 50"
 let delete_avl_aux1 (#a: Type0)
   (cmp:cmp a)
   (t: avl a cmp{Node? t})
