@@ -682,7 +682,7 @@ let delete_avl_aux1 (#a: Type0)
 //        new_t, true
 //     end
 
-#push-options "--z3rlimit 200"
+#push-options "--z3rlimit 250"
 let rec delete_avl_aux (#a: Type0)
   (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
   : Pure (avl a cmp & bool)

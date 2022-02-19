@@ -108,6 +108,7 @@ let rec insert_bst2_aux (#a: Type)
     end
 
 //@BST
+#push-options "--z3rlimit 25"
 let rec insert_bst2_aux_size (#a: Type)
   (r:bool) (cmp:cmp a) (t: bst a cmp) (new_data: a)
   : Lemma (
@@ -139,6 +140,7 @@ let rec insert_bst2_aux_size (#a: Type)
       assert (new_size == size_of_tree new_t);
       assert (is_wds new_t)
     end
+#pop-options
 
 //@BST
 let insert_bst2 (#a: Type)
