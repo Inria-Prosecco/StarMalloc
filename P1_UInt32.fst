@@ -214,22 +214,18 @@ let rec main5_aux (ptr: t a) (v: a)
   : Steel (t a)
   (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
-    True
-    //Spec.size_of_tree (v_linked_tree ptr h0) < 100
+    Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr h0)
   )
   (ensures fun h0 ptr' h1 ->
-    //Spec.size_of_tree (v_linked_tree ptr h1)
-    //==
-    //Spec.size_of_tree (v_linked_tree ptr h0) + 1/\
-    //Spec.size_of_tree (v_linked_tree ptr h0) < 100
-    True
+    Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr' h1)
   )
   =
-  sladmit ();
   if U64.eq v zero then (
     let h = get () in
     return ptr
   ) else (
+    let h = get () in
+    assume (Spec.size_of_tree (Impl.v_linked_tree ptr h) < 1000000000);
     let ptr' = insert_avl2 true compare ptr v in
     let v' = U64.sub v one in
     main5_aux ptr' v'
@@ -244,3 +240,24 @@ let main5 (x: a)
   =
   let ptr = create_leaf () in
   main5_aux ptr x
+
+let rec main6_aux (ptr: t a) (v: a)
+  : Steel a
+  (linked_tree ptr) (fun _ -> linked_tree ptr)
+  (requires fun h0 ->
+    Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr h0))
+  (ensures fun h0 v' h1 ->
+    Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr h0) /\
+    Impl.v_linked_tree ptr h0 == Impl.v_linked_tree ptr h1)
+  =
+  if U64.eq v zero then (
+    return zero
+  ) else (
+    let b = member compare ptr v in
+    if b then (
+      let v' = U64.sub v one in
+      main6_aux ptr v'
+    ) else (
+      return v
+    )
+  )

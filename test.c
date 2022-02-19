@@ -23,5 +23,7 @@ int main(int argc, char** argv) {
   void* ptr = P1_UInt32_main5(x);
   s = P1_UInt32_sot_wds(ptr);
   printf("s=%lui\n", s);
+  uint64_t r = P1_UInt32_main6(ptr);
+  printf("r=%lui\n", r);
   return 0;
 }
