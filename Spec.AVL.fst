@@ -9,19 +9,41 @@ open Spec.BST
 (**** AVL insertion *)
 
 //@AVL
-//will be GTot, is_balanced check should be local
-let rec is_balanced (#a: Type) (x: tree a)
+//complexity: O(n), where n is the size of the tree
+//not for effective use
+let rec is_balanced_g (#a: Type) (x: tree a)
   : GTot bool
   = match x with
   | Leaf -> true
   | Node data left right _ _ ->
     M.abs(height_of_tree right - height_of_tree left) <= 1 &&
-    is_balanced(right) &&
-    is_balanced(left)
+    is_balanced_g right &&
+    is_balanced_g left
+
+let is_balanced (#a: Type) (t: wdm a)
+  : bool
+  = match t with
+  | Leaf -> true
+  | Node _ left right _ _ ->
+      let lh = hot_wdh left in
+      let rh = hot_wdh right in
+      (lh - rh <= 1) && (rh - lh <= 1)
+
+let is_balanced_spec_lemma (#a: Type) (t: wdm a)
+  : Lemma
+  (requires
+    Node? t /\
+    is_balanced_g (cleft t) /\
+    is_balanced_g (cright t) /\
+    is_balanced t)
+  (ensures
+    is_balanced_g t
+  )
+  = ()
 
 //@AVL
 let is_avl (#a: Type) (cmp:cmp a) (x: tree a) : GTot bool =
-  is_bst cmp x && is_balanced x
+  is_bst cmp x && is_balanced_g x
 
 //@AVL
 let avl (a: Type) (cmp:cmp a) = x: wdm a {is_avl cmp x}

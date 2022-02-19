@@ -7,10 +7,9 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
-//module Spec = Trees
 module U = FStar.UInt64
 module I = FStar.Int64
-module M = FStar.Math.Lib
+//module M = FStar.Math.Lib
 
 open Impl.Core
 open Impl.Common
@@ -22,14 +21,14 @@ open Impl.BST
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-//@AVL (?)
+//@AVL
 #push-options "--fuel 1 --ifuel 1"
 let rec is_balanced_g (#a: Type) (ptr: t a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 -> True)
   (ensures (fun h0 b h1 ->
       v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-      Spec.is_balanced (v_linked_tree ptr h0) == b))
+      Spec.is_balanced_g (v_linked_tree ptr h0) == b))
   =
   if is_null_t ptr then (
     (**) null_is_leaf ptr;
@@ -49,6 +48,7 @@ let rec is_balanced_g (#a: Type) (ptr: t a)
     //rh + 1 >= lh
     //lh + 1 >= rh
     //TODO: will fail when c is set to MAX_UINT64 - 1
+    //does not fail as lh, rh < height of the whole tree
     let b1 = U.gte (U.add rh one) lh in
     let b2 = U.gte (U.add lh one) rh in
     let v = (lbal && rbal) && b1 && b2 in
@@ -57,29 +57,12 @@ let rec is_balanced_g (#a: Type) (ptr: t a)
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1"
-let is_balanced_spec (#a: Type) (t: Spec.wdm a)
-  : bool
-  = match t with
-  | Spec.Leaf -> true
-  | Spec.Node _ left right _ _ ->
-      let lh = Spec.hot_wdh left in
-      let rh = Spec.hot_wdh right in
-      (lh - rh <= 1) && (rh - lh <= 1)
-#pop-options
-
-#push-options "--fuel 1 --ifuel 1"
 let is_balanced (#a: Type) (ptr: t a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 -> True)
   (ensures (fun h0 b h1 ->
-//      let t = v_linked_tree ptr h0 in
-//      (Spec.Node? t /\
-//      Spec.is_balanced (Spec.cleft t) /\
-//      Spec.is_balanced (Spec.cright t) /\
-//      b
-//      ==> Spec.is_balanced t) /\
       v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-      is_balanced_spec (v_linked_tree ptr h0) == b))
+      Spec.is_balanced (v_linked_tree ptr h0) == b))
   =
   if is_null_t ptr then (
     (**) null_is_leaf ptr;
@@ -96,6 +79,7 @@ let is_balanced (#a: Type) (ptr: t a)
     //rh + 1 >= lh
     //lh + 1 >= rh
     //TODO: will fail when c is set to MAX_UINT64 - 1
+    //does not fail as lh, rh < height of the whole tree
     let b1 = U.gte (U.add rh one) lh in
     let b2 = U.gte (U.add lh one) rh in
     let v = b1 && b2 in
@@ -104,14 +88,9 @@ let is_balanced (#a: Type) (ptr: t a)
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1"
-//let height_to_node (#a: Type) (t: Spec.wdm a)
-//  : Lemma
-//  (Spec.height_of_tree t > 0 ==> Spec.Node? t)
-//  = ()
-
-let is_balanced_spec_not_null (#a: Type) (t: Spec.wdm a)
+let is_balanced_not_null (#a: Type) (t: Spec.wdm a)
   : Lemma
-  (not (is_balanced_spec t) ==> Spec.Node? t)
+  (not (Spec.is_balanced t) ==> Spec.Node? t)
   = ()
 
 let rotate_left_h (#a: Type) (t: Spec.wdm a)
@@ -178,21 +157,6 @@ let rotate_left_right_h (#a: Type) (t: Spec.wdm a)
 
 #pop-options
 
-//let lemma0 (w x y z: nat)
-//  : Lemma
-//  (requires
-//    w = M.max x y + 1 /\
-//    w > (z + 1) /\
-//    x > y
-//  )
-//  (ensures
-//    x > z
-//  )
-//  =
-//  assert (M.max x y > z);
-//  ()
-
-
 //@AVL
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 50"
 //#push-options "--fuel 1 --ifuel 1 --z3rlimit 25"
@@ -202,7 +166,6 @@ let rebalance_avl (#a: Type) (ptr: t a)
   (ensures fun h0 ptr' h1 ->
       Spec.rebalance_avl_wdm (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
   =
-  //admit ();
   let h0 = get () in
   if is_balanced #a ptr then (
     // TODO : fails without the assertion, why?
@@ -211,7 +174,7 @@ let rebalance_avl (#a: Type) (ptr: t a)
     assert (v_linked_tree ptr h0 == v_linked_tree ptr h1);
     return ptr
   ) else (
-    is_balanced_spec_not_null (v_linked_tree ptr h0);
+    is_balanced_not_null (v_linked_tree ptr h0);
     assert (Spec.Node? (v_linked_tree ptr h0));
     (**) node_is_not_null ptr;
     (**) let node = unpack_tree ptr in
@@ -292,51 +255,8 @@ let rebalance_avl (#a: Type) (ptr: t a)
   )
 #pop-options
 
-//let rec insert_avl (#a: Type)
-//  (cmp:cmp a) (ptr: t a) (new_data: a)
-//  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-//  (requires fun h0 ->
-//    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
-//    Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
-//  (ensures fun h0 ptr' h1 -> //True
-//     //TODO: remove redundancy
-//     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
-//     Spec.insert_avl (convert cmp) (v_linked_tree ptr h0) new_data
-//     == v_linked_tree ptr' h1)
-//  =
-//  if is_null_t ptr then (
-//    (**) null_is_leaf ptr;
-//    (**) let second_leaf = create_leaf () in
-//    let sr = malloc one in
-//    let node = mk_node new_data ptr second_leaf sr in
-//    let new_tree = malloc node in
-//    (**) pack_tree new_tree ptr second_leaf sr;
-//    return new_tree
-//  ) else (
-//    (**) let node = unpack_tree ptr in
-//    let delta = cmp (get_data node) new_data in
-//    if I.gte delta szero then (
-//      let new_left = insert_avl cmp (get_left node) new_data in
-//      let old_size = read (get_size node) in
-//      write (get_size node) (U.add old_size one);
-//      let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
-//      write ptr new_node;
-//      (**) pack_tree ptr new_left (get_right node) (get_size node);
-//      rebalance_avl ptr
-//    )
-//    else (
-//      let new_right = insert_avl cmp (get_right node) new_data in
-//      let old_size = read (get_size node) in
-//      write (get_size node) (U.add old_size one);
-//      let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
-//      write ptr new_node;
-//      (**) pack_tree ptr (get_left node) new_right (get_size node);
-//      rebalance_avl ptr
-//    )
-//  )
-
 //@AVL
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
 let rec insert_avl2 (#a: Type)
   (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
@@ -351,7 +271,8 @@ let rec insert_avl2 (#a: Type)
     Spec.size_of_tree (v_linked_tree ptr' h1)
     <= Spec.size_of_tree (v_linked_tree ptr h0) + 1)
   =
-  admit ();
+  let h0 = get () in
+  Spec.height_lte_size (v_linked_tree ptr h0);
   if is_null_t ptr then (
     (**) null_is_leaf ptr;
     (**) let second_leaf = create_leaf () in
