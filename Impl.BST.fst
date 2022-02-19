@@ -16,8 +16,8 @@ open Impl.Common
 open Impl.Trees
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
-//@BST
 
+//@BST
 #push-options "--fuel 1 --ifuel 1"
 let rec member (#a: Type) (cmp:cmp a) (ptr: t a) (v: a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
@@ -39,15 +39,18 @@ let rec member (#a: Type) (cmp:cmp a) (ptr: t a) (v: a)
     let data = get_data node in
     let delta = cmp v data in
     if I.eq delta szero then begin
-      (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
+      (**) pack_tree ptr (get_left node) (get_right node)
+        (get_size node) (get_height node);
       return true
     end else if I.lt delta szero then begin
       let b = member cmp (get_left node) v in
-      (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
+      (**) pack_tree ptr (get_left node) (get_right node)
+        (get_size node) (get_height node);
       return b
     end else begin
       let b = member cmp (get_right node) v in
-      (**) pack_tree ptr (get_left node) (get_right node) (get_size node);
+      (**) pack_tree ptr (get_left node) (get_right node)
+        (get_size node) (get_height node);
       return b
     end
   )
@@ -111,8 +114,13 @@ let uincr (b: bool) (ptr: ref U.t)
   ) else ( return () )
 *)
 
+inline_for_extraction noextract
+let umax (x y: U.t) : U.t
+  = if U.gt x y then x else y
+
+(*)
 //@BST
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec insert_bst2 (#a: Type)
   (r:bool) (cmp:cmp a) (ptr:t a) (new_data: a)
   : Steel (t a)
@@ -127,6 +135,7 @@ let rec insert_bst2 (#a: Type)
     == v_linked_tree ptr' h1
   )
   =
+  let h = get () in
   if is_null_t #a ptr then (
     (**) elim_linked_tree_leaf ptr;
     (**) let ptr' = create_tree new_data in
@@ -137,14 +146,17 @@ let rec insert_bst2 (#a: Type)
     if I.eq delta szero then (
       if r then (
         let new_node = mk_node new_data
-          (get_left node) (get_right node) (get_size node) in
+          (get_left node) (get_right node)
+          (get_size node) (get_height node) in
         write ptr new_node;
         pack_tree ptr
-          (get_left node) (get_right node) (get_size node);
+          (get_left node) (get_right node)
+          (get_size node) (get_height node);
         return ptr
       ) else (
         pack_tree ptr
-          (get_left node) (get_right node) (get_size node);
+          (get_left node) (get_right node)
+          (get_size node) (get_height node);
         return ptr
       )
     ) else (
@@ -156,9 +168,16 @@ let rec insert_bst2 (#a: Type)
         let diff = U.sub new_left_s old_left_s in
         let old_size = read (get_size node) in
         write (get_size node) (U.add old_size diff);
-        let new_node = mk_node (get_data node) new_left (get_right node) (get_size node) in
+        let height_new_left = hot_wdh new_left in
+        let height_right = hot_wdh (get_right node) in
+        Spec.height_lte_size (v_linked_tree ptr h);
+        let new_height = umax height_new_left height_right in
+        write (get_height node) (U.add new_height one);
+        let new_node = mk_node (get_data node) new_left (get_right node)
+          (get_size node) (get_height node) in
         write ptr new_node;
-        (**) pack_tree ptr new_left (get_right node) (get_size node);
+        (**) pack_tree ptr new_left (get_right node)
+          (get_size node) (get_height node);
         return ptr
       ) else (
         let old_right_s = sot_wds (get_right node) in
@@ -168,9 +187,16 @@ let rec insert_bst2 (#a: Type)
         let diff = U.sub new_right_s old_right_s in
         let old_size = read (get_size node) in
         write (get_size node) (U.add old_size diff);
-        let new_node = mk_node (get_data node) (get_left node) new_right (get_size node) in
+        let height_left = hot_wdh (get_left node) in
+        let height_new_right = hot_wdh new_right in
+        Spec.height_lte_size (v_linked_tree ptr h);
+        let new_height = umax height_left height_new_right in
+        write (get_height node) (U.add new_height one);
+        let new_node = mk_node (get_data node) (get_left node) new_right
+          (get_size node) (get_height node) in
         write ptr new_node;
-        (**) pack_tree ptr (get_left node) new_right (get_size node);
+        (**) pack_tree ptr (get_left node) new_right
+          (get_size node) (get_height node);
         return ptr
       )
     )

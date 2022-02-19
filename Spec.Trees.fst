@@ -216,6 +216,9 @@ t1     z    =>   x     z
 let rotate_right_left_wdm (#a: Type) (r: wdm a) : option (wdm a) =
   match r with
   | Node x t1 (Node z (Node y t2 t3 _ _) t4 _ _) s _ ->
+      assert (is_wdm r);
+      assert (is_wdm (cright r));
+      assert (is_wdm (cleft r));
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       let h1 = hot_wdh t1 in
       let h2 = hot_wdh t2 in
@@ -249,6 +252,9 @@ t1   y         t1 t2 t3 t4
 let rotate_left_right_wdm (#a: Type) (r: wdm a) : option (wdm a) =
   match r with
   | Node x (Node z t1 (Node y t2 t3 _ _) _ _) t4 s _ ->
+      assert (is_wdm r);
+      assert (is_wdm (cright r));
+      assert (is_wdm (cleft r));
       let s12 = sot_wds t1 + sot_wds t2 + 1 in
       let h1 = hot_wdh t1 in
       let h2 = hot_wdh t2 in
