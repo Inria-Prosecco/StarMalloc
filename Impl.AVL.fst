@@ -16,6 +16,8 @@ open Impl.Core
 open Impl.Common
 open Impl.Trees
 open Impl.Trees.Rotate
+open Impl.Trees.Rotate2
+open Impl.Trees.Rotate3
 open Impl.BST
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
