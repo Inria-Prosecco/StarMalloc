@@ -18,6 +18,7 @@ open Impl.Common
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
 //@Trees
+inline_for_extraction noextract
 let create_leaf (#a: Type0) (_: unit) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
@@ -30,6 +31,7 @@ let create_leaf (#a: Type0) (_: unit) : Steel (t a)
 
 //@Trees
 #push-options "--fuel 1 --ifuel 1"
+inline_for_extraction noextract
 let create_tree (#a: Type0) (v: a) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
@@ -48,6 +50,7 @@ let create_tree (#a: Type0) (v: a) : Steel (t a)
 #pop-options
 
 //@Trees
+inline_for_extraction noextract
 let sot_wds (#a: Type) (ptr: t a)
   : Steel (U.t)
   (linked_tree ptr)
@@ -93,6 +96,7 @@ let sot_wds (#a: Type) (ptr: t a)
     return s
   )
 
+inline_for_extraction noextract
 let hot_wdh (#a: Type) (ptr: t a)
   : Steel (U.t)
   (linked_tree ptr)
