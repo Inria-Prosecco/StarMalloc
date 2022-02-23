@@ -109,11 +109,11 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wdm a)
   ))
   (ensures
     is_avl cmp (rebalance_avl_wdm t)
-    ///\
-    //(forall_keys t (key_left cmp root)
-    //  ==> forall_keys (rebalance_avl_wdm t) (key_left cmp root)) /\
-    //(forall_keys t (key_right cmp root)
-    //  ==> forall_keys (rebalance_avl_wdm t) (key_right cmp root))
+    /\
+    (forall_keys t (key_left cmp root)
+      ==> forall_keys (rebalance_avl_wdm t) (key_left cmp root)) /\
+    (forall_keys t (key_right cmp root)
+      ==> forall_keys (rebalance_avl_wdm t) (key_right cmp root))
   )
   =
   admit ();
@@ -202,11 +202,38 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wdm a)
 //previous lemmas: @BST
 
 //@AVL
-let rebalance_equal (#a: Type) (cmp: cmp a) (t1: bst a cmp)
+let rebalance_equal (#a: Type) (cmp: cmp a) (t: bst a cmp)
   : Lemma
-  (requires is_avl cmp (rebalance_avl_wdm t1))
-  (ensures equal cmp t1 (rebalance_avl_wdm t1))
-  = admit ()
+  (requires is_avl cmp (rebalance_avl_wdm t))
+  (ensures equal cmp t (rebalance_avl_wdm t))
+  =
+  if Leaf? t then () else
+  let Node data left right size height = t in
+  if hot_wdh left - hot_wdh right > 1 then (
+    let Node ldata lleft lright lsize lheight = left in
+    if hot_wdh lleft >= hot_wdh lright then (
+      let r = rotate_right_wdm t in
+      assert (Some? r);
+      rotate_right_equal cmp t
+    ) else (
+      let r = rotate_left_right_wdm t in
+      assert (Some? r);
+      rotate_left_right_equal cmp t
+    )
+  ) else if hot_wdh right - hot_wdh left > 1 then (
+    let Node rdata rleft rright rsize lright = right in
+    if hot_wdh rleft > hot_wdh rright then (
+      let r = rotate_right_left_wdm t in
+      assert (Some? r);
+      rotate_right_left_equal cmp t
+    ) else (
+      let r = rotate_left_wdm t in
+      assert (Some? r);
+      rotate_left_equal cmp t
+    )
+  ) else (
+    ()
+  )
 
 (*
 - r: in case of equality with an already existing element,
@@ -444,22 +471,19 @@ let rec remove_leftmost_avl (#a: Type0)
 #push-options "--z3rlimit 25"
 let delete_avl_aux0 (#a: Type0)
   (cmp:cmp a)
-  (t: avl a cmp{Node? t})
-  (data_to_rm: a{cmp (cdata t) data_to_rm = 0})
+  (t: avl a cmp)
+  (data_to_rm: a)
   : Pure (bst a cmp)
-  True
+  (Node? t /\ cmp (cdata t) data_to_rm = 0)
   (fun t' ->
     // 1 a b removal of one element
     mem cmp t data_to_rm = true /\
-    //?data_to_rm = true /\
     mem cmp t' data_to_rm = false /\
     // 2 remaining tree unchanged
-    //(forall x. cmp x data_to_rm <> 0
-    //  ==> mem cmp t x = mem cmp r x) /\
     add cmp t' t data_to_rm /\
     // 3 size decreased by one
     size_of_tree t' = size_of_tree t - 1 /\
-    // 4
+    // 4 height inequalities
     height_of_tree t - 1 <= height_of_tree t' /\
     height_of_tree t' <= height_of_tree t
   )
@@ -572,16 +596,6 @@ let delete_avl_aux0 (#a: Type0)
       new_t
 #pop-options
 
-//let delete_avl_aux0_wo_refinement (#a: Type0)
-//  (cmp:cmp a)
-//  (t: avl a cmp{Node? t})
-//  (data_to_rm: a{cmp (cdata t) data_to_rm = 0})
-//  : r:bst a cmp
-//  {
-//    size_of_tree r = size_of_tree t - 1
-//  }
-//  = delete_avl_aux0 cmp t data_to_rm
-
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 50"
 let delete_avl_aux1 (#a: Type0)
   (cmp:cmp a)
@@ -593,15 +607,12 @@ let delete_avl_aux1 (#a: Type0)
   (fun r ->
     // 1 a b removal of one element
     mem cmp t data_to_rm = true /\
-    //?data_to_rm = true /\
     mem cmp r data_to_rm = false /\
     // 2 remaining tree unchanged
-    //(forall x. cmp x data_to_rm <> 0
-    //  ==> mem cmp t x = mem cmp r x) /\
     add cmp r t data_to_rm /\
     // 3 size decreased by one
     size_of_tree r = size_of_tree t - 1 /\
-    // 4
+    // 4 height inequalities
     height_of_tree t - 1 <= height_of_tree r /\
     height_of_tree r <= height_of_tree t
   )
@@ -704,7 +715,7 @@ let delete_avl_aux1 (#a: Type0)
 //        new_t, true
 //     end
 
-#push-options "--z3rlimit 250"
+#push-options "--z3rlimit 200"
 let rec delete_avl_aux (#a: Type0)
   (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
   : Pure (avl a cmp & bool)
@@ -747,9 +758,6 @@ let rec delete_avl_aux (#a: Type0)
         let new_t2 = rebalance_avl_wdm new_t in
         rebalance_avl_wds_proof cmp new_t data;
         assert (is_avl cmp new_t2);
-        //admit ();
-        //assume (height_of_tree t - 1 <= height_of_tree new_t2);
-        //assume (height_of_tree new_t2 <= height_of_tree t);
 
         assert (mem cmp new_left data_to_rm = false);
         forall_keys_trans right
@@ -786,9 +794,6 @@ let rec delete_avl_aux (#a: Type0)
         let new_t2 = rebalance_avl_wdm new_t in
         rebalance_avl_wds_proof cmp new_t data;
         assert (is_avl cmp new_t2);
-        //admit ();
-        //assume (height_of_tree t - 1 <= height_of_tree new_t2);
-        //assume (height_of_tree new_t2 <= height_of_tree t);
 
         assert (mem cmp new_right data_to_rm = false);
         forall_keys_trans left
