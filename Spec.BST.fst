@@ -588,9 +588,9 @@ let rotate_left_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   (requires Some? (rotate_left_wdm r))
   (ensures (
     let _ = rotate_left_bst cmp r in
-    equal cmp (get (rotate_left_wdm r)) r))
+    equal cmp (opt_get (rotate_left_wdm r)) r))
   =
-  let r2 = get (rotate_left_wdm r) in
+  let r2 = opt_get (rotate_left_wdm r) in
   rotate_left_bst cmp r
 
 let rotate_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
@@ -598,9 +598,9 @@ let rotate_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   (requires Some? (rotate_right_wdm r))
   (ensures (
     let _ = rotate_right_bst cmp r in
-    equal cmp (get (rotate_right_wdm r)) r))
+    equal cmp (opt_get (rotate_right_wdm r)) r))
   =
-  let r2 = get (rotate_right_wdm r) in
+  let r2 = opt_get (rotate_right_wdm r) in
   rotate_right_bst cmp r
 
 let rotate_right_left_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
@@ -608,9 +608,9 @@ let rotate_right_left_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   (requires Some? (rotate_right_left_wdm r))
   (ensures (
     let _ = rotate_right_left_bst cmp r in
-    equal cmp (get (rotate_right_left_wdm r)) r))
+    equal cmp (opt_get (rotate_right_left_wdm r)) r))
   =
-  let r2 = get (rotate_right_left_wdm r) in
+  let r2 = opt_get (rotate_right_left_wdm r) in
   rotate_right_left_bst cmp r
 
 let rotate_left_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
@@ -618,9 +618,9 @@ let rotate_left_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   (requires Some? (rotate_left_right_wdm r))
   (ensures (
     let _ = rotate_left_right_bst cmp r in
-    equal cmp (get (rotate_left_right_wdm r)) r))
+    equal cmp (opt_get (rotate_left_right_wdm r)) r))
   =
-  let r2 = get (rotate_left_right_wdm r) in
+  let r2 = opt_get (rotate_left_right_wdm r) in
   rotate_left_right_bst cmp r
 
 //TODO: refactor, change for wds trees

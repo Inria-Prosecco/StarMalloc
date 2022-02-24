@@ -97,13 +97,13 @@ let rotate_left_h (#a: Type) (t: Spec.wdm a)
   : Lemma
   (requires (
     let t' = Spec.rotate_left_wdm t in
-    Some? t' /\ Spec.Node? (Spec.get t') /\
+    Some? t' /\ Spec.Node? (Spec.opt_get t') /\
     Spec.Node? t /\ Spec.Node? (Spec.cright t) /\
     Spec.hot_wdh (Spec.cleft t)
     <= Spec.hot_wdh (Spec.cright (Spec.cright t))
   ))
   (ensures (
-    let t' = Spec.get (Spec.rotate_left_wdm t) in
+    let t' = Spec.opt_get (Spec.rotate_left_wdm t) in
     Spec.hot_wdh t' <= Spec.hot_wdh t
   ))
   = ()
@@ -112,13 +112,13 @@ let rotate_right_h (#a: Type) (t: Spec.wdm a)
   : Lemma
   (requires (
     let t' = Spec.rotate_right_wdm t in
-    Some? t' /\ Spec.Node? (Spec.get t') /\
+    Some? t' /\ Spec.Node? (Spec.opt_get t') /\
     Spec.Node? t /\ Spec.Node? (Spec.cleft t) /\
     Spec.hot_wdh (Spec.cright t)
     <= Spec.hot_wdh (Spec.cleft (Spec.cleft t))
   ))
   (ensures (
-    let t' = Spec.get (Spec.rotate_right_wdm t) in
+    let t' = Spec.opt_get (Spec.rotate_right_wdm t) in
     Spec.hot_wdh t' <= Spec.hot_wdh t
   ))
   = ()
@@ -128,13 +128,13 @@ let rotate_right_left_h (#a: Type) (t: Spec.wdm a)
   : Lemma
   (requires (
     let t' = Spec.rotate_right_left_wdm t in
-    Some? t' /\ Spec.Node? (Spec.get t') /\
+    Some? t' /\ Spec.Node? (Spec.opt_get t') /\
     Spec.Node? t /\ Spec.Node? (Spec.cright t) /\
     Spec.hot_wdh (Spec.cleft t)
     <= Spec.hot_wdh (Spec.cright (Spec.cright t))
   ))
   (ensures (
-    let t' = Spec.get (Spec.rotate_right_left_wdm t) in
+    let t' = Spec.opt_get (Spec.rotate_right_left_wdm t) in
     Spec.hot_wdh t' <= Spec.hot_wdh t
   ))
   = ()
@@ -143,13 +143,13 @@ let rotate_left_right_h (#a: Type) (t: Spec.wdm a)
   : Lemma
   (requires (
     let t' = Spec.rotate_left_right_wdm t in
-    Some? t' /\ Spec.Node? (Spec.get t') /\
+    Some? t' /\ Spec.Node? (Spec.opt_get t') /\
     Spec.Node? t /\ Spec.Node? (Spec.cleft t) /\
     Spec.hot_wdh (Spec.cright t)
     <= Spec.hot_wdh (Spec.cleft (Spec.cleft t))
   ))
   (ensures (
-    let t' = Spec.get (Spec.rotate_left_right_wdm t) in
+    let t' = Spec.opt_get (Spec.rotate_left_right_wdm t) in
     Spec.hot_wdh t' <= Spec.hot_wdh t
   ))
   = ()
@@ -158,13 +158,17 @@ let rotate_left_right_h (#a: Type) (t: Spec.wdm a)
 #pop-options
 
 //@AVL
-#push-options "--fuel 2 --ifuel 2 --z3rlimit 50"
-//#push-options "--fuel 1 --ifuel 1 --z3rlimit 25"
-let rebalance_avl (#a: Type) (ptr: t a)
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+let rebalance_avl (#a: Type) (cmp: cmp a) (ptr: t a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
-  (requires fun h0 -> True)
+  (requires fun h0 ->
+    Spec.Node? (v_linked_tree ptr h0)
+    ==>
+    Spec.is_avl (convert cmp) (Spec.cleft (v_linked_tree ptr h0)) /\
+    Spec.is_avl (convert cmp) (Spec.cright (v_linked_tree ptr h0)))
   (ensures fun h0 ptr' h1 ->
-      Spec.rebalance_avl_wdm (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
+    Spec.rebalance_avl_wdm (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
+    //Spec.is_avl (convert cmp) (v_linked_tree ptr' h1))
   =
   let h0 = get () in
   if is_balanced #a ptr then (
@@ -196,22 +200,27 @@ let rebalance_avl (#a: Type) (ptr: t a)
       (**) pack_tree ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       let h = get () in
-      assert (U.v llh = Spec.hot_wdh (Spec.cleft (Spec.cleft (v_linked_tree ptr h))));
-      assert (U.v lrh = Spec.hot_wdh (Spec.cright (Spec.cleft (v_linked_tree ptr h))));
-      assert (U.v rh = Spec.hot_wdh (Spec.cright (v_linked_tree ptr h)));
+      assert (v_linked_tree ptr h == v_linked_tree ptr h0);
+      assert (Spec.is_wdm (v_linked_tree ptr h0));
+      assert (Spec.is_wdm (Spec.cleft (v_linked_tree ptr h0)));
+      assert (Spec.is_wdm (Spec.cleft (Spec.cleft (v_linked_tree ptr h0))));
+      assert (Spec.is_wdm (Spec.cright (Spec.cleft (v_linked_tree ptr h0))));
+      assert (Spec.is_wdm (Spec.cright (v_linked_tree ptr h0)));
+      assert (U.v llh = Spec.hot_wdh (Spec.cleft (Spec.cleft (v_linked_tree ptr h0))));
+      assert (U.v lrh = Spec.hot_wdh (Spec.cright (Spec.cleft (v_linked_tree ptr h0))));
+      assert (U.v rh = Spec.hot_wdh (Spec.cright (v_linked_tree ptr h0)));
       assert (lh = U.add (umax llh lrh) one);
       assert (U.gt (umax llh lrh) rh);
 
       if U.gt lrh llh then (
         assert (U.gt lrh rh);
-        assume (Spec.is_balanced (Spec.cleft (v_linked_tree ptr h)));
         assert (U.gte llh rh);
-        rotate_left_right_h (v_linked_tree ptr h);
+        rotate_left_right_h (v_linked_tree ptr h0);
         rotate_left_right ptr
 
       ) else (
         assert (U.gt llh rh);
-        rotate_right_h (v_linked_tree ptr h);
+        rotate_right_h (v_linked_tree ptr h0);
         rotate_right ptr
       )
 
@@ -229,21 +238,25 @@ let rebalance_avl (#a: Type) (ptr: t a)
       (**) pack_tree ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       let h = get () in
-      assert (U.v rlh = Spec.hot_wdh (Spec.cleft (Spec.cright (v_linked_tree ptr h))));
-      assert (U.v rrh = Spec.hot_wdh (Spec.cright (Spec.cright (v_linked_tree ptr h))));
-      assert (U.v lh = Spec.hot_wdh (Spec.cleft (v_linked_tree ptr h)));
+      assert (v_linked_tree ptr h == v_linked_tree ptr h0);
+      assert (Spec.is_wdm (Spec.cright (v_linked_tree ptr h0)));
+      assert (Spec.is_wdm (Spec.cleft (Spec.cright (v_linked_tree ptr h0))));
+      assert (Spec.is_wdm (Spec.cright (Spec.cright (v_linked_tree ptr h0))));
+      assert (Spec.is_wdm (Spec.cleft (v_linked_tree ptr h0)));
+      assert (U.v rlh = Spec.hot_wdh (Spec.cleft (Spec.cright (v_linked_tree ptr h0))));
+      assert (U.v rrh = Spec.hot_wdh (Spec.cright (Spec.cright (v_linked_tree ptr h0))));
+      assert (U.v lh = Spec.hot_wdh (Spec.cleft (v_linked_tree ptr h0)));
       assert (rh = U.add (umax rlh rrh) one);
       assert (U.gt (umax rlh rrh) lh);
 
       if U.gt rlh rrh then (
         assert (U.gt rlh lh);
-        assume (Spec.is_balanced (Spec.cright (v_linked_tree ptr h)));
         assert (U.gte rrh lh);
-        rotate_right_left_h (v_linked_tree ptr h);
+        rotate_right_left_h (v_linked_tree ptr h0);
         rotate_right_left ptr
       ) else (
         assert (U.gt rrh lh);
-        rotate_left_h (v_linked_tree ptr h);
+        rotate_left_h (v_linked_tree ptr h0);
         rotate_left ptr
       )
 
@@ -256,8 +269,8 @@ let rebalance_avl (#a: Type) (ptr: t a)
 #pop-options
 
 //@AVL
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
-let rec insert_avl2 (#a: Type)
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+let rec insert_avl (#a: Type)
   (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
@@ -265,14 +278,30 @@ let rec insert_avl2 (#a: Type)
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 ->
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
-    Spec.insert_avl2 r (convert cmp) (v_linked_tree ptr h0) new_data
+    Spec.insert_avl r (convert cmp) (v_linked_tree ptr h0) new_data
     == v_linked_tree ptr' h1 /\
-    Spec.is_avl (convert cmp) (v_linked_tree ptr' h1) /\
+    //Spec.is_avl (convert cmp) (v_linked_tree ptr' h1) /\
     Spec.size_of_tree (v_linked_tree ptr' h1)
-    <= Spec.size_of_tree (v_linked_tree ptr h0) + 1)
+    <= Spec.size_of_tree (v_linked_tree ptr h0) + 1 /\
+    Spec.height_of_tree (v_linked_tree ptr' h1)
+    <= Spec.height_of_tree (v_linked_tree ptr h0) + 1
+  )
   =
   let h0 = get () in
+  let t1 = hide (v_linked_tree ptr h0) in
+  assert (Spec.size_of_tree (reveal t1) < c);
   Spec.height_lte_size (v_linked_tree ptr h0);
+  let height_tree = hide (Spec.height_of_tree (reveal t1)) in
+  assert (reveal height_tree < c);
+  //let t2 = hide (Spec.insert_avl
+  //  r (convert cmp) (reveal t1) new_data) in
+  // TODO: this fails, is this a normalization bug?
+  //assert (
+  //  Spec.size_of_tree (reveal t2)
+  //  <= Spec.size_of_tree (reveal t1) + 1);
+  //assert (Spec.height_of_tree t2
+  //  <= Spec.height_of_tree t1 + 1);
+
   if is_null_t ptr then (
     (**) null_is_leaf ptr;
     (**) let second_leaf = create_leaf () in
@@ -302,15 +331,21 @@ let rec insert_avl2 (#a: Type)
         return ptr
       )
     ) else (
-      if I.gte delta szero then (
+      if I.gt delta szero then (
         let old_left_s = sot_wds (get_left node) in
-        let new_left = insert_avl2 r cmp (get_left node) new_data in
+        //let old_left_h = hide (hot_wdh (get_left node)) in
+        let new_left = insert_avl r cmp (get_left node) new_data in
         let new_left_s = sot_wds new_left in
         let diff = U.sub new_left_s old_left_s in
         let old_size = read (get_size node) in
         write (get_size node) (U.add old_size diff);
         let height_new_left = hot_wdh new_left in
         let height_right = hot_wdh (get_right node) in
+        //assert (U.v (reveal old_left_h) < reveal height_tree);
+        //assert (U.v (reveal old_left_h) < c - 1);
+        //assert (U.v height_new_left < c);
+        //assert (U.v height_right < reveal height_tree);
+        //assert (U.v height_right < c);
         let new_height = umax height_new_left height_right in
         write (get_height node) (U.add new_height one);
         let new_node = mk_node (get_data node) new_left (get_right node)
@@ -320,16 +355,18 @@ let rec insert_avl2 (#a: Type)
           (get_size node) (get_height node);
         let h = get () in
         Spec.height_lte_size (v_linked_tree ptr h);
-        rebalance_avl ptr
+        Spec.rebalance_height (convert cmp) (v_linked_tree ptr h);
+        rebalance_avl cmp ptr
       ) else (
         let old_right_s = sot_wds (get_right node) in
-        let new_right = insert_avl2 r cmp (get_right node) new_data in
+        let new_right = insert_avl r cmp (get_right node) new_data in
         let new_right_s = sot_wds new_right in
         let diff = U.sub new_right_s old_right_s in
         let old_size = read (get_size node) in
         write (get_size node) (U.add old_size diff);
         let height_left = hot_wdh (get_left node) in
         let height_new_right = hot_wdh new_right in
+        //Spec.height_lte_size (v_linked_tree ptr h0);
         let new_height = umax height_left height_new_right in
         write (get_height node) (U.add new_height one);
         let new_node = mk_node (get_data node) (get_left node) new_right
@@ -339,7 +376,8 @@ let rec insert_avl2 (#a: Type)
           (get_size node) (get_height node);
         let h = get () in
         Spec.height_lte_size (v_linked_tree ptr h);
-        rebalance_avl ptr
+        Spec.rebalance_height (convert cmp) (v_linked_tree ptr h);
+        rebalance_avl cmp ptr
       )
     )
   )
@@ -360,7 +398,8 @@ let rec remove_leftmost_avl (#a: Type0) (cmp:cmp a) (ptr: t a)
     v_linked_tree (fst r) h1
     == fst (Spec.remove_leftmost_avl
       (convert cmp) (v_linked_tree ptr h0)) /\
-    snd r == snd (Spec.remove_leftmost_avl
+    snd r == snd (Spec.remove_leftmos
+t_avl
       (convert cmp) (v_linked_tree ptr h0)) /\
     Spec.size_of_tree (v_linked_tree (fst r) h1)
     == Spec.size_of_tree (v_linked_tree ptr h0) - 1 /\

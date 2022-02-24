@@ -7,10 +7,10 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
-//module Spec = Trees
 module U = FStar.UInt64
 module I = FStar.Int64
 
+open Spec.Trees
 open Impl.Core
 open Impl.Common
 open Impl.Trees
@@ -24,20 +24,20 @@ let rotate_right_left (#a: Type) (ptr: t a)
   (fun ptr' -> linked_tree ptr')
   (requires (fun h0 ->
     let t = v_linked_tree ptr h0 in
-    let r = Spec.rotate_right_left_wdm t in
+    let r = rotate_right_left_wdm t in
     Some? r /\
-    Spec.height_of_tree (Spec.get r) <= Spec.height_of_tree t
+    height_of_tree (opt_get r) <= height_of_tree t
   ))
   (ensures (fun h0 ptr' h1 ->
-    Spec.rotate_right_left_wdm (v_linked_tree ptr h0)
+    rotate_right_left_wdm (v_linked_tree ptr h0)
     == Some (v_linked_tree ptr' h1)
   ))
   =
   let h = get () in
-  assert (Spec.size_of_tree (v_linked_tree ptr h) <= c);
-  Spec.rotate_right_left_size (v_linked_tree ptr h);
-  assert (Spec.size_of_tree (Spec.get (Spec.rotate_right_left_wdm (v_linked_tree ptr h)))
-  == Spec.size_of_tree (v_linked_tree ptr h));
+  assert (size_of_tree (v_linked_tree ptr h) <= c);
+  rotate_right_left_size (v_linked_tree ptr h);
+  assert (size_of_tree (opt_get (rotate_right_left_wdm (v_linked_tree ptr h)))
+  == size_of_tree (v_linked_tree ptr h));
   (**) node_is_not_null ptr;
   // original root node
   (**) let x_node = unpack_tree ptr in

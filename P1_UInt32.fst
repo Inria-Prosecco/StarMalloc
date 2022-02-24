@@ -88,7 +88,7 @@ let rotate_right_left = Impl.rotate_right_left #a
 let rotate_left_right = Impl.rotate_left_right #a
 let is_balanced = Impl.is_balanced #a
 let rebalance_avl = Impl.rebalance_avl #a
-let insert_avl2 = Impl.insert_avl2 #a
+let insert_avl = Impl.insert_avl #a
 //let delete_avl = Impl.delete_avl #a
 
 (*
@@ -202,14 +202,15 @@ let compare_is_cmp () : Lemma
 //  // toggling this flag allow one to check
 //  // whether the r arg of insert_bst2 is taken into account
 //  let f = true in
-//  let ptr = insert_avl2 f compare ptr valn1 in
-//  let ptr = insert_avl2 f compare ptr valn2 in
+//  let ptr = insert_avl f compare ptr valn1 in
+//  let ptr = insert_avl f compare ptr valn2 in
 //  assert (I64.eq (compare valn1 valn2) I64.zero);
 //  let b = member compare ptr valn2 in
 //  let vr = if b then val42 else val0 in
 //  destruct ptr;
 //  return (fst vr)
 
+#push-options "--z3rlimit 50"
 let rec main5_aux (ptr: t a) (v: a)
   : Steel (t a)
   (linked_tree ptr) (fun ptr' -> linked_tree ptr')
@@ -226,10 +227,11 @@ let rec main5_aux (ptr: t a) (v: a)
   ) else (
     let h = get () in
     assume (Spec.size_of_tree (Impl.v_linked_tree ptr h) < 1000000000);
-    let ptr' = insert_avl2 true compare ptr v in
+    let ptr' = insert_avl true compare ptr v in
     let v' = U64.sub v one in
     main5_aux ptr' v'
   )
+#pop-options
 
 
 let main5 (x: a)
