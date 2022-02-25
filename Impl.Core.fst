@@ -4,9 +4,9 @@ open FStar.Ghost
 open Steel.FractionalPermission
 
 module Mem = Steel.Memory
-//module Spec = Trees
 module U = FStar.UInt64
 
+module Spec = Spec.Trees
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
@@ -14,7 +14,6 @@ open Steel.Reference
 #set-options "--fuel 1 --ifuel 1 --z3rlimit 15"
 
 #push-options "--__no_positivity"
-
 noeq type node (a: Type0) = {
   data: a;
   left: ref (node a);
