@@ -22,5 +22,5 @@ type cmp (a: Type) = compare: (a -> a -> I.t){
                          I.gte (compare x z) I.zero)
 }
 
-let convert (#a: Type) (cmp: cmp a) : GTot (Spec.cmp a)
+let convert (#a: Type) (cmp: cmp a) : GTot (Spec.BST.cmp a)
   = fun x y -> I.v (cmp x y)

@@ -7,7 +7,7 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
-//module Spec = Trees
+module Spec = Spec.Trees
 module U = FStar.UInt64
 module I = FStar.Int64
 module M = FStar.Math.Lib
