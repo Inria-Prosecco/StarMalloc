@@ -5,9 +5,9 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
-//module Spec = Trees
 module U = FStar.UInt64
 module M = FStar.Math.Lib
+module Spec = Spec.Trees
 
 #set-options "--ide_id_info_off"
 

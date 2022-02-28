@@ -2,14 +2,13 @@ module Impl.Core
 
 open FStar.Ghost
 open Steel.FractionalPermission
-
-module Mem = Steel.Memory
-module U = FStar.UInt64
-
-module Spec = Spec.Trees
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
+
+module Mem = Steel.Memory
+module U = FStar.UInt64
+module Spec = Spec.Trees
 
 #set-options "--fuel 1 --ifuel 1 --z3rlimit 15"
 
