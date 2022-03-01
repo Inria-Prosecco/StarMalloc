@@ -144,6 +144,16 @@ let is_wdm (#a: Type) (t: tree a) : GTot bool
   = is_wds t && is_wdh t
 let wdm (a: Type) = x:tree a {is_wdm x}
 
+let merge_tree (#a: Type) (v: a) (l r: wdm a) : wdm a
+  =
+  let s1 = sot_wds l in
+  let s2 = sot_wds r in
+  let s = s1 + s2 + 1 in
+  let h1 = hot_wdh l in
+  let h2 = hot_wdh r in
+  let h = (M.max h1 h2) + 1 in
+  let t = Node v l r s h in
+  t
 
 (*
    x            z

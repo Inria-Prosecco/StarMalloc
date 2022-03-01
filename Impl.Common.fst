@@ -13,6 +13,10 @@ let sone = I.int_to_t 1
 inline_for_extraction noextract
 let szero = I.int_to_t 0
 
+inline_for_extraction noextract
+let umax (x y: U.t) : U.t
+  = if U.gt x y then x else y
+
 type cmp (a: Type) = compare: (a -> a -> I.t){
   squash (forall x. I.eq (compare x x) I.zero) /\
   squash (forall x y. I.gt (compare x y) I.zero

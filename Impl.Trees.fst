@@ -155,19 +155,14 @@ let merge_tree (#a: Type0) (v: a) (l r: t a) : Steel (t a)
     sl + sr + 1 <= c /\
     M.max hl hr + 1 <= c)
   (ensures fun h0 ptr h1 ->
-    let sl = Spec.size_of_tree (v_linked_tree l h0) in
-    let sr = Spec.size_of_tree (v_linked_tree r h0) in
-    let s = sl + sr + 1 in
-    let hl = Spec.height_of_tree (v_linked_tree l h0) in
-    let hr = Spec.height_of_tree (v_linked_tree r h0) in
-    let h = M.max hl hr + 1 in
-    s <= c /\
-    h <= c /\
-    v_linked_tree ptr h1 ==
-    Spec.Node v
+    v_linked_tree ptr h1
+    == Spec.merge_tree
+      v
       (v_linked_tree l h0)
       (v_linked_tree r h0)
-      s h)
+    /\
+    Spec.csize (v_linked_tree ptr h1) <= c /\
+    Spec.cheight (v_linked_tree ptr h1) <= c)
   =
   let s1 = sot_wds l in
   let s2 = sot_wds r in
@@ -175,10 +170,49 @@ let merge_tree (#a: Type0) (v: a) (l r: t a) : Steel (t a)
   let sr = malloc s in
   let h1 = hot_wdh l in
   let h2 = hot_wdh r in
-  let h = if U.gt h1 h2 then U.add h1 one else U.add h2 one in
+  let h = U.add (umax h1 h2) one in
   let hr = malloc h in
   let n = mk_node v l r sr hr in
   let ptr = malloc n in
+  pack_tree ptr l r sr hr;
+  return ptr
+
+let merge_tree_no_alloc (#a: Type0)
+  (v: a) (l r: t a) (sr hr: ref U.t) (ptr: ref (node a))
+  : Steel (t a)
+  (linked_tree l `star`
+  linked_tree r `star`
+  vptr sr `star`
+  vptr hr `star`
+  vptr ptr)
+  (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    let sl = Spec.size_of_tree (v_linked_tree l h0) in
+    let sr = Spec.size_of_tree (v_linked_tree r h0) in
+    let hl = Spec.height_of_tree (v_linked_tree l h0) in
+    let hr = Spec.height_of_tree (v_linked_tree r h0) in
+    sl + sr + 1 <= c /\
+    M.max hl hr + 1 <= c)
+  (ensures fun h0 ptr' h1 ->
+    v_linked_tree ptr' h1
+    == Spec.merge_tree
+      v
+      (v_linked_tree l h0)
+      (v_linked_tree r h0)
+    /\
+    Spec.csize (v_linked_tree ptr' h1) <= c /\
+    Spec.cheight (v_linked_tree ptr' h1) <= c)
+  =
+  let s1 = sot_wds l in
+  let s2 = sot_wds r in
+  let s = U.add (U.add s1 s2) one in
+  write sr s;
+  let h1 = hot_wdh l in
+  let h2 = hot_wdh r in
+  let h = U.add (umax h1 h2) one in
+  write hr h;
+  let n = mk_node v l r sr hr in
+  write ptr n;
   pack_tree ptr l r sr hr;
   return ptr
 
