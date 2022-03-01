@@ -746,7 +746,7 @@ let rec remove_leftmost_avl (#a: Type0)
 #pop-options
 
 // https://en.wikipedia.org/wiki/Binary_search_tree#Deletion
-#push-options "--z3rlimit 75"
+#push-options "--z3rlimit 100"
 let delete_avl_aux0 (#a: Type0)
   (cmp:cmp a)
   (t: avl a cmp)

@@ -89,7 +89,7 @@ let rotate_left_right = Impl.rotate_left_right #a
 let is_balanced = Impl.is_balanced #a
 let rebalance_avl = Impl.rebalance_avl #a
 let insert_avl = Impl.insert_avl #a
-//let delete_avl = Impl.delete_avl #a
+let delete_avl = Impl.delete_avl #a
 
 (*
 let one ()
@@ -243,7 +243,7 @@ let main5 (x: a)
   let ptr = create_leaf () in
   main5_aux ptr x
 
-let rec main6_aux (ptr: t a) (v: a)
+let rec main6_aux (ptr: t a) (v: a) (check: bool)
   : Steel a
   (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 ->
@@ -256,10 +256,32 @@ let rec main6_aux (ptr: t a) (v: a)
     return zero
   ) else (
     let b = member compare ptr v in
-    if b then (
+    if (b = check) then (
       let v' = U64.sub v one in
-      main6_aux ptr v'
+      main6_aux ptr v' check
     ) else (
       return v
     )
   )
+
+#push-options "--z3rlimit 50"
+let rec main7_aux (ptr: t a) (v: a)
+  : Steel (t a)
+  (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+  (requires fun h0 ->
+    Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr h0)
+  )
+  (ensures fun h0 ptr' h1 ->
+    Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr' h1)
+  )
+  =
+  if U64.eq v zero then (
+    let h = get () in
+    return ptr
+  ) else (
+    let h = get () in
+    let ptr' = delete_avl compare ptr v in
+    let v' = U64.sub v one in
+    main7_aux ptr' v'
+  )
+#pop-options

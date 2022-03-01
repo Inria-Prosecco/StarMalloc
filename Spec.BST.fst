@@ -603,6 +603,7 @@ let rotate_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   let r2 = opt_get (rotate_right_wdm r) in
   rotate_right_bst cmp r
 
+#push-options "--z3rlimit 25"
 let rotate_right_left_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   : Lemma
   (requires Some? (rotate_right_left_wdm r))
@@ -622,6 +623,7 @@ let rotate_left_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   =
   let r2 = opt_get (rotate_left_right_wdm r) in
   rotate_left_right_bst cmp r
+#pop-options
 
 //TODO: refactor, change for wds trees
 //@BST
