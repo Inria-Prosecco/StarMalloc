@@ -67,22 +67,22 @@ let rebalance_avl_wdm (#a: Type) (t: wdm a) : wdm a =
   if hot_wdh left - hot_wdh right > 1 then (
     let Node ldata lleft lright lsize lheight = left in
     if hot_wdh lleft >= hot_wdh lright then (
-      let r = rotate_right_wdm t in
+      let r = rotate_right t in
       assert (Some? r);
       opt_get r
     ) else (
-      let r = rotate_left_right_wdm t in
+      let r = rotate_left_right t in
       assert (Some? r);
       opt_get r
     )
   ) else if hot_wdh right - hot_wdh left > 1 then (
     let Node rdata rleft rright rsize lright = right in
     if hot_wdh rleft > hot_wdh rright then (
-      let r = rotate_right_left_wdm t in
+      let r = rotate_right_left t in
       assert (Some? r);
       opt_get r
     ) else (
-      let r = rotate_left_wdm t in
+      let r = rotate_left t in
       assert (Some? r);
       opt_get r
     )
@@ -94,7 +94,8 @@ let rebalance_avl_wds_size (#a: Type) (t: wdm a)
   : Lemma (size_of_tree (rebalance_avl_wdm t) == size_of_tree t)
   = ()
 
-#push-options "--fuel 2 --ifuel 2 --z3rlimit 50"
+//#push-options "--fuel 2 --ifuel 2 --z3rlimit 50"
+#push-options "--z3rlimit 100"
 let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wdm a)
   (root: a)
   : Lemma
@@ -123,7 +124,7 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wdm a)
     assert (hot_wdh left - hot_wdh right == 2);
     let Node _ lleft lright _ _ = left in
     if hot_wdh lleft >= hot_wdh lright then (
-      let r = rotate_right_wdm t in
+      let r = rotate_right t in
       assert (Some? r);
       let t' = opt_get r in
       rotate_right_bst cmp t;
@@ -131,7 +132,7 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wdm a)
       //Classical.move_requires (rotate_right_key_right cmp t) root;
       assert (is_avl cmp t')
     ) else (
-      let r = rotate_left_right_wdm t in
+      let r = rotate_left_right t in
       assert (Some? r);
       let t' = opt_get r in
       rotate_left_right_bst cmp t;
@@ -144,7 +145,7 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wdm a)
     let Node _ rleft rright _ _ = right in
     assert (is_balanced right);
     if hot_wdh rright >= hot_wdh rleft then (
-      let r = rotate_left_wdm t in
+      let r = rotate_left t in
       assert (Some? r);
       let t' = opt_get r in
       rotate_left_bst cmp t;
@@ -152,7 +153,7 @@ let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wdm a)
       //Classical.move_requires (rotate_left_key_right cmp t) root;
       assert (is_avl cmp t')
     ) else (
-      let r = rotate_right_left_wdm t in
+      let r = rotate_right_left t in
       assert (Some? r);
       let t' = opt_get r in
       rotate_right_left_bst cmp t;
@@ -219,22 +220,22 @@ let rebalance_equal (#a: Type) (cmp: cmp a) (t: bst a cmp)
   if hot_wdh left - hot_wdh right > 1 then (
     let Node ldata lleft lright lsize lheight = left in
     if hot_wdh lleft >= hot_wdh lright then (
-      let r = rotate_right_wdm t in
+      let r = rotate_right t in
       assert (Some? r);
       rotate_right_equal cmp t
     ) else (
-      let r = rotate_left_right_wdm t in
+      let r = rotate_left_right t in
       assert (Some? r);
       rotate_left_right_equal cmp t
     )
   ) else if hot_wdh right - hot_wdh left > 1 then (
     let Node rdata rleft rright rsize lright = right in
     if hot_wdh rleft > hot_wdh rright then (
-      let r = rotate_right_left_wdm t in
+      let r = rotate_right_left t in
       assert (Some? r);
       rotate_right_left_equal cmp t
     ) else (
-      let r = rotate_left_wdm t in
+      let r = rotate_left t in
       assert (Some? r);
       rotate_left_equal cmp t
     )
@@ -270,28 +271,14 @@ let rec insert_avl_aux (#a: Type)
     end
     else if delta < 0 then begin
       let new_left, b = insert_avl_aux r cmp left new_data in
-      let size_new_left = size_of_tree new_left in
-      let size_right = size_of_tree right in
-      let new_size = size_new_left + size_right + 1 in
-      assert (new_size = size + (int_of_bool b));
-      let height_new_left = hot_wdh new_left in
-      let height_right = hot_wdh right in
-      let new_height = M.max height_new_left height_right + 1 in
-      let new_t = Node data new_left right new_size new_height in
+      let new_t = merge_tree data new_left right in
       assert (is_wdm new_t);
       let new_t2 = rebalance_avl_wdm new_t in
       rebalance_avl_wds_size new_t;
       new_t2, b
     end else begin
       let new_right, b = insert_avl_aux r cmp right new_data in
-      let size_left = size_of_tree left in
-      let size_new_right = size_of_tree new_right in
-      let new_size = size_left + size_new_right + 1 in
-      assert (new_size = size + (int_of_bool b));
-      let height_left = hot_wdh left in
-      let height_new_right = hot_wdh new_right in
-      let new_height = M.max height_left height_new_right + 1 in
-      let new_t = Node data left new_right new_size new_height in
+      let new_t = merge_tree data left new_right in
       assert (is_wdm new_t);
       let new_t2 = rebalance_avl_wdm new_t in
       rebalance_avl_wds_size new_t;
@@ -455,26 +442,26 @@ let rec insert_avl_aux_bst (#a: Type)
 let rotate1_involutive (#a: Type) (t: wdm a)
   : Lemma
   (requires
-    Some? (rotate_left_wdm t))
+    Some? (rotate_left t))
   (ensures
-    opt_get (rotate_right_wdm (opt_get (rotate_left_wdm t))) == t)
+    opt_get (rotate_right (opt_get (rotate_left t))) == t)
   = ()
 
 let rotate2_involutive (#a: Type) (t: wdm a)
   : Lemma
   (requires
-    Some? (rotate_right_wdm t))
+    Some? (rotate_right t))
   (ensures
-    opt_get (rotate_left_wdm (opt_get (rotate_right_wdm t))) == t)
+    opt_get (rotate_left (opt_get (rotate_right t))) == t)
   = ()
 
 // TODO: to be shortened using merge_tree
 let rotate_left_right_decomposition (#a: Type) (t: wdm a)
   : Pure (wdm a)
-  (Some? (rotate_left_right_wdm t))
+  (Some? (rotate_left_right t))
   (fun _ -> True)
   =
-  let new_left = rotate_left_wdm (cleft t) in
+  let new_left = rotate_left (cleft t) in
   assert (Some? new_left);
   let new_left = opt_get new_left in
   let height_new_left = hot_wdh new_left in
@@ -482,19 +469,19 @@ let rotate_left_right_decomposition (#a: Type) (t: wdm a)
   let new_height = M.max height_new_left height_right + 1 in
   let new_t = Node (cdata t) new_left (cright t) (csize t) new_height in
   rotate_left_size (cleft t);
-  let new_t2 = rotate_right_wdm new_t in
+  let new_t2 = rotate_right new_t in
   assert (Some? new_t2);
   let new_t2 = opt_get new_t2 in
-  assert (new_t2 == opt_get (rotate_left_right_wdm t));
+  assert (new_t2 == opt_get (rotate_left_right t));
   t
 
 // TODO: to be shortened using merge_tree
 let rotate_right_left_decomposition (#a: Type) (t: wdm a)
   : Pure (wdm a)
-  (Some? (rotate_right_left_wdm t))
+  (Some? (rotate_right_left t))
   (fun _ -> True)
   =
-  let new_right = rotate_right_wdm (cright t) in
+  let new_right = rotate_right (cright t) in
   assert (Some? new_right);
   let new_right = opt_get new_right in
   let height_left = hot_wdh (cleft t) in
@@ -502,10 +489,10 @@ let rotate_right_left_decomposition (#a: Type) (t: wdm a)
   let new_height = M.max height_left height_new_right + 1 in
   let new_t = Node (cdata t) (cleft t) new_right (csize t) new_height in
   rotate_right_size (cright t);
-  let new_t2 = rotate_left_wdm new_t in
+  let new_t2 = rotate_left new_t in
   assert (Some? new_t2);
   let new_t2 = opt_get new_t2 in
-  assert (new_t2 == opt_get (rotate_right_left_wdm t));
+  assert (new_t2 == opt_get (rotate_right_left t));
   t
 
 #push-options "--z3rlimit 50"
@@ -514,8 +501,8 @@ let rec insert_avl_aux_avl (#a: Type)
   : Lemma (
     let new_t, b = insert_avl_aux r cmp t new_data in
     // 1 height inequalities
-    hot_wdh t <= hot_wdh new_t /\
-    hot_wdh new_t <= hot_wdh t + 1 /\
+    height_of_tree t <= height_of_tree new_t /\
+    height_of_tree new_t <= height_of_tree t + 1 /\
     // 2 balanced
     is_avl cmp new_t
   )
@@ -646,7 +633,19 @@ let insert_avl (#a: Type)
   insert_avl_aux_avl r cmp t new_data;
   fst (insert_avl_aux r cmp t new_data)
 
-#push-options "--z3rlimit 25"
+let insert_lemma (#a: Type)
+  (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
+  : Lemma
+  (let t' = insert_avl r cmp t new_data in
+    size_of_tree t <= size_of_tree t' /\
+    size_of_tree t' <= size_of_tree t + 1 /\
+    height_of_tree t' <= height_of_tree t + 1 /\
+    height_of_tree t <= height_of_tree t'
+  )
+  = insert_avl_aux_avl r cmp t new_data
+
+
+#push-options "--z3rlimit 50"
 let rec remove_leftmost_avl (#a: Type0)
   (cmp:cmp a)
   (t: avl a cmp{Node? t})
@@ -1205,6 +1204,19 @@ let delete_avl (#a: Type0)
   delete_avl_aux_bst cmp t data_to_rm;
   delete_avl_aux_avl cmp t data_to_rm;
   fst (delete_avl_aux cmp t data_to_rm)
+
+let delete_lemma (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
+  : Lemma
+  (let t' = delete_avl cmp t data_to_rm in
+    size_of_tree t - 1 <= size_of_tree t' /\
+    size_of_tree t' <= size_of_tree t /\
+    height_of_tree t - 1 <= height_of_tree t' /\
+    height_of_tree t' <= height_of_tree t
+  )
+  = delete_avl_aux_avl cmp t data_to_rm
+
+
 
 let rec lemma_insert (#a: Type)
   (r: bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)

@@ -177,6 +177,7 @@ let merge_tree (#a: Type0) (v: a) (l r: t a) : Steel (t a)
   pack_tree ptr l r sr hr;
   return ptr
 
+inline_for_extraction noextract
 let merge_tree_no_alloc (#a: Type0)
   (v: a) (l r: t a) (sr hr: ref U.t) (ptr: ref (node a))
   : Steel (t a)

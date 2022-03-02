@@ -515,8 +515,8 @@ let test (#a: Type)
 //@BST
 let rotate_left_bst (#a:Type) (cmp:cmp a) (r:wdm a)
   : Lemma
-  (requires is_bst cmp r /\ Some? (rotate_left_wdm r))
-  (ensures is_bst cmp (Some?.v (rotate_left_wdm r)))
+  (requires is_bst cmp r /\ Some? (rotate_left r))
+  (ensures is_bst cmp (Some?.v (rotate_left r)))
   = match r with
   | Node x t1 (Node z t2 t3 _ _ ) _ _ ->
       assert (is_bst cmp (Node z t2 t3 0 0));
@@ -525,8 +525,8 @@ let rotate_left_bst (#a:Type) (cmp:cmp a) (r:wdm a)
 
 let rotate_right_bst (#a:Type) (cmp:cmp a) (r:wdm a)
   : Lemma
-  (requires is_bst cmp r /\ Some? (rotate_right_wdm r))
-  (ensures is_bst cmp (Some?.v (rotate_right_wdm r)))
+  (requires is_bst cmp r /\ Some? (rotate_right r))
+  (ensures is_bst cmp (Some?.v (rotate_right r)))
   = match r with
   | Node x (Node z t1 t2 _ _) t3 _ _ ->
       assert (is_bst cmp (Node z t1 t2 0 0));
@@ -536,8 +536,8 @@ let rotate_right_bst (#a:Type) (cmp:cmp a) (r:wdm a)
 //@BST
 let rotate_right_left_bst (#a:Type) (cmp:cmp a) (r:wdm a)
   : Lemma
-  (requires is_bst cmp r /\ Some? (rotate_right_left_wdm r))
-  (ensures is_bst cmp (Some?.v (rotate_right_left_wdm r)))
+  (requires is_bst cmp r /\ Some? (rotate_right_left r))
+  (ensures is_bst cmp (Some?.v (rotate_right_left r)))
   = match r with
   | Node x t1 (Node z (Node y t2 t3 _ _) t4 _ _) _ _ ->
     // Node y (Node x t1 t2) (Node z t3 t4)
@@ -561,8 +561,8 @@ let rotate_right_left_bst (#a:Type) (cmp:cmp a) (r:wdm a)
 //@BST
 let rotate_left_right_bst (#a:Type) (cmp:cmp a) (r:wdm a)
   : Lemma
-  (requires is_bst cmp r /\ Some? (rotate_left_right_wdm r))
-  (ensures is_bst cmp (Some?.v (rotate_left_right_wdm r)))
+  (requires is_bst cmp r /\ Some? (rotate_left_right r))
+  (ensures is_bst cmp (Some?.v (rotate_left_right r)))
   = match r with
   | Node x (Node z t1 (Node y t2 t3 _ _) _ _) t4 _ _ ->
     // Node y (Node z t1 t2) (Node x t3 t4)
@@ -585,43 +585,43 @@ let rotate_left_right_bst (#a:Type) (cmp:cmp a) (r:wdm a)
 
 let rotate_left_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   : Lemma
-  (requires Some? (rotate_left_wdm r))
+  (requires Some? (rotate_left r))
   (ensures (
     let _ = rotate_left_bst cmp r in
-    equal cmp (opt_get (rotate_left_wdm r)) r))
+    equal cmp (opt_get (rotate_left r)) r))
   =
-  let r2 = opt_get (rotate_left_wdm r) in
+  let r2 = opt_get (rotate_left r) in
   rotate_left_bst cmp r
 
 let rotate_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   : Lemma
-  (requires Some? (rotate_right_wdm r))
+  (requires Some? (rotate_right r))
   (ensures (
     let _ = rotate_right_bst cmp r in
-    equal cmp (opt_get (rotate_right_wdm r)) r))
+    equal cmp (opt_get (rotate_right r)) r))
   =
-  let r2 = opt_get (rotate_right_wdm r) in
+  let r2 = opt_get (rotate_right r) in
   rotate_right_bst cmp r
 
 #push-options "--z3rlimit 25"
 let rotate_right_left_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   : Lemma
-  (requires Some? (rotate_right_left_wdm r))
+  (requires Some? (rotate_right_left r))
   (ensures (
     let _ = rotate_right_left_bst cmp r in
-    equal cmp (opt_get (rotate_right_left_wdm r)) r))
+    equal cmp (opt_get (rotate_right_left r)) r))
   =
-  let r2 = opt_get (rotate_right_left_wdm r) in
+  let r2 = opt_get (rotate_right_left r) in
   rotate_right_left_bst cmp r
 
 let rotate_left_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   : Lemma
-  (requires Some? (rotate_left_right_wdm r))
+  (requires Some? (rotate_left_right r))
   (ensures (
     let _ = rotate_left_right_bst cmp r in
-    equal cmp (opt_get (rotate_left_right_wdm r)) r))
+    equal cmp (opt_get (rotate_left_right r)) r))
   =
-  let r2 = opt_get (rotate_left_right_wdm r) in
+  let r2 = opt_get (rotate_left_right r) in
   rotate_left_right_bst cmp r
 #pop-options
 

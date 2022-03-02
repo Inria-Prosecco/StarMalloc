@@ -182,6 +182,18 @@ let rotate_left_wdm (#a: Type) (r: wdm a) : option (wdm a) =
       Some (Node z t12 t3 s h123)
   | _ -> None
 
+let rotate_left (#a: Type) (r: wdm a) : option (wdm a) =
+  match r with
+  | Node x t1 (Node z t2 t3 _ _) s _ ->
+      let t12 = merge_tree x t1 t2 in
+      let t123 = merge_tree z t12 t3 in
+      Some t123
+  | _ -> None
+
+let equiv_rl (#a: Type) (r: wdm a) :
+  Lemma (rotate_left r == rotate_left_wdm r)
+  = ()
+
 (*
     x          z
   z   t3 => t1   x
@@ -209,6 +221,18 @@ let rotate_right_wdm (#a: Type) (r: wdm a) : option (wdm a) =
       let h123 = (M.max h1 h23) + 1 in
       Some (Node z t1 t23 s h123)
   | _ -> None
+
+let rotate_right (#a: Type) (r: wdm a) : option (wdm a) =
+  match r with
+  | Node x (Node z t1 t2 _ _) t3 s _ ->
+      let t23 = merge_tree x t2 t3 in
+      let t123 = merge_tree z t1 t23 in
+      Some t123
+  | _ -> None
+
+let equiv_rr (#a: Type) (r: wdm a) :
+  Lemma (rotate_right r == rotate_right_wdm r)
+  = ()
 
 (*
     x               y
@@ -247,6 +271,22 @@ let rotate_right_left_wdm (#a: Type) (r: wdm a) : option (wdm a) =
       Some (Node y t12 t34 s h1234)
   | _ -> None
 
+let rotate_right_left (#a: Type) (r: wdm a) : option (wdm a) =
+  match r with
+  | Node x t1 (Node z (Node y t2 t3 _ _) t4 _ _) s _ ->
+      assert (is_wdm r);
+      assert (is_wdm (cright r));
+      assert (is_wdm (cleft r));
+      let t12 = merge_tree x t1 t2 in
+      let t34 = merge_tree z t3 t4 in
+      let t1234 = merge_tree y t12 t34 in
+      Some t1234
+  | _ -> None
+
+let equiv_rrl (#a: Type) (r: wdm a) :
+  Lemma (rotate_right_left r == rotate_right_left_wdm r)
+  = ()
+
 (*
       x             y
    z     t4 =>   z     x
@@ -282,6 +322,22 @@ let rotate_left_right_wdm (#a: Type) (r: wdm a) : option (wdm a) =
       let h1234 = M.max h12 h34 + 1 in
       Some (Node y t12 t34 s h1234)
   | _ -> None
+
+let rotate_left_right (#a: Type) (r: wdm a) : option (wdm a) =
+  match r with
+  | Node x (Node z t1 (Node y t2 t3 _ _) _ _) t4 s _ ->
+      assert (is_wdm r);
+      assert (is_wdm (cright r));
+      assert (is_wdm (cleft r));
+      let t12 = merge_tree z t1 t2 in
+      let t34 = merge_tree x t3 t4 in
+      let t1234 = merge_tree y t12 t34 in
+      Some t1234
+  | _ -> None
+
+let equiv_rlr (#a: Type) (r: wdm a) :
+  Lemma (rotate_left_right r == rotate_left_right_wdm r)
+  = ()
 
 //@Trees/AVL
 let rotate_left_size (#a: Type) (r: wdm a)
