@@ -92,7 +92,26 @@ let rebalance_avl_wdm (#a: Type) (t: wdm a) : wdm a =
 
 let rebalance_avl_wds_size (#a: Type) (t: wdm a)
   : Lemma (size_of_tree (rebalance_avl_wdm t) == size_of_tree t)
-  = ()
+  =
+  if Leaf? t then () else
+  let Node data left right size height = t in
+  if hot_wdh left - hot_wdh right > 1 then (
+    let Node ldata lleft lright lsize lheight = left in
+    if hot_wdh lleft >= hot_wdh lright then (
+      rotate_right_size t
+    ) else (
+      rotate_left_right_size t
+    )
+  ) else if hot_wdh right - hot_wdh left > 1 then (
+    let Node rdata rleft rright rsize lright = right in
+    if hot_wdh rleft > hot_wdh rright then (
+      rotate_right_left_size t
+    ) else (
+      rotate_left_size t
+    )
+  ) else (
+    ()
+  )
 
 #push-options "--z3rlimit 50"
 let rebalance_avl_wds_proof (#a: Type) (cmp: cmp a) (t: wdm a)
