@@ -26,7 +26,7 @@ let rotate_right_left (#a: Type) (ptr: t a)
     let t = v_linked_tree ptr h0 in
     let r = rotate_right_left_wdm t in
     Some? r /\
-    height_of_tree (opt_get r) <= height_of_tree t
+    height_of_tree (Some?.v r) <= height_of_tree t
   ))
   (ensures (fun h0 ptr' h1 ->
     rotate_right_left (v_linked_tree ptr h0)

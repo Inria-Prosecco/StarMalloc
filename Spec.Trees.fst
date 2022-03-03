@@ -122,9 +122,9 @@ let int_of_bool b : nat = match b with
   | true -> 1
   | false -> 0
 
-//@Trees.Misc
-let opt_get (#a: Type) (v: option a{Some? v}) : a =
-  let Some v' = v in v'
+//@D
+//let opt_get (#a: Type) (v: option a{Some? v}) : a =
+//  let Some v' = v in v'
 
 //@Trees
 let sot_wds (#a: Type) (t: wds a)
@@ -343,23 +343,23 @@ let equiv_rlr (#a: Type) (r: wdm a) :
 let rotate_left_size (#a: Type) (r: wdm a)
   : Lemma
   (requires Some? (rotate_left r))
-  (ensures size_of_tree (opt_get (rotate_left r)) == size_of_tree r)
+  (ensures size_of_tree (Some?.v (rotate_left r)) == size_of_tree r)
   = ()
 let rotate_right_size (#a: Type) (r: wdm a)
   : Lemma
   (requires Some? (rotate_right r))
-  (ensures size_of_tree (opt_get (rotate_right r)) == size_of_tree r)
+  (ensures size_of_tree (Some?.v (rotate_right r)) == size_of_tree r)
   = ()
 let rotate_right_left_size (#a: Type) (r: wdm a)
   : Lemma
   (requires Some? (rotate_right_left r))
   (ensures
-  size_of_tree (opt_get (rotate_right_left r)) == size_of_tree r)
+  size_of_tree (Some?.v (rotate_right_left r)) == size_of_tree r)
   = ()
 let rotate_left_right_size (#a: Type) (r: wdm a)
   : Lemma
   (requires Some? (rotate_left_right r))
   (ensures
-  size_of_tree (opt_get (rotate_left_right r)) == size_of_tree r)
+  size_of_tree (Some?.v (rotate_left_right r)) == size_of_tree r)
   = ()
 
