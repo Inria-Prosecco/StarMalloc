@@ -227,6 +227,7 @@ let rec main5_aux (ptr: t a) (v: a)
   ) else (
     let h = get () in
     assume (Spec.size_of_tree (Impl.v_linked_tree ptr h) < 1000000000);
+    assume (Spec.height_of_tree (Impl.v_linked_tree ptr h) < 1000000000);
     let ptr' = insert_avl true compare ptr v in
     let v' = U64.sub v one in
     main5_aux ptr' v'

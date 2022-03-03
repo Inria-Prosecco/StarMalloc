@@ -522,7 +522,7 @@ let u_of_bool (b:bool) : x:U.t{U.v x = Spec.int_of_bool b}
 //  )
 //#pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 120"
 let rec delete_avl (#a: Type0)
   (cmp:cmp a) (ptr: t a) (data_to_rm: a)
   : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
