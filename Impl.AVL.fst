@@ -87,76 +87,6 @@ let is_balanced (#a: Type) (ptr: t a)
   )
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1"
-let is_balanced_not_null (#a: Type) (t: Spec.wdm a)
-  : Lemma
-  (not (Spec.is_balanced t) ==> Spec.Node? t)
-  = ()
-
-let rotate_left_h (#a: Type) (t: Spec.wdm a)
-  : Lemma
-  (requires (
-    let t' = Spec.rotate_left_wdm t in
-    Some? t' /\ Spec.Node? (Spec.opt_get t') /\
-    Spec.Node? t /\ Spec.Node? (Spec.cright t) /\
-    Spec.hot_wdh (Spec.cleft t)
-    <= Spec.hot_wdh (Spec.cright (Spec.cright t))
-  ))
-  (ensures (
-    let t' = Spec.opt_get (Spec.rotate_left_wdm t) in
-    Spec.hot_wdh t' <= Spec.hot_wdh t
-  ))
-  = ()
-
-let rotate_right_h (#a: Type) (t: Spec.wdm a)
-  : Lemma
-  (requires (
-    let t' = Spec.rotate_right_wdm t in
-    Some? t' /\ Spec.Node? (Spec.opt_get t') /\
-    Spec.Node? t /\ Spec.Node? (Spec.cleft t) /\
-    Spec.hot_wdh (Spec.cright t)
-    <= Spec.hot_wdh (Spec.cleft (Spec.cleft t))
-  ))
-  (ensures (
-    let t' = Spec.opt_get (Spec.rotate_right_wdm t) in
-    Spec.hot_wdh t' <= Spec.hot_wdh t
-  ))
-  = ()
-
-#push-options "--fuel 2"
-let rotate_right_left_h (#a: Type) (t: Spec.wdm a)
-  : Lemma
-  (requires (
-    let t' = Spec.rotate_right_left_wdm t in
-    Some? t' /\ Spec.Node? (Spec.opt_get t') /\
-    Spec.Node? t /\ Spec.Node? (Spec.cright t) /\
-    Spec.hot_wdh (Spec.cleft t)
-    <= Spec.hot_wdh (Spec.cright (Spec.cright t))
-  ))
-  (ensures (
-    let t' = Spec.opt_get (Spec.rotate_right_left_wdm t) in
-    Spec.hot_wdh t' <= Spec.hot_wdh t
-  ))
-  = ()
-
-let rotate_left_right_h (#a: Type) (t: Spec.wdm a)
-  : Lemma
-  (requires (
-    let t' = Spec.rotate_left_right_wdm t in
-    Some? t' /\ Spec.Node? (Spec.opt_get t') /\
-    Spec.Node? t /\ Spec.Node? (Spec.cleft t) /\
-    Spec.hot_wdh (Spec.cright t)
-    <= Spec.hot_wdh (Spec.cleft (Spec.cleft t))
-  ))
-  (ensures (
-    let t' = Spec.opt_get (Spec.rotate_left_right_wdm t) in
-    Spec.hot_wdh t' <= Spec.hot_wdh t
-  ))
-  = ()
-#pop-options
-
-#pop-options
-
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rebalance_avl (#a: Type) (cmp: cmp a) (ptr: t a)
@@ -178,7 +108,7 @@ let rebalance_avl (#a: Type) (cmp: cmp a) (ptr: t a)
     assert (v_linked_tree ptr h0 == v_linked_tree ptr h1);
     return ptr
   ) else (
-    is_balanced_not_null (v_linked_tree ptr h0);
+    Spec.not_balanced_is_not_null (v_linked_tree ptr h0);
     assert (Spec.Node? (v_linked_tree ptr h0));
     (**) node_is_not_null ptr;
     (**) let node = unpack_tree ptr in
@@ -215,12 +145,12 @@ let rebalance_avl (#a: Type) (cmp: cmp a) (ptr: t a)
       if U.gt lrh llh then (
         assert (U.gt lrh rh);
         assert (U.gte llh rh);
-        rotate_left_right_h (v_linked_tree ptr h0);
+        Spec.rotate_left_right_h (v_linked_tree ptr h0);
         rotate_left_right ptr
 
       ) else (
         assert (U.gt llh rh);
-        rotate_right_h (v_linked_tree ptr h0);
+        Spec.rotate_right_h (v_linked_tree ptr h0);
         rotate_right ptr
       )
 
@@ -252,11 +182,11 @@ let rebalance_avl (#a: Type) (cmp: cmp a) (ptr: t a)
       if U.gt rlh rrh then (
         assert (U.gt rlh lh);
         assert (U.gte rrh lh);
-        rotate_right_left_h (v_linked_tree ptr h0);
+        Spec.rotate_right_left_h (v_linked_tree ptr h0);
         rotate_right_left ptr
       ) else (
         assert (U.gt rrh lh);
-        rotate_left_h (v_linked_tree ptr h0);
+        Spec.rotate_left_h (v_linked_tree ptr h0);
         rotate_left ptr
       )
 

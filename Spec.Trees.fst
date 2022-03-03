@@ -342,24 +342,24 @@ let equiv_rlr (#a: Type) (r: wdm a) :
 //@Trees/AVL
 let rotate_left_size (#a: Type) (r: wdm a)
   : Lemma
-  (requires Some? (rotate_left_wdm r))
-  (ensures size_of_tree (opt_get (rotate_left_wdm r)) == size_of_tree r)
+  (requires Some? (rotate_left r))
+  (ensures size_of_tree (opt_get (rotate_left r)) == size_of_tree r)
   = ()
 let rotate_right_size (#a: Type) (r: wdm a)
   : Lemma
-  (requires Some? (rotate_right_wdm r))
-  (ensures size_of_tree (opt_get (rotate_right_wdm r)) == size_of_tree r)
+  (requires Some? (rotate_right r))
+  (ensures size_of_tree (opt_get (rotate_right r)) == size_of_tree r)
   = ()
 let rotate_right_left_size (#a: Type) (r: wdm a)
   : Lemma
-  (requires Some? (rotate_right_left_wdm r))
+  (requires Some? (rotate_right_left r))
   (ensures
-  size_of_tree (opt_get (rotate_right_left_wdm r)) == size_of_tree r)
+  size_of_tree (opt_get (rotate_right_left r)) == size_of_tree r)
   = ()
 let rotate_left_right_size (#a: Type) (r: wdm a)
   : Lemma
-  (requires Some? (rotate_left_right_wdm r))
+  (requires Some? (rotate_left_right r))
   (ensures
-  size_of_tree (opt_get (rotate_left_right_wdm r)) == size_of_tree r)
+  size_of_tree (opt_get (rotate_left_right r)) == size_of_tree r)
   = ()
 

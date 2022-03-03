@@ -432,7 +432,7 @@ let pack_tree #opened #a ptr left right sr hr =
 // TODO : reveal_star_4 / arbitrary arity
 // TODO : pourquoi inutile finalement ?
   //reveal_star_3 (vptr ptr) (linked_tree left) (linked_tree right);
-  //let t:wds a = Spec.Node (get_data x) l r s in
+  //let t:wdm a = Spec.Node (get_data x) l r s in
   let t = Spec.Node (get_data x) l r (U.v s) (U.v h) in
 
   change_slprop
