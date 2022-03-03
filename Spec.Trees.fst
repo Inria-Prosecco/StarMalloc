@@ -122,10 +122,6 @@ let int_of_bool b : nat = match b with
   | true -> 1
   | false -> 0
 
-//@D
-//let opt_get (#a: Type) (v: option a{Some? v}) : a =
-//  let Some v' = v in v'
-
 //@Trees
 let sot_wds (#a: Type) (t: wds a)
   : s:nat{size_of_tree t = s} =
@@ -363,3 +359,60 @@ let rotate_left_right_size (#a: Type) (r: wdm a)
   size_of_tree (Some?.v (rotate_left_right r)) == size_of_tree r)
   = ()
 
+let rotate_left_h (#a: Type) (t: wdm a)
+  : Lemma
+  (requires (
+    let t' = rotate_left t in
+    Some? t' /\ Node? (Some?.v t') /\
+    Node? t /\ Node? (cright t) /\
+    hot_wdh (cleft t) <= hot_wdh (cright (cright t))
+  ))
+  (ensures (
+    let t' = Some?.v (rotate_left t) in
+    hot_wdh t' <= hot_wdh t
+  ))
+  = ()
+
+let rotate_right_h (#a: Type) (t: wdm a)
+  : Lemma
+  (requires (
+    let t' = rotate_right t in
+    Some? t' /\ Node? (Some?.v t') /\
+    Node? t /\ Node? (cleft t) /\
+    hot_wdh (cright t) <= hot_wdh (cleft (cleft t))
+  ))
+  (ensures (
+    let t' = Some?.v (rotate_right t) in
+    hot_wdh t' <= hot_wdh t
+  ))
+  = ()
+
+#push-options "--z3rlimit 25"
+let rotate_right_left_h (#a: Type) (t: wdm a)
+  : Lemma
+  (requires (
+    let t' = rotate_right_left t in
+    Some? t' /\ Node? (Some?.v t') /\
+    Node? t /\ Node? (cright t) /\
+    hot_wdh (cleft t) <= hot_wdh (cright (cright t))
+  ))
+  (ensures (
+    let t' = Some?.v (rotate_right_left t) in
+    hot_wdh t' <= hot_wdh t
+  ))
+  = ()
+
+let rotate_left_right_h (#a: Type) (t: wdm a)
+  : Lemma
+  (requires (
+    let t' = rotate_left_right t in
+    Some? t' /\ Node? (Some?.v t') /\
+    Node? t /\ Node? (cleft t) /\
+    hot_wdh (cright t) <= hot_wdh (cleft (cleft t))
+  ))
+  (ensures (
+    let t' = Some?.v (rotate_left_right t) in
+    hot_wdh t' <= hot_wdh t
+  ))
+  = ()
+#pop-options

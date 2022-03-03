@@ -62,69 +62,6 @@ let rec bst_search (#a: Type) (cmp:cmp a) (x: bst a cmp) (key: a) : option a =
     if delta > 0 then bst_search cmp left key else
     Some data
 
-(**** BST insertion *)
-
-//@BST
-(*
-- r: in case of equality with an already existing element,
-  true = replace, false = do not replace
-- snd (result): whether a new element has been added,
-  that is whether the size has increased
-  => bad idea/bad design?
-*)
-//let rec insert_bst2_aux (#a: Type)
-//  (r:bool) (cmp:cmp a) (t: bst a cmp) (new_data: a)
-//  : Pure (wdm a & bool)
-//  True
-//  (fun (new_t, b) ->
-//    size_of_tree new_t = size_of_tree t + (int_of_bool b)
-//  )
-//  =
-//  match t with
-//  | Leaf -> Node new_data Leaf Leaf 1 1, true
-//  | Node data left right size height ->
-//    let delta = cmp data new_data in
-//    if delta = 0 then begin
-//      if r then Node new_data left right size height, false
-//           else t, false
-//    end
-//    else if delta > 0 then begin
-//      let new_left, b = insert_bst2_aux r cmp left new_data in
-//      let size_new_left = size_of_tree new_left in
-//      let size_right = size_of_tree right in
-//      let new_size = size_new_left + size_right + 1 in
-//      assert (new_size = size + (int_of_bool b));
-//      let height_new_left = hot_wdh new_left in
-//      let height_right = hot_wdh right in
-//      let new_height = M.max height_new_left height_right + 1 in
-//      let new_t = Node data new_left right new_size new_height in
-//      assert (new_size = size_of_tree new_t);
-//      assert (is_wdm new_t);
-//      new_t, b
-//    end else begin
-//      let new_right, b = insert_bst2_aux r cmp right new_data in
-//      let size_left = size_of_tree left in
-//      let size_new_right = size_of_tree new_right in
-//      let new_size = size_left + size_new_right + 1 in
-//      assert (new_size = size + (int_of_bool b));
-//      let height_left = hot_wdh left in
-//      let height_new_right = hot_wdh new_right in
-//      let new_height = M.max height_left height_new_right + 1 in
-//      let new_t = Node data left new_right new_size new_height in
-//      assert (new_size = size_of_tree new_t);
-//      assert (is_wdm new_t);
-//      new_t, b
-//    end
-//
-////@BST
-//let insert_bst2 (#a: Type)
-//  (r: bool) (cmp:cmp a) (t: bst a cmp) (new_data: a)
-//  : t':wdm a{
-//    let _, b = insert_bst2_aux r cmp t new_data in
-//  size_of_tree t' == size_of_tree t + (int_of_bool b)}
-//  =
-//  fst (insert_bst2_aux r cmp t new_data)
-
 //@BST
 let rec forall_keys_trans (#a: Type) (t: tree a) (cond1 cond2: a -> bool)
   : Lemma

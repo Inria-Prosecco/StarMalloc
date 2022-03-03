@@ -71,17 +71,12 @@ let mk_node = Impl.Core.mk_node #a
 let unpack_tree = Impl.Core.unpack_tree #a
 
 (* stdlib *)
-//let append_left = P1.append_left #a
-//let append_right = P1.append_right #a
-//let insert_bst = P1.insert_bst #a
-//let insert_avl = Impl.insert_avl #a
 let create_leaf = Impl.create_leaf #a
 let create_tree = Impl.create_tree #a
 let merge_tree  = Impl.merge_tree #a
 let sot_wds     = Impl.sot_wds #a
 let hot_wdh     = Impl.hot_wdh #a
 let member      = Impl.member #a
-//let insert_bst2 = Impl.insert_bst2 #a
 let rotate_left = Impl.rotate_left #a
 let rotate_right = Impl.rotate_right #a
 let rotate_right_left = Impl.rotate_right_left #a
@@ -90,18 +85,6 @@ let is_balanced = Impl.is_balanced #a
 let rebalance_avl = Impl.rebalance_avl #a
 let insert_avl = Impl.insert_avl #a
 let delete_avl = Impl.delete_avl #a
-
-(*
-let one ()
-  : Steel (ref nat)
-  (emp)
-  (fun r -> vptr r)
-  (requires fun _ -> True)
-  (ensures fun _ _ _ -> True)
-  =
-  let v = 1 + 1 in
-  let r = malloc v in r
-*)
 
 let destruct_linked_tree_leaf (ptr: t a) : Steel unit
   (linked_tree ptr) (fun _ -> emp)
