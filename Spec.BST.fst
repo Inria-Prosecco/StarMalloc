@@ -538,7 +538,7 @@ let rotate1_involutive (#a: Type) (t: wdm a)
   (requires
     Some? (rotate_left t))
   (ensures
-    opt_get (rotate_right (opt_get (rotate_left t))) == t)
+    Some?.v (rotate_right (Some?.v (rotate_left t))) == t)
   = ()
 
 let rotate2_involutive (#a: Type) (t: wdm a)
@@ -546,7 +546,7 @@ let rotate2_involutive (#a: Type) (t: wdm a)
   (requires
     Some? (rotate_right t))
   (ensures
-    opt_get (rotate_left (opt_get (rotate_right t))) == t)
+    Some?.v (rotate_left (Some?.v (rotate_right t))) == t)
   = ()
 
 let rotate_left_bst2 (#a: Type) (cmp: cmp a) (t: wdm a)
@@ -595,19 +595,6 @@ let rotate_right_bst_eq (#a: Type) (cmp: cmp a) (t: wdm a)
   if is_bst cmp (Some?.v (rotate_right t))
   then rotate_right_bst2 cmp t
 
-let rotate_left_right_dec (#a: Type) (t: wdm a)
-  : Lemma
-  (requires Some? (rotate_left_right t))
-  (ensures
-    Some?.v (rotate_left_right t)
-    ==
-    Some?.v (rotate_right (merge_tree
-      (cdata t)
-      (Some?.v (rotate_left (cleft t)))
-      (cright t)
-  )))
-  = ()
-
 let rotate_right_left_dec (#a: Type) (t: wdm a)
   : Lemma
   (requires Some? (rotate_right_left t))
@@ -646,6 +633,73 @@ let rotate_right_left_bst (#a:Type) (cmp:cmp a) (r:wdm a)
     forall_keys_trans t4 (key_right cmp z) (key_right cmp y);
     assert (forall_keys right (key_right cmp y))
 
+let rotate_left_right_dec (#a: Type) (t: wdm a)
+  : Lemma
+  (requires Some? (rotate_left_right t))
+  (ensures
+    Some?.v (rotate_left_right t)
+    ==
+    Some?.v (rotate_right (merge_tree
+      (cdata t)
+      (Some?.v (rotate_left (cleft t)))
+      (cright t)
+  )))
+  = ()
+
+let rotate3_involutive (#a: Type) (t: wdm a)
+  : Lemma
+  (requires Some? (rotate_left_right t))
+  (ensures
+    (let t' = Some?.v (rotate_left
+      (Some?.v (rotate_left_right t))) in
+    merge_tree (cdata t')
+      (Some?.v (rotate_right (cleft t')))
+      (cright t')
+    ==
+    t
+  ))
+  = ()
+
+let rotate_left_right_bst2 (#a:Type) (cmp:cmp a) (t:wdm a)
+  : Lemma
+  (requires
+    Some? (rotate_left_right t) /\
+    is_bst cmp (Some?.v (rotate_left_right t)))
+  (ensures is_bst cmp t)
+  =
+  rotate3_involutive t;
+  let t2 = Some?.v (rotate_left_right t) in
+  rotate_left_bst_eq cmp t2;
+  let t3 = Some?.v (rotate_left t2) in
+  rotate_right_bst_eq cmp (cleft t3)
+
+let rotate4_involutive (#a: Type) (t: wdm a)
+  : Lemma
+  (requires Some? (rotate_right_left t))
+  (ensures
+    (let t' = Some?.v (rotate_right
+      (Some?.v (rotate_right_left t))) in
+    merge_tree (cdata t')
+      (cleft t')
+      (Some?.v (rotate_left (cright t')))
+    ==
+    t
+  ))
+  = ()
+
+let rotate_right_left_bst2 (#a:Type) (cmp:cmp a) (t:wdm a)
+  : Lemma
+  (requires
+    Some? (rotate_right_left t) /\
+    is_bst cmp (Some?.v (rotate_right_left t)))
+  (ensures is_bst cmp t)
+  =
+  rotate4_involutive t;
+  let t2 = Some?.v (rotate_right_left t) in
+  rotate_right_bst_eq cmp t2;
+  let t3 = Some?.v (rotate_right t2) in
+  rotate_left_bst_eq cmp (cright t3)
+
 //@BST
 let rotate_left_right_bst (#a:Type) (cmp:cmp a) (r:wdm a)
   : Lemma
@@ -678,7 +732,10 @@ let rotate_right_left_bst_eq (#a: Type) (cmp: cmp a) (t: wdm a)
     is_bst cmp t = is_bst cmp (Some?.v (rotate_right_left t))
   )
   =
-  admit ()
+  if is_bst cmp t
+  then rotate_right_left_bst cmp t;
+  if is_bst cmp (Some?.v (rotate_right_left t))
+  then rotate_right_left_bst2 cmp t
 
 let rotate_left_right_bst_eq (#a: Type) (cmp: cmp a) (t: wdm a)
   : Lemma
@@ -687,16 +744,19 @@ let rotate_left_right_bst_eq (#a: Type) (cmp: cmp a) (t: wdm a)
     is_bst cmp t = is_bst cmp (Some?.v (rotate_left_right t))
   )
   =
-  admit ()
+  if is_bst cmp t
+  then rotate_left_right_bst cmp t;
+  if is_bst cmp (Some?.v (rotate_left_right t))
+  then rotate_left_right_bst2 cmp t
 
 let rotate_left_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   : Lemma
   (requires Some? (rotate_left r))
   (ensures (
     let _ = rotate_left_bst cmp r in
-    equal cmp (opt_get (rotate_left r)) r))
+    equal cmp (Some?.v (rotate_left r)) r))
   =
-  let r2 = opt_get (rotate_left r) in
+  let r2 = Some?.v (rotate_left r) in
   rotate_left_bst cmp r
 
 let rotate_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
@@ -704,9 +764,9 @@ let rotate_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   (requires Some? (rotate_right r))
   (ensures (
     let _ = rotate_right_bst cmp r in
-    equal cmp (opt_get (rotate_right r)) r))
+    equal cmp (Some?.v (rotate_right r)) r))
   =
-  let r2 = opt_get (rotate_right r) in
+  let r2 = Some?.v (rotate_right r) in
   rotate_right_bst cmp r
 
 #push-options "--z3rlimit 25"
@@ -715,9 +775,9 @@ let rotate_right_left_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   (requires Some? (rotate_right_left r))
   (ensures (
     let _ = rotate_right_left_bst cmp r in
-    equal cmp (opt_get (rotate_right_left r)) r))
+    equal cmp (Some?.v (rotate_right_left r)) r))
   =
-  let r2 = opt_get (rotate_right_left r) in
+  let r2 = Some?.v (rotate_right_left r) in
   rotate_right_left_bst cmp r
 
 let rotate_left_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
@@ -725,9 +785,9 @@ let rotate_left_right_equal (#a: Type) (cmp: cmp a) (r: bst a cmp)
   (requires Some? (rotate_left_right r))
   (ensures (
     let _ = rotate_left_right_bst cmp r in
-    equal cmp (opt_get (rotate_left_right r)) r))
+    equal cmp (Some?.v (rotate_left_right r)) r))
   =
-  let r2 = opt_get (rotate_left_right r) in
+  let r2 = Some?.v (rotate_left_right r) in
   rotate_left_right_bst cmp r
 #pop-options
 
