@@ -23,12 +23,12 @@ open Impl.BST
 
 //@AVL
 #push-options "--fuel 1 --ifuel 1"
-let rec is_balanced_g (#a: Type) (ptr: t a)
+let rec is_balanced_global (#a: Type) (ptr: t a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 -> True)
   (ensures (fun h0 b h1 ->
       v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-      Spec.is_balanced_g (v_linked_tree ptr h0) == b))
+      Spec.is_balanced_global (v_linked_tree ptr h0) == b))
   =
   if is_null_t ptr then (
     (**) null_is_leaf ptr;
@@ -40,8 +40,8 @@ let rec is_balanced_g (#a: Type) (ptr: t a)
     let lh = hot_wdh (get_left node) in
     let rh = hot_wdh (get_right node) in
 
-    let lbal = is_balanced_g (get_left node) in
-    let rbal = is_balanced_g (get_right node) in
+    let lbal = is_balanced_global (get_left node) in
+    let rbal = is_balanced_global (get_right node) in
 
     (**) pack_tree ptr (get_left node) (get_right node)
       (get_size node) (get_height node);
@@ -57,12 +57,12 @@ let rec is_balanced_g (#a: Type) (ptr: t a)
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1"
-let is_balanced (#a: Type) (ptr: t a)
+let is_balanced_local (#a: Type) (ptr: t a)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 -> True)
   (ensures (fun h0 b h1 ->
       v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-      Spec.is_balanced (v_linked_tree ptr h0) == b))
+      Spec.is_balanced_local (v_linked_tree ptr h0) == b))
   =
   if is_null_t ptr then (
     (**) null_is_leaf ptr;
@@ -97,11 +97,11 @@ let rebalance_avl (#a: Type) (cmp: cmp a) (ptr: t a)
     Spec.is_avl (convert cmp) (Spec.cleft (v_linked_tree ptr h0)) /\
     Spec.is_avl (convert cmp) (Spec.cright (v_linked_tree ptr h0)))
   (ensures fun h0 ptr' h1 ->
-    Spec.rebalance_avl_wdm (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
+    Spec.rebalance_avl (v_linked_tree ptr h0) == v_linked_tree ptr' h1)
     //Spec.is_avl (convert cmp) (v_linked_tree ptr' h1))
   =
   let h0 = get () in
-  if is_balanced #a ptr then (
+  if is_balanced_local #a ptr then (
     // TODO : fails without the assertion, why?
     // any additional line (h0, h1 or both and the assert) is enough for everything to work
     let h1 = get () in
@@ -145,12 +145,12 @@ let rebalance_avl (#a: Type) (cmp: cmp a) (ptr: t a)
       if U.gt lrh llh then (
         assert (U.gt lrh rh);
         assert (U.gte llh rh);
-        Spec.rotate_left_right_h (v_linked_tree ptr h0);
+        Spec.rotate_left_right_height (v_linked_tree ptr h0);
         rotate_left_right ptr
 
       ) else (
         assert (U.gt llh rh);
-        Spec.rotate_right_h (v_linked_tree ptr h0);
+        Spec.rotate_right_height (v_linked_tree ptr h0);
         rotate_right ptr
       )
 
@@ -182,11 +182,11 @@ let rebalance_avl (#a: Type) (cmp: cmp a) (ptr: t a)
       if U.gt rlh rrh then (
         assert (U.gt rlh lh);
         assert (U.gte rrh lh);
-        Spec.rotate_right_left_h (v_linked_tree ptr h0);
+        Spec.rotate_right_left_height (v_linked_tree ptr h0);
         rotate_right_left ptr
       ) else (
         assert (U.gt rrh lh);
-        Spec.rotate_left_h (v_linked_tree ptr h0);
+        Spec.rotate_left_height (v_linked_tree ptr h0);
         rotate_left ptr
       )
 

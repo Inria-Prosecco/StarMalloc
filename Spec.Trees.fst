@@ -359,7 +359,7 @@ let rotate_left_right_size (#a: Type) (r: wdm a)
   size_of_tree (Some?.v (rotate_left_right r)) == size_of_tree r)
   = ()
 
-let rotate_left_h (#a: Type) (t: wdm a)
+let rotate_left_height (#a: Type) (t: wdm a)
   : Lemma
   (requires (
     let t' = rotate_left t in
@@ -373,7 +373,7 @@ let rotate_left_h (#a: Type) (t: wdm a)
   ))
   = ()
 
-let rotate_right_h (#a: Type) (t: wdm a)
+let rotate_right_height (#a: Type) (t: wdm a)
   : Lemma
   (requires (
     let t' = rotate_right t in
@@ -388,7 +388,7 @@ let rotate_right_h (#a: Type) (t: wdm a)
   = ()
 
 #push-options "--z3rlimit 25"
-let rotate_right_left_h (#a: Type) (t: wdm a)
+let rotate_right_left_height (#a: Type) (t: wdm a)
   : Lemma
   (requires (
     let t' = rotate_right_left t in
@@ -402,7 +402,7 @@ let rotate_right_left_h (#a: Type) (t: wdm a)
   ))
   = ()
 
-let rotate_left_right_h (#a: Type) (t: wdm a)
+let rotate_left_right_height (#a: Type) (t: wdm a)
   : Lemma
   (requires (
     let t' = rotate_left_right t in
