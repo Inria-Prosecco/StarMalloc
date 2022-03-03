@@ -40,7 +40,7 @@ $(ALL_CHECKED_FILES): %.checked:
 	@touch -c $@
 
 verify: $(ALL_CHECKED_FILES)
-	echo $*
+	@echo $*
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
