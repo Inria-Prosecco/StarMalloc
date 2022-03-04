@@ -74,6 +74,9 @@ test: verify extract
 testopt: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist -O2 -lbsd test.c
 
+testocaml:
+	ocamlopt -o ocaml.a.out bench.ml
+
 #ALL_C_FILES=$(addsuffix .c,$(ALL_MODULE_NAMES))
 #
 #$(ALL_C_FILES): extract

@@ -34,23 +34,23 @@ int main(int argc, char** argv) {
   puts("Should be equal to the supplied argument.");
   printf("s=%lui\n", s);
 
-  bool b = false;
-  for (size_t i = 0; i < x; i++) {
-    rd = random_data[i];
-    b = P1_UInt32_member(P1_UInt32_compare, ptr, rd);
-    if (! b) {
-      puts("Error: some element was not properly inserted.");
-      return 1;
-    }
-  }
+  //bool b = false;
+  //for (size_t i = 0; i < x; i++) {
+  //  rd = random_data[i];
+  //  b = P1_UInt32_member(P1_UInt32_compare, ptr, rd);
+  //  if (! b) {
+  //    puts("Error: some element was not properly inserted.");
+  //    return 1;
+  //  }
+  //}
 
-  for (size_t i = 0; i < x; i++) {
-    rd = random_data[i];
-    ptr = P1_UInt32_delete_avl(P1_UInt32_compare, ptr, rd);
-  }
-  puts("Should be equal to zero.");
-  s = P1_UInt32_sot_wds(ptr);
-  printf("s=%lui\n", s);
+  //for (size_t i = 0; i < x; i++) {
+  //  rd = random_data[i];
+  //  ptr = P1_UInt32_delete_avl(P1_UInt32_compare, ptr, rd);
+  //}
+  //puts("Should be equal to zero.");
+  //s = P1_UInt32_sot_wds(ptr);
+  //printf("s=%lui\n", s);
 
   //uint64_t s1 = 0;
   //uint64_t s2 = 0;
