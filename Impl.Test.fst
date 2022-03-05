@@ -1,4 +1,4 @@
-module P1_UInt32
+module Impl.Test
 
 open Steel.Memory
 open Steel.Effect.Atomic
@@ -15,12 +15,12 @@ let linked_tree = Impl.Core.linked_tree
 
 
 
-let a = U64.t
+let a = I64.t
 
 //inline_for_extraction noextract
-let one = Impl.Common.one
+let one = Impl.Common.sone
 //inline_for_extraction noextract
-let zero = Impl.Common.zero
+let zero = Impl.Common.szero
 
 let val0 = 0UL
 let val1 = 1UL
@@ -28,10 +28,10 @@ let val2 = 2UL
 let val3 = 3UL
 let val4 = 4UL
 let val42 = 42UL
-let compare (x y: U64.t) : I64.t
+let compare (x y: I64.t) : I64.t
   =
-  if U64.gt x y then 1L
-  else if U64.eq x y then 0L
+  if I64.gt x y then 1L
+  else if I64.eq x y then 0L
   else -1L
 
 //let a = (U32.t & U32.t)
@@ -204,15 +204,16 @@ let rec main5_aux (ptr: t a) (v: a)
     Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr' h1)
   )
   =
-  if U64.eq v zero then (
+  if I64.eq v zero then (
     let h = get () in
     return ptr
   ) else (
     let h = get () in
     assume (Spec.size_of_tree (Impl.v_linked_tree ptr h) < 1000000000);
     assume (Spec.height_of_tree (Impl.v_linked_tree ptr h) < 1000000000);
+    assume (I64.gt v zero);
     let ptr' = insert_avl true compare ptr v in
-    let v' = U64.sub v one in
+    let v' = I64.sub v one in
     main5_aux ptr' v'
   )
 #pop-options
@@ -236,12 +237,13 @@ let rec main6_aux (ptr: t a) (v: a) (check: bool)
     Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr h0) /\
     Impl.v_linked_tree ptr h0 == Impl.v_linked_tree ptr h1)
   =
-  if U64.eq v zero then (
+  if I64.eq v zero then (
     return zero
   ) else (
     let b = member compare ptr v in
     if (b = check) then (
-      let v' = U64.sub v one in
+      assume (I64.gt v zero);
+      let v' = I64.sub v one in
       main6_aux ptr v' check
     ) else (
       return v
@@ -259,13 +261,14 @@ let rec main7_aux (ptr: t a) (v: a)
     Spec.is_avl (Impl.convert compare) (Impl.v_linked_tree ptr' h1)
   )
   =
-  if U64.eq v zero then (
+  if I64.eq v zero then (
     let h = get () in
     return ptr
   ) else (
     let h = get () in
     let ptr' = delete_avl compare ptr v in
-    let v' = U64.sub v one in
+    assume (I64.gt v zero);
+    let v' = I64.sub v one in
     main7_aux ptr' v'
   )
 #pop-options
