@@ -51,7 +51,7 @@ verify: $(ALL_CHECKED_FILES)
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 clean:
-	-rm -rf .depend obj dist hints a.out
+	-rm -rf .depend obj dist hints a.out ocaml.a.out bench.cmx bench.cmi bench.o
 
 ifdef KREMLIN_HOME
 
