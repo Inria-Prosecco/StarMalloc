@@ -54,7 +54,7 @@ verify: $(ALL_CHECKED_FILES)
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 clean:
-	-rm -rf .depend obj dist hints a.out ocaml.a.out bench.cmx bench.cmi bench.o
+	-rm -rf .depend obj dist hints bench/*.{cmx,cmi,o,out}
 
 .PRECIOUS: %.krml
 obj/%.krml:
@@ -72,13 +72,17 @@ extract: $(FILTERED_KRML_FILES)
      -bundle 'FStar.\*,Steel.\*' $^
 
 test: verify extract
-	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist -lbsd test.c
-
+	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist -lbsd \
+	-o bench/a.out bench/test.c
 testopt: verify extract
-	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist -O2 -lbsd test.c
-
+	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist -lbsd -O2 \
+	-o bench/a.out bench/test.c
 testocaml:
-	ocamlopt -o ocaml.a.out bench.ml
+	ocamlopt -o bench/ocaml.a.out bench/bench.ml
+testcpp:
+	g++ -O2 -o bench/cpp.a.out bench/main.cpp
+bench: testopt testocaml testcpp
+	./bench/bench.sh
 
 #ALL_C_FILES=$(addsuffix .c,$(ALL_MODULE_NAMES))
 #

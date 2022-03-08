@@ -18,12 +18,12 @@ int main(int argc, char** argv) {
   void* ptr = NULL;
   int64_t rd = 0;
   uint64_t s = 0;
-  puts("AVL implementation test.");
-  puts("The supplied number of random values");
-  puts("will be inserted into an empty tree,");
-  puts("the presence of these values will be");
-  puts("checked, then these values will be");
-  puts("removed from the tree.");
+  //puts("AVL implementation test.");
+  //puts("The supplied number of random values");
+  //puts("will be inserted into an empty tree,");
+  //puts("the presence of these values will be");
+  //puts("checked, then these values will be");
+  //puts("removed from the tree.");
 
   for (size_t i = 0; i < x; i++) {
     rd = random_data[i];
@@ -31,8 +31,9 @@ int main(int argc, char** argv) {
     ptr = Impl_Test_insert_avl(true, Impl_Test_compare, ptr, rd);
   }
   s = Impl_Test_sot_wds(ptr);
-  puts("Should be equal to the supplied argument.");
-  printf("s=%lui\n", s);
+  //puts("Should be equal to the supplied argument.");
+  //printf("s=%lui\n", s);
+  printf("%lui\n", s);
 
   //bool b = false;
   //for (size_t i = 0; i < x; i++) {
