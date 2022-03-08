@@ -1,13 +1,15 @@
 all: world
 
+# Many thanks to Jonathan Protzenko for its Low* tutorial
+
 FSTAR_HOME ?= $(realpath $(dir $(shell which fstar.exe))/..)
 FSTAR_EXE = $(FSTAR_HOME)/bin/fstar.exe
 
+include Makefile.include
+
 INCLUDE_PATH = $(FSTAR_HOME)/ulib/.cache $(FSTAR_HOME)/ulib/experimental lib_avl/
 
-ifdef KREMLIN_HOME
 KRML_EXE = $(KREMLIN_HOME)/krml
-endif
 
 world: verify
 
@@ -17,23 +19,27 @@ hints:
 obj:
 	mkdir $@
 
-FSTAR_OPTIONS = --cache_checked_modules \
+FSTAR_OPTIONS = --cache_checked_modules $(FSTAR_INCLUDES) \
 		--cmi --odir obj --cache_dir obj \
 	        --already_cached 'Prims,FStar,LowStar,Steel' \
-		$(addprefix --include ,$(INCLUDE_PATH)) \
 		$(OTHERFLAGS)
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 
-ALL_SOURCE_FILES = $(wildcard *.fst *.fsti)
+ALL_SOURCE_FILES = $(wildcard $(addsuffix /*.fsti,$(SOURCE_DIRS))) \
+  $(wildcard $(addsuffix /*.fst,$(SOURCE_DIRS))) \
 
-.depend: $(ALL_SOURCE_FILES) Makefile
-	@$(FSTAR) --dep full $(ALL_SOURCE_FILES) > $@.tmp
-	@mv $@.tmp $@
+ifndef MAKE_RESTARTS
+.depend: .FORCE
+	$(FSTAR) --dep full $(ALL_SOURCE_FILES) > $@
+
+.PHONY: .FORCE
+.FORCE:
+endif
+
+include .depend
 
 depend: .depend
-
--include .depend
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR) $<
@@ -41,9 +47,6 @@ $(ALL_CHECKED_FILES): %.checked:
 
 verify: $(ALL_CHECKED_FILES)
 	@echo $*
-
-%.fst-in %.fsti-in:
-	@echo $(FSTAR_OPTIONS)
 
 .PRECIOUS: %.ml
 %.ml:
@@ -53,15 +56,15 @@ verify: $(ALL_CHECKED_FILES)
 clean:
 	-rm -rf .depend obj dist hints a.out ocaml.a.out bench.cmx bench.cmi bench.o
 
-ifdef KREMLIN_HOME
-
 .PRECIOUS: %.krml
 obj/%.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin \
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
-FILTERED_KRML_FILES=$(filter-out obj/FStar_NMST.krml obj/Steel_%.krml,$(ALL_KRML_FILES))
+FILTERED_KRML_FILES=$(filter-out obj/FStar_NMST.krml obj/Steel_%.krml \
+  obj/Allocator.krml obj/Some_lemmas.krml,\
+  $(ALL_KRML_FILES))
 
 extract: $(FILTERED_KRML_FILES)
 	mkdir -p dist
@@ -87,12 +90,5 @@ testocaml:
 #
 #$(ALL_O_FILES): %.o: %.c
 #	$(CC) $(CFLAGS) -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -o $@ -c $<
-
-else # no KREMLIN_HOME
-
-extract:
-	@echo "KReMLin is not installed, skipping extraction"
-
-endif # KREMLIN_HOME
 
 .PHONY: all world verify clean depend hints obj test

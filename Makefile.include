@@ -1,0 +1,19 @@
+ifeq (,$(FSTAR_HOME))
+  $(error FSTAR_HOME is not defined)
+endif
+
+ifeq (,$(KREMLIN_HOME))
+  $(error KREMLIN_HOME is not defined)
+endif
+
+SOURCE_DIRS = src lib_avl lib_std .
+
+INCLUDE_DIRS = \
+  $(SOURCE_DIRS) \
+  $(FSTAR_HOME)/ulib/.cache \
+  $(FSTAR_HOME)/ulib/experimental
+
+FSTAR_INCLUDES = $(addprefix --include ,$(INCLUDE_DIRS))
+
+%.fst-in %.fsti-in:
+	@echo $(FSTAR_INCLUDES)
