@@ -11,6 +11,7 @@ PROJECT_HOME ?= .
 SOURCE_DIRS = \
   $(PROJECT_HOME)/src \
   $(PROJECT_HOME)/lib_avl \
+  $(PROJECT_HOME)/lib_list \
   $(PROJECT_HOME)/lib_std \
   $(PROJECT_HOME)
 
