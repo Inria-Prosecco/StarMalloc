@@ -258,7 +258,6 @@ val intro_llist_cons (#a:Type0) (p : a -> vprop)
   v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
 
 let intro_llist_cons p ptr1 ptr2 x =
-  //admit ();
   let h = get () in
   let x' = hide (sel ptr1 h) in
   assert (get_data (reveal x') == x);
@@ -315,13 +314,14 @@ val intro_llist_cons2 (#a:Type0) (p : a -> vprop)
   (ptr1 ptr2:t a)
   //(y: t_of (p (get_data x)))
   : Steel unit
-  (vptr ptr1 `star`
+  (let h = get () in
+  vptr ptr1 `star`
   llist p ptr2 `star`
-  p (get_data x))
+  p (sel ptr1 h))
   (fun _ -> llist p ptr1)
   (requires fun h ->
-    get_next (sel ptr1 h) == ptr2 /\
-    x == sel ptr1 h
+    get_next (sel ptr1 h) == ptr2
+    //x == sel ptr1 h
     ///\
     //y == sel (sel_of (p (get_data x))) h
   )
