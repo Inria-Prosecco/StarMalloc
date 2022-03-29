@@ -14,14 +14,19 @@ module Mem = Steel.Memory
 open FStar.Seq
 open Seq.Aux
 
-noeq type contents (a: Type0) = {
+noeq type content (a: Type0) = {
   //size: nat;
   //i1: nat;
   //i2: nat;
   data: seq (a & perm);
 }
 
-let array (a: Type0) = option (seq (a & perm))
+let mk_content (#a: Type0) (data: seq (a & perm)) : content a
+  = { data }
+
+let get_data (#a: Type0) (content: content a) = content.data
+
+let array (a: Type0) = option (content a)
 
 let comp_prop (#a: Type) (x y: a & perm)
   = fst x == fst y /\ (sum_perm (snd x) (snd y)).v <=. one
@@ -38,8 +43,8 @@ let composable (#a: Type) : symrel (array a)
   -> match arr1, arr2 with
   | None, _
   | _,  None -> True
-  | Some arr1, Some arr2 -> composable' arr1 arr2
-
+  | Some c1, Some c2 ->
+      composable' (get_data c1) (get_data c2)
 
 let f (#a: Type) : a & perm -> a & perm -> a & perm =
   fun x y -> (fst x, (sum_perm (snd x) (snd y)))
@@ -55,7 +60,9 @@ let op (#a: Type)
   = match arr1, arr2 with
   | None, f
   | f, None -> f
-  | Some arr1, Some arr2 -> Some (op' arr1 arr2)
+  | Some c1, Some c2 ->
+      let new_data = op' (get_data c1) (get_data c2) in
+      Some (mk_content new_data)
 
 let pcm_array' (#a: Type) : pcm' (array a) = {
   composable = composable;
@@ -69,7 +76,9 @@ let lem_commutative (#a: Type)
   = match arr1, arr2 with
   | None, _
   | _, None -> ()
-  | Some s1, Some s2 ->
+  | Some c1, Some c2 ->
+    let s1 = get_data c1 in
+    let s2 = get_data c2 in
     assert (
        forall i. (i <= 0 /\ i < length s1) ==>
        (let x = index s1 i in
@@ -100,9 +109,9 @@ let lem_assoc_l_eq (#a: Type)
   (ensures
     op arr1 (op arr2 arr3) == op (op arr1 arr2) arr3)
   =
-  let s1 = Some?.v arr1 in
-  let s2 = Some?.v arr2 in
-  let s3 = Some?.v arr3 in
+  let s1 = get_data (Some?.v arr1) in
+  let s2 = get_data (Some?.v arr2) in
+  let s3 = get_data (Some?.v arr3) in
   assert (
     forall i. (i <= 0 /\ i < length s1) ==>
     (let x = index s1 i in
@@ -178,12 +187,12 @@ let lem_assoc_l_aux3 (#a: Type)
     /\ composable (op arr1 arr2) arr3
   )
   =
-  let s1 = Some?.v arr1 in
-  let s2 = Some?.v arr2 in
-  let s3 = Some?.v arr3 in
+  let s1 = get_data (Some?.v arr1) in
+  let s2 = get_data (Some?.v arr2) in
+  let s3 = get_data (Some?.v arr3) in
   let arr23 = op arr2 arr3 in
   assert (Some? arr23);
-  let s23 = Some?.v arr23 in
+  let s23 = get_data (Some?.v arr23) in
 
   assert (length s2 == length s3);
   assert (length s1 == length s23);
@@ -192,21 +201,21 @@ let lem_assoc_l_aux3 (#a: Type)
   assert (length s1 == length s2);
   Classical.forall_intro (
     Classical.move_requires (
-    lem_assoc_l_aux1 s1 s2 s3 s23
+      lem_assoc_l_aux1 s1 s2 s3 s23
     )
   );
   assert (composable arr1 arr2);
 
   let arr12 = op arr1 arr2 in
   assert (Some? arr12);
-  let s12 = Some?.v arr12 in
+  let s12 = get_data (Some?.v arr12) in
   map_seq2_len f s1 s2;
   assert (length s1 == length s2);
   Classical.forall_intro (
     Classical.move_requires (
-    lem_assoc_l_aux2 s1 s2 s3 s23 s12
-  )
-);
+      lem_assoc_l_aux2 s1 s2 s3 s23 s12
+    )
+  );
   ()
 
 let lem_assoc (#a: Type)
@@ -267,5 +276,21 @@ let pcm_array (#a: Type) : pcm (array a) = {
   refine = (fun _ -> True);
 }
 
-let ref a = Mem.ref (array a) pcm_array
+let array_ref a = Mem.ref (array a) pcm_array
+let null #a = Mem.null #(array a) #pcm_array
+let is_null #a r = Mem.is_null #(array a) #pcm_array r
 
+let perm_ok p : prop = (p.v <=. one == true) /\ True
+
+let apply (#a: Type) (s: seq (a & perm)) (p: perm) : seq (a & perm)
+  =
+  let s, _ = unzip s in
+  map_seq (fun x -> x, p) s
+
+// seq (a & perm) or seq a & seq perm?
+// tentative
+let pts_to_raw_sl (#a: Type)
+  (r: array_ref a) (p: perm) (v: content a) : Mem.slprop
+  =
+  let array_with_perm = apply (get_data v) p in
+  Mem.pts_to r (Some (mk_content array_with_perm))
