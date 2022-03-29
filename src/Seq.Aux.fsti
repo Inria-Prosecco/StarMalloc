@@ -55,3 +55,19 @@ val map_seq2_assoc (#a: Type)
     map_seq2 f (map_seq2 f s1 s2) s3
  == map_seq2 f s1 (map_seq2 f s2 s3)
   ))
+
+val unzip (#a #b: Type) (s: Seq.seq (a & b))
+  : Tot (Seq.seq a & Seq.seq b)
+val unzip_len (#a #b: Type) (s: Seq.seq (a & b))
+  : Lemma
+  (ensures Seq.length (fst (unzip s)) == Seq.length (snd (unzip s)) /\
+  Seq.length (fst (unzip s)) == Seq.length s)
+
+val zip (#a #b: Type)
+  (s1: Seq.seq a) (s2: Seq.seq b{Seq.length s1 = Seq.length s2})
+  : Tot (Seq.seq (a & b))
+val zip_len (#a #b: Type)
+  (s1: Seq.seq a) (s2: Seq.seq b{Seq.length s1 = Seq.length s2})
+  : Lemma
+  (ensures Seq.length (zip s1 s2) == Seq.length s1 /\
+  Seq.length (zip s1 s2) == Seq.length s2)

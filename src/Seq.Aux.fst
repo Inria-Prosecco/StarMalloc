@@ -85,3 +85,26 @@ let rec map_seq2_assoc #a f s1 s2 s3
     map_seq2_len f s2 s3;
     map_seq2_assoc f (Seq.tail s1) (Seq.tail s2) (Seq.tail s3)
   end
+
+let rec unzip #a #b s
+  : Tot (Seq.seq a & Seq.seq b)
+  (decreases Seq.length s) =
+  if Seq.length s = 0
+  then Seq.empty, Seq.empty
+  else let hd, tl = Seq.head s, Seq.tail s in
+       let s1, s2 = unzip tl in
+       Seq.cons (fst hd) s1, Seq.cons (snd hd) s2
+
+let rec unzip_len #a #b s
+  : Lemma
+  (ensures Seq.length (fst (unzip s)) == Seq.length (snd (unzip s)) /\
+  Seq.length (fst (unzip s)) == Seq.length s)
+  (decreases Seq.length s)
+  = if Seq.length s = 0
+    then ()
+    else unzip_len (Seq.tail s)
+
+let zip #a #b s1 s2
+  = map_seq2 #a #b #(a & b) (fun x y -> (x, y)) s1 s2
+let zip_len #a #b s1 s2
+  = map_seq2_len (fun x y -> (x, y)) s1 s2
