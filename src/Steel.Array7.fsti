@@ -15,16 +15,24 @@ open FStar.Seq
 open Seq.Aux
 
 noeq type content (a: Type0) = {
-  //size: nat;
-  //i1: nat;
-  //i2: nat;
-  data: seq (a & perm);
+  size: nat;
+  i1: nat;
+  i2: nat;
+  data: d:(seq (a & perm)){length d == size};
 }
 
-let mk_content (#a: Type0) (data: seq (a & perm)) : content a
-  = { data }
+let mk_content (#a: Type0)
+  (size i1 i2: nat) (data:seq (a & perm){length data == size}) : content a
+  = { size; i1; i2; data }
 
-let get_data (#a: Type0) (content: content a) = content.data
+let get_data (#a: Type0) (content: content a) : seq (a & perm)
+  = content.data
+let get_size (#a: Type0) (content: content a) : nat
+  = content.size
+let get_i1 (#a: Type0) (content: content a) : nat
+  = content.i1
+let get_i2 (#a: Type0) (content: content a) : nat
+  = content.i2
 
 let array (a: Type0) = option (content a)
 
@@ -44,6 +52,9 @@ let composable (#a: Type) : symrel (array a)
   | None, _
   | _,  None -> True
   | Some c1, Some c2 ->
+      get_size c1 == get_size c2 /\
+      get_i1 c1 == get_i1 c2 /\
+      get_i2 c1 == get_i2 c2 /\
       composable' (get_data c1) (get_data c2)
 
 let f (#a: Type) : a & perm -> a & perm -> a & perm =
@@ -51,8 +62,10 @@ let f (#a: Type) : a & perm -> a & perm -> a & perm =
 
 let op' (#a: Type)
   (s1: seq (a & perm)) (s2: seq (a & perm){length s1 == length s2})
-  : seq (a & perm)
-  = map_seq2 f s1 s2
+  : (r:seq (a & perm){length r == length s1})
+  =
+  map_seq2_len f s1 s2;
+  map_seq2 f s1 s2
 
 let op (#a: Type)
   (arr1: array a) (arr2: array a {composable arr1 arr2})
@@ -62,7 +75,9 @@ let op (#a: Type)
   | f, None -> f
   | Some c1, Some c2 ->
       let new_data = op' (get_data c1) (get_data c2) in
-      Some (mk_content new_data)
+      let new_content = mk_content
+        (get_size c1) (get_i1 c1) (get_i2 c1) new_data in
+      Some new_content
 
 let pcm_array' (#a: Type) : pcm' (array a) = {
   composable = composable;
@@ -282,10 +297,13 @@ let is_null #a r = Mem.is_null #(array a) #pcm_array r
 
 let perm_ok p : prop = (p.v <=. one == true) /\ True
 
-let apply (#a: Type) (s: seq (a & perm)) (p: perm) : seq (a & perm)
+let apply (#a: Type) (s: seq (a & perm)) (p: perm)
+  : (r:seq (a & perm){length r == length s})
   =
-  let s, _ = unzip s in
-  map_seq (fun x -> x, p) s
+  let s', _ = unzip s in
+  unzip_len s;
+  map_seq_len (fun x -> x, p) s';
+  map_seq (fun x -> x, p) s'
 
 // seq (a & perm) or seq a & seq perm?
 // tentative
@@ -293,4 +311,5 @@ let pts_to_raw_sl (#a: Type)
   (r: array_ref a) (p: perm) (v: content a) : Mem.slprop
   =
   let array_with_perm = apply (get_data v) p in
-  Mem.pts_to r (Some (mk_content array_with_perm))
+  let new_content = mk_content (get_size v) 0 0 array_with_perm in
+  Mem.pts_to r (Some new_content)
