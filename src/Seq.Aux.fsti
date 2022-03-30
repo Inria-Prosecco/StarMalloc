@@ -62,6 +62,15 @@ val unzip_len (#a #b: Type) (s: Seq.seq (a & b))
   : Lemma
   (ensures Seq.length (fst (unzip s)) == Seq.length (snd (unzip s)) /\
   Seq.length (fst (unzip s)) == Seq.length s)
+val unzip_index (#a #b: Type) (s: Seq.seq (a & b))
+  (i: nat{i < Seq.length s})
+  : Lemma
+  (ensures (
+    unzip_len s;
+    let s1, s2 = unzip s in
+    Seq.index s i
+    == (Seq.index s1 i, Seq.index s2 i)
+  ))
 
 val zip (#a #b: Type)
   (s1: Seq.seq a) (s2: Seq.seq b{Seq.length s1 = Seq.length s2})
@@ -71,3 +80,12 @@ val zip_len (#a #b: Type)
   : Lemma
   (ensures Seq.length (zip s1 s2) == Seq.length s1 /\
   Seq.length (zip s1 s2) == Seq.length s2)
+val zip_index (#a #b: Type)
+  (s1:Seq.seq a) (s2:Seq.seq b{Seq.length s1 = Seq.length s2})
+  (i: nat{i < Seq.length s1})
+  : Lemma
+  (ensures (
+    zip_len s1 s2;
+    Seq.index (zip s1 s2) i
+    == (Seq.index s1 i, Seq.index s2 i)
+  ))
