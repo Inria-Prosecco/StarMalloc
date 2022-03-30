@@ -385,7 +385,9 @@ let pts_to_ref_injective
   : Lemma
     (requires
       Mem.interp (pts_to_sl r v0 `Mem.star` pts_to_sl r v1) m)
-    (ensures v0 == v1)
+    (ensures (
+      fst (unzip (get_data v0)) == fst (unzip (get_data v1))
+    ))
   = let open Steel.Memory in
     abcd_acbd (hp_of (pts_to_raw r v0))
               (pure (perm_ok v0))
