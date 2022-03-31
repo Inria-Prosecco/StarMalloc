@@ -15,19 +15,35 @@ open FStar.Seq
 open Seq.Aux
 
 (**
-First step : seq (a & perm) pcm
+First step : lseq a n & lseq perm n PCM
+  [ok] - unwrapped PCM
+  [ok] - perm -> option perm
 Second step : slprop on top of it
 Third step : vprop on top of it, introducing idx1/idx2
 **)
 
 (** First step **)
 
+// seems a reasonable way to reason about null permissions
+let perm = option perm
+
+let sum_perm_opt (p1 p2: perm) : perm
+  = match p1, p2 with
+  | None, p
+  | p, None -> p
+  | Some p1, Some p2 -> Some (sum_perm p1 p2)
+
+let perm_ok_elem (p: perm)
+  = match p with
+  | None -> true
+  | Some p -> p.v <=. one
+
 let content (a: Type u#1) (#n: nat): Type u#1 = lseq a n & lseq perm n
 
 let array (a: Type u#1) (#n: nat): Type u#1 = option (content a #n)
 
 let comp_prop (#a: Type) (v1 v2: a) (p1 p2: perm)
-  = v1 == v2 /\ (sum_perm p1 p2).v <=. one
+  = v1 == v2 /\ perm_ok_elem (sum_perm_opt p1 p2)
 
 let composable' (#a: Type) (#n: nat): symrel (content a #n)
   = fun (arr1 arr2: content a #n) ->
@@ -47,7 +63,7 @@ let composable (#a: Type) (#n: nat): symrel (array a)
 let f1 (#a: Type) : a -> a -> a
   = fun x y -> x
 let f2 : perm -> perm -> perm
-  = fun x y -> sum_perm x y
+  = fun x y -> sum_perm_opt x y
 
 let f (#a: Type) : a & perm -> a & perm -> a & perm =
   fun x y -> f1 (fst x) (fst y), f2 (snd x) (snd y)
@@ -270,11 +286,9 @@ let array_ref (a: Type u#1) (#n: nat) : Type u#0
 let null #a #n = Mem.null #(array a #n) #pcm_array
 let is_null #a #n r = Mem.is_null #(array a #n) #pcm_array r
 
-let perm_ok_elem p : prop = (p.v <=. one == true) /\ True
-
 let perm_ok #n (s: lseq perm n) : prop
   =
-  forall i. ((index s i).v <=. one == true)
+  forall i. perm_ok_elem (index s i)
 
 // deprecated
 let apply (#a: Type u#1) (s: seq (a & perm)) (p: perm)
