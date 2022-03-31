@@ -89,3 +89,19 @@ val zip_index (#a #b: Type)
     Seq.index (zip s1 s2) i
     == (Seq.index s1 i, Seq.index s2 i)
   ))
+
+val unzip_zip_id (#a #b: Type)
+  (s1:Seq.seq a) (s2:Seq.seq b{Seq.length s1 = Seq.length s2})
+  : Lemma
+  (ensures (
+    zip_len s1 s2;
+    fst (unzip (zip s1 s2)) == s1 /\
+    snd (unzip (zip s1 s2)) == s2
+  ))
+val zip_unzip_id (#a #b: Type)
+  (s: Seq.seq (a & b))
+  : Lemma
+  (ensures (
+    unzip_len s;
+    zip (fst (unzip s)) (snd (unzip s)) == s
+  ))

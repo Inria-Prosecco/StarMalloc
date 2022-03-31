@@ -104,7 +104,48 @@ let rec unzip_len #a #b s
     then ()
     else unzip_len (Seq.tail s)
 
+let rec unzip_index #a #b s i
+  : Lemma
+  (ensures (
+    unzip_len s;
+    Seq.index s i
+== (Seq.index (fst (unzip s)) i, Seq.index (snd (unzip s)) i)
+  ))
+  (decreases i)
+  =
+  unzip_len s;
+  if Seq.length s = 0
+  then ()
+  else begin
+    if i = 0
+    then ()
+    else unzip_index (Seq.tail s) (i-1)
+  end
+
 let zip #a #b s1 s2
   = map_seq2 #a #b #(a & b) (fun x y -> (x, y)) s1 s2
 let zip_len #a #b s1 s2
   = map_seq2_len (fun x y -> (x, y)) s1 s2
+let zip_index #a #b s1 s2 i
+  = map_seq2_index (fun x y -> (x, y)) s1 s2 i
+
+let unzip_zip_id #a #b s1 s2 =
+  zip_len s1 s2;
+  unzip_len (zip s1 s2);
+  Classical.forall_intro (zip_index s1 s2);
+  Classical.forall_intro (unzip_index (zip s1 s2));
+  let s1', s2' = unzip (zip s1 s2) in
+  Seq.lemma_eq_intro s1 s1';
+  Seq.lemma_eq_intro s2 s2';
+  Seq.lemma_eq_elim s1 s1';
+  Seq.lemma_eq_elim s2 s2'
+
+let zip_unzip_id #a #b s =
+  unzip_len s;
+  zip_len (fst (unzip s)) (snd (unzip s));
+  Classical.forall_intro (unzip_index s);
+  Classical.forall_intro (
+    zip_index (fst (unzip s)) (snd (unzip s))
+  );
+  let s' = zip (fst (unzip s)) (snd (unzip s)) in
+  Seq.lemma_eq_intro s s'
