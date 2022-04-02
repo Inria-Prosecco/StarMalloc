@@ -1,12 +1,9 @@
-module Steel.Array9
+module Steel.HigherArray
 
 open FStar.Ghost
-open Steel.Effect.Atomic
-open Steel.Effect
 open FStar.Real
 open FStar.PCM
 open Steel.FractionalPermission
-module RP = Steel.PCMReference
 module Mem = Steel.Memory
 
 #set-options "--ide_id_info_off"
@@ -19,6 +16,8 @@ open Seq.Aux
   [ok] - unwrapped PCM
   [ok] - perm -> option perm
 [ok] Second step : slprop on top of it
+-- separation between HigherArray and Array,
+  due to selectors universes restriction
 [wip] Third step : vprop on top of it, introducing idx1/idx2
 **)
 
