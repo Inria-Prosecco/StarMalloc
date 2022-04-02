@@ -578,11 +578,12 @@ let pts_to_sl (#a: Type)
   (i2: nat{i1 < i2 /\ i2 <= n})
   (p: lseq perm n)
   =
-  fun (x: lseq (option a) (i2 - i1 + 1)) ->
+  fun (x: lseq a (i2 - i1 + 1)) ->
   Mem.h_exists (
     fun (y: lseq (option a) n{forall (i:nat{i < n}).
       Some? (index p i) = Some? (index y i)}) ->
-    pts_to_sl' n r i1 i2 p y x
+    map_seq_len (fun e -> Some e) x;
+    pts_to_sl' n r i1 i2 p y (map_seq (fun e -> Some e) x)
   )
 
 let pts_to_ref_injective (#a: Type u#1) (#n: nat)
@@ -590,7 +591,7 @@ let pts_to_ref_injective (#a: Type u#1) (#n: nat)
   (i1: nat)
   (i2: nat{i1 < i2 /\ i2 <= n})
   (p1 p2: lseq perm n)
-  (subv1 subv2: lseq (option a) (i2 - i1 + 1))
+  (subv1 subv2: lseq a (i2 - i1 + 1))
   (m:Mem.mem)
   : Lemma
     (requires Mem.interp (
@@ -601,48 +602,55 @@ let pts_to_ref_injective (#a: Type u#1) (#n: nat)
   let psl1 = pts_to_sl n r i1 i2 p1 subv1 in
   let psl2 = pts_to_sl n r i1 i2 p2 subv2 in
   let m1, m2 = Mem.id_elim_star psl1 psl2 m in
+  map_seq_len (fun e -> Some e) subv1;
+  map_seq_len (fun e -> Some e) subv2;
+  let subv1' = map_seq (fun e -> Some e) subv1 in
+  let subv2' = map_seq (fun e -> Some e) subv2 in
   let v1 : (y: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p1 i) = Some? (index y i)})
     = Mem.id_elim_exists
-    (fun x -> pts_to_sl' n r i1 i2 p1 x subv1) m1 in
+    (fun x -> pts_to_sl' n r i1 i2 p1 x subv1') m1 in
   let v2 : (y: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p2 i) = Some? (index y i)})
     = Mem.id_elim_exists
-    (fun x -> pts_to_sl' n r i1 i2 p2 x subv2) m2 in
-  let psl1' = pts_to_sl' n r i1 i2 p1 v1 subv1 in
-  let psl2' = pts_to_sl' n r i1 i2 p2 v2 subv2 in
+    (fun x -> pts_to_sl' n r i1 i2 p2 x subv2') m2 in
+  let psl1' = pts_to_sl' n r i1 i2 p1 v1 subv1' in
+  let psl2' = pts_to_sl' n r i1 i2 p2 v2 subv2' in
   assert (Mem.interp psl1' m1);
   assert (Mem.interp psl2' m2);
   assert (Mem.disjoint m1 m2);
   Mem.intro_star psl1' psl2' m1 m2;
-  pts_to_ref_injective' r i1 i2 p1 p2 v1 v2 subv1 subv2 m
+  pts_to_ref_injective' r i1 i2 p1 p2 v1 v2 subv1' subv2' m;
+  assert (subv1' == subv2');
+  Classical.forall_intro (map_seq_index (fun e -> Some e) subv1);
+  Classical.forall_intro (map_seq_index (fun e -> Some e) subv2);
+  Seq.lemma_eq_intro subv1 subv2;
+  assert (subv1 == subv2)
 
 let pts_to_not_null (#a:Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 < i2 /\ i2 <= n})
   (p: lseq perm n)
-  (subv: lseq (option a) (i2 - i1 + 1))
+  (subv: lseq a (i2 - i1 + 1))
   (m:Mem.mem)
   : Lemma (requires Mem.interp (pts_to_sl n r i1 i2 p subv) m)
           (ensures r =!= null)
   =
+  map_seq_len (fun e -> Some e) subv;
+  let subv' = map_seq (fun e -> Some e) subv in
   let v : (y: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index y i)})
     = Mem.id_elim_exists
-    (fun x -> pts_to_sl' n r i1 i2 p x subv) m in
-  pts_to_not_null' r i1 i2 p v subv m
+    (fun x -> pts_to_sl' n r i1 i2 p x subv') m in
+  pts_to_not_null' r i1 i2 p v subv' m
 
 let aux_sl (#a: Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 < i2 /\ i2 <= n})
   (p: lseq perm n)
-  //(v1: lseq (option a) n{forall (i:nat{i < n}).
-    //Some? (index p i) = Some? (index v1 i)})
-  //(v2: lseq (option a) n{forall (i:nat{i < n}).
-    //Some? (index p i) = Some? (index v2 i)})
-  (subv1 subv2: lseq (option a) (i2 - i1 + 1))
+  (subv1 subv2: lseq a (i2 - i1 + 1))
   (m:Mem.mem)
   : Lemma
   (requires
@@ -651,15 +659,22 @@ let aux_sl (#a: Type u#1) (#n: nat)
   )
   (ensures subv1 == subv2)
   =
+  map_seq_len (fun e -> Some e) subv1;
+  map_seq_len (fun e -> Some e) subv2;
+  let subv1' = map_seq (fun e -> Some e) subv1 in
+  let subv2' = map_seq (fun e -> Some e) subv2 in
   let v1 : (y: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index y i)})
     = Mem.id_elim_exists
-    (fun x -> pts_to_sl' n r i1 i2 p x subv1) m in
+    (fun x -> pts_to_sl' n r i1 i2 p x subv1') m in
   let v2 : (y: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index y i)})
     = Mem.id_elim_exists
-    (fun x -> pts_to_sl' n r i1 i2 p x subv2) m in
-  aux_sl' r i1 i2 p v1 v2 subv1 subv2 m
+    (fun x -> pts_to_sl' n r i1 i2 p x subv2') m in
+  aux_sl' r i1 i2 p v1 v2 subv1' subv2' m;
+  Classical.forall_intro (map_seq_index (fun e -> Some e) subv1);
+  Classical.forall_intro (map_seq_index (fun e -> Some e) subv2);
+  Seq.lemma_eq_intro subv1 subv2
 
 // 1) better definition
 // 2) a pts_to wrapper? an unwrapped PCM based on the wrapped one?
@@ -707,3 +722,13 @@ let pts_to_frame_mon (#a:Type) (#n: nat)
       pts_to_sl n r i1 i2 p
     ))
   = pts_to_witinv r i1 i2 p
+
+[@@ expect_failure]
+let array_sel' (#a:Type) (#n: nat)
+  (r:array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 < n})
+  (p: lseq perm n)
+  : selector' (lseq a (i2 - i1 + 1)) (pts_to_sl n r i1 i2 p)
+  =
+  fun h -> Mem.id_elim_exists (pts_to_sl n r i1 i2 p)
