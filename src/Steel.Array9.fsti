@@ -15,11 +15,11 @@ open FStar.Seq
 open Seq.Aux
 
 (**
-First step : lseq a n & lseq perm n PCM
+[ok] First step : lseq a n & lseq perm n PCM
   [ok] - unwrapped PCM
   [ok] - perm -> option perm
-Second step : slprop on top of it
-Third step : vprop on top of it, introducing idx1/idx2
+[ok] Second step : slprop on top of it
+[wip] Third step : vprop on top of it, introducing idx1/idx2
 **)
 
 (** First step **)
@@ -38,12 +38,18 @@ let perm_ok_elem (p: perm)
   | None -> true
   | Some p -> p.v <=. one
 
-let content (a: Type u#1) (#n: nat): Type u#1 = lseq a n & lseq perm n
+let content (a: Type u#1) (#n: nat): Type u#1
+  = x:(lseq (option a) n & lseq perm n){
+    forall (i:nat{i < n}).
+      Some? (index (fst x) i) = Some? (index (snd x) i)
+  }
 
 let array (a: Type u#1) (#n: nat): Type u#1 = option (content a #n)
 
-let comp_prop (#a: Type) (v1 v2: a) (p1 p2: perm)
-  = v1 == v2 /\ perm_ok_elem (sum_perm_opt p1 p2)
+let comp_prop (#a: Type) (v1 v2: option a) (p1 p2: perm)
+  =
+  ((Some? p1 /\ Some? p2) ==> v1 == v2) /\
+  perm_ok_elem (sum_perm_opt p1 p2)
 
 let composable' (#a: Type) (#n: nat): symrel (content a #n)
   = fun (arr1 arr2: content a #n) ->
@@ -60,22 +66,44 @@ let composable (#a: Type) (#n: nat): symrel (array a)
   | _,  None -> True
   | Some c1, Some c2 -> composable' #a #n c1 c2
 
-let f1 (#a: Type) : a -> a -> a
-  = fun x y -> x
+let f1 (#a: Type) : option a -> option a -> option a
+  = fun v1 v2 -> match (v1, v2) with
+  | v, None
+  | None, v -> v
+  | Some _, Some _ -> v1
+
 let f2 : perm -> perm -> perm
   = fun x y -> sum_perm_opt x y
 
-let f (#a: Type) : a & perm -> a & perm -> a & perm =
-  fun x y -> f1 (fst x) (fst y), f2 (snd x) (snd y)
+//let f (#a: Type) : a & perm -> a & perm -> a & perm =
+//  fun x y -> f1 (fst x) (fst y), f2 (snd x) (snd y)
+
+//let l2 (p1 p2: perm)
+//  : Lemma
+//  (Some? (f2 p1 p2) = (Some? p1 || Some? p2))
+//  = ()
+//
+//let l1 (#a: Type) (v1 v2: option a)
+//  : Lemma
+//  (Some? (f1 v1 v2) = (Some? v1 || Some? v2))
+//  = ()
+//
+//let l (#a: Type) (v1 v2: option a) (p1 p2: perm)
+//  : Lemma
+//  (requires (Some? v1 = Some? p1) /\ (Some? v2 = Some? p2))
+//  (ensures Some? (f1 v1 v2) = Some? (f2 p1 p2))
+//  = ()
 
 let op' (#a: Type) (#n: nat)
-  (s1: content a #n) (s2: content a #n)
+  (s1 s2: content a #n)
   : content a #n
   =
   map_seq2_len f1 (fst s1) (fst s2);
   map_seq2_len f2 (snd s1) (snd s2);
   let x1 = map_seq2 f1 (fst s1) (fst s2) in
   let x2 = map_seq2 f2 (snd s1) (snd s2) in
+  Classical.forall_intro (map_seq2_index f1 (fst s1) (fst s2));
+  Classical.forall_intro (map_seq2_index f2 (snd s1) (snd s2));
   x1, x2
 
 let op (#a: Type) (#n: nat)
@@ -145,10 +173,12 @@ let lem_assoc_l_aux1 (#a: Type) (#n: nat)
       (index (fst s1) i) (index (fst s2) i)
       (index (snd s1) i) (index (snd s2) i))
   =
-  assert (fst s23 == map_seq2 f1 (fst s2) (fst s3));
-  assert (snd s23 == map_seq2 f2 (snd s2) (snd s3));
+  //assert (fst s23 == map_seq2 f1 (fst s2) (fst s3));
   Classical.forall_intro (map_seq2_index f1 (fst s2) (fst s3));
+  //assert (x23 == f1 x2 x3);
+  //assert (snd s23 == map_seq2 f2 (snd s2) (snd s3));
   Classical.forall_intro (map_seq2_index f2 (snd s2) (snd s3));
+  //assert (y23 == f2 y2 y3);
   ()
 
 let lem_assoc_l_aux2 (#a: Type) (#n: nat)
@@ -176,14 +206,19 @@ let lem_assoc_l_aux2 (#a: Type) (#n: nat)
       (index (snd s12) i) (index (snd s3) i)
   )
   =
-  assert (fst s12 == map_seq2 f1 (fst s1) (fst s2));
-  assert (snd s12 == map_seq2 f2 (snd s1) (snd s2));
-  assert (fst s23 == map_seq2 f1 (fst s2) (fst s3));
-  assert (snd s23 == map_seq2 f2 (snd s2) (snd s3));
-  Classical.forall_intro (map_seq2_index f1 (fst s1) (fst s2));
-  Classical.forall_intro (map_seq2_index f2 (snd s1) (snd s2));
+  //assert (fst s23 == map_seq2 f1 (fst s2) (fst s3));
   Classical.forall_intro (map_seq2_index f1 (fst s2) (fst s3));
-  Classical.forall_intro (map_seq2_index f2 (snd s2) (snd s3))
+  //assert (x23 == f1 x2 x3);
+  //assert (snd s23 == map_seq2 f2 (snd s2) (snd s3));
+  Classical.forall_intro (map_seq2_index f2 (snd s2) (snd s3));
+  //assert (y23 == f2 y2 y3);
+  //assert (fst s12 == map_seq2 f1 (fst s1) (fst s2));
+  Classical.forall_intro (map_seq2_index f1 (fst s1) (fst s2));
+  //assert (x12 == f1 x1 x2);
+  //assert (snd s12 == map_seq2 f2 (snd s1) (snd s2));
+  Classical.forall_intro (map_seq2_index f2 (snd s1) (snd s2));
+  //assert (y12 == f2 y1 y2);
+  ()
 
 let lem_assoc_l_aux3 (#a: Type) (#n: nat)
   (arr1 arr2 arr3: array a #n)
@@ -208,7 +243,7 @@ let lem_assoc_l_aux3 (#a: Type) (#n: nat)
   map_seq2_len f2 (snd s2) (snd s3);
   Classical.forall_intro (
     Classical.move_requires (
-      lem_assoc_l_aux1 #a #n s1 s2 s3 s23
+      lem_assoc_l_aux1 s1 s2 s3 s23
     )
   );
   let arr12 = op arr1 arr2 in
@@ -239,8 +274,7 @@ let lem_assoc (#a: Type) (#n: nat)
   if None? arr2 then () else
   if None? arr3 then () else begin
   lem_assoc_l_aux3 arr1 arr2 arr3;
-  lem_assoc_l_eq arr1 arr2 arr3;
-  ()
+  lem_assoc_l_eq arr1 arr2 arr3
   end
 
 let lem_assoc_l (#a: Type) (#n: nat)
@@ -290,84 +324,138 @@ let perm_ok #n (s: lseq perm n) : prop
   =
   forall i. perm_ok_elem (index s i)
 
-// deprecated
-let apply (#a: Type u#1) (s: seq (a & perm)) (p: perm)
-  : (r:seq (a & perm){length r == length s})
-  =
-  let s', _ = unzip s in
-  unzip_len s;
-  map_seq_len (fun x -> x, p) s';
-  map_seq (fun x -> x, p) s'
+(** Second step = void? **)
 
-// seq (a & perm) or seq a & seq perm?
-// tentative
-//let pts_to_raw_sl_extperm (#a: Type u#1)
-//  (r: array_ref a) (v: content a)
-//  : Mem.slprop u#1
-//  =
-//  let array_with_perm = apply (get_data v) p in
-//  //let new_content = mk_content (get_size v) 0 0 array_with_perm in
-//  let new_content = { v with data = array_with_perm } in
-//  Mem.pts_to r (Some new_content)
+(** Third step **)
 
-// perm is bundled
-let pts_to_raw_sl (#a: Type) (#n: nat)
+type set = s:(nat & nat){fst s < snd s}
+
+let is_in (pos: nat) (s: set) : bool
+  = fst s <= pos && pos < snd s
+
+let zeroed (bounds: set) (s: seq perm)
+  : prop
+  = forall (i:nat{i < length s}).
+      Some? (index s i) = is_in i (bounds)
+
+let pts_to_sl' (#a: Type)
+  (n: nat)
   (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
   (p: lseq perm n)
-  (v: lseq a n)
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq (option a) (i2 - i1 + 1))
   : Mem.slprop
-  = Mem.pts_to r (Some (v, p))
-
-let pts_to_raw (#a: Type) (#n: nat)
-  (r: array_ref a #n)
-  (p: lseq perm n)
-  (v: lseq a n)
-  : vprop
-  //= to_vprop (Mem.pts_to r (Some v))
-  = to_vprop (pts_to_raw_sl r p v)
-
-[@@ __reduce__]
-let pts_to' (#a: Type u#1) (#n: nat)
-  (r: array_ref a)
-  (p: lseq perm n)
-  (v: lseq a n)
-  : vprop
   =
-  pts_to_raw r p v `star` pure (perm_ok p)
+  Mem.pts_to r (Some (v, p)) `Mem.star`
+  Mem.pure (perm_ok p) `Mem.star`
+  Mem.pure (zeroed (i1, i2) p) `Mem.star`
+  Mem.pure (Seq.slice v i1 i2 == subv)
 
-let pts_to_sl #a #n r p v
-  = hp_of (pts_to' #a #n r p v)
+let pts_to_ref_injective' (#a: Type u#1) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
+  (p1 p2: lseq perm n)
+  (v1: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p1 i) = Some? (index v1 i)})
+  (v2: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p2 i) = Some? (index v2 i)})
+  (subv1 subv2: lseq (option a) (i2 - i1 + 1))
+  (m:Mem.mem)
+  : Lemma
+    (requires Mem.interp (
+      pts_to_sl' n r i1 i2 p1 v1 subv1 `Mem.star`
+      pts_to_sl' n r i1 i2 p2 v2 subv2) m)
+    (ensures subv1 == subv2)
+  =
+  let pa1 = Mem.pts_to r (Some (v1, p1)) in
+  let pb1 = Mem.pure (perm_ok p1) in
+  let pc1 = Mem.pure (zeroed (i1, i2) p1) in
+  let pd1 = Mem.pure (Seq.slice v1 i1 i2 == subv1) in
+  let pa2 = Mem.pts_to r (Some (v2, p2)) in
+  let pb2 = Mem.pure (perm_ok p2) in
+  let pc2 = Mem.pure (zeroed (i1, i2) p2) in
+  let pd2 = Mem.pure (Seq.slice v2 i1 i2 == subv2) in
+  let pab1 = pa1 `Mem.star` pb1 in
+  let pabc1 = pa1 `Mem.star` pb1 `Mem.star` pc1 in
+  let pab2 = pa2 `Mem.star` pb2 in
+  let pabc2 = pa2 `Mem.star` pb2 `Mem.star` pc2 in
+  let pabcd1 = pa1 `Mem.star` pb1 `Mem.star` pc1 `Mem.star` pd1 in
+  let pabcd2 = pa2 `Mem.star` pb2 `Mem.star` pc2 `Mem.star` pd2 in
+  assert (Mem.interp (pabcd1 `Mem.star` pabcd2) m);
+  let m1, m2 = Mem.id_elim_star pabcd1 pabcd2 m in
+  assert (Mem.disjoint m1 m2);
+  assert (Mem.interp (
+    ((pa1 `Mem.star` pb1) `Mem.star` pc1) `Mem.star` pd1
+  ) m1);
+  let mabc1, md1 = Mem.id_elim_star pabc1 pd1 m1 in
+  let mab1, mc1 = Mem.id_elim_star pab1 pc1 mabc1 in
+  let ma1, mb1 = Mem.id_elim_star pa1 pb1 mab1 in
+  let mabc2, md2 = Mem.id_elim_star pabc2 pd2 m2 in
+  let mab2, mc2 = Mem.id_elim_star pab2 pc2 mabc2 in
+  let ma2, mb2 = Mem.id_elim_star pa2 pb2 mab2 in
 
-let abcd_acbd (a b c d:Mem.slprop)
-  : Lemma (Mem.(((a `star` b) `star` (c `star` d)) `equiv`
-           ((a `star` c) `star` (b `star` d))))
-  = let open Steel.Memory in
-    calc (equiv) {
-    ((a `star` b) `star` (c `star` d));
-      (equiv) { star_associative a b (c `star` d) }
-    ((a `star` (b `star` (c `star` d))));
-      (equiv) { star_associative b c d;
-                star_congruence a (b `star` (c `star` d))
-                                a ((b `star` c) `star` d) }
-    (a `star` ((b `star` c) `star` d));
-      (equiv) { star_commutative  b c;
-                star_congruence (b `star` c) d (c `star` b) d;
-                star_congruence a ((b `star` c) `star` d)
-                                a ((c `star` b) `star` d) }
-    (a `star` ((c `star` b) `star` d));
-      (equiv) { star_associative c b d;
-                star_congruence a ((c `star` b) `star` d)
-                                a (c `star` (b `star` d)) }
-    (a `star` (c `star` (b `star` d)));
-      (equiv) { star_associative a c (b `star` d) }
-    ((a `star` c) `star` (b `star` d));
-   }
+  Mem.disjoint_join m2 mabc1 md1;
+  Mem.disjoint_join m2 mab1 mc1;
+  Mem.disjoint_join m2 ma1 mb1;
+  assert (Mem.disjoint ma1 m2);
+  Mem.disjoint_join ma1 mabc2 md2;
+  Mem.disjoint_join ma1 mab2 mc2;
+  Mem.disjoint_join ma1 ma2 mb2;
+  assert (Mem.disjoint ma1 ma2);
+
+  Mem.intro_star pa1 pa2 ma1 ma2;
+  let ma = Mem.join ma1 ma2 in
+  assert (Mem.interp (pa1 `Mem.star` pa2) ma);
+  Mem.pts_to_compatible r
+    (Some (v1, p1))
+    (Some (v2, p2))
+    ma;
+  assert (composable' (v1, p1) (v2, p2));
+  Mem.pure_interp (zeroed (i1, i2) p1) m;
+  Mem.pure_interp (zeroed (i1, i2) p2) m;
+  assert (forall (i:nat{i < n}).
+      Some? (index p1 i) = is_in i (i1, i2));
+  assert (forall (i:nat{i < n}).
+      Some? (index p2 i) = is_in i (i1, i2));
+  assert (forall (i:nat{i < n /\ i1 <= i /\ i < i2}).
+      Some? (index p1 i) = true);
+  assert (forall (i:nat{i < n /\ i1 <= i /\ i < i2}).
+      Some? (index p2 i) = true);
+  assert (forall (i:nat{i < n /\ i1 <= i /\ i < i2}).
+      index v1 i == index v2 i);
+  Mem.pure_interp (Seq.slice v1 i1 i2 == subv1) m;
+  Mem.pure_interp (Seq.slice v2 i1 i2 == subv2) m;
+  assert (subv1 == subv2);
+  ()
+
+let pts_to_not_null' (#a:Type u#1) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
+  (p: lseq perm n)
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq (option a) (i2 - i1 + 1))
+  (m:Mem.mem)
+  : Lemma (requires Mem.interp (pts_to_sl' n r i1 i2 p v subv) m)
+          (ensures r =!= null)
+  = Mem.pts_to_not_null r (Some (v, p)) m
 
 let composable_to_fst_eq (#a: Type u#1) (#n: nat)
   (s1 s2: content a #n)
+  (i1 i2: nat)
   : Lemma
-  (requires composable' s1 s2)
-  (ensures fst s1 == fst s2)
+  (requires
+    composable' s1 s2 /\
+    snd s1 == snd s2 /\
+    i1 < i2 /\ i2 < n /\
+    zeroed (i1, i2) (snd s1))
+  (ensures
+    Seq.slice (fst s1) i1 i2 == Seq.slice (fst s2) i1 i2)
   =
   assert (forall (i:nat{i < n}).
     index (fst s1) i == index (fst s2) i
@@ -376,96 +464,82 @@ let composable_to_fst_eq (#a: Type u#1) (#n: nat)
 
 let op_to_fst_eq (#a: Type u#1) (#n: nat)
   (s1 s2 s3: content a #n)
+  (i1 i2: nat)
   : Lemma
   (requires
     composable' s1 s2 /\
-    s3 == op' s1 s2)
-  (ensures fst s1 == fst s3)
+    s3 == op' s1 s2 /\
+    i1 < i2 /\ i2 < n /\
+    zeroed (i1, i2) (snd s1))
+  (ensures
+    Seq.slice (fst s1) i1 i2 == Seq.slice (fst s3) i1 i2)
   =
   Classical.forall_intro (map_seq2_index f1 (fst s1) (fst s2));
-  Seq.lemma_eq_elim (fst s1) (fst s3)
-
-let pts_to_ref_injective (#a: Type u#1) (#n: nat)
-  (r: array_ref a #n)
-  (p0 p1: lseq perm n)
-  (v0 v1: lseq a n)
-  (m:Mem.mem)
-  : Lemma
-    (requires Mem.interp (
-      pts_to_sl r p0 v0 `Mem.star` pts_to_sl r p1 v1) m)
-    (ensures v0 == v1)
-  = let open Steel.Memory in
-    abcd_acbd (hp_of (pts_to_raw r p0 v0))
-              (pure (perm_ok p0))
-              (hp_of (pts_to_raw r p1 v1))
-              (pure (perm_ok p1));
-    Mem.affine_star
-      (hp_of (pts_to_raw r p0 v0) `star` hp_of (pts_to_raw r p1 v1))
-      (pure (perm_ok p0) `star` pure (perm_ok p1)) m;
-    Mem.pts_to_compatible r (Some (v0, p0))
-                            (Some (v1, p1))
-                            m;
-    assert (composable' (v0, p0) (v1, p1));
-    composable_to_fst_eq (v0, p0) (v1, p1)
-
-let pts_to_not_null (#a:Type u#1) (#n: nat)
-                    (r: array_ref a #n)
-                    (p: lseq perm n)
-                    (v: lseq a n)
-                    (m:Mem.mem)
-  : Lemma (requires Mem.interp (pts_to_sl r p v) m)
-          (ensures r =!= null)
-  = Mem.affine_star
-      (hp_of (pts_to_raw r p v))
-      (Mem.pure (perm_ok p)) m;
-    Mem.pts_to_not_null r (Some (v, p)) m
+  Seq.lemma_eq_elim
+    (Seq.slice (fst s1) i1 i2)
+    (Seq.slice (fst s3) i1 i2)
 
 let aux' (#a: Type u#1) (#n: nat)
-  (x y f1 f2 z: array a #n)
+  (i1 i2: nat)
+  (x y u1 u2 z: array a #n)
   : Lemma
   (requires
     Some? x /\
     Some? y /\
-    composable x f1 /\
-    op f1 x == z /\
-    composable y f2 /\
-    op f2 y == z
+    snd (Some?.v x) == snd (Some?.v y) /\
+    composable x u1 /\
+    op u1 x == z /\
+    composable y u2 /\
+    op u2 y == z /\
+    i1 < i2 /\ i2 < n /\
+    zeroed (i1, i2) (snd (Some?.v x))
   )
-  (ensures fst (Some?.v x) == fst (Some?.v y))
+  (ensures (
+    Seq.slice (fst (Some?.v x)) i1 i2
+ == Seq.slice (fst (Some?.v y)) i1 i2))
   =
   assert (Some? z);
-  match (Some? f1, Some? f2) with
+  let x' = Some?.v x in
+  let y' = Some?.v y in
+  let z' = Some?.v z in
+  match (Some? u1, Some? u2) with
   | false, false -> ()
-  | true, false ->
-    assert (op f2 y == y);
-    assert (y == z);
-    composable_to_fst_eq (Some?.v x) (Some?.v f1);
-    op_to_fst_eq (Some?.v f1) (Some?.v x) (Some?.v z)
   | false, true ->
-    assert (op f1 x == x);
+    assert (op u1 x == x);
     assert (x == z);
-    composable_to_fst_eq (Some?.v y) (Some?.v f2);
-    op_to_fst_eq (Some?.v f2) (Some?.v y) (Some?.v z)
+    lem_commutative y u2;
+    op_to_fst_eq (Some?.v y) (Some?.v u2) (Some?.v z) i1 i2
+  | true, false ->
+    assert (op u2 y == y);
+    assert (y == z);
+    lem_commutative x u1;
+    op_to_fst_eq (Some?.v x) (Some?.v u1) (Some?.v z) i1 i2
   | true, true ->
-    composable_to_fst_eq (Some?.v x) (Some?.v f1);
-    composable_to_fst_eq (Some?.v y) (Some?.v f2);
-    op_to_fst_eq (Some?.v f1) (Some?.v x) (Some?.v z);
-    op_to_fst_eq (Some?.v f2) (Some?.v y) (Some?.v z)
+    lem_commutative y u2;
+    op_to_fst_eq (Some?.v y) (Some?.v u2) (Some?.v z) i1 i2;
+    lem_commutative x u1;
+    op_to_fst_eq (Some?.v x) (Some?.v u1) (Some?.v z) i1 i2
 
-let aux (#a: Type u#1) (#n: nat)
-  (r: array_ref a)
+let aux_sl' (#a: Type u#1) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
   (p: lseq perm n)
-  (x y: erased (lseq a n))
+  (v1: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v1 i)})
+  (v2: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v2 i)})
+  (subv1 subv2: lseq (option a) (i2 - i1 + 1))
   (m:Mem.mem)
   : Lemma
   (requires
-    Mem.interp (pts_to_sl r p x) m /\
-    Mem.interp (pts_to_sl r p y) m
+    Mem.interp (pts_to_sl' n r i1 i2 p v1 subv1) m /\
+    Mem.interp (pts_to_sl' n r i1 i2 p v2 subv2) m
   )
-  (ensures x == y)
+  (ensures subv1 == subv2)
   =
-  let c1 = Some (reveal x, p) in
-  let c2 = Some (reveal y, p) in
+  let c1 = Some (v1, p) in
+  let c2 = Some (v2, p) in
   Mem.pts_to_join r c1 c2 m;
   assert (joinable pcm_array c1 c2);
   assert (exists z.
@@ -489,20 +563,147 @@ let aux (#a: Type u#1) (#n: nat)
       op f2 c2 == z /\
       Some? z
   );
+  Mem.pure_interp (Seq.slice v1 i1 i2 == subv1) m;
+  Mem.pure_interp (Seq.slice v2 i1 i2 == subv2) m;
   Classical.forall_intro_3 (
     Classical.move_requires_3 (
-        aux' c1 c2
+      aux' i1 i2 c1 c2
     )
   )
+
+let pts_to_sl (#a: Type)
+  (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
+  (p: lseq perm n)
+  =
+  fun (x: lseq (option a) (i2 - i1 + 1)) ->
+  Mem.h_exists (
+    fun (y: lseq (option a) n{forall (i:nat{i < n}).
+      Some? (index p i) = Some? (index y i)}) ->
+    pts_to_sl' n r i1 i2 p y x
+  )
+
+let pts_to_ref_injective (#a: Type u#1) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
+  (p1 p2: lseq perm n)
+  (subv1 subv2: lseq (option a) (i2 - i1 + 1))
+  (m:Mem.mem)
+  : Lemma
+    (requires Mem.interp (
+      pts_to_sl n r i1 i2 p1 subv1 `Mem.star`
+      pts_to_sl n r i1 i2 p2 subv2) m)
+    (ensures subv1 == subv2)
+  =
+  let psl1 = pts_to_sl n r i1 i2 p1 subv1 in
+  let psl2 = pts_to_sl n r i1 i2 p2 subv2 in
+  let m1, m2 = Mem.id_elim_star psl1 psl2 m in
+  let v1 : (y: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p1 i) = Some? (index y i)})
+    = Mem.id_elim_exists
+    (fun x -> pts_to_sl' n r i1 i2 p1 x subv1) m1 in
+  let v2 : (y: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p2 i) = Some? (index y i)})
+    = Mem.id_elim_exists
+    (fun x -> pts_to_sl' n r i1 i2 p2 x subv2) m2 in
+  let psl1' = pts_to_sl' n r i1 i2 p1 v1 subv1 in
+  let psl2' = pts_to_sl' n r i1 i2 p2 v2 subv2 in
+  assert (Mem.interp psl1' m1);
+  assert (Mem.interp psl2' m2);
+  assert (Mem.disjoint m1 m2);
+  Mem.intro_star psl1' psl2' m1 m2;
+  pts_to_ref_injective' r i1 i2 p1 p2 v1 v2 subv1 subv2 m
+
+let pts_to_not_null (#a:Type u#1) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
+  (p: lseq perm n)
+  (subv: lseq (option a) (i2 - i1 + 1))
+  (m:Mem.mem)
+  : Lemma (requires Mem.interp (pts_to_sl n r i1 i2 p subv) m)
+          (ensures r =!= null)
+  =
+  let v : (y: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index y i)})
+    = Mem.id_elim_exists
+    (fun x -> pts_to_sl' n r i1 i2 p x subv) m in
+  pts_to_not_null' r i1 i2 p v subv m
+
+let aux_sl (#a: Type u#1) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
+  (p: lseq perm n)
+  //(v1: lseq (option a) n{forall (i:nat{i < n}).
+    //Some? (index p i) = Some? (index v1 i)})
+  //(v2: lseq (option a) n{forall (i:nat{i < n}).
+    //Some? (index p i) = Some? (index v2 i)})
+  (subv1 subv2: lseq (option a) (i2 - i1 + 1))
+  (m:Mem.mem)
+  : Lemma
+  (requires
+    Mem.interp (pts_to_sl n r i1 i2 p subv1) m /\
+    Mem.interp (pts_to_sl n r i1 i2 p subv2) m
+  )
+  (ensures subv1 == subv2)
+  =
+  let v1 : (y: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index y i)})
+    = Mem.id_elim_exists
+    (fun x -> pts_to_sl' n r i1 i2 p x subv1) m in
+  let v2 : (y: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index y i)})
+    = Mem.id_elim_exists
+    (fun x -> pts_to_sl' n r i1 i2 p x subv2) m in
+  aux_sl' r i1 i2 p v1 v2 subv1 subv2 m
 
 // 1) better definition
 // 2) a pts_to wrapper? an unwrapped PCM based on the wrapped one?
 // [selected option] 3) unwrapped PCM from scratch
-let pts_to_witinv_aux (#a:Type) (#n: nat)
-  (r:array_ref a #n) (p: lseq perm n)
-  : Lemma (Mem.is_witness_invariant (pts_to_sl r p))
+
+//let t1 (#a: Type) (#n: nat)
+//  (i1: nat) (i2: nat{i1 < i2 /\ i2 <= n})
+//  (p: lseq perm n)
+//  : Type
+//  = v:(lseq (option a) n){forall (i:nat{i < n}).
+//      Some? (index p i) = Some? (index v i)}
+//
+//let t2 (#a: Type) (#n: nat)
+//  (i1: nat) (i2: nat{i1 < i2 /\ i2 < n})
+//  : Type
+//  = lseq (option a) (i2 - i1 + 1)
+//
+//let t (#a: Type) (#n: nat)
+//  (i1: nat) (i2: nat{i1 < i2 /\ i2 < n})
+//  (p: lseq perm n)
+//  : Type
+//  = t1 #a #n i1 i2 p & t2 #a #n i1 i2
+
+let pts_to_witinv (#a:Type) (#n: nat)
+  (r:array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 < n})
+  (p: lseq perm n)
+  : Lemma (Mem.is_witness_invariant (
+      pts_to_sl n r i1 i2 p
+    ))
   =
   Classical.forall_intro_3 (
-    fun (x y: lseq a n) ->
-      Classical.move_requires (aux r p x y)
+    Classical.move_requires_3 (
+      aux_sl r i1 i2 p
+    )
   )
+
+let pts_to_frame_mon (#a:Type) (#n: nat)
+  (r:array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 < n})
+  (p: lseq perm n)
+  : Lemma (Mem.is_frame_monotonic (
+      pts_to_sl n r i1 i2 p
+    ))
+  = pts_to_witinv r i1 i2 p
