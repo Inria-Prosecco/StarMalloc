@@ -761,7 +761,9 @@ let full_perm_seq (n: nat)
   = Seq.create n (Some full_perm)
 
 let to_some (#a: Type) (#n: nat) (v: lseq a n)
-  : s:lseq (option a) n{forall (i:nat{i < n}). Some? (index s i)}
+  : Pure (lseq (option a) n)
+         (requires True)
+         (ensures fun s -> forall (i:nat{i < n}). Some? (index s i))
   =
   map_seq_len (fun e -> Some e) v;
   Classical.forall_intro (map_seq_index (fun e -> Some e) v);
@@ -786,6 +788,9 @@ let pts_to (#a:Type u#1) (#n: nat)
   to_vprop (pts_to_sl' n r i1 i2 p v (to_some subv))
 
 open FStar.Tactics
+
+#set-options "--print_implicits --print_universes"
+
 let lema_alloc (#a:Type u#1)
   (#n: nat)
   (r: array_ref a #n)
@@ -842,22 +847,13 @@ let lema_alloc (#a:Type u#1)
   ==
   pts_to_sl' n r 0 n (full_perm_seq n) (to_some v) (to_some v));
   // to be removed
-  assume (
-  pts_to_sl' #a n r 0 n (full_perm_seq n) (to_some v) (to_some v)
-  ==
-  ((Mem.pts_to r (Some (to_some v, (full_perm_seq n))) `Mem.star`
-  Mem.pure (perm_ok (full_perm_seq n)) `Mem.star`
-  Mem.pure (zeroed (0, n) (full_perm_seq n)) `Mem.star`
-  Mem.pure (Seq.slice (to_some v) 0 n == to_some v)) <: Mem.slprop u#1));
   assert (
   pts_to_sl' #a n r 0 n (full_perm_seq n) (to_some v) (to_some v)
   ==
-  ((Mem.pts_to r (Some (to_some v, (full_perm_seq n))) `Mem.star`
+  Mem.pts_to r (Some (to_some v, (full_perm_seq n))) `Mem.star`
   Mem.pure (perm_ok (full_perm_seq n)) `Mem.star`
   Mem.pure (zeroed (0, n) (full_perm_seq n)) `Mem.star`
-  Mem.pure (Seq.slice (to_some v) 0 n == to_some v)) <: Mem.slprop u#1)
-  );
-  //by (norm [delta_only [`%pts_to_sl']]; trefl (); dump "zut");
+  Mem.pure (Seq.slice (to_some v) 0 n == to_some v));
   assert (
     pts_to_sl' n r 0 n (full_perm_seq n) (to_some v) (to_some v)
     ==
