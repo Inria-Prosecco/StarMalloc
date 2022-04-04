@@ -787,11 +787,7 @@ let pts_to (#a:Type u#1) (#n: nat)
   =
   to_vprop (pts_to_sl' n r i1 i2 p v (to_some subv))
 
-open FStar.Tactics
-
-#set-options "--print_implicits --print_universes"
-
-let lema_alloc (#a:Type u#1)
+let lemma_alloc (#a:Type)
   (#n: nat)
   (r: array_ref a #n)
   (v: lseq a n)
@@ -860,10 +856,8 @@ let lema_alloc (#a:Type u#1)
     p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4);
   ()
 
-//#push-options "--z3rlimit 30"
 let alloc (#a: Type) (n:nat{n > 0}) (v: lseq a n)
   : Steel (array_ref a #(Seq.length v))
-  //: Steel unit
   emp
   (fun r ->
     pts_to #a #n r 0 n
@@ -882,10 +876,121 @@ let alloc (#a: Type) (n:nat{n > 0}) (v: lseq a n)
   rewrite_slprop
     (PR.pts_to #(array a #n) #pcm_array r c)
     (pts_to #a #n r 0 n (full_perm_seq n) (to_some v) v)
-    (fun m -> lema_alloc #a #n r v m);
+    (fun m -> lemma_alloc #a #n r v m);
   extract_info_raw
     (pts_to #a #n r 0 n (full_perm_seq n) (to_some v) v)
     (~ (is_null #a #n r))
     (fun m -> pts_to_not_null' #a #n r 0 n
       (full_perm_seq n) (to_some v) (to_some v) m);
   return r
+
+let lemma_free (#a: Type)
+  (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq perm n{p == full_perm_seq n})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq a (i2 - i1))
+  (m: Mem.mem)
+  : Lemma
+  (requires Mem.interp (
+    pts_to_sl' n r i1 i2 p v (to_some subv)
+  ) m)
+  (ensures (
+    let c : array a #n = Some (v, p) in
+    Mem.interp (
+    hp_of (PR.pts_to #(array a #n) #pcm_array r c)
+  ) m))
+  = ()
+
+// currently false
+// counter-example: c2,
+// such that \forall i. index (snd (Some?.v c2)) i = None
+// indeed:
+// option (lseq (option a) n & lseq (option perm) n) has
+// too neutral element: None + all of the given counterexamples
+let lemma_exclusive (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (c1: array a #n)
+  //(c2: array a #n)
+  : Lemma
+  (requires
+    Some? c1 /\ snd (Some?.v c1) == full_perm_seq n
+  )
+  (ensures
+    exclusive #(array a #n) (pcm_array #a #n) c1
+  )
+  =
+  //if composable c1 c2 then begin
+  //if None? c2 then ()
+  //else begin
+  //  let c1' = Some?.v c1 in
+  //  let c2' = Some?.v c2 in
+  //  assert (composable' #a #n c1' c2');
+  //  admit ()
+  //end
+  //end
+  admit ()
+
+// extending it with ghost ref/additional writing for zeroing?
+let free (#a: Type) (n:nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq perm n{p == full_perm_seq n})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq a (i2 - i1))
+  : SteelT unit
+  (pts_to #a #n r i1 i2 p v subv)
+  (fun _ -> emp)
+  =
+  let c : array a #n = Some (v, p) in
+  assert (FStar.PCM.composable pcm_array c None);
+  assert (compatible pcm_array c c);
+  rewrite_slprop
+    (pts_to #a #n r i1 i2 p v subv)
+    (PR.pts_to #(array a #n) #pcm_array r c)
+    (fun m -> lemma_free r i1 i2 p v subv m);
+  lemma_exclusive n r c;
+  assert (FStar.PCM.exclusive pcm_array c);
+  PR.free r c;
+  drop (PR.pts_to r (Mkpcm'?.one (Mkpcm?.p pcm_array)));
+  return ()
+
+let read (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq perm n{p == full_perm_seq n})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (#subv: lseq a (i2 - i1))
+  : Steel (lseq a (i2 - i1))
+  (pts_to #a #n r i1 i2 p v subv)
+  (fun _ -> pts_to #a #n r i1 i2 p v subv)
+  (requires fun _ -> True)
+  (ensures fun _ subv' _ -> subv' == subv)
+  =
+  admit ();
+  sladmit ();
+  return subv
+
+let write (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq perm n{p == full_perm_seq n})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq a (i2 - i1))
+  (subv_to_write: lseq a (i2 - i1))
+  : SteelT unit
+  (pts_to #a #n r i1 i2 p v subv)
+  (fun _ -> pts_to #a #n r i1 i2 p v subv_to_write)
+  =
+  admit ();
+  sladmit ();
+  return ()
