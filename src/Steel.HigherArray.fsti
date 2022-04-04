@@ -45,30 +45,24 @@ let perm_ok_elem (p: perm)
 let content (a: Type u#1) (#n: nat): Type u#1
   = x:(lseq (option a) n & lseq perm n){
     forall (i:nat{i < n}).
-      Some? (index (fst x) i) = Some? (index (snd x) i)
+      Some? (index (fst x) i) = Some? (index (snd x) i) /\
+      perm_ok_elem (index (snd x) i)
   }
 
-let array (a: Type u#1) (#n: nat): Type u#1 = option (content a #n)
+let array (a: Type u#1) (#n: nat): Type u#1 = content a #n
 
 let comp_prop (#a: Type) (v1 v2: option a) (p1 p2: perm)
   =
   ((Some? p1 /\ Some? p2) ==> v1 == v2) /\
   perm_ok_elem (sum_perm_opt p1 p2)
 
-let composable' (#a: Type) (#n: nat): symrel (content a #n)
-  = fun (arr1 arr2: content a #n) ->
+let composable (#a: Type) (#n: nat): symrel (content a #n)
+  = fun (arr1 arr2: array a #n) ->
   (forall (i:nat{i < n}).
     comp_prop
       (index (fst arr1) i) (index (fst arr2) i)
       (index (snd arr1) i) (index (snd arr2) i)
   )
-
-let composable (#a: Type) (#n: nat): symrel (array a)
-  = fun (arr1 arr2: array a)
-  -> match arr1, arr2 with
-  | None, _
-  | _,  None -> True
-  | Some c1, Some c2 -> composable' #a #n c1 c2
 
 let f1 (#a: Type) : option a -> option a -> option a
   = fun v1 v2 -> match (v1, v2) with
@@ -98,9 +92,10 @@ let f2 : perm -> perm -> perm
 //  (ensures Some? (f1 v1 v2) = Some? (f2 p1 p2))
 //  = ()
 
-let op' (#a: Type) (#n: nat)
-  (s1 s2: content a #n)
-  : content a #n
+let op (#a: Type) (#n: nat)
+  (s1: array a #n)
+  (s2: array a #n{composable s1 s2})
+  : array a #n
   =
   map_seq2_len f1 (fst s1) (fst s2);
   map_seq2_len f2 (snd s1) (snd s2);
@@ -110,38 +105,30 @@ let op' (#a: Type) (#n: nat)
   Classical.forall_intro (map_seq2_index f2 (snd s1) (snd s2));
   x1, x2
 
-let op (#a: Type) (#n: nat)
-  (arr1 arr2: array a #n)
-  : array a #n
-  = match arr1, arr2 with
-  | None, f
-  | f, None -> f
-  | Some s1, Some s2 -> Some (op' s1 s2)
+let one_element (#a: Type) (#n: nat) : array a #n
+  =
+  let none_seq1 : lseq (option a) n = Seq.create n None in
+  let none_seq2 : lseq perm n = Seq.create n None in
+  (none_seq1, none_seq2)
 
 let pcm_array' (#a: Type) (#n: nat): pcm' (array a #n) = {
   composable = composable;
   op = op;
-  one = None;
+  one = one_element;
 }
 
 let lem_commutative (#a: Type) (#n: nat)
   (arr1: array a #n)
   (arr2: array a #n{composable arr1 arr2})
   : Lemma (op arr1 arr2 == op arr2 arr1)
-  = match arr1, arr2 with
-  | None, _
-  | _, None -> ()
-  | Some s1, Some s2 ->
-      map_seq2_comm f1 (fst s1) (fst s2);
-      map_seq2_comm f2 (snd s1) (snd s2)
+  =
+  map_seq2_comm f1 (fst arr1) (fst arr2);
+  map_seq2_comm f2 (snd arr1) (snd arr2)
 
 let lem_assoc_l_eq (#a: Type) (#n: nat)
   (arr1 arr2 arr3: array a #n)
   : Lemma
   (requires
-    Some? arr1 /\
-    Some? arr2 /\
-    Some? arr3 /\
     composable arr1 arr2 /\
     composable arr2 arr3 /\
     composable (op arr1 arr2) arr3 /\
@@ -149,86 +136,69 @@ let lem_assoc_l_eq (#a: Type) (#n: nat)
   (ensures
     op arr1 (op arr2 arr3) == op (op arr1 arr2) arr3)
   =
-  let s1 = Some?.v arr1 in
-  let s2 = Some?.v arr2 in
-  let s3 = Some?.v arr3 in
-  map_seq2_assoc f1 (fst s1) (fst s2) (fst s3);
-  map_seq2_assoc f2 (snd s1) (snd s2) (snd s3)
+  map_seq2_assoc f1 (fst arr1) (fst arr2) (fst arr3);
+  map_seq2_assoc f2 (snd arr1) (snd arr2) (snd arr3)
 
 let lem_assoc_l_aux1 (#a: Type) (#n: nat)
-  (s1 s2 s3 s23: content a #n)
+  (arr1 arr2 arr3 arr23: array a #n)
   (i: nat)
   : Lemma
   (requires
     i < n /\
-    composable' s2 s3 /\
-    s23 == op' s2 s3 /\
+    composable arr2 arr3 /\
+    arr23 == op arr2 arr3 /\
     comp_prop
-      (index (fst s2) i) (index (fst s3) i)
-      (index (snd s2) i) (index (snd s3) i) /\
+      (index (fst arr2) i) (index (fst arr3) i)
+      (index (snd arr2) i) (index (snd arr3) i) /\
     comp_prop
-      (index (fst s1) i) (index (fst s23) i)
-      (index (snd s1) i) (index (snd s23) i)
+      (index (fst arr1) i) (index (fst arr23) i)
+      (index (snd arr1) i) (index (snd arr23) i)
   )
   (ensures
     // TODO: duplicata
     i < n /\
     comp_prop
-      (index (fst s1) i) (index (fst s2) i)
-      (index (snd s1) i) (index (snd s2) i))
+      (index (fst arr1) i) (index (fst arr2) i)
+      (index (snd arr1) i) (index (snd arr2) i))
   =
-  //assert (fst s23 == map_seq2 f1 (fst s2) (fst s3));
-  Classical.forall_intro (map_seq2_index f1 (fst s2) (fst s3));
-  //assert (x23 == f1 x2 x3);
-  //assert (snd s23 == map_seq2 f2 (snd s2) (snd s3));
-  Classical.forall_intro (map_seq2_index f2 (snd s2) (snd s3));
-  //assert (y23 == f2 y2 y3);
-  ()
+  map_seq2_index f1 (fst arr2) (fst arr3) i;
+  map_seq2_index f2 (snd arr2) (snd arr3) i
+
 
 let lem_assoc_l_aux2 (#a: Type) (#n: nat)
-  (s1 s2 s3 s23 s12: content a #n)
+  (arr1 arr2 arr3 arr23 arr12: content a #n)
   (i: nat)
   : Lemma
   (requires
     i < n /\
-    composable' s2 s3 /\
-    s23 == op' s2 s3 /\
-    composable' s1 s2 /\
-    s12 == op' s1 s2 /\
+    composable arr2 arr3 /\
+    arr23 == op arr2 arr3 /\
+    composable arr1 arr2 /\
+    arr12 == op arr1 arr2 /\
     comp_prop
-      (index (fst s2) i) (index (fst s3) i)
-      (index (snd s2) i) (index (snd s3) i) /\
+      (index (fst arr2) i) (index (fst arr3) i)
+      (index (snd arr2) i) (index (snd arr3) i) /\
     comp_prop
-      (index (fst s1) i) (index (fst s23) i)
-      (index (snd s1) i) (index (snd s23) i)
+      (index (fst arr1) i) (index (fst arr23) i)
+      (index (snd arr1) i) (index (snd arr23) i)
   )
   (ensures
     //TODO: duplicata
     i < n /\
     comp_prop
-      (index (fst s12) i) (index (fst s3) i)
-      (index (snd s12) i) (index (snd s3) i)
+      (index (fst arr12) i) (index (fst arr3) i)
+      (index (snd arr12) i) (index (snd arr3) i)
   )
   =
-  //assert (fst s23 == map_seq2 f1 (fst s2) (fst s3));
-  Classical.forall_intro (map_seq2_index f1 (fst s2) (fst s3));
-  //assert (x23 == f1 x2 x3);
-  //assert (snd s23 == map_seq2 f2 (snd s2) (snd s3));
-  Classical.forall_intro (map_seq2_index f2 (snd s2) (snd s3));
-  //assert (y23 == f2 y2 y3);
-  //assert (fst s12 == map_seq2 f1 (fst s1) (fst s2));
-  Classical.forall_intro (map_seq2_index f1 (fst s1) (fst s2));
-  //assert (x12 == f1 x1 x2);
-  //assert (snd s12 == map_seq2 f2 (snd s1) (snd s2));
-  Classical.forall_intro (map_seq2_index f2 (snd s1) (snd s2));
-  //assert (y12 == f2 y1 y2);
-  ()
+  map_seq2_index f1 (fst arr2) (fst arr3) i;
+  map_seq2_index f2 (snd arr2) (snd arr3) i;
+  map_seq2_index f1 (fst arr1) (fst arr2) i;
+  map_seq2_index f2 (snd arr1) (snd arr2) i
 
 let lem_assoc_l_aux3 (#a: Type) (#n: nat)
   (arr1 arr2 arr3: array a #n)
   : Lemma
   (requires
-    Some? arr1 /\ Some? arr2 /\ Some? arr3 /\
     composable arr2 arr3 /\
     composable arr1 (op arr2 arr3)
   )
@@ -237,27 +207,20 @@ let lem_assoc_l_aux3 (#a: Type) (#n: nat)
     composable (op arr1 arr2) arr3
   )
   =
-  let s1 = Some?.v arr1 in
-  let s2 = Some?.v arr2 in
-  let s3 = Some?.v arr3 in
   let arr23 = op arr2 arr3 in
-  assert (Some? arr23);
-  let s23 = Some?.v arr23 in
-  map_seq2_len f1 (fst s2) (fst s3);
-  map_seq2_len f2 (snd s2) (snd s3);
+  map_seq2_len f1 (fst arr2) (fst arr3);
+  map_seq2_len f2 (snd arr2) (snd arr3);
   Classical.forall_intro (
     Classical.move_requires (
-      lem_assoc_l_aux1 s1 s2 s3 s23
+      lem_assoc_l_aux1 arr1 arr2 arr3 arr23
     )
   );
   let arr12 = op arr1 arr2 in
-  assert (Some? arr12);
-  let s12 = Some?.v arr12 in
-  map_seq2_len f1 (fst s1) (fst s2);
-  map_seq2_len f2 (snd s1) (snd s2);
+  map_seq2_len f1 (fst arr1) (fst arr2);
+  map_seq2_len f2 (snd arr1) (snd arr2);
   Classical.forall_intro (
     Classical.move_requires (
-      lem_assoc_l_aux2 s1 s2 s3 s23 s12
+      lem_assoc_l_aux2 arr1 arr2 arr3 arr23 arr12
     )
   )
 
@@ -274,12 +237,8 @@ let lem_assoc (#a: Type) (#n: nat)
     op arr1 (op arr2 arr3) == op (op arr1 arr2) arr3
   )
   =
-  if None? arr1 then () else
-  if None? arr2 then () else
-  if None? arr3 then () else begin
   lem_assoc_l_aux3 arr1 arr2 arr3;
   lem_assoc_l_eq arr1 arr2 arr3
-  end
 
 let lem_assoc_l (#a: Type) (#n: nat)
   (arr1 arr2: array a #n) (arr3: array a #n{
@@ -309,12 +268,31 @@ let lem_assoc_r (#a: Type) (#n: nat)
   lem_commutative arr1 (op arr2 arr3);
   lem_commutative arr3 (op arr1 arr2)
 
+let lem_is_unit (#a: Type) (#n: nat) (arr: array a #n)
+  : Lemma
+  (composable arr (one_element #a #n) /\
+  op arr (one_element #a #n) == arr)
+  =
+  let one_element = one_element #a #n in
+  assert (forall i. index (fst one_element) i == None);
+  assert (forall i. index (snd one_element) i == None);
+  assert (composable arr one_element);
+  map_seq2_len f1 (fst arr) (fst one_element);
+  map_seq2_len f2 (snd arr) (snd one_element);
+  Classical.forall_intro (
+    map_seq2_index f1 (fst arr) (fst one_element));
+  Classical.forall_intro (
+    map_seq2_index f2 (snd arr) (snd one_element));
+  let r = op arr one_element in
+  Seq.lemma_eq_intro (fst r) (fst arr);
+  Seq.lemma_eq_intro (snd r) (snd arr)
+
 let pcm_array (#a: Type) (#n: nat): pcm (array a #n) = {
   p = pcm_array';
   comm = lem_commutative;
   assoc = lem_assoc_l;
   assoc_r = lem_assoc_r;
-  is_unit = (fun _ -> ());
+  is_unit = lem_is_unit;
   refine = (fun _ -> True);
 }
 
@@ -351,14 +329,14 @@ let pts_to_sl' (#a: Type)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   (v: lseq (option a) n
   {forall (i:nat{i < n}).
     Some? (index p i) = Some? (index v i)})
   (subv: lseq (option a) (i2 - i1))
   : Mem.slprop u#1
   =
-  Mem.pts_to r (Some (v, p)) `Mem.star`
+  Mem.pts_to r (v, p) `Mem.star`
   Mem.pure (perm_ok p) `Mem.star`
   Mem.pure (zeroed (i1, i2) p) `Mem.star`
   //Mem.pure (zeroed (i1, i2) v) `Mem.star`
@@ -368,7 +346,7 @@ let pts_to_ref_injective' (#a: Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p1 p2: lseq perm n)
+  (p1 p2: (p:lseq perm n{perm_ok p}))
   (v1: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p1 i) = Some? (index v1 i)})
   (v2: lseq (option a) n{forall (i:nat{i < n}).
@@ -381,11 +359,11 @@ let pts_to_ref_injective' (#a: Type u#1) (#n: nat)
       pts_to_sl' n r i1 i2 p2 v2 subv2) m)
     (ensures subv1 == subv2)
   =
-  let pa1 = Mem.pts_to r (Some (v1, p1)) in
+  let pa1 = Mem.pts_to r (v1, p1) in
   let pb1 = Mem.pure (perm_ok p1) in
   let pc1 = Mem.pure (zeroed (i1, i2) p1) in
   let pd1 = Mem.pure (Seq.slice v1 i1 i2 == subv1) in
-  let pa2 = Mem.pts_to r (Some (v2, p2)) in
+  let pa2 = Mem.pts_to r (v2, p2) in
   let pb2 = Mem.pure (perm_ok p2) in
   let pc2 = Mem.pure (zeroed (i1, i2) p2) in
   let pd2 = Mem.pure (Seq.slice v2 i1 i2 == subv2) in
@@ -421,10 +399,10 @@ let pts_to_ref_injective' (#a: Type u#1) (#n: nat)
   let ma = Mem.join ma1 ma2 in
   assert (Mem.interp (pa1 `Mem.star` pa2) ma);
   Mem.pts_to_compatible r
-    (Some (v1, p1))
-    (Some (v2, p2))
+    (v1, p1)
+    (v2, p2)
     ma;
-  assert (composable' (v1, p1) (v2, p2));
+  assert (composable (v1, p1) (v2, p2));
   Mem.pure_interp (zeroed (i1, i2) p1) m;
   Mem.pure_interp (zeroed (i1, i2) p2) m;
   assert (forall (i:nat{i < n}).
@@ -447,21 +425,21 @@ let pts_to_not_null' (#a:Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   (v: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index v i)})
   (subv: lseq (option a) (i2 - i1))
   (m:Mem.mem)
   : Lemma (requires Mem.interp (pts_to_sl' n r i1 i2 p v subv) m)
           (ensures r =!= null)
-  = Mem.pts_to_not_null r (Some (v, p)) m
+  = Mem.pts_to_not_null r (v, p) m
 
 let composable_to_fst_eq (#a: Type u#1) (#n: nat)
   (s1 s2: content a #n)
   (i1 i2: nat)
   : Lemma
   (requires
-    composable' s1 s2 /\
+    composable s1 s2 /\
     snd s1 == snd s2 /\
     i1 <= i2 /\ i2 <= n /\
     zeroed (i1, i2) (snd s1))
@@ -478,8 +456,8 @@ let op_to_fst_eq (#a: Type u#1) (#n: nat)
   (i1 i2: nat)
   : Lemma
   (requires
-    composable' s1 s2 /\
-    s3 == op' s1 s2 /\
+    composable s1 s2 /\
+    s3 == op s1 s2 /\
     i1 <= i2 /\ i2 <= n /\
     zeroed (i1, i2) (snd s1))
   (ensures
@@ -495,48 +473,28 @@ let aux' (#a: Type u#1) (#n: nat)
   (x y u1 u2 z: array a #n)
   : Lemma
   (requires
-    Some? x /\
-    Some? y /\
-    snd (Some?.v x) == snd (Some?.v y) /\
+    snd x == snd y /\
     composable x u1 /\
     op u1 x == z /\
     composable y u2 /\
     op u2 y == z /\
     i1 <= i2 /\ i2 <= n /\
-    zeroed (i1, i2) (snd (Some?.v x))
-  )
+    zeroed (i1, i2) (snd x))
   (ensures (
-    Seq.slice (fst (Some?.v x)) i1 i2
- == Seq.slice (fst (Some?.v y)) i1 i2))
+    Seq.slice (fst x) i1 i2
+ == Seq.slice (fst y) i1 i2))
   =
-  assert (Some? z);
-  let x' = Some?.v x in
-  let y' = Some?.v y in
-  let z' = Some?.v z in
-  match (Some? u1, Some? u2) with
-  | false, false -> ()
-  | false, true ->
-    assert (op u1 x == x);
-    assert (x == z);
-    lem_commutative y u2;
-    op_to_fst_eq (Some?.v y) (Some?.v u2) (Some?.v z) i1 i2
-  | true, false ->
-    assert (op u2 y == y);
-    assert (y == z);
-    lem_commutative x u1;
-    op_to_fst_eq (Some?.v x) (Some?.v u1) (Some?.v z) i1 i2
-  | true, true ->
-    lem_commutative y u2;
-    op_to_fst_eq (Some?.v y) (Some?.v u2) (Some?.v z) i1 i2;
-    lem_commutative x u1;
-    op_to_fst_eq (Some?.v x) (Some?.v u1) (Some?.v z) i1 i2
+  lem_commutative y u2;
+  op_to_fst_eq y u2 z i1 i2;
+  lem_commutative x u1;
+  op_to_fst_eq x u1 z i1 i2
 
 //#push-options "--z3rlimit 30"
 let aux_sl' (#a: Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   (v1: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index v1 i)})
   (v2: lseq (option a) n{forall (i:nat{i < n}).
@@ -550,8 +508,8 @@ let aux_sl' (#a: Type u#1) (#n: nat)
   )
   (ensures subv1 == subv2)
   =
-  let c1 = Some (v1, p) in
-  let c2 = Some (v2, p) in
+  let c1 = (v1, p) in
+  let c2 = (v2, p) in
   Mem.pts_to_join r c1 c2 m;
   assert (joinable pcm_array c1 c2);
   assert (exists z.
@@ -568,18 +526,16 @@ let aux_sl' (#a: Type u#1) (#n: nat)
       op frame c2 == z)
   );
   Mem.pure_interp (zeroed (i1, i2) p) m;
-  assert (zeroed (i1, i2) (snd (Some?.v c1)));
+  assert (zeroed (i1, i2) (snd c1));
   assert (
     exists (z f1 f2: array a).
-      Some? c1 /\
-      Some? c2 /\
-      snd (Some?.v c1) == snd (Some?.v c2) /\
+      snd c1 == snd c2 /\
       composable c1 f1 /\
       op f1 c1 == z /\
       composable c2 f2 /\
       op f2 c2 == z /\
       i1 <= i2 /\ i2 <= n /\
-      zeroed (i1, i2) (snd (Some?.v c1))
+      zeroed (i1, i2) (snd c1)
   );
   Mem.pure_interp (Seq.slice v1 i1 i2 == subv1) m;
   assert (Seq.slice v1 i1 i2 == subv1);
@@ -599,7 +555,7 @@ let pts_to_sl (#a: Type)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   =
   fun (x: lseq a (i2 - i1)) ->
   Mem.h_exists (
@@ -613,7 +569,7 @@ let pts_to_ref_injective (#a: Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p1 p2: lseq perm n)
+  (p1 p2: (p:lseq perm n{perm_ok p}))
   (subv1 subv2: lseq a (i2 - i1))
   (m:Mem.mem)
   : Lemma
@@ -654,7 +610,7 @@ let pts_to_not_null (#a:Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   (subv: lseq a (i2 - i1))
   (m:Mem.mem)
   : Lemma (requires Mem.interp (pts_to_sl n r i1 i2 p subv) m)
@@ -672,7 +628,7 @@ let aux_sl (#a: Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   (subv1 subv2: lseq a (i2 - i1))
   (m:Mem.mem)
   : Lemma
@@ -725,7 +681,7 @@ let pts_to_witinv (#a:Type) (#n: nat)
   (r:array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   : Lemma (Mem.is_witness_invariant (
       pts_to_sl n r i1 i2 p
     ))
@@ -740,7 +696,7 @@ let pts_to_frame_mon (#a:Type) (#n: nat)
   (r:array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   : Lemma (Mem.is_frame_monotonic (
       pts_to_sl n r i1 i2 p
     ))
@@ -780,7 +736,7 @@ let pts_to (#a:Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n)
+  (p: lseq perm n{perm_ok p})
   (v: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index v i)})
   (subv: lseq a (i2 - i1))
@@ -796,7 +752,7 @@ let lemma_alloc (#a:Type)
   (requires (
     let v' = to_some v in
     let p = full_perm_seq n in
-    let c : array a #n = Some (v', p) in
+    let c : array a #n = (v', p) in
     Mem.interp (hp_of (PR.pts_to #(array a #n) #pcm_array r c)) m
   ))
   (ensures (
@@ -812,7 +768,7 @@ let lemma_alloc (#a:Type)
   =
   //let p = full_perm_seq n in
   //let p1 = Mem.pts_to r (Some (to_some v, p)) in
-  let p1 = Mem.pts_to r (Some (to_some v, full_perm_seq n)) in
+  let p1 = Mem.pts_to r (to_some v, full_perm_seq n) in
   let p2 = Mem.pure (perm_ok (full_perm_seq n)) in
   let p3 = Mem.pure (zeroed (0, n) (full_perm_seq n)) in
   let p4 = Mem.pure (slice (to_some v) 0 n == to_some v) in
@@ -846,7 +802,7 @@ let lemma_alloc (#a:Type)
   assert (
   pts_to_sl' #a n r 0 n (full_perm_seq n) (to_some v) (to_some v)
   ==
-  Mem.pts_to r (Some (to_some v, (full_perm_seq n))) `Mem.star`
+  Mem.pts_to r (to_some v, (full_perm_seq n)) `Mem.star`
   Mem.pure (perm_ok (full_perm_seq n)) `Mem.star`
   Mem.pure (zeroed (0, n) (full_perm_seq n)) `Mem.star`
   Mem.pure (Seq.slice (to_some v) 0 n == to_some v));
@@ -869,8 +825,11 @@ let alloc (#a: Type) (n:nat{n > 0}) (v: lseq a n)
   =
   let v' = to_some v in
   let p = full_perm_seq n in
-  let c : array a #n = Some (v', p) in
-  assert (FStar.PCM.composable pcm_array c None);
+  let c : array a #n = (v', p) in
+  pcm_array.is_unit c;
+  assert (FStar.PCM.composable pcm_array c pcm_array.p.one);
+  pcm_array.comm c pcm_array.p.one;
+  assert (FStar.PCM.op pcm_array pcm_array.p.one c == c);
   assert (compatible pcm_array c c);
   let r = PR.alloc #(array a #n) #pcm_array c in
   rewrite_slprop
@@ -899,40 +858,30 @@ let lemma_free (#a: Type)
     pts_to_sl' n r i1 i2 p v (to_some subv)
   ) m)
   (ensures (
-    let c : array a #n = Some (v, p) in
+    let c : array a #n = (v, p) in
     Mem.interp (
     hp_of (PR.pts_to #(array a #n) #pcm_array r c)
   ) m))
   = ()
 
-// currently false
-// counter-example: c2,
-// such that \forall i. index (snd (Some?.v c2)) i = None
-// indeed:
-// option (lseq (option a) n & lseq (option perm) n) has
-// too neutral element: None + all of the given counterexamples
 let lemma_exclusive (#a: Type) (n: nat)
   (r: array_ref a #n)
-  (c1: array a #n)
-  //(c2: array a #n)
+  (c1: array a #n{snd c1 == full_perm_seq n})
+  (c2: array a #n)
   : Lemma
   (requires
-    Some? c1 /\ snd (Some?.v c1) == full_perm_seq n
+    composable c1 c2
   )
   (ensures
-    exclusive #(array a #n) (pcm_array #a #n) c1
+    c2 == one_element
   )
   =
-  //if composable c1 c2 then begin
-  //if None? c2 then ()
-  //else begin
-  //  let c1' = Some?.v c1 in
-  //  let c2' = Some?.v c2 in
-  //  assert (composable' #a #n c1' c2');
-  //  admit ()
-  //end
-  //end
-  admit ()
+  let one_element = one_element #a #n in
+  assert (forall i. index (snd c2) i == None);
+  assert (forall i. index (fst c2) i == None);
+  Seq.lemma_eq_intro (fst c2) (fst one_element);
+  Seq.lemma_eq_intro (snd c2) (snd one_element);
+  ()
 
 // extending it with ghost ref/additional writing for zeroing?
 let free (#a: Type) (n:nat)
@@ -947,14 +896,18 @@ let free (#a: Type) (n:nat)
   (pts_to #a #n r i1 i2 p v subv)
   (fun _ -> emp)
   =
-  let c : array a #n = Some (v, p) in
-  assert (FStar.PCM.composable pcm_array c None);
+  let c : array a #n = (v, p) in
+  pcm_array.is_unit c;
+  assert (FStar.PCM.composable pcm_array c pcm_array.p.one);
+  pcm_array.comm c pcm_array.p.one;
+  assert (FStar.PCM.op pcm_array pcm_array.p.one c == c);
   assert (compatible pcm_array c c);
   rewrite_slprop
     (pts_to #a #n r i1 i2 p v subv)
     (PR.pts_to #(array a #n) #pcm_array r c)
     (fun m -> lemma_free r i1 i2 p v subv m);
-  lemma_exclusive n r c;
+  Classical.forall_intro (
+    Classical.move_requires (lemma_exclusive n r c));
   assert (FStar.PCM.exclusive pcm_array c);
   PR.free r c;
   drop (PR.pts_to r (Mkpcm'?.one (Mkpcm?.p pcm_array)));
@@ -964,7 +917,7 @@ let read (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n{p == full_perm_seq n})
+  (p: lseq perm n{perm_ok p})
   (v: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index v i)})
   (#subv: lseq a (i2 - i1))
@@ -982,7 +935,7 @@ let write (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (p: lseq perm n{p == full_perm_seq n})
+  (p: lseq perm n{perm_ok p})
   (v: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index v i)})
   (subv: lseq a (i2 - i1))
