@@ -149,3 +149,122 @@ let zip_unzip_id #a #b s =
   );
   let s' = zip (fst (unzip s)) (snd (unzip s)) in
   Seq.lemma_eq_intro s s'
+
+let from_some'
+  (#a: Type)
+  (#n: nat)
+  (s: Seq.lseq (x: option a{Some? x}) n)
+  : Pure (Seq.lseq a n)
+  (requires forall (i: nat{i < n}).
+    Some? (Seq.index s i)
+  )
+  (ensures fun s' -> forall (i: nat{i < n}).
+    Seq.index s' i == Some?.v (Seq.index s i))
+  =
+  let f : x: option a{Some? x} -> a = fun x -> Some?.v x in
+  Seq.map_seq_len f s;
+  Classical.forall_intro (Seq.map_seq_index f s);
+  Seq.map_seq f s
+
+let to_some'
+  (#a: Type)
+  (#n: nat)
+  (s: Seq.lseq a n)
+  : Pure (Seq.lseq (x: option a{Some? x}) n)
+  (requires True)
+  (ensures fun s' -> forall (i: nat{i < n}).
+    Some? (Seq.index s' i) /\
+    Seq.index s' i == Some (Seq.index s i)
+  )
+  =
+  let f : a -> x: option a{Some? x} = fun x -> Some x in
+  Seq.map_seq_len f s;
+  Classical.forall_intro (Seq.map_seq_index f s);
+  Seq.map_seq f s
+
+let with_some_aux
+  (#a: Type)
+  (#n: nat)
+  (s: Seq.lseq (option a) n)
+  (i:nat{i < n}) (elem: option a)
+  : Pure (x:option a{Some? x})
+  (requires
+    elem == Seq.index s i /\
+    (forall (i:nat{i < n}). Some? (Seq.index s i)))
+  (ensures fun x -> x == Seq.index s i /\ x == elem)
+  = elem
+
+let with_some
+  (#a: Type)
+  (#n: nat)
+  (s: Seq.lseq (option a) n)
+  : Pure (Seq.lseq (x: option a{Some? x}) n)
+  (requires forall (i: nat{i < n}).
+    Some? (Seq.index s i))
+  (ensures fun s' -> forall (i: nat{i < n}).
+    Some? (Seq.index s' i) /\
+    Seq.index s' i == Seq.index s i)
+  =
+  Seq.lemma_init_len n (fun i -> i);
+  let indexes = Seq.init n (fun i -> i) in
+  assert (Seq.length indexes = n);
+  let f = (fun i -> with_some_aux s i (Seq.index s i)) in
+  Seq.map_seq_len f indexes;
+  let s' = Seq.map_seq f indexes in
+  Classical.forall_intro (Seq.map_seq_index f indexes);
+  s'
+
+let without_some
+  (#a: Type)
+  (#n: nat)
+  (s: Seq.lseq (x: option a{Some? x}) n)
+  : Pure (Seq.lseq (option a) n)
+  (requires True)
+  (ensures fun s' -> forall (i: nat{i < n}).
+    Some? (Seq.index s' i) /\
+    Seq.index s' i == Seq.index s i)
+  =
+  let f : x: option a{Some? x} -> option a = fun x -> x in
+  Seq.map_seq_len f s;
+  Classical.forall_intro (Seq.map_seq_index f s);
+  Seq.map_seq f s
+
+let invert_to_some (#a: Type) (#n: nat)
+  (s: Seq.lseq a n)
+  : Lemma
+  (from_some' (to_some' s) == s)
+  =
+  let s1 = to_some' s in
+  let s2 = from_some' s1 in
+  Seq.lemma_eq_intro s2 s
+
+
+let eq_without_with_some_bij (#a: Type) (#n: nat)
+  (s: Seq.lseq (option a) n)
+  : Lemma
+  (requires forall (i: nat{i < n}).
+    Some? (Seq.index s i))
+  (ensures
+    without_some (with_some s) == s)
+  =
+  Seq.lemma_eq_intro (without_some (with_some s)) s
+
+let eq_with_without_some_bij (#a: Type) (#n: nat)
+  (s: Seq.lseq (x: option a{Some? x}) n)
+  : Lemma
+  (requires forall (i: nat{i < n}).
+    Some? (Seq.index s i))
+  (ensures
+    with_some (without_some s) == s)
+  =
+  Seq.lemma_eq_intro (with_some (without_some s)) s
+
+let eq_bazar_some (#a: Type) (#n: nat)
+  (s: Seq.lseq a n)
+  : Lemma
+  (requires True)
+  (ensures
+    from_some' (with_some (without_some (to_some' s))) == s)
+  =
+  eq_with_without_some_bij (to_some' s);
+  invert_to_some s

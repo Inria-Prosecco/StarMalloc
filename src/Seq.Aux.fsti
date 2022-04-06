@@ -105,3 +105,66 @@ val zip_unzip_id (#a #b: Type)
     unzip_len s;
     zip (fst (unzip s)) (snd (unzip s)) == s
   ))
+
+val from_some' (#a: Type) (#n: nat)
+  (s: Seq.lseq (x: option a{Some? x}) n)
+  : Pure (Seq.lseq a n)
+  (requires forall (i: nat{i < n}).
+    Some? (Seq.index s i)
+  )
+  (ensures fun s' -> forall (i: nat{i < n}).
+    Seq.index s' i == Some?.v (Seq.index s i))
+
+val to_some' (#a: Type) (#n: nat)
+  (s: Seq.lseq a n)
+  : Pure (Seq.lseq (x: option a{Some? x}) n)
+  (requires True)
+  (ensures fun s' -> forall (i: nat{i < n}).
+    Some? (Seq.index s' i) /\
+    Seq.index s' i == Some (Seq.index s i)
+  )
+
+val with_some (#a: Type) (#n: nat)
+  (s: Seq.lseq (option a) n)
+  : Pure (Seq.lseq (x: option a{Some? x}) n)
+  (requires forall (i: nat{i < n}).
+    Some? (Seq.index s i))
+  (ensures fun s' -> forall (i: nat{i < n}).
+    Some? (Seq.index s' i) /\
+    Seq.index s' i == Seq.index s i)
+
+val without_some (#a: Type) (#n: nat)
+  (s: Seq.lseq (x: option a{Some? x}) n)
+  : Pure (Seq.lseq (option a) n)
+  (requires True)
+  (ensures fun s' -> forall (i: nat{i < n}).
+    Some? (Seq.index s' i) /\
+    Seq.index s' i == Seq.index s i)
+
+val invert_to_some (#a: Type) (#n: nat)
+  (s: Seq.lseq a n)
+  : Lemma
+  (from_some' (to_some' s) == s)
+
+val eq_without_with_some_bij (#a: Type) (#n: nat)
+  (s: Seq.lseq (option a) n)
+  : Lemma
+  (requires forall (i: nat{i < n}).
+    Some? (Seq.index s i))
+  (ensures
+    without_some (with_some s) == s)
+
+val eq_with_without_some_bij (#a: Type) (#n: nat)
+  (s: Seq.lseq (x: option a{Some? x}) n)
+  : Lemma
+  (requires forall (i: nat{i < n}).
+    Some? (Seq.index s i))
+  (ensures
+    with_some (without_some s) == s)
+
+val eq_bazar_some (#a: Type) (#n: nat)
+  (s: Seq.lseq a n)
+  : Lemma
+  (requires True)
+  (ensures
+    from_some' (with_some (without_some (to_some' s))) == s)
