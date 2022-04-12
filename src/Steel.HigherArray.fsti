@@ -509,7 +509,6 @@ let aux' (#a: Type u#1) (#n: nat)
   lem_commutative x u1;
   op_to_fst_eq x u1 z i1 i2
 
-//#push-options "--z3rlimit 30"
 let aux_sl' (#a: Type u#1) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
@@ -751,6 +750,17 @@ let to_some
     Seq.index s' i == Some (Seq.index s i)
   )
   = without_some (to_some' s)
+
+let to_some_map_equiv (#a: Type) (#n: nat)
+  (s: lseq a n)
+  : Lemma
+  (to_some #a #n s == map_seq (fun e -> Some e) s)
+  =
+  map_seq_len (fun e -> Some e) s;
+  Classical.forall_intro (map_seq_index (fun e -> Some e) s);
+  Seq.lemma_eq_intro
+    (to_some #a #n s)
+    (map_seq (fun e -> Some e) s)
 
 let mk_content (#a: Type) (v: seq a) : content a #(Seq.length v)
   =
@@ -1340,6 +1350,7 @@ let frame_preserving_sufficient_conditions1 (#a: Type) (n: nat)
   lem_commutative frame2 arr2;
   assert (compatible pcm_array arr2 arr4);
   arr4
+#pop-options
 
 let _f_aux (#a: Type) (n: nat)
   (i1: nat)
@@ -1457,6 +1468,7 @@ let frame_preserving_sufficient_conditions2 (#a: Type) (n: nat)
     (op arr23 frame3);
   ()
 
+#push-options "--z3rlimit 20"
 let _f (#a: Type) (n: nat)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
@@ -1475,6 +1487,7 @@ let _f (#a: Type) (n: nat)
   fun (arr3: array a #n{
     pcm_array.refine arr3 /\ compatible pcm_array arr1 arr3})
     -> frame_preserving_sufficient_conditions1 n i1 i2 arr1 arr2 arr3
+#pop-options
 
 let write (#a: Type) (n: nat)
   (r: array_ref a #n)
@@ -1585,16 +1598,16 @@ let split_aux_slice (#a: Type) (n: nat)
   let v1, v2 = split_aux n (fst arr) j in
   let subv1, subv2 = split subv (j - i1) in
 
-  map_seq_len (fun e -> Some e) subv;
+  to_some_map_equiv subv;
   let subv' = map_seq (fun e -> Some e) subv in
-  Classical.forall_intro (map_seq_index (fun e -> Some e) subv);
-  Seq.lemma_eq_intro (to_some subv) subv';
+  assert (to_some subv == subv');
 
   assert (slice v1 0 j == slice (fst arr) 0 j);
   slice_slice v1 0 j i1 j;
   assert (slice v1 i1 j == slice (to_some subv) 0 (j - i1));
   assert (slice v1 i1 j == slice subv' 0 (j - i1));
   map_seq_len (fun e -> Some e) (slice subv 0 (j - i1));
+  // TODO: map_seq_slice
   let subv1' = map_seq (fun e -> Some e) (slice subv 0 (j - i1)) in
   Classical.forall_intro (map_seq_index (fun e -> Some e)
     (slice subv 0 (j - i1)));
@@ -1608,6 +1621,7 @@ let split_aux_slice (#a: Type) (n: nat)
   assert (slice v2 j i2 == slice (to_some subv) (j - i1) (i2 - i1));
   assert (slice v2 j i2 == slice subv' (j - i1) (i2 - i1));
   map_seq_len (fun e -> Some e) (slice subv (j - i1) (i2 - i1));
+  // TODO: map_seq_slice
   let subv2' = map_seq (fun e -> Some e)
     (slice subv (j - i1) (i2 - i1)) in
   Classical.forall_intro (map_seq_index (fun e -> Some e)
@@ -1691,6 +1705,7 @@ let split_aux_composable_op (#a: Type) (n: nat)
   assert (fst r == fst arr);
   assert (snd r == snd arr)
 
+#push-options "--z3rlimit 20"
 let split (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
@@ -1776,28 +1791,84 @@ let split (#a: Type) (n: nat)
       (snd (split subv (j - i1)))
     m);
   return ()
+#pop-options
+
+let merge_perm_lemma (n: nat)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p1: lseq (option perm) n{zeroed (i1, j) p1})
+  (p2: lseq (option perm) n{zeroed (j, i2) p2})
+  : Lemma
+  (zeroed (i1, i2) (map_seq2 f2 p1 p2))
+  =
+  let p11, p12 = Seq.split p1 j in
+  let p21, p22 = Seq.split p2 j in
+  Seq.lemma_eq_intro p21 (null_perm_seq j);
+  assert (p21 == null_perm_seq j);
+  map_seq2_len f2 p11 p21;
+  Classical.forall_intro (map_seq2_index f2 p11 p21);
+  Seq.lemma_eq_intro (map_seq2 f2 p11 p21) p11;
+  assert (map_seq2 f2 p11 p21 == p11);
+  Seq.lemma_eq_intro p12 (null_perm_seq (n - j));
+  assert (p12 == null_perm_seq (n - j));
+  map_seq2_len f2 p12 p22;
+  Classical.forall_intro (map_seq2_index f2 p12 p22);
+  Seq.lemma_eq_intro (map_seq2 f2 p12 p22) p22;
+  assert (map_seq2 f2 p12 p22 == p22);
+  lemma_split p1 j;
+  lemma_split p2 j;
+  map_seq2_append f2 p11 p21 p12 p22
+
+let merge_subv_lemma (#a: Type) (n: nat)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p1: lseq (option perm) n{perm_ok p1 /\ zeroed (i1, j) p1})
+  (v1: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p1 i) = Some? (index v1 i)})
+  (subv1: lseq a (j - i1){slice v1 i1 j == to_some subv1})
+  (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
+  (v2: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p2 i) = Some? (index v2 i)})
+  (subv2: lseq a (i2 - j){slice v2 j i2 == to_some subv2})
+  : Lemma
+  (map_seq2_len f1 v1 v2;
+  slice (map_seq2 f1 v1 v2) i1 i2
+  == to_some #a #(i2 - i1) (append subv1 subv2))
+  =
+  let (v, p) : array a #n = op (v1, p1) (v2, p2) in
+  merge_perm_lemma n i1 i2 j p1 p2;
+  assert (zeroed (i1, i2) p);
+  assert (forall (i:nat{i < n}).
+      Some? (index v i) = Some? (index p i));
+  assert (zeroed (i1, i2) v);
+  Classical.forall_intro (map_seq2_index f1 v1 v2);
+  Seq.lemma_eq_intro (slice v i1 j) (slice v1 i1 j);
+  assert (slice v i1 j == slice v1 i1 j);
+  Seq.lemma_eq_intro (slice v j i2) (slice v2 j i2);
+  assert (slice v j i2 == slice v2 j i2);
+  to_some_map_equiv subv1;
+  to_some_map_equiv subv2;
+  map_seq_append (fun e -> Some e) subv1 subv2;
+  lemma_split (slice v i1 i2) (j - i1);
+  assert (slice v i1 i2
+  == map_seq (fun e -> Some e) (append subv1 subv2));
+  to_some_map_equiv #a #(i2 - i1) (append subv1 subv2)
 
 let merge (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (j: nat{i1 <= j /\ j <= i2})
-  (p1: lseq (option perm) n{perm_ok p1})
+  (p1: lseq (option perm) n{perm_ok p1 /\ zeroed (i1, j) p1})
   (v1: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p1 i) = Some? (index v1 i)})
-  (subv1: lseq a (j - i1))
-  (p2: lseq (option perm) n{perm_ok p2})
+  (subv1: lseq a (j - i1){slice v1 i1 j == to_some subv1})
+  (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
   (v2: lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p2 i) = Some? (index v2 i)})
-  (subv2: lseq a (i2 - j))
- // (p: lseq (option perm) n{perm_ok p /\ p == map_seq2 f2 p1 p2 /\ zeroed (i1, i2) p})
- // (v: lseq (option a) n{forall (i:nat{i < n}).
- //   Some? (index (map_seq2 f2 p1 p2) i) = Some? (index v i) /\
- //   v == map_seq2 f1 v1 v2
- // })
- // (subv: lseq a (i2 - i1){
- //   slice v i1 i2 == to_some subv /\ subv == append subv1 subv2
- // })
+  (subv2: lseq a (i2 - j){slice v2 j i2 == to_some subv2})
   (_: unit{composable (v1, p1) (v2, p2)})
   : Steel (lseq a (i2 - i1))
   (pts_to #a #n r i1 j p1 v1 subv1 `star`
@@ -1808,26 +1879,18 @@ let merge (#a: Type) (n: nat)
     assert (composable (v1, p1) (v2, p2));
     assert (map_seq2 f2 p1 p2 == snd (op (v1, p1) (v2, p2)));
     assert (perm_ok #n (map_seq2 f2 p1 p2));
-    assume (zeroed (i1, i2) (map_seq2 f2 p1 p2));
-    assume (slice (map_seq2 f1 v1 v2) i1 i2 == to_some subv);
-    //admit ();
+    merge_perm_lemma n i1 i2 j p1 p2;
+    assert (zeroed (i1, i2) (map_seq2 f2 p1 p2));
+    merge_subv_lemma n i1 i2 j p1 v1 subv1 p2 v2 subv2;
+    assert (slice (map_seq2 f1 v1 v2) i1 i2
+    == to_some #a #(i2 - i1) (append subv1 subv2));
     pts_to #a #n r i1 i2
     (map_seq2 f2 p1 p2)
     (map_seq2 f1 v1 v2)
     (append subv1 subv2))
-  (requires fun _ ->
-    zeroed (i1, j) p1 /\
-    zeroed (j, i2) p1 /\
-    perm_ok p1 /\
-    perm_ok p2 /\
-    composable (v1, p1) (v2, p2) /\
-    //perm_ok p /\
-    slice v1 i1 j == to_some subv1 /\
-    slice v2 j i2 == to_some subv2
-  )
-  (ensures fun _ _ _ -> True)
+  (requires fun _ -> True)
+  (ensures fun _ subv _ -> subv == append subv1 subv2)
   =
-  //sladmit ();
   rewrite_slprop
     (pts_to #a #n r i1 j p1 v1 subv1)
     (PR.pts_to #(array a #n) #pcm_array r (v1, p1))
@@ -1836,19 +1899,7 @@ let merge (#a: Type) (n: nat)
     (pts_to #a #n r j i2 p2 v2 subv2)
     (PR.pts_to #(array a #n) #pcm_array r (v2, p2))
     (fun m -> lemma_usersl_to_pcmsl r j i2 p2 v2 subv2 m);
-//  let v : lseq (option )= map_seq2 f1 v1 v2 in
-//  let p : lseq (option perm) n = p in
-//  let subv = append subv1 subv2 in
-  //let c : array a #n = (v, p) in
   PR.gather r (v1, p1) (v2, p2);
-//  rewrite_slprop
-//    (PR.pts_to #(array a #n) #pcm_array r
-//      (op (reveal (hide (v1, p1))) (reveal (hide (v2, p2))))
-//    )
-//    (PR.pts_to #(array a #n) #pcm_array r (v, p))
-//      //(map_seq2 f1 v1 v2,
-//      //map_seq2 f2 p1 p2)
-//    (fun m -> admit ());
   rewrite_slprop
     (PR.pts_to #(array a #n) #pcm_array r //(p, v))
       (map_seq2 f1 v1 v2,
@@ -1869,8 +1920,10 @@ let merge (#a: Type) (n: nat)
       assert (composable (v1, p1) (v2, p2));
       assert (map_seq2 f2 p1 p2 == snd (op (v1, p1) (v2, p2)));
       assert (perm_ok #n (map_seq2 f2 p1 p2));
-      assume (zeroed (i1, i2) (map_seq2 f2 p1 p2));
-      assume (slice (map_seq2 f1 v1 v2) i1 i2
+      merge_perm_lemma n i1 i2 j p1 p2;
+      assert (zeroed (i1, i2) (map_seq2 f2 p1 p2));
+      merge_subv_lemma n i1 i2 j p1 v1 subv1 p2 v2 subv2;
+      assert (slice (map_seq2 f1 v1 v2) i1 i2
       == to_some #a #(i2 - i1) (append subv1 subv2));
       lemma_pcmsl_to_usersl #a #n r i1 i2
       (map_seq2 f2 p1 p2)
