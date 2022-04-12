@@ -1931,3 +1931,118 @@ let merge (#a: Type) (n: nat)
       (append subv1 subv2)
     m);
   return (append subv1 subv2)
+
+let half_perm_opt (p: option perm) : option perm
+= match p with
+| None -> None
+| Some p -> Some (half_perm p)
+
+let halve_perm (#n: nat)
+  (p: lseq (option perm) n)
+  : p': lseq (option perm) n{
+    forall (i:nat{i < n}). index p' i == half_perm_opt (index p i)
+  }
+  =
+  map_seq_len half_perm_opt p;
+  Classical.forall_intro (map_seq_index half_perm_opt p);
+  map_seq half_perm_opt p
+
+let lemma_sum_halves (#a: Type) (#n: nat)
+  (p: lseq (option perm) n{perm_ok p})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  : Lemma
+  (let half = (v, halve_perm p) in
+  composable half half /\
+  op half half == (v, p)
+  )
+  =
+  let half_p = halve_perm p in
+  map_seq2_len f2 half_p half_p;
+  Classical.forall_intro (map_seq2_index f2 half_p half_p);
+  Seq.lemma_eq_intro p (map_seq2 f2 half_p half_p);
+  map_seq2_len f1 v v;
+  Classical.forall_intro (map_seq2_index f1 v v);
+  Seq.lemma_eq_intro v (map_seq2 f1 v v)
+
+let share (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq a (i2 - i1){slice v i1 i2 == to_some subv})
+  : Steel unit
+  (pts_to #a #n r i1 i2 p v subv)
+  (fun _ ->
+    pts_to #a #n r i1 i2 (halve_perm p) v subv
+    `star`
+    pts_to #a #n r i1 i2 (halve_perm p) v subv
+  )
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  =
+  rewrite_slprop
+    (pts_to #a #n r i1 i2 p v subv)
+    (PR.pts_to #(array a #n) #pcm_array r (v, p))
+    (fun m -> lemma_usersl_to_pcmsl r i1 i2 p v subv m);
+  lemma_sum_halves p v;
+  PR.split r (v, p)
+    (v, halve_perm p)
+    (v, halve_perm p);
+  rewrite_slprop
+    (PR.pts_to #(array a #n) #pcm_array r
+      (v, halve_perm p))
+    (pts_to #a #n r i1 i2 (halve_perm p) v subv)
+    (fun m ->
+      lemma_pcmsl_to_usersl #a #n r i1 i2 (halve_perm p) v subv m);
+  rewrite_slprop
+    (PR.pts_to #(array a #n) #pcm_array r
+      (v, halve_perm p))
+    (pts_to #a #n r i1 i2 (halve_perm p) v subv)
+    (fun m ->
+      lemma_pcmsl_to_usersl #a #n r i1 i2 (halve_perm p) v subv m);
+  return ()
+
+let gather (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq a (i2 - i1){slice v i1 i2 == to_some subv})
+  : Steel unit
+  (
+    pts_to #a #n r i1 i2 (halve_perm p) v subv
+    `star`
+    pts_to #a #n r i1 i2 (halve_perm p) v subv
+  )
+  (fun _ -> pts_to #a #n r i1 i2 p v subv)
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  =
+  rewrite_slprop
+    (pts_to #a #n r i1 i2 (halve_perm p) v subv)
+    (PR.pts_to #(array a #n) #pcm_array r (v, halve_perm p))
+    (fun m -> lemma_usersl_to_pcmsl r i1 i2 (halve_perm p) v subv m);
+  rewrite_slprop
+    (pts_to #a #n r i1 i2 (halve_perm p) v subv)
+    (PR.pts_to #(array a #n) #pcm_array r (v, halve_perm p))
+    (fun m -> lemma_usersl_to_pcmsl r i1 i2 (halve_perm p) v subv m);
+  lemma_sum_halves p v;
+  PR.gather r
+    (v, halve_perm p)
+    (v, halve_perm p);
+  rewrite_slprop
+    (PR.pts_to #(array a #n) #pcm_array r
+      (op (v, halve_perm p) (v, halve_perm p))
+    )
+    (PR.pts_to #(array a #n) #pcm_array r (v, p))
+    (fun m -> ());
+  rewrite_slprop
+    (PR.pts_to #(array a #n) #pcm_array r (v, p))
+    (pts_to #a #n r i1 i2 p v subv)
+    (fun m -> lemma_pcmsl_to_usersl #a #n r i1 i2 p v subv m);
+  return ()
