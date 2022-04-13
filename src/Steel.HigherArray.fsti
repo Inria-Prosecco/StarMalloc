@@ -969,26 +969,27 @@ let lemma_exclusive (#a: Type) (n: nat)
 // extending it with ghost ref/additional writing for zeroing?
 let free (#a: Type) (n:nat)
   (r: array_ref a #n)
-  (i1: nat)
-  (i2: nat{i1 <= i2 /\ i2 <= n})
+  //(i1: nat)
+  //(i2: nat{i1 <= i2 /\ i2 <= n})
   (p: lseq (option perm) n{p == full_perm_seq n})
-  (v: lseq (option a) n{forall (i:nat{i < n}).
-    Some? (index p i) = Some? (index v i)})
-  (subv: lseq a (i2 - i1))
+  (v: erased (v2:lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v2 i)}))
+  (subv: lseq a n)
   : SteelT unit
-  (pts_to' #a #n r i1 i2 p v subv)
+  (pts_to' #a #n r 0 n p v subv)
   (fun _ -> emp)
   =
-  let c : array a #n = (v, p) in
-  pcm_array.is_unit c;
-  assert (FStar.PCM.composable pcm_array c pcm_array.p.one);
-  pcm_array.comm c pcm_array.p.one;
-  assert (FStar.PCM.op pcm_array pcm_array.p.one c == c);
+  let c : erased (array a #n) = hide (reveal v, p) in
+  pcm_array.is_unit (reveal c);
+  assert (FStar.PCM.composable pcm_array (reveal c) pcm_array.p.one);
+  pcm_array.comm (reveal c) pcm_array.p.one;
+  assert (FStar.PCM.op pcm_array pcm_array.p.one (reveal c)
+  == (reveal c));
   assert (compatible pcm_array c c);
   rewrite_slprop
-    (pts_to' #a #n r i1 i2 p v subv)
+    (pts_to' #a #n r 0 n p v subv)
     (PR.pts_to #(array a #n) #pcm_array r c)
-    (fun m -> lemma_usersl_to_pcmsl r i1 i2 p v subv m);
+    (fun m -> lemma_usersl_to_pcmsl r 0 n p v subv m);
   Classical.forall_intro (
     Classical.move_requires (lemma_exclusive n c));
   assert (FStar.PCM.exclusive pcm_array c);
@@ -2265,3 +2266,16 @@ let write2 (#a: Type) (n: nat)
     (append (to_some subv_to_write) (slice (reveal v) i2 n)))
     subv_to_write;
   return ()
+
+let free2 (#a: Type) (n:nat)
+  (r: array_ref a #n)
+  (p: lseq (option perm) n{p == full_perm_seq n})
+  (subv: lseq a n)
+  : SteelT unit
+  (pts_to #a #n r 0 n p subv)
+  (fun _ -> emp)
+  =
+  let v = usersl_to_usersl' r 0 n p subv in
+  free n r p v subv
+
+// split, merge, share, gather: SteelGhost?
