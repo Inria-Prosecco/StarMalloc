@@ -342,7 +342,6 @@ let pts_to_sl' (#a: Type)
   Mem.pts_to r (v, p) `Mem.star`
   Mem.pure (perm_ok p) `Mem.star`
   Mem.pure (zeroed (i1, i2) p) `Mem.star`
-  //Mem.pure (zeroed (i1, i2) v) `Mem.star`
   Mem.pure (Seq.slice v i1 i2 == subv)
 
 let pts_to_ref_injective' (#a: Type u#1) (#n: nat)
@@ -421,8 +420,7 @@ let pts_to_ref_injective' (#a: Type u#1) (#n: nat)
   Mem.pure_interp (Seq.slice v1 i1 i2 == subv1) m;
   Mem.pure_interp (Seq.slice v2 i1 i2 == subv2) m;
   Seq.lemma_eq_intro subv1 subv2;
-  assert (subv1 == subv2);
-  ()
+  assert (subv1 == subv2)
 
 let pts_to_not_null' (#a:Type u#1) (#n: nat)
   (r: array_ref a #n)
@@ -848,7 +846,7 @@ let lemma_alloc (#a:Type)
   ()
 
 let alloc (#a: Type) (n:nat{n > 0}) (v: lseq a n)
-  : Steel (array_ref a #(Seq.length v))
+  : Steel (array_ref a #n)
   emp
   (fun r ->
     pts_to' #a #n r 0 n
@@ -1006,55 +1004,58 @@ let from_some (#a: Type) (#n: nat) (s: lseq (option a) n)
   =
   from_some' (with_some s)
 
+#push-options "--z3rlimit 30"
 let read (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (p: lseq (option perm) n{perm_ok p})
-  (v: lseq (option a) n{forall (i:nat{i < n}).
-    Some? (index p i) = Some? (index v i)})
+  (#v: erased (v2:lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v2 i)}))
   (#subv: lseq a (i2 - i1))
   : Steel (lseq a (i2 - i1))
-  (pts_to' #a #n r i1 i2 p v subv)
-  (fun _ -> pts_to' #a #n r i1 i2 p v subv)
+  (pts_to' #a #n r i1 i2 p (reveal v) subv)
+  (fun _ -> pts_to' #a #n r i1 i2 p (reveal v) subv)
   (requires fun _ -> True)
   (ensures fun _ subv' _ -> subv' == subv)
   =
-  let c = (v, p) in
   extract_info_raw
-    (pts_to' #a #n r i1 i2 p v subv)
+    (pts_to' #a #n r i1 i2 p (reveal v) subv)
     (zeroed (i1, i2) p)
     (fun m -> Mem.pure_interp (zeroed (i1, i2) p) m);
   assert (zeroed (i1, i2) p);
   extract_info_raw
-    (pts_to' #a #n r i1 i2 p v subv)
-    (Seq.slice v i1 i2 == to_some subv)
-    (fun m -> Mem.pure_interp (Seq.slice v i1 i2 == to_some subv) m);
-  assert (Seq.slice v i1 i2 == to_some subv);
+    (pts_to' #a #n r i1 i2 p (reveal v) subv)
+    (Seq.slice (reveal v) i1 i2 == to_some subv)
+    (fun m -> Mem.pure_interp
+      (Seq.slice (reveal v) i1 i2 == to_some subv) m);
+  assert (Seq.slice (reveal v) i1 i2 == to_some subv);
   eq_bazar_some subv;
-  assert (from_some (Seq.slice v i1 i2) == subv);
+  assert (from_some (Seq.slice (reveal v) i1 i2) == subv);
   rewrite_slprop
-    (pts_to' #a #n r i1 i2 p v subv)
-    (PR.pts_to #(array a #n) #pcm_array r (v, p))
-    (fun m -> lemma_usersl_to_pcmsl r i1 i2 p v subv m);
-  let read_v = PR.read r (v, p) in
+    (pts_to' #a #n r i1 i2 p (reveal v) subv)
+    (PR.pts_to #(array a #n) #pcm_array r (reveal v, p))
+    (fun m -> lemma_usersl_to_pcmsl r i1 i2 p (reveal v) subv m);
+  let read_v = PR.read r (reveal v, p) in
   assert (forall (i:nat{i <n}).
    Some? (index (snd read_v) i) = Some? (index (fst read_v) i));
-  assert (compatible pcm_array (v, p) read_v);
+  assert (compatible pcm_array (reveal v, p) read_v);
   assert (exists (frame:content a #n).
-    composable (v, p) frame /\ op frame (v, p) == read_v
+    composable (reveal v, p) frame /\ op frame (reveal v, p) == read_v
   );
   let frame = FStar.IndefiniteDescription.indefinite_description_tot
     (content a #n)
-    (fun frame -> composable (v, p) frame /\ op frame (v, p) == read_v) in
-  op_to_snd_eq frame (v, p) read_v i1 i2;
-  assert (Seq.slice v i1 i2 == Seq.slice (fst read_v) i1 i2);
+    (fun frame -> composable (reveal v, p) frame /\
+    op frame (reveal v, p) == read_v) in
+  op_to_snd_eq frame (reveal v, p) read_v i1 i2;
+  assert (Seq.slice (reveal v) i1 i2 == Seq.slice (fst read_v) i1 i2);
   assert (from_some (Seq.slice (fst read_v) i1 i2) == subv);
   rewrite_slprop
-    (PR.pts_to #(array a #n) #pcm_array r (v, p))
-    (pts_to' #a #n r i1 i2 p v subv)
-    (fun m -> lemma_pcmsl_to_usersl r i1 i2 p v subv m);
+    (PR.pts_to #(array a #n) #pcm_array r (reveal v, p))
+    (pts_to' #a #n r i1 i2 p (reveal v) subv)
+    (fun m -> lemma_pcmsl_to_usersl r i1 i2 p (reveal v) subv m);
   return subv
+#pop-options
 
 let full_p (bounds: set) (s: seq (option perm))
   : prop
@@ -1493,51 +1494,67 @@ let write (#a: Type) (n: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (p: lseq (option perm) n{
     perm_ok p /\ zeroed (i1, i2) p /\ full_p (i1, i2) p})
-  (v: lseq (option a) n{forall (i:nat{i < n}).
-    Some? (index p i) = Some? (index v i)})
+  (v: erased (v2:lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v2 i)}))
   (subv: lseq a (i2 - i1){slice v i1 i2 == to_some subv})
   (subv_to_write: lseq a (i2 - i1))
-  : SteelT unit
+  : Steel unit
   (pts_to' #a #n r i1 i2 p v subv)
   (fun _ ->
-    let v' = append
-      (slice v 0 i1)
-      (append (to_some subv_to_write) (slice v i2 n)) in
-    pts_to' #a #n r i1 i2 p v' subv_to_write)
-  =
-  rewrite_slprop
-    (pts_to' #a #n r i1 i2 p v subv)
-    (PR.pts_to #(array a #n) #pcm_array r (v, p))
-    (fun m -> lemma_usersl_to_pcmsl r i1 i2 p v subv m);
-  let v' =
-    append
-    (slice v 0 i1)
-    (append (to_some subv_to_write) (slice v i2 n)) in
-  let v'' = (append (to_some subv_to_write) (slice v i2 n)) in
-  assert (length (to_some subv_to_write) == i2 - i1);
-  lemma_eq_intro (slice v'' 0 (i2 - i1)) (to_some subv_to_write);
-  assert (slice v'' 0 (i2 - i1) == to_some subv_to_write);
-  lemma_eq_intro (slice v' i1 i2) (to_some subv_to_write);
-  assert (slice v' i1 i2 == to_some subv_to_write);
-  PR.upd_gen r (v, p) (
-    append
-    (slice v 0 i1)
-    (append (to_some subv_to_write) (slice v i2 n)),
-  p) (_f n i1 i2 (v, p) (v', p));
-  rewrite_slprop
-    (PR.pts_to #(array a #n) #pcm_array r (
-      append
-      (slice v 0 i1)
-      (append (to_some subv_to_write) (slice v i2 n)),
-    p))
-    (pts_to' #a #n r i1 i2 p
+   // let v' = append
+   //   (slice (reveal v) 0 i1)
+   //   (append (to_some subv_to_write) (slice (reveal v) i2 n)) in
+    pts_to' #a #n r i1 i2 p
       (append
-      (slice v 0 i1)
-      (append (to_some subv_to_write) (slice v i2 n)))
+      (slice (reveal v) 0 i1)
+      (append (to_some subv_to_write) (slice (reveal v) i2 n)))
     subv_to_write)
-    (fun m ->
-      lemma_pcmsl_to_usersl r i1 i2 p v' subv_to_write m);
-  return ()
+  (requires fun _ -> True)
+  (ensures fun _ _ _ ->
+    let v' = append
+      (slice (reveal v) 0 i1)
+      (append (to_some subv_to_write) (slice (reveal v) i2 n)) in
+    Seq.slice v' i1 i2 == to_some subv_to_write
+  )
+
+  =
+  admit ();
+  sladmit ()
+
+
+//  rewrite_slprop
+//    (pts_to' #a #n r i1 i2 p (reveal v) subv)
+//    (PR.pts_to #(array a #n) #pcm_array r (reveal v, p))
+//    (fun m -> lemma_usersl_to_pcmsl r i1 i2 p (reveal v) subv m);
+//  let v' =
+//    append
+//    (slice (v 0 i1)
+//    (append (to_some subv_to_write) (slice v i2 n)) in
+//  let v'' = (append (to_some subv_to_write) (slice v i2 n)) in
+//  assert (length (to_some subv_to_write) == i2 - i1);
+//  lemma_eq_intro (slice v'' 0 (i2 - i1)) (to_some subv_to_write);
+//  assert (slice v'' 0 (i2 - i1) == to_some subv_to_write);
+//  lemma_eq_intro (slice v' i1 i2) (to_some subv_to_write);
+//  assert (slice v' i1 i2 == to_some subv_to_write);
+//  PR.upd_gen r (v, p) (
+//    append
+//    (slice v 0 i1)
+//    (append (to_some subv_to_write) (slice v i2 n)),
+//  p) (_f n i1 i2 (v, p) (v', p));
+//  rewrite_slprop
+//    (PR.pts_to #(array a #n) #pcm_array r (
+//      append
+//      (slice v 0 i1)
+//      (append (to_some subv_to_write) (slice v i2 n)),
+//    p))
+//    (pts_to' #a #n r i1 i2 p
+//      (append
+//      (slice v 0 i1)
+//      (append (to_some subv_to_write) (slice v i2 n)))
+//    subv_to_write)
+//    (fun m ->
+//      lemma_pcmsl_to_usersl r i1 i2 p v' subv_to_write m);
+//  return ()
 
 let split_aux (#a: Type) (n: nat)
   (s: lseq (option a) n)
@@ -2055,32 +2072,196 @@ let pts_to (#a:Type u#1) (#n: nat)
   =
   to_vprop (pts_to_sl n r i1 i2 p subv)
 
+let lemma_usersl'_to_usersl (#a: Type)
+  (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2})
+  (p: lseq (option perm) n{perm_ok p})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq a (i2 - i1))
+  (m: Mem.mem)
+  : Lemma
+  (requires (
+    i1 <= i2 /\ i2 <= n /\
+    perm_ok p /\
+    zeroed (i1, i2) p /\
+    slice v i1 i2 == to_some subv /\
+    Mem.interp (
+    pts_to_sl' n r i1 i2 p v (to_some subv)
+  ) m))
+  (ensures Mem.interp (
+    pts_to_sl #a n r i1 i2 p subv
+  ) m)
+  =
+  let pred = fun x -> fun y ->
+    pts_to_sl' n r i1 i2 p y (to_some x) in
+  assert (Mem.interp (
+    pts_to_sl' n r i1 i2 p v (to_some subv)
+  ) m);
+  assert (Mem.interp (
+    (pred subv v)
+  ) m);
+  Mem.intro_h_exists v (pred subv) m;
+  assert (Mem.interp (
+    Mem.h_exists (pred subv)
+  ) m);
+  assert (Mem.interp (
+   pts_to_sl n r i1 i2 p subv
+  ) m)
+
+let lemma_usersl_to_usersl' (#a: Type)
+  (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2})
+  (p: lseq (option perm) n{perm_ok p})
+  //(v: lseq (option a) n{forall (i:nat{i < n}).
+  //    Some? (index p i) = Some? (index v i)
+  //})
+  (subv: lseq a (i2 - i1))
+  (m: Mem.mem)
+  : Pure (erased (lseq (option a) n))
+  (requires (
+    i1 <= i2 /\ i2 <= n /\
+    perm_ok p /\
+    zeroed (i1, i2) p /\
+    //slice v i1 i2 == to_some subv /\
+    Mem.interp (pts_to_sl n r i1 i2 p subv) m))
+  (ensures fun v' ->
+    slice v' i1 i2 == to_some subv /\
+    (forall (i:nat{i < n}).
+      Some? (index p i) = Some? (index v' i)) /\
+    Mem.interp (
+    pts_to_sl' #a n r i1 i2 p v' (to_some subv)
+  ) m)
+  =
+  let pred = fun x -> fun y ->
+    pts_to_sl' n r i1 i2 p y (to_some x) in
+  assert (Mem.interp (
+   pts_to_sl n r i1 i2 p subv
+  ) m);
+  assert (Mem.interp (
+    Mem.h_exists (pred subv)
+  ) m);
+  Mem.elim_h_exists (pred subv) m;
+  let v = FStar.IndefiniteDescription.indefinite_description_tot
+    (v:lseq (option a) n{forall (i:nat{i < n}).
+      Some? (index p i) = Some? (index v i)})
+    (fun v -> Mem.interp (pred subv v) m) in
+  assert (Mem.interp (
+    pts_to_sl' n r i1 i2 p v (to_some subv)
+  ) m);
+  Mem.pure_interp (slice v i1 i2 == to_some subv) m;
+  let v : lseq (option a) n = v in
+  v
+
+let usersl'_to_usersl (#a: Type) (#opened_invariants:_)
+  (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (v: lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v i)})
+  (subv: lseq a (i2 - i1){slice v i1 i2 == to_some subv})
+  : SteelGhostT unit
+  opened_invariants
+  (pts_to' r i1 i2 p v subv)
+  (fun _ -> pts_to r i1 i2 p subv)
+  =
+  rewrite_slprop
+    (pts_to' r i1 i2 p v subv)
+    (pts_to r i1 i2 p subv)
+    (fun m -> lemma_usersl'_to_usersl r i1 i2 p v subv m)
+
+#set-options "--print_implicits"
+let usersl_to_usersl' (#a: Type) (#opened_invariants:_)
+  (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (subv: lseq a (i2 - i1))
+  : SteelGhost
+  (erased (v2:lseq (option a) n{
+    forall (i:nat{i < n}). Some? (index p i) = Some? (index v2 i)
+  }))
+  opened_invariants
+  (pts_to r i1 i2 p subv)
+  (fun v -> pts_to' r i1 i2 p (reveal v) subv)
+  (requires fun _ -> True)
+  (ensures fun _ v _ -> Seq.slice (reveal v) i1 i2 == to_some subv)
+  =
+  rewrite_slprop
+    (pts_to r i1 i2 p subv)
+    (h_exists (fun y -> pts_to' r i1 i2 p y subv))
+    (fun m ->
+      assert_norm (hp_of (pts_to r i1 i2 p subv)
+      == (hp_of (h_exists (fun y -> pts_to' r i1 i2 p y subv)))
+    ));
+  let v : erased (v2:lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v2 i)})
+  = witness_exists
+    //#(v2:lseq (option a) n{forall (i:nat{i < n}).
+    //Some? (index p i) = Some? (index v2 i)})
+    //#opened_invariants
+    //#(fun y -> pts_to' r i1 i2 p y subv)
+    () in
+  extract_info_raw
+    (pts_to' #a #n r i1 i2 p (reveal v) subv)
+    (Seq.slice (reveal v) i1 i2 == to_some subv)
+    (fun m -> Mem.pure_interp
+      (Seq.slice (reveal v) i1 i2 == to_some subv) m);
+  v
+
+
 let alloc2 (#a: Type) (n:nat{n > 0}) (v: lseq a n)
-  : Steel (array_ref a #(Seq.length v))
+  : Steel (array_ref a #n)
   emp
   (fun r -> pts_to #a #n r 0 n (full_perm_seq n) v)
   (requires fun _ -> True)
   (ensures fun _ r _ -> True)
   =
   let r = alloc n v in
-  let p = fun x -> fun y ->
-    pts_to_sl' n r 0 n (full_perm_seq n) y (to_some x) in
-  rewrite_slprop
-    (pts_to' #a #n r 0 n (full_perm_seq n) (to_some v) v)
-    (pts_to #a #n r 0 n (full_perm_seq n) v)
-    (fun m ->
-      assert (Mem.interp (
-        pts_to_sl' n r 0 n (full_perm_seq n) (to_some v) (to_some v)
-      ) m);
-      assert (Mem.interp (
-        (p v (to_some v))
-      ) m);
-      Mem.intro_h_exists (to_some v) (p v) m;
-      assert (Mem.interp (
-        Mem.h_exists (p v)
-      ) m);
-      assert (Mem.interp (
-        pts_to_sl n r 0 n (full_perm_seq n) v
-      ) m)
-    );
+  usersl'_to_usersl r 0 n (full_perm_seq n) (to_some v) v;
   return r
+
+let read2 (#a: Type) (n:nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (#subv: lseq a (i2 - i1))
+  : Steel (lseq a (i2 - i1))
+  (pts_to #a #n r i1 i2 p subv)
+  (fun _ -> pts_to #a #n r i1 i2 p subv)
+  (requires fun _ -> True)
+  (ensures fun _ subv' _ -> subv' == subv)
+  =
+  let v = usersl_to_usersl' r i1 i2 p subv in
+  let subv' = read n r i1 i2 p #_ #_ in
+  usersl'_to_usersl r i1 i2 p v subv;
+  return subv'
+
+let write2 (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{
+    perm_ok p /\ zeroed (i1, i2) p /\ full_p (i1, i2) p})
+  (subv: lseq a (i2 - i1))
+  (subv_to_write: lseq a (i2 - i1))
+  : SteelT unit
+  (pts_to #a #n r i1 i2 p subv)
+  (fun _ -> pts_to #a #n r i1 i2 p subv_to_write)
+  =
+  let v = usersl_to_usersl' r i1 i2 p subv in
+  write n r i1 i2 p v subv subv_to_write;
+  usersl'_to_usersl r i1 i2 p
+    (append
+    (slice (reveal v) 0 i1)
+    (append (to_some subv_to_write) (slice (reveal v) i2 n)))
+    subv_to_write;
+  return ()
