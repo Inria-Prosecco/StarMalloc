@@ -2317,3 +2317,52 @@ let merge2 (#a: Type) (n: nat)
 
 #set-options "--print_implicits"
 // split, merge, share, gather: SteelGhost?
+
+let share2 (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (subv: lseq a (i2 - i1))
+  : Steel unit
+  (pts_to #a #n r i1 i2 p subv)
+  (fun _ ->
+    pts_to #a #n r i1 i2 (halve_perm p) subv
+    `star`
+    pts_to #a #n r i1 i2 (halve_perm p) subv
+  )
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  =
+  let v = usersl_to_usersl' r i1 i2 p subv in
+  share n r i1 i2 p v subv;
+  usersl'_to_usersl r i1 i2 (halve_perm p) v subv;
+  usersl'_to_usersl r i1 i2 (halve_perm p) v subv;
+  return ()
+
+let gather2 (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (subv: lseq a (i2 - i1))
+  : Steel unit
+  (
+    pts_to #a #n r i1 i2 (halve_perm p) subv
+    `star`
+    pts_to #a #n r i1 i2 (halve_perm p) subv
+  )
+  (fun _ -> pts_to #a #n r i1 i2 p subv)
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  =
+  let v1 = usersl_to_usersl' r i1 i2 (halve_perm #n p) subv in
+  let v2 = usersl_to_usersl' r i1 i2 (halve_perm #n p) subv in
+  assert (v1 == v2);
+  rewrite_slprop
+    (pts_to' r i1 i2 (halve_perm p) v2 subv)
+    (pts_to' r i1 i2 (halve_perm p) v1 subv)
+    (fun m -> ());
+  gather n r i1 i2 p v1 subv;
+  usersl'_to_usersl r i1 i2 p v1 subv;
+  return ()
