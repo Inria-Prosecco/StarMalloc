@@ -1520,8 +1520,11 @@ let _f (#a: Type) (n: nat)
 let complete (#a: Type) (n: nat)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
   (subv: lseq a (i2 - i1))
-  : Pure (lseq (option a) n)
+  : Pure (v:lseq (option a) n{
+    forall (i:nat{i < n}). Some? (index p i) = Some? (index v i)
+  })
   (requires True)
   (ensures fun v ->
     slice v i1 i2 == to_some subv /\
@@ -1538,15 +1541,20 @@ let complete (#a: Type) (n: nat)
 let replace (#a: Type) (n: nat)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  (v: lseq (option a) n)
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (v: lseq (option a) n{
+    forall (i:nat{i < n}). Some? (index p i) = Some? (index v i)
+  })
   (subv: lseq a (i2 - i1))
-  : Pure (lseq (option a) n)
+  : Pure (v:lseq (option a) n{
+    forall (i:nat{i < n}). Some? (index p i) = Some? (index v i)
+  })
   (requires zeroed (i1, i2) v)
   (ensures fun v' ->
     slice v' i1 i2 == to_some subv /\
     zeroed (i1, i2) v'
   )
-  = complete n i1 i2 subv
+  = complete n i1 i2 p subv
 
 let write (#a: Type) (n: nat)
   (r: array_ref a #n)
@@ -1565,19 +1573,19 @@ let write (#a: Type) (n: nat)
    //   (slice (reveal v) 0 i1)
    //   (append (to_some subv_to_write) (slice (reveal v) i2 n)) in
     pts_to' #a #n r i1 i2 p
-      (replace n i1 i2 v subv_to_write)
+      (replace n i1 i2 p v subv_to_write)
       subv_to_write)
   (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
   =
   usersl'_to_pcmsl r i1 i2 p (hide v) subv;
-  let v' = replace n i1 i2 v subv_to_write in
+  let v' = replace n i1 i2 p v subv_to_write in
   PR.upd_gen r
     (v, p)
-    (replace n i1 i2 v subv_to_write, p)
+    (replace n i1 i2 p v subv_to_write, p)
     (_f n i1 i2 (v, p) (v', p));
   pcmsl_to_usersl' r i1 i2 p
-    (replace n i1 i2 v subv_to_write)
+    (replace n i1 i2 p v subv_to_write)
     subv_to_write;
   return ()
 
@@ -1774,7 +1782,12 @@ let split (#a: Type) (n: nat)
     let p1, p2 = split_aux n p j in
     let subv1, subv2 = split subv (j - i1) in
     composable (v1, p1) (v2, p2) /\
-    Seq.append subv1 subv2 == subv)
+    Seq.append subv1 subv2 == subv /\
+    Seq.slice (fst (split_aux n v j)) i1 j
+      == to_some #a #(j - i1) (fst (split subv (j - i1))) /\
+    Seq.slice (snd (split_aux n v j)) j i2
+      == to_some #a #(i2 - j) (snd (split subv (j - i1)))
+    )
   =
   usersl'_to_pcmsl r i1 i2 p v subv;
   let v1, v2 = split_aux n v j in
@@ -2133,46 +2146,33 @@ let usersl'_to_usersl (#a: Type) (#opened_invariants:_)
     (pts_to r i1 i2 p subv)
     (fun m -> lemma_usersl'_to_usersl r i1 i2 p v subv m)
 
-#set-options "--print_implicits"
-let usersl_to_usersl' (#a: Type) (#opened_invariants:_)
+let usersl_to_usersl' (#a: Type)
   (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
   (subv: lseq a (i2 - i1))
-  : SteelGhost
-  (erased (v2:lseq (option a) n{
-    forall (i:nat{i < n}). Some? (index p i) = Some? (index v2 i)
-  }))
-  opened_invariants
+  : Steel
+  (v:lseq (option a) n{
+    forall (i:nat{i < n}). Some? (index p i) = Some? (index v i)
+  })
   (pts_to r i1 i2 p subv)
-  (fun v -> pts_to' r i1 i2 p (reveal v) subv)
+  (fun v -> pts_to' r i1 i2 p v subv)
   (requires fun _ -> True)
-  (ensures fun _ v _ -> Seq.slice (reveal v) i1 i2 == to_some subv)
+  (ensures fun _ v _ ->
+    Seq.slice v i1 i2 == to_some subv /\
+    v == complete n i1 i2 p subv)
   =
+  let v = complete n i1 i2 p subv in
   rewrite_slprop
     (pts_to r i1 i2 p subv)
-    (h_exists (fun y -> pts_to' r i1 i2 p y subv))
+    (pts_to' r i1 i2 p v subv)
     (fun m ->
-      assert_norm (hp_of (pts_to r i1 i2 p subv)
-      == (hp_of (h_exists (fun y -> pts_to' r i1 i2 p y subv)))
-    ));
-  let v : erased (v2:lseq (option a) n{forall (i:nat{i < n}).
-    Some? (index p i) = Some? (index v2 i)})
-  = witness_exists
-    //#(v2:lseq (option a) n{forall (i:nat{i < n}).
-    //Some? (index p i) = Some? (index v2 i)})
-    //#opened_invariants
-    //#(fun y -> pts_to' r i1 i2 p y subv)
-    () in
-  extract_info_raw
-    (pts_to' #a #n r i1 i2 p (reveal v) subv)
-    (Seq.slice (reveal v) i1 i2 == to_some subv)
-    (fun m -> Mem.pure_interp
-      (Seq.slice (reveal v) i1 i2 == to_some subv) m);
-  v
-
+      let v_ghost = lemma_usersl_to_usersl' r i1 i2 p subv m in
+      Seq.lemma_eq_intro v (reveal v_ghost)
+    );
+  return v
 
 let alloc2 (#a: Type) (n:nat{n > 0}) (v: lseq a n)
   : Steel (array_ref a #n)
@@ -2214,17 +2214,10 @@ let write2 (#a: Type) (n: nat)
   (pts_to #a #n r i1 i2 p subv)
   (fun _ -> pts_to #a #n r i1 i2 p subv_to_write)
   =
-  let v_ghost = usersl_to_usersl' r i1 i2 p subv in
-  let v = complete n i1 i2 subv in
-  Seq.lemma_eq_intro v (reveal v_ghost);
-  assert (v == reveal v_ghost);
-  rewrite_slprop
-    (pts_to' r i1 i2 p (reveal v_ghost) subv)
-    (pts_to' r i1 i2 p v subv)
-    (fun m -> ());
+  let v = usersl_to_usersl' r i1 i2 p subv in
   write n r i1 i2 p v subv subv_to_write;
   usersl'_to_usersl r i1 i2 p
-    (replace n i1 i2 v subv_to_write)
+    (replace n i1 i2 p v subv_to_write)
     subv_to_write;
   return ()
 
@@ -2238,3 +2231,89 @@ let free2 (#a: Type) (n:nat)
   =
   let v = usersl_to_usersl' r 0 n p subv in
   free n r p v subv
+
+#push-options "--z3rlimit 20"
+let split2 (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
+  (subv: lseq a (i2 - i1))
+  : SteelT unit
+  (pts_to #a #n r i1 i2 p subv)
+  (fun _ ->
+    pts_to #a #n r i1 j
+      (fst (split_aux n p j))
+      (fst (Seq.split subv (j - i1)))
+    `star`
+    pts_to #a #n r j i2
+      (snd (split_aux n p j))
+      (snd (Seq.split subv (j - i1)))
+  )
+  =
+  let v = usersl_to_usersl' r i1 i2 p subv in
+  split n r i1 i2 j p v subv;
+  split_aux_lemma n p i1 i2 j;
+  usersl'_to_usersl r i1 j
+    (fst (split_aux n p j))
+    (fst (split_aux n v j))
+    (fst (Seq.split subv (j - i1)));
+  usersl'_to_usersl r j i2
+    (snd (split_aux n p j))
+    (snd (split_aux n v j))
+    (snd (Seq.split subv (j - i1)));
+  return ()
+#pop-options
+
+let merge2 (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p1: lseq (option perm) n{perm_ok p1 /\ zeroed (i1, j) p1})
+  (subv1: lseq a (j - i1))
+  (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
+  (subv2: lseq a (i2 - j))
+  (_: unit{composable
+    (complete n i1 j p1 subv1, p1)
+    (complete n j i2 p2 subv2, p2)})
+  : SteelT unit
+  (pts_to #a #n r i1 j p1 subv1 `star`
+  pts_to #a #n r j i2 p2 subv2)
+  (fun _ ->
+    map_seq2_len f2 p1 p2;
+    let v1 = complete n i1 j p1 subv1 in
+    let v2 = complete n j i2 p2 subv2 in
+    assert (composable (v1, p1) (v2, p2));
+    assert (map_seq2 f2 p1 p2 == snd (op (v1, p1) (v2, p2)));
+    assert (perm_ok #n (map_seq2 f2 p1 p2));
+    pts_to #a #n r i1 i2
+      (map_seq2 f2 p1 p2)
+      (append subv1 subv2)
+  )
+  =
+  let v1 = usersl_to_usersl' r i1 j p1 subv1 in
+  slassert (pts_to' #a #n r i1 j p1 v1 subv1);
+  let v2 = usersl_to_usersl' r j i2 p2 subv2 in
+  slassert (pts_to' #a #n r j i2 p2 v2 subv2);
+  let _ = merge n r i1 i2 j p1 v1 subv1 p2 v2 subv2 () in
+  map_seq2_len f1 v1 v2;
+  map_seq2_len f2 p1 p2;
+  assert (map_seq2 f2 p1 p2 == snd (op (v1, p1) (v2, p2)));
+  assert (v1 == complete n i1 j p1 subv1);
+  assert (v2 == complete n j i2 p2 subv2);
+  assert (composable (v1, p1) (v2, p2));
+  assert (perm_ok #n (map_seq2 f2 p1 p2));
+  merge_perm_lemma n i1 i2 j p1 p2;
+  assert (zeroed (i1, i2) (map_seq2 f2 p1 p2));
+  merge_subv_lemma n i1 i2 j p1 v1 subv1 p2 v2 subv2;
+  assert (slice (map_seq2 f1 v1 v2) i1 i2 == to_some #a #(i2 - i1) (append subv1 subv2));
+  usersl'_to_usersl r i1 i2
+    (map_seq2 f2 p1 p2)
+    (map_seq2 f1 v1 v2)
+    (append subv1 subv2);
+  return ()
+
+#set-options "--print_implicits"
+// split, merge, share, gather: SteelGhost?
