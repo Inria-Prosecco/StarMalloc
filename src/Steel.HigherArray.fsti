@@ -845,7 +845,7 @@ let lemma_alloc (#a:Type)
     p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4);
   ()
 
-let alloc (#a: Type) (n:nat{n > 0}) (v: lseq a n)
+let alloc (#a: Type) (n:nat) (v: lseq a n)
   : Steel (array_ref a #n)
   emp
   (fun r ->
@@ -2038,7 +2038,7 @@ let pts_to (#a:Type u#1) (#n: nat)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (p: lseq (option perm) n{perm_ok p})
-  (subv: lseq a (i2 - i1))
+  ([@@@smt_fallback] subv: lseq a (i2 - i1))
   =
   to_vprop (pts_to_sl n r i1 i2 p subv)
 
@@ -2174,12 +2174,12 @@ let usersl_to_usersl' (#a: Type)
     );
   return v
 
-let alloc2 (#a: Type) (n:nat{n > 0}) (v: lseq a n)
+let alloc2 (#a: Type) (n:nat) (v: lseq a n)
   : Steel (array_ref a #n)
   emp
   (fun r -> pts_to #a #n r 0 n (full_perm_seq n) v)
   (requires fun _ -> True)
-  (ensures fun _ r _ -> True)
+  (ensures fun _ r _ -> not (is_null r))
   =
   let r = alloc n v in
   usersl'_to_usersl r 0 n (full_perm_seq n) (to_some v) v;
