@@ -52,12 +52,15 @@ let downgrade_raise_val_bij (#a: Type0) (#n: nat) (s: lseq a n)
   : Lemma
   (downgrade_val_seq (raise_val_seq s) == s)
   =
-  admit ();
   let s' = raise_val_seq s in
+  map_seq_len U.raise_val s;
   Classical.forall_intro (map_seq_index U.raise_val s);
   let s'' = downgrade_val_seq s' in
+  map_seq_len U.downgrade_val s';
   Classical.forall_intro (map_seq_index U.downgrade_val s');
-  ()
+  assert (forall (i:nat{i < n}).
+    index s'' i == U.downgrade_val (U.raise_val (index s i)));
+  Seq.lemma_eq_intro s s''
 
 let pts_to_sl (#a: Type0)
   (#n: nat)
@@ -101,6 +104,33 @@ let raise_val_seq_inj (#a: Type) (#n: nat) (x y: lseq a n)
   in
   Classical.forall_intro aux;
   Seq.lemma_eq_intro x y
+
+let raise_val_seq_move_split (#a: Type) (#n: nat)
+  (s: lseq a n) (j: nat{j <= n})
+  : Lemma
+  (ensures (
+    let s1, s2 = Seq.split (raise_val_seq s) j in
+    s1 == raise_val_seq #a #j (fst (Seq.split s j)) /\
+    s2 == raise_val_seq #a #(n - j) (snd (Seq.split s j))
+  ))
+  =
+  let s1, s2 = Seq.split (raise_val_seq s) j in
+  Seq.lemma_split (raise_val_seq s) j;
+  assert (append s1 s2 == raise_val_seq s);
+  let t1', t2' = Seq.split s j in
+  Seq.lemma_split s j;
+  let t1 = raise_val_seq #a #j t1' in
+  let t2 = raise_val_seq #a #(n - j) t2' in
+  assert (t1 == map_seq U.raise_val t1');
+  assert (t2 == map_seq U.raise_val t2');
+  assert (raise_val_seq s == map_seq U.raise_val s);
+  Seq.map_seq_append U.raise_val t1' t2';
+  assert (raise_val_seq s == Seq.append t1 t2);
+  assert (Seq.equal (append s1 s2) (append t1 t2));
+  Seq.lemma_eq_intro t1 s1;
+  Seq.lemma_eq_intro t2 s2;
+  assert (s1 == t1);
+  assert (s2 == t2)
 
 let pts_to_ref_injective (#a: Type0) (#n: nat)
   (r: array_ref a #n)
@@ -315,82 +345,185 @@ let free_pt (#a: Type) (n:nat)
   slu_raise r 0 n p 0 n subv (fun v -> v);
   H.free2 n r p (raise_val_seq subv)
 
-//let split_pt (#a: Type) (n: nat)
-//  (r: array_ref a #n)
-//  (i1: nat)
-//  (i2: nat{i1 <= i2 /\ i2 <= n})
-//  (j: nat{i1 <= j /\ j <= i2})
-//  (p: lseq (option perm) n{perm_ok p /\ H.zeroed (i1, i2) p})
-//  (subv: lseq a (i2 - i1))
-//  : SteelT unit
-//  (pts_to #a #n r i1 i2 p subv)
-//  (fun _ ->
-//    pts_to #a #n r i1 j
-//      (fst (H.split_aux n p j))
-//      (fst (Seq.split subv (j - i1)))
-//    `star`
-//    pts_to #a #n r j i2
-//      (snd (H.split_aux n p j))
-//      (snd (Seq.split subv (j - i1)))
-//  )
-//  =
-//  slu_raise r i1 i2 p i1 i2 subv (fun v -> v);
-//  H.split2 n r i1 i2 j p (raise_val_seq subv);
-//  slassert (
-//      (H.pts_to r i1 j
-//      (fst (H.split_aux n p j))
-//      (fst (Seq.split (raise_val_seq subv) (j - i1))))
-//     `star`
-//      (H.pts_to r j i2
-//      (snd (H.split_aux n p j))
-//      (snd (Seq.split (raise_val_seq subv) (j - i1))))
-//  );
-//  sladmit ();
-//  slu_downgrade r i1 j
-//    (fst (H.split_aux n p j))
-//    i1 i2
-//    subv
-//    (fun v -> fst (Seq.split v (j - i1)));
-//  slu_downgrade r j i2
-//    (snd (H.split_aux n p j))
-//    i1 i2
-//    subv
-//    (fun v -> snd (Seq.split v (j - i1)));
-//  ()
-//
-//let merge_pt (#a: Type) (n: nat)
-//  (r: array_ref a #n)
-//  (i1: nat)
-//  (i2: nat{i1 <= i2 /\ i2 <= n})
-//  (j: nat{i1 <= j /\ j <= i2})
-//  (p1: lseq (option perm) n{perm_ok p1 /\ H.zeroed (i1, j) p1})
-//  (subv1: lseq a (j - i1))
-//  (p2: lseq (option perm) n{perm_ok p2 /\ H.zeroed (j, i2) p2})
-//  (subv2: lseq a (i2 - j))
-//  (_: unit{H.composable
-//    (H.complete n i1 j p1 (raise_val_seq subv1), p1)
-//    (H.complete n j i2 p2 (raise_val_seq subv2), p2)})
-//  : SteelT unit
-//  (pts_to #a #n r i1 j p1 subv1 `star`
-//  pts_to #a #n r j i2 p2 subv2)
-//  //(fun _ -> emp)
-//  (fun _ ->
-//    //admit ();
-//    map_seq2_len H.f2 p1 p2;
-//    let v1 = H.complete n i1 j p1 (raise_val_seq subv1) in
-//    let v2 = H.complete n j i2 p2 (raise_val_seq subv2) in
-//    assert (H.composable (v1, p1) (v2, p2));
-//    assert (map_seq2 H.f2 p1 p2 == snd (H.op (v1, p1) (v2, p2)));
-//    assert (perm_ok #n (map_seq2 H.f2 p1 p2));
-//    assert (H.perm_ok #n (map_seq2 H.f2 p1 p2));
-//    assert (Seq.length (append subv1 subv2) == i2 - i1);
-//    pts_to #a #n r i1 i2
-//      //(map_seq2 H.f2 p1 p2)
-//      (H.full_perm_seq n)
-//      (append subv1 subv2)
-//  )
-//  =
-//  sladmit ()
+let split_pt_lemma1 (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p: lseq (option perm) n{perm_ok p /\ H.zeroed (i1, i2) p})
+  (subv: lseq a (i2 - i1))
+  (m:Mem.mem)
+  : Lemma
+  (requires Mem.interp (
+      H.pts_to_sl n r i1 j
+      (fst (H.split_aux n p j))
+      (fst (Seq.split (raise_val_seq subv) (j - i1)))
+  ) m)
+  (ensures Mem.interp (
+      H.pts_to_sl n r i1 j
+      (fst (H.split_aux n p j))
+      (raise_val_seq #a #(j - i1) (fst (Seq.split subv (j - i1))))
+  ) m)
+  =
+  raise_val_seq_move_split subv (j - i1);
+  assert (
+    fst (Seq.split (raise_val_seq subv) (j - i1))
+    ==
+    raise_val_seq #a #(j - i1) (fst (Seq.split subv (j - i1)))
+  );
+  assume (
+      H.pts_to_sl n r i1 j
+      (fst (H.split_aux n p j))
+      (fst (Seq.split (raise_val_seq subv) (j - i1)))
+      ==
+      H.pts_to_sl n r i1 j
+      (fst (H.split_aux n p j))
+      (raise_val_seq #a #(j - i1) (fst (Seq.split subv (j - i1))))
+  );
+  ()
+
+let split_pt_lemma2 (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p: lseq (option perm) n{perm_ok p /\ H.zeroed (i1, i2) p})
+  (subv: lseq a (i2 - i1))
+  (m:Mem.mem)
+  : Lemma
+  (requires Mem.interp (
+      H.pts_to_sl n r j i2
+      (snd (H.split_aux n p j))
+      (snd (Seq.split (raise_val_seq subv) (j - i1)))
+  ) m)
+  (ensures Mem.interp (
+      H.pts_to_sl n r j i2
+      (snd (H.split_aux n p j))
+      (raise_val_seq #a #(i2 - j) (snd (Seq.split subv (j - i1))))
+  ) m)
+  =
+  raise_val_seq_move_split subv (j - i1);
+  assert (
+    snd (Seq.split (raise_val_seq subv) (j - i1))
+    ==
+    raise_val_seq #a #(i2 - j) (snd (Seq.split subv (j - i1)))
+  );
+  assume (
+      H.pts_to_sl n r j i2
+      (snd (H.split_aux n p j))
+      (snd (Seq.split (raise_val_seq subv) (j - i1)))
+      ==
+      H.pts_to_sl n r j i2
+      (snd (H.split_aux n p j))
+      (raise_val_seq #a #(i2 - j) (snd (Seq.split subv (j - i1))))
+  );
+  ()
+
+#push-options "--z3rlimit 30 --print_implicits"
+//#push-options "--print_implicits"
+
+let split_pt (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p: lseq (option perm) n{perm_ok p /\ H.zeroed (i1, i2) p})
+  (subv: erased (lseq a (i2 - i1)))
+  : SteelT unit
+  (pts_to #a #n r i1 i2 p (reveal subv))
+  (fun _ ->
+    pts_to #a #n r i1 j
+      (fst (H.split_aux n p j))
+      (fst (Seq.split (reveal subv) (j - i1)))
+    `star`
+    pts_to #a #n r j i2
+      (snd (H.split_aux n p j))
+      (snd (Seq.split (reveal subv) (j - i1)))
+  )
+  =
+  slu_raise r i1 i2 p i1 i2 (reveal subv) (fun v -> v);
+  H.split2 n r i1 i2 j p (hide (raise_val_seq (reveal subv)));
+  slassert (
+      (H.pts_to r i1 j
+      (fst (H.split_aux n p j))
+      (fst (Seq.split (raise_val_seq (reveal subv)) (j - i1))))
+     `star`
+      (H.pts_to r j i2
+      (snd (H.split_aux n p j))
+      (snd (Seq.split (raise_val_seq (reveal subv)) (j - i1))))
+  );
+  rewrite_slprop
+      (H.pts_to r i1 j
+      (fst (H.split_aux n p j))
+      (fst (Seq.split (raise_val_seq (reveal subv)) (j - i1))))
+      (H.pts_to r i1 j
+      (fst (H.split_aux n p j))
+      (raise_val_seq #a #(j - i1) (fst (Seq.split (reveal subv) (j - i1)))))
+      (fun m -> split_pt_lemma1 n r i1 i2 j p (reveal subv) m);
+  rewrite_slprop
+      (H.pts_to r j i2
+      (snd (H.split_aux n p j))
+      (snd (Seq.split (raise_val_seq (reveal subv)) (j - i1))))
+      (H.pts_to r j i2
+      (snd (H.split_aux n p j))
+      (raise_val_seq #a #(i2 - j) (snd (Seq.split (reveal subv) (j - i1)))))
+      (fun m -> split_pt_lemma2 n r i1 i2 j p (reveal subv) m);
+  slu_downgrade r i1 j
+    (fst (H.split_aux n p j))
+    i1 i2
+    subv
+    (fun v -> fst (Seq.split v (j - i1)));
+  slu_downgrade r j i2
+    (snd (H.split_aux n p j))
+    i1 i2
+    subv
+    (fun v -> snd (Seq.split v (j - i1)));
+  ()
+#pop-options
+
+let merge_pt (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p1: lseq (option perm) n{perm_ok p1 /\ H.zeroed (i1, j) p1})
+  (subv1: erased (lseq a (j - i1)))
+  (p2: lseq (option perm) n{perm_ok p2 /\ H.zeroed (j, i2) p2})
+  (subv2: erased (lseq a (i2 - j)))
+  //(_: unit{H.composable #(U.raise_t a) #n
+  // (H.complete' #(U.raise_t a) n i1 j (raise_val_seq #(j - i1) (reveal subv1), p1))
+  //  (H.complete' #(U.raise_t a) n j i2 (raise_val_seq #(i2 - j) (reveal subv2), p2))})
+  : SteelT unit
+  (pts_to #a #n r i1 j p1 (reveal subv1) `star`
+  pts_to #a #n r j i2 p2 (reveal subv2))
+  //(fun _ -> emp)
+  (fun _ ->
+    map_seq2_len H.f2 p1 p2;
+    let v1 = H.complete n i1 j p1 (raise_val_seq subv1) in
+    let v2 = H.complete n j i2 p2 (raise_val_seq subv2) in
+    assert (H.composable (v1, p1) (v2, p2));
+    assert (map_seq2 H.f2 p1 p2 == snd (H.op (v1, p1) (v2, p2)));
+    assert (perm_ok #n (map_seq2 H.f2 p1 p2));
+    assert (H.perm_ok #n (map_seq2 H.f2 p1 p2));
+    assert (Seq.length (append subv1 subv2) == i2 - i1);
+    pts_to #a #n r i1 i2
+      (map_seq2 H.f2 p1 p2)
+      //(H.full_perm_seq n)
+      (append (reveal subv1) (reveal subv2))
+  )
+  =
+  slu_raise r i1 j p1 i1 j (reveal subv1) (fun v -> v);
+  slu_raise r j i2 p2 j i2 (reveal subv2) (fun v -> v);
+  admit ();
+  H.merge2 n r i1 i2 j
+    p1 (raise_val_seq (reveal subv1))
+    p2 (raise_val_seq (reveal subv2)) ();
+  slu_downgrade r i1 i2
+    (map_seq2 H.f2 p1 p2)
+    i1 i2
+    (append (reveal subv1) (reveal subv2))
+    (fun v -> v);
+  ()
 
 let arrp (#a: Type0) (#n: nat)
   //([@@@smt_fallback] i1: nat)
@@ -636,7 +769,7 @@ let readp (#a: Type0) (n: nat) (r: array_ref a #n)
   intro_varr r i1 i2 p v;
   return content
 
-let read (#a: Type0) (#n: nat) (r: array_ref a #n)
+let read_seq (#a: Type0) (#n: nat) (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   : Steel (lseq a (i2 - i1))
@@ -648,7 +781,7 @@ let read (#a: Type0) (#n: nat) (r: array_ref a #n)
   let v = readp n r i1 i2 (mk_full_perm n i1 i2) in
   return v
 
-let write (#a: Type0) (#n: nat) (r: array_ref a #n)
+let write_seq (#a: Type0) (#n: nat) (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (v_write: lseq a (i2 - i1))
@@ -661,5 +794,61 @@ let write (#a: Type0) (#n: nat) (r: array_ref a #n)
   let v = elim_varr r i1 i2 (mk_full_perm n i1 i2) in
   write_pt n r i1 i2 (mk_full_perm n i1 i2) v v_write;
   intro_varr r i1 i2 (mk_full_perm n i1 i2) v_write
+
+let split (#a: Type0) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p: lseq (option perm) n{perm_ok p /\ H.zeroed (i1, i2) p})
+  : SteelT unit
+  (varrp r i1 i2 p)
+  (fun _ ->
+    varrp r i1 j (fst (H.split_aux n p j)) `star`
+    varrp r j i2 (snd (H.split_aux n p j)))
+  =
+  let v = elim_varr r i1 i2 p in
+  slassert (pts_to #a #n r i1 i2 p (reveal v));
+  split_pt n r i1 i2 j p v;
+  slassert (
+    pts_to #a #n r i1 j
+      (fst (H.split_aux n p j))
+      (fst (Seq.split (reveal v) (j - i1)))
+    `star`
+    pts_to #a #n r j i2
+      (snd (H.split_aux n p j))
+      (snd (Seq.split (reveal v) (j - i1)))
+  );
+  intro_varr #a #_ #n r i1 j (fst (H.split_aux n p j))
+    (hide (fst (Seq.split (reveal v) (j - i1))));
+  intro_varr #a #_ #n r j i2 (snd (H.split_aux n p j))
+    (hide (snd (Seq.split (reveal v) (j - i1))));
+  ()
+
+let merge (#a: Type0) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p1: lseq (option perm) n{perm_ok p1 /\ H.zeroed (i1, j) p1})
+  //(subv1: erased (lseq a (j - i1)))
+  (p2: lseq (option perm) n{perm_ok p2 /\ H.zeroed (j, i2) p2})
+  //(subv2: erased (lseq a (i2 - j)))
+  (_:unit{
+    Seq.length (map_seq2 H.f2 p1 p2) == n /\
+    perm_ok #n (map_seq2 H.f2 p1 p2)})
+  : SteelT unit
+  (varrp r i1 j p1 `star`
+   varrp r j i2 p2)
+  (fun _ -> varrp r i1 i2 (map_seq2 H.f2 p1 p2))
+  =
+  let v1 = elim_varr r i1 j p1 in
+  let v2 = elim_varr r j i2 p2 in
+  merge_pt n r i1 i2 j p1 v1 p2 v2;
+  intro_varr #a #_ #n r i1 i2
+    (map_seq2 H.f2 p1 p2)
+    (hide (append (reveal v1) (reveal v2)));
+  ()
+
 
 #set-options "--print_implicits"

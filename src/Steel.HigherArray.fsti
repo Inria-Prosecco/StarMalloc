@@ -92,7 +92,7 @@ let f2 : option perm -> option perm -> option perm
 //  (ensures Some? (f1 v1 v2) = Some? (f2 p1 p2))
 //  = ()
 
-let op (#a: Type) (#n: nat)
+unfold let op (#a: Type) (#n: nat)
   (s1: array a #n)
   (s2: array a #n{composable s1 s2})
   : array a #n
@@ -1008,7 +1008,7 @@ let pcmsl_to_usersl' (#a: Type) (#opened_invariants:_)
   (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
   (v: erased (v2:lseq (option a) n{forall (i:nat{i < n}).
     Some? (index p i) = Some? (index v2 i)}))
-  (subv: lseq a (i2 - i1){slice v i1 i2 == to_some subv})
+  (subv: erased (lseq a (i2 - i1)){slice v i1 i2 == to_some subv})
   : SteelGhostT unit
   opened_invariants
   (PR.pts_to #(array a #n) #pcm_array r (reveal v, p))
@@ -1772,36 +1772,39 @@ let split_aux_composable_op (#a: Type) (n: nat)
   assert (fst r == fst arr);
   assert (snd r == snd arr)
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 50 --query_stats"
 let split (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (j: nat{i1 <= j /\ j <= i2})
   (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
-  (v: lseq (option a) n{forall (i:nat{i < n}).
-    Some? (index p i) = Some? (index v i)})
-  (subv: lseq a (i2 - i1){slice v i1 i2 == to_some subv})
+  (v: erased (v2:lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v2 i)}))
+  (subv: erased (lseq a (i2 - i1)){
+    slice (reveal v) i1 i2 == to_some (reveal subv)})
   : Steel unit
-  (pts_to' #a #n r i1 i2 p v subv)
+  (pts_to' #a #n r i1 i2 p (reveal v) (reveal subv))
   (fun _ ->
     pts_to' #a #n r i1 j
       (fst (split_aux n p j))
-      (fst (split_aux n v j))
-      (fst (split subv (j - i1)))
+      (fst (split_aux n (reveal v) j))
+      (fst (split (reveal subv) (j - i1)))
     `star`
     pts_to' #a #n r j i2
       (snd (split_aux n p j))
-      (snd (split_aux n v j))
-      (snd (split subv (j - i1)))
+      (snd (split_aux n (reveal v) j))
+      (snd (split (reveal subv) (j - i1)))
   )
   (requires fun _ -> True)
   (ensures fun _ _ _ ->
-    let v1, v2 = split_aux n v j in
+    let v1 = hide (fst (split_aux n (reveal v) j)) in
+    let v2 = hide (snd (split_aux n (reveal v) j)) in
     let p1, p2 = split_aux n p j in
-    let subv1, subv2 = split subv (j - i1) in
-    composable (v1, p1) (v2, p2) /\
-    Seq.append subv1 subv2 == subv /\
+    let subv1 = hide (fst (split (reveal subv) (j - i1))) in
+    let subv2 = hide (snd (split (reveal subv) (j - i1))) in
+    composable (reveal v1, p1) (reveal v2, p2) /\
+    Seq.append subv1 subv2 == reveal subv /\
     Seq.slice (fst (split_aux n v j)) i1 j
       == to_some #a #(j - i1) (fst (split subv (j - i1))) /\
     Seq.slice (snd (split_aux n v j)) j i2
@@ -1809,25 +1812,29 @@ let split (#a: Type) (n: nat)
     )
   =
   usersl'_to_pcmsl r i1 i2 p v subv;
-  let v1, v2 = split_aux n v j in
+  let v1 = hide (fst (split_aux n (reveal v) j)) in
+  let v2 = hide (snd (split_aux n (reveal v) j)) in
   let p1, p2 = split_aux n p j in
-  let c1 : array a #n = (v1, p1) in
-  let c2 : array a #n = (v2, p2) in
-  let c : array a #n = (v, p) in
-  let subv1, subv2 = split subv (j - i1) in
-  assert (composable c1 c2);
-  split_aux_composable_op n c j;
-  assert (op c1 c2 == c);
-  PR.split r (v, p)
-    (fst (split_aux n v j), fst (split_aux n p j))
-    (snd (split_aux n v j), snd (split_aux n p j));
+  let c1 : erased (array a #n) = hide (reveal v1, p1) in
+  let c2 : erased (array a #n) = hide (reveal v2, p2) in
+  let c : erased (array a #n) = hide (reveal v, p) in
+
+  let subv1 = hide (fst (split (reveal subv) (j - i1))) in
+  let subv2 = hide (snd (split (reveal subv) (j - i1))) in
+  assert (composable (reveal c1) (reveal c2));
+  split_aux_composable_op n (reveal c) j;
+  assert (op (reveal c1) (reveal c2) == reveal c);
+  PR.split r (reveal v, p)
+    (fst (split_aux n (reveal v) j), fst (split_aux n p j))
+    (snd (split_aux n (reveal v) j), snd (split_aux n p j));
+
   split_aux_lemma n p i1 i2 j;
   assert (perm_ok p1);
   assert (perm_ok p2);
   assert (zeroed (i1, j) p1);
   assert (zeroed (j, i2) p2);
   lemma_split subv (j - i1);
-  assert (Seq.append subv1 subv2 == subv);
+  assert (Seq.append subv1 subv2 == reveal subv);
   split_aux_slice n c i1 i2 subv j;
   assert (slice (fst (split_aux n v j)) i1 j
   == to_some #a #(j - i1) (fst (split subv (j - i1))));
@@ -1836,11 +1843,11 @@ let split (#a: Type) (n: nat)
   pcmsl_to_usersl' r i1 j
     (fst (split_aux #perm n p j))
     (fst (split_aux #a n v j))
-    (fst (split #a subv (j - i1)));
+    (fst (split (reveal subv) (j - i1)));
   pcmsl_to_usersl' r j i2
     (snd (split_aux n p j))
     (snd (split_aux n v j))
-    (snd (split subv (j - i1)));
+    (snd (split (reveal subv) (j - i1)));
   return ()
 #pop-options
 
@@ -1907,45 +1914,54 @@ let merge_subv_lemma (#a: Type) (n: nat)
   == map_seq (fun e -> Some e) (append subv1 subv2));
   to_some_map_equiv #a #(i2 - i1) (append subv1 subv2)
 
+#push-options "--z3rlimit 30"
 let merge (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (j: nat{i1 <= j /\ j <= i2})
   (p1: lseq (option perm) n{perm_ok p1 /\ zeroed (i1, j) p1})
-  (v1: lseq (option a) n{forall (i:nat{i < n}).
-    Some? (index p1 i) = Some? (index v1 i)})
-  (subv1: lseq a (j - i1){slice v1 i1 j == to_some subv1})
+  (v1: erased (v1':lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p1 i) = Some? (index v1' i)}))
+  (subv1: erased (lseq a (j - i1)){slice v1 i1 j == to_some subv1})
   (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
-  (v2: lseq (option a) n{forall (i:nat{i < n}).
-    Some? (index p2 i) = Some? (index v2 i)})
-  (subv2: lseq a (i2 - j){slice v2 j i2 == to_some subv2})
-  (_: unit{composable (v1, p1) (v2, p2)})
-  : Steel (lseq a (i2 - i1))
-  (pts_to' #a #n r i1 j p1 v1 subv1 `star`
-  pts_to' #a #n r j i2 p2 v2 subv2)
+  (v2: erased (v2':lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p2 i) = Some? (index v2' i)}))
+  (subv2: erased (lseq a (i2 - j)){slice v2 j i2 == to_some subv2})
+  (_: unit{composable (reveal v1, p1) (reveal v2, p2)})
+  : Steel (erased (lseq a (i2 - i1)))
+  (pts_to' #a #n r i1 j p1 (reveal v1) (reveal subv1) `star`
+  pts_to' #a #n r j i2 p2 (reveal v2) (reveal subv2))
   (fun subv ->
-    map_seq2_len f1 v1 v2;
+    map_seq2_len f1 (reveal v1) (reveal v2);
     map_seq2_len f2 p1 p2;
-    assert (composable (v1, p1) (v2, p2));
-    assert (map_seq2 f2 p1 p2 == snd (op (v1, p1) (v2, p2)));
+    assert (composable (reveal v1, p1) (reveal v2, p2));
+    assert (map_seq2 f2 p1 p2 == snd (op (reveal v1, p1) (reveal v2, p2)));
     assert (perm_ok #n (map_seq2 f2 p1 p2));
     merge_perm_lemma n i1 i2 j p1 p2;
     assert (zeroed (i1, i2) (map_seq2 f2 p1 p2));
-    merge_subv_lemma n i1 i2 j p1 v1 subv1 p2 v2 subv2;
-    assert (slice (map_seq2 f1 v1 v2) i1 i2
-    == to_some #a #(i2 - i1) (append subv1 subv2));
+    merge_subv_lemma n i1 i2 j
+      p1 (reveal v1) (reveal subv1) p2 (reveal v2) (reveal subv2);
+    assert (slice (map_seq2 f1 (reveal v1) (reveal v2)) i1 i2
+    == to_some #a #(i2 - i1) (append (reveal subv1) (reveal subv2)));
     pts_to' #a #n r i1 i2
     (map_seq2 f2 p1 p2)
-    (map_seq2 f1 v1 v2)
+    (map_seq2 f1 (reveal v1) (reveal v2))
     (append subv1 subv2))
   (requires fun _ -> True)
-  (ensures fun _ subv _ -> subv == append subv1 subv2)
+  (ensures fun _ subv _ ->
+    reveal subv == append (reveal subv1) (reveal subv2))
   =
   usersl'_to_pcmsl r i1 j p1 v1 subv1;
   usersl'_to_pcmsl r j i2 p2 v2 subv2;
-  PR.gather r (v1, p1) (v2, p2);
-  map_seq2_len f1 v1 v2;
+  PR.gather r (hide (reveal v1, p1)) (hide (reveal v2, p2));
+  rewrite_slprop
+    (PR.pts_to r (FStar.PCM.op pcm_array (reveal v1, p1) (reveal v2, p2)))
+    (PR.pts_to r
+      (map_seq2 f1 (reveal v1) (reveal v2),
+      map_seq2 f2 p1 p2))
+    (fun _ -> ());
+  map_seq2_len f1 (reveal v1) (reveal v2);
   map_seq2_len f2 p1 p2;
   merge_perm_lemma n i1 i2 j p1 p2;
   assert (zeroed (i1, i2) (map_seq2 f2 p1 p2));
@@ -1954,9 +1970,9 @@ let merge (#a: Type) (n: nat)
   == to_some #a #(i2 - i1) (append subv1 subv2));
   pcmsl_to_usersl' r i1 i2
     (map_seq2 f2 p1 p2)
-    (map_seq2 f1 v1 v2)
-    (append subv1 subv2);
-  return (append subv1 subv2)
+    (hide (map_seq2 f1 (reveal v1) (reveal v2)))
+    (hide (append (reveal subv1) (reveal subv2)));
+  return (hide (append subv1 subv2))
 
 let half_perm_opt (p: option perm) : option perm
 = match p with
@@ -2152,9 +2168,9 @@ let usersl'_to_usersl (#a: Type) (#opened_invariants:_)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
-  (v: lseq (option a) n{forall (i:nat{i < n}).
-    Some? (index p i) = Some? (index v i)})
-  (subv: lseq a (i2 - i1){slice v i1 i2 == to_some subv})
+  (v: erased (v2:lseq (option a) n{forall (i:nat{i < n}).
+    Some? (index p i) = Some? (index v2 i)}))
+  (subv: erased (lseq a (i2 - i1)){slice (reveal v) i1 i2 == to_some subv})
   : SteelGhostT unit
   opened_invariants
   (pts_to' r i1 i2 p v subv)
@@ -2261,25 +2277,24 @@ let free2 (#a: Type) (n:nat)
   })) = usersl_to_usersl' r 0 n p subv in
   free n r p v subv
 
-(*)
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 40"
 let split2 (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (j: nat{i1 <= j /\ j <= i2})
   (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
-  (subv: lseq a (i2 - i1))
+  (subv: erased (lseq a (i2 - i1)))
   : SteelT unit
-  (pts_to #a #n r i1 i2 p subv)
+  (pts_to #a #n r i1 i2 p (reveal subv))
   (fun _ ->
     pts_to #a #n r i1 j
       (fst (split_aux n p j))
-      (fst (Seq.split subv (j - i1)))
+      (fst (Seq.split (reveal subv) (j - i1)))
     `star`
     pts_to #a #n r j i2
       (snd (split_aux n p j))
-      (snd (Seq.split subv (j - i1)))
+      (snd (Seq.split (reveal subv) (j - i1)))
   )
   =
   let v = usersl_to_usersl' r i1 i2 p subv in
@@ -2288,11 +2303,11 @@ let split2 (#a: Type) (n: nat)
   usersl'_to_usersl r i1 j
     (fst (split_aux n p j))
     (fst (split_aux n v j))
-    (fst (Seq.split subv (j - i1)));
+    (fst (Seq.split (reveal subv) (j - i1)));
   usersl'_to_usersl r j i2
     (snd (split_aux n p j))
     (snd (split_aux n v j))
-    (snd (Seq.split subv (j - i1)));
+    (snd (Seq.split (reveal subv) (j - i1)));
   return ()
 #pop-options
 
@@ -2302,15 +2317,15 @@ let merge2 (#a: Type) (n: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (j: nat{i1 <= j /\ j <= i2})
   (p1: lseq (option perm) n{perm_ok p1 /\ zeroed (i1, j) p1})
-  (subv1: lseq a (j - i1))
+  (subv1: erased (lseq a (j - i1)))
   (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
-  (subv2: lseq a (i2 - j))
+  (subv2: erased (lseq a (i2 - j)))
   (_: unit{composable
-    (complete n i1 j p1 subv1, p1)
-    (complete n j i2 p2 subv2, p2)})
+    (complete n i1 j p1 (reveal subv1), p1)
+    (complete n j i2 p2 (reveal subv2), p2)})
   : SteelT unit
-  (pts_to #a #n r i1 j p1 subv1 `star`
-  pts_to #a #n r j i2 p2 subv2)
+  (pts_to #a #n r i1 j p1 (reveal subv1) `star`
+  pts_to #a #n r j i2 p2 (reveal subv2))
   (fun _ ->
     map_seq2_len f2 p1 p2;
     let v1 = complete n i1 j p1 subv1 in
@@ -2330,10 +2345,10 @@ let merge2 (#a: Type) (n: nat)
   let _ = merge n r i1 i2 j p1 v1 subv1 p2 v2 subv2 () in
   map_seq2_len f1 v1 v2;
   map_seq2_len f2 p1 p2;
-  assert (map_seq2 f2 p1 p2 == snd (op (v1, p1) (v2, p2)));
-  assert (v1 == complete n i1 j p1 subv1);
-  assert (v2 == complete n j i2 p2 subv2);
-  assert (composable (v1, p1) (v2, p2));
+  assert (map_seq2 f2 p1 p2 == snd (op (reveal v1, p1) (reveal v2, p2)));
+  assert (reveal v1 == complete n i1 j p1 (reveal subv1));
+  assert (reveal v2 == complete n j i2 p2 (reveal subv2));
+  assert (composable (reveal v1, p1) (reveal v2, p2));
   assert (perm_ok #n (map_seq2 f2 p1 p2));
   merge_perm_lemma n i1 i2 j p1 p2;
   assert (zeroed (i1, i2) (map_seq2 f2 p1 p2));
@@ -2347,7 +2362,7 @@ let merge2 (#a: Type) (n: nat)
 
 #set-options "--print_implicits"
 // split, merge, share, gather: SteelGhost?
-
+(*)
 let share2 (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
