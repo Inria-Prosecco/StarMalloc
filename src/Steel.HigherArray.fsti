@@ -2311,6 +2311,55 @@ let split2 (#a: Type) (n: nat)
   return ()
 #pop-options
 
+let disjoint_perms_are_composable (n: nat)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p1: lseq (option perm) n{perm_ok p1 /\ zeroed (i1, j) p1})
+  (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
+  : Lemma
+  (map_seq2_len f2 p1 p2;
+  perm_ok #n (map_seq2 f2 p1 p2))
+  =
+  map_seq2_len f2 p1 p2;
+  Classical.forall_intro (map_seq2_index f2 p1 p2)
+
+let disjoint_values_are_composable (#a: Type) (n: nat)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (subv1: erased (lseq a (j - i1)))
+  (subv2: erased (lseq a (i2 - j)))
+  : Lemma
+  (let v1 = complete' n i1 j subv1 in
+  let v2 = complete' n j i2 subv2 in
+  forall (i:nat{i < n}). ~(Some? (index v1 i) /\ Some? (index v2 i)))
+  =
+  let v1 = complete' n i1 j subv1 in
+  let v2 = complete' n j i2 subv2 in
+  assert (forall (i:nat{i < n}).
+    i < j ==> Some? (index v2 i) = false
+  );
+  assert (forall (i:nat{i < n}).
+    i >= j ==> Some? (index v1 i) = false
+  )
+
+let disjoint_is_composable (#a: Type) (n: nat)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p1: lseq (option perm) n{perm_ok p1 /\ zeroed (i1, j) p1})
+  (subv1: erased (lseq a (j - i1)))
+  (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
+  (subv2: erased (lseq a (i2 - j)))
+  : Lemma
+  (let v1 = complete' n i1 j subv1 in
+  let v2 = complete' n j i2 subv2 in
+  composable (v1, p1) (v2, p2))
+  =
+  disjoint_perms_are_composable n i1 i2 j p1 p2;
+  disjoint_values_are_composable n i1 i2 j subv1 subv2
+
 let merge2 (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
@@ -2320,9 +2369,6 @@ let merge2 (#a: Type) (n: nat)
   (subv1: erased (lseq a (j - i1)))
   (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
   (subv2: erased (lseq a (i2 - j)))
-  (_: unit{composable
-    (complete n i1 j p1 (reveal subv1), p1)
-    (complete n j i2 p2 (reveal subv2), p2)})
   : SteelT unit
   (pts_to #a #n r i1 j p1 (reveal subv1) `star`
   pts_to #a #n r j i2 p2 (reveal subv2))
@@ -2330,18 +2376,20 @@ let merge2 (#a: Type) (n: nat)
     map_seq2_len f2 p1 p2;
     let v1 = complete n i1 j p1 subv1 in
     let v2 = complete n j i2 p2 subv2 in
+    disjoint_is_composable n i1 i2 j p1 subv1 p2 subv2;
     assert (composable (v1, p1) (v2, p2));
     assert (map_seq2 f2 p1 p2 == snd (op (v1, p1) (v2, p2)));
     assert (perm_ok #n (map_seq2 f2 p1 p2));
     pts_to #a #n r i1 i2
       (map_seq2 f2 p1 p2)
-      (append subv1 subv2)
+      (append (reveal subv1) (reveal subv2))
   )
   =
   let v1 = usersl_to_usersl' r i1 j p1 subv1 in
   slassert (pts_to' #a #n r i1 j p1 v1 subv1);
   let v2 = usersl_to_usersl' r j i2 p2 subv2 in
   slassert (pts_to' #a #n r j i2 p2 v2 subv2);
+  disjoint_is_composable n i1 i2 j p1 subv1 p2 subv2;
   let _ = merge n r i1 i2 j p1 v1 subv1 p2 v2 subv2 () in
   map_seq2_len f1 v1 v2;
   map_seq2_len f2 p1 p2;

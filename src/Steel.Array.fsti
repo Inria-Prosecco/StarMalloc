@@ -345,6 +345,19 @@ let free_pt (#a: Type) (n:nat)
   slu_raise r 0 n p 0 n subv (fun v -> v);
   H.free2 n r p (raise_val_seq subv)
 
+let pts_to_sl_lemma (#a: Type)
+  (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (p: lseq (option perm) n{perm_ok p})
+  (x y: lseq (U.raise_t a) (i2 - i1))
+  : Lemma
+  (requires x == y)
+  (ensures H.pts_to_sl n r i1 i2 p x == H.pts_to_sl n r i1 i2 p y)
+  =
+  ()
+
 let split_pt_lemma1 (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
@@ -371,16 +384,10 @@ let split_pt_lemma1 (#a: Type) (n: nat)
     ==
     raise_val_seq #a #(j - i1) (fst (Seq.split subv (j - i1)))
   );
-  assume (
-      H.pts_to_sl n r i1 j
-      (fst (H.split_aux n p j))
-      (fst (Seq.split (raise_val_seq subv) (j - i1)))
-      ==
-      H.pts_to_sl n r i1 j
-      (fst (H.split_aux n p j))
-      (raise_val_seq #a #(j - i1) (fst (Seq.split subv (j - i1))))
-  );
-  ()
+  pts_to_sl_lemma n r i1 j
+    (fst (H.split_aux n p j))
+    (fst (Seq.split (raise_val_seq subv) (j - i1)))
+    (raise_val_seq #a #(j - i1) (fst (Seq.split subv (j - i1))))
 
 let split_pt_lemma2 (#a: Type) (n: nat)
   (r: array_ref a #n)
@@ -408,16 +415,10 @@ let split_pt_lemma2 (#a: Type) (n: nat)
     ==
     raise_val_seq #a #(i2 - j) (snd (Seq.split subv (j - i1)))
   );
-  assume (
-      H.pts_to_sl n r j i2
-      (snd (H.split_aux n p j))
-      (snd (Seq.split (raise_val_seq subv) (j - i1)))
-      ==
-      H.pts_to_sl n r j i2
-      (snd (H.split_aux n p j))
-      (raise_val_seq #a #(i2 - j) (snd (Seq.split subv (j - i1))))
-  );
-  ()
+  pts_to_sl_lemma n r j i2
+    (snd (H.split_aux n p j))
+    (snd (Seq.split (raise_val_seq subv) (j - i1)))
+    (raise_val_seq #a #(i2 - j) (snd (Seq.split subv (j - i1))))
 
 #push-options "--z3rlimit 30 --print_implicits"
 //#push-options "--print_implicits"
@@ -481,6 +482,50 @@ let split_pt (#a: Type) (n: nat)
   ()
 #pop-options
 
+let merge_pt_lemma (#a: Type) (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  (p1: lseq (option perm) n{perm_ok p1 /\ H.zeroed (i1, j) p1})
+  (subv1: erased (lseq a (j - i1)))
+  (p2: lseq (option perm) n{perm_ok p2 /\ H.zeroed (j, i2) p2})
+  (subv2: erased (lseq a (i2 - j)))
+  (m:Mem.mem)
+  : Lemma
+  (requires (
+    map_seq2_len H.f2 p1 p2;
+    H.disjoint_perms_are_composable n i1 i2 j p1 p2;
+    Mem.interp (
+    (H.pts_to_sl n r i1 i2
+      (map_seq2 H.f2 p1 p2)
+      (append (raise_val_seq (reveal subv1))
+              (raise_val_seq (reveal subv2))))
+  ) m))
+  (ensures Mem.interp (
+    (H.pts_to_sl n r i1 i2
+      (map_seq2 H.f2 p1 p2)
+      (raise_val_seq (append (reveal subv1) (reveal subv2))))
+  ) m)
+  =
+  //Seq.lemma_len_append (reveal subv1) (reveal subv2);
+  let subv : lseq a (i2 - i1) = append (reveal subv1) (reveal subv2) in
+  Seq.lemma_split subv (j - i1);
+  //raise_val_seq_move_split #a #(i2 - i1) subv (j - i1);
+  map_seq_append U.raise_val (reveal subv1) (reveal subv2);
+  assert (
+    (raise_val_seq subv)
+    ==
+    (append (raise_val_seq (reveal subv1))
+              (raise_val_seq (reveal subv2)))
+  );
+  map_seq2_len H.f2 p1 p2;
+  H.disjoint_perms_are_composable n i1 i2 j p1 p2;
+  pts_to_sl_lemma n r i1 i2 (map_seq2 H.f2 p1 p2)
+    (raise_val_seq subv)
+    (append (raise_val_seq (reveal subv1))
+              (raise_val_seq (reveal subv2)))
+
 let merge_pt (#a: Type) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
@@ -490,17 +535,16 @@ let merge_pt (#a: Type) (n: nat)
   (subv1: erased (lseq a (j - i1)))
   (p2: lseq (option perm) n{perm_ok p2 /\ H.zeroed (j, i2) p2})
   (subv2: erased (lseq a (i2 - j)))
-  //(_: unit{H.composable #(U.raise_t a) #n
-  // (H.complete' #(U.raise_t a) n i1 j (raise_val_seq #(j - i1) (reveal subv1), p1))
-  //  (H.complete' #(U.raise_t a) n j i2 (raise_val_seq #(i2 - j) (reveal subv2), p2))})
   : SteelT unit
   (pts_to #a #n r i1 j p1 (reveal subv1) `star`
   pts_to #a #n r j i2 p2 (reveal subv2))
-  //(fun _ -> emp)
   (fun _ ->
     map_seq2_len H.f2 p1 p2;
-    let v1 = H.complete n i1 j p1 (raise_val_seq subv1) in
-    let v2 = H.complete n j i2 p2 (raise_val_seq subv2) in
+    let subv1' = raise_val_seq subv1 in
+    let subv2' = raise_val_seq subv2 in
+    let v1 = H.complete n i1 j p1 subv1' in
+    let v2 = H.complete n j i2 p2 subv2' in
+    H.disjoint_is_composable n i1 i2 j p1 subv1' p2 subv2';
     assert (H.composable (v1, p1) (v2, p2));
     assert (map_seq2 H.f2 p1 p2 == snd (H.op (v1, p1) (v2, p2)));
     assert (perm_ok #n (map_seq2 H.f2 p1 p2));
@@ -508,16 +552,25 @@ let merge_pt (#a: Type) (n: nat)
     assert (Seq.length (append subv1 subv2) == i2 - i1);
     pts_to #a #n r i1 i2
       (map_seq2 H.f2 p1 p2)
-      //(H.full_perm_seq n)
       (append (reveal subv1) (reveal subv2))
   )
   =
   slu_raise r i1 j p1 i1 j (reveal subv1) (fun v -> v);
   slu_raise r j i2 p2 j i2 (reveal subv2) (fun v -> v);
-  admit ();
   H.merge2 n r i1 i2 j
     p1 (raise_val_seq (reveal subv1))
-    p2 (raise_val_seq (reveal subv2)) ();
+    p2 (raise_val_seq (reveal subv2));
+  map_seq2_len H.f2 p1 p2;
+  H.disjoint_perms_are_composable n i1 i2 j p1 p2;
+  rewrite_slprop
+    (H.pts_to r i1 i2
+      (map_seq2 H.f2 p1 p2)
+      (append (raise_val_seq (reveal subv1))
+              (raise_val_seq (reveal subv2))))
+    (H.pts_to r i1 i2
+      (map_seq2 H.f2 p1 p2)
+      (raise_val_seq (append (reveal subv1) (reveal subv2))))
+    (fun m -> merge_pt_lemma n r i1 i2 j p1 subv1 p2 subv2 m);
   slu_downgrade r i1 i2
     (map_seq2 H.f2 p1 p2)
     i1 i2
@@ -831,20 +884,20 @@ let merge (#a: Type0) (#n: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (j: nat{i1 <= j /\ j <= i2})
   (p1: lseq (option perm) n{perm_ok p1 /\ H.zeroed (i1, j) p1})
-  //(subv1: erased (lseq a (j - i1)))
   (p2: lseq (option perm) n{perm_ok p2 /\ H.zeroed (j, i2) p2})
-  //(subv2: erased (lseq a (i2 - j)))
-  (_:unit{
-    Seq.length (map_seq2 H.f2 p1 p2) == n /\
-    perm_ok #n (map_seq2 H.f2 p1 p2)})
   : SteelT unit
   (varrp r i1 j p1 `star`
    varrp r j i2 p2)
-  (fun _ -> varrp r i1 i2 (map_seq2 H.f2 p1 p2))
+  (fun _ ->
+    map_seq2_len H.f2 p1 p2;
+    H.disjoint_perms_are_composable n i1 i2 j p1 p2;
+    varrp r i1 i2 (map_seq2 H.f2 p1 p2))
   =
   let v1 = elim_varr r i1 j p1 in
   let v2 = elim_varr r j i2 p2 in
   merge_pt n r i1 i2 j p1 v1 p2 v2;
+  map_seq2_len H.f2 p1 p2;
+  H.disjoint_perms_are_composable n i1 i2 j p1 p2;
   intro_varr #a #_ #n r i1 i2
     (map_seq2 H.f2 p1 p2)
     (hide (append (reveal v1) (reveal v2)));
