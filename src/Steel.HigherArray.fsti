@@ -1773,7 +1773,7 @@ let split_aux_composable_op (#a: Type) (n: nat)
   assert (snd r == snd arr)
 
 #push-options "--z3rlimit 50 --query_stats"
-let split (#a: Type) (n: nat)
+let split (#a: Type) (#opened:_) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
@@ -1783,7 +1783,7 @@ let split (#a: Type) (n: nat)
     Some? (index p i) = Some? (index v2 i)}))
   (subv: erased (lseq a (i2 - i1)){
     slice (reveal v) i1 i2 == to_some (reveal subv)})
-  : Steel unit
+  : SteelGhost unit opened
   (pts_to' #a #n r i1 i2 p (reveal v) (reveal subv))
   (fun _ ->
     pts_to' #a #n r i1 j
@@ -1848,7 +1848,7 @@ let split (#a: Type) (n: nat)
     (snd (split_aux n p j))
     (snd (split_aux n v j))
     (snd (split (reveal subv) (j - i1)));
-  return ()
+  ()
 #pop-options
 
 let merge_perm_lemma (n: nat)
@@ -1915,7 +1915,7 @@ let merge_subv_lemma (#a: Type) (n: nat)
   to_some_map_equiv #a #(i2 - i1) (append subv1 subv2)
 
 #push-options "--z3rlimit 30"
-let merge (#a: Type) (n: nat)
+let merge (#a: Type) (#opened:_)  (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
@@ -1929,7 +1929,7 @@ let merge (#a: Type) (n: nat)
     Some? (index p2 i) = Some? (index v2' i)}))
   (subv2: erased (lseq a (i2 - j)){slice v2 j i2 == to_some subv2})
   (_: unit{composable (reveal v1, p1) (reveal v2, p2)})
-  : Steel (erased (lseq a (i2 - i1)))
+  : SteelGhost (erased (lseq a (i2 - i1))) opened
   (pts_to' #a #n r i1 j p1 (reveal v1) (reveal subv1) `star`
   pts_to' #a #n r j i2 p2 (reveal v2) (reveal subv2))
   (fun subv ->
@@ -1972,7 +1972,7 @@ let merge (#a: Type) (n: nat)
     (map_seq2 f2 p1 p2)
     (hide (map_seq2 f1 (reveal v1) (reveal v2)))
     (hide (append (reveal subv1) (reveal subv2)));
-  return (hide (append subv1 subv2))
+  hide (append subv1 subv2)
 
 let half_perm_opt (p: option perm) : option perm
 = match p with
@@ -2278,14 +2278,14 @@ let free2 (#a: Type) (n:nat)
   free n r p v subv
 
 #push-options "--z3rlimit 40"
-let split2 (#a: Type) (n: nat)
+let split2 (#a: Type) (#opened:_) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (j: nat{i1 <= j /\ j <= i2})
   (p: lseq (option perm) n{perm_ok p /\ zeroed (i1, i2) p})
   (subv: erased (lseq a (i2 - i1)))
-  : SteelT unit
+  : SteelGhostT unit opened
   (pts_to #a #n r i1 i2 p (reveal subv))
   (fun _ ->
     pts_to #a #n r i1 j
@@ -2308,7 +2308,7 @@ let split2 (#a: Type) (n: nat)
     (snd (split_aux n p j))
     (snd (split_aux n v j))
     (snd (Seq.split (reveal subv) (j - i1)));
-  return ()
+  ()
 #pop-options
 
 let disjoint_perms_are_composable (n: nat)
@@ -2360,7 +2360,7 @@ let disjoint_is_composable (#a: Type) (n: nat)
   disjoint_perms_are_composable n i1 i2 j p1 p2;
   disjoint_values_are_composable n i1 i2 j subv1 subv2
 
-let merge2 (#a: Type) (n: nat)
+let merge2 (#a: Type) (#opened:_) (n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
@@ -2369,7 +2369,7 @@ let merge2 (#a: Type) (n: nat)
   (subv1: erased (lseq a (j - i1)))
   (p2: lseq (option perm) n{perm_ok p2 /\ zeroed (j, i2) p2})
   (subv2: erased (lseq a (i2 - j)))
-  : SteelT unit
+  : SteelGhostT unit opened
   (pts_to #a #n r i1 j p1 (reveal subv1) `star`
   pts_to #a #n r j i2 p2 (reveal subv2))
   (fun _ ->
@@ -2406,7 +2406,7 @@ let merge2 (#a: Type) (n: nat)
     (map_seq2 f2 p1 p2)
     (map_seq2 f1 v1 v2)
     (append subv1 subv2);
-  return ()
+  ()
 
 #set-options "--print_implicits"
 // split, merge, share, gather: SteelGhost?
