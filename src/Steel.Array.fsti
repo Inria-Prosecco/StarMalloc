@@ -1122,4 +1122,44 @@ let read (#a: Type0) (#n: nat) (r: array_ref a #n)
   return v
 #pop-options
 
+#push-options "--z3rlimit 20"
+let write (#a: Type0) (#n: nat) (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j < i2})
+  (v_write: a)
+  : Steel unit
+  (varr r i1 i2)
+  (fun _ -> varr r i1 i2)
+  (requires fun _ -> n > 0)
+  (ensures fun h0 v h1 ->
+    Seq.index (asel r i1 i2 h1) (j - i1) == v_write)
+    ///\
+    //TODO: missing lemma
+    //asel r i1 i2 h1 == Seq.upd (asel r i1 i2 h0) (j - i1) v_write)
+  =
+  let arr : erased (lseq a (i2 - i1)) = gget (varr r i1 i2) in
+  split r i1 i2 j;
+  let arr1 = gget (varr r i1 j) in
+  let arr2 : erased (lseq a (i2 - j)) = gget (varr r j i2) in
+  append_eq_to_slice_eq (reveal arr) (j - i1)
+    (reveal arr1) (reveal arr2);
+  assert (reveal arr1 == slice (reveal arr) 0 (j - i1));
+  assert (reveal arr2 == slice (reveal arr) (j - i1) (i2 - i1));
+  split r j i2 (j+1);
+  let arr21 = gget (varr r j (j+1)) in
+  let arr22 = gget (varr r (j+1) i2) in
+  append_eq_to_slice_eq (reveal arr2) 1
+    (reveal arr21) (reveal arr22);
+  assert (reveal arr21 == slice (reveal arr2) 0 1);
+  assert (reveal arr22 == slice (reveal arr2) 1 (i2 - j));
+  Seq.slice_slice (reveal arr) (j - i1) (i2 - i1) 0 1;
+  assert (reveal arr21 == slice (reveal arr) (j - i1) (j - i1 + 1));
+  let v_write' = Seq.create 1 v_write in
+  write_seq r j (j+1) v_write';
+  merge r j i2 (j+1);
+  merge r i1 i2 j;
+  return ()
+#pop-options
+
 #set-options "--print_implicits"
