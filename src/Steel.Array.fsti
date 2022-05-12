@@ -575,12 +575,20 @@ let arrp (#a: Type0) (#n: nat)
   (p: lseq (option perm) n{perm_ok p})
   = Mem.h_exists (pts_to_sl r i1 i2 p)
 
+unfold let mk_full_perm (n: nat)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  : p:lseq (option perm) n{perm_ok p /\ H.zeroed (i1, i2) p}
+  =
+  let p' = Seq.create (i2 - i1) full_perm in
+  H.complete' n i1 i2 p'
+
 [@@ __steel_reduce__; __reduce__]
 let arr (#a: Type0) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
-  = arrp #a #n r i1 i2 (Seq.create n (Some full_perm))
+  = arrp #a #n r i1 i2 (mk_full_perm n i1 i2)
 
 let arrp_sel' (#a: Type0) (#n: nat)
   (r: array_ref a #n)
@@ -636,7 +644,7 @@ let arr_sel (#a: Type0) (#n: nat)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   : selector (lseq a (i2 - i1)) (arr r i1 i2)
-  = arrp_sel r i1 i2 (H.full_perm_seq n)
+  = arrp_sel r i1 i2 (mk_full_perm n i1 i2)
 
 [@@ __steel_reduce__]
 let varr' (#a: Type0) (#n: nat)
@@ -659,16 +667,8 @@ let varrp (#a: Type0) (#n: nat)
   (p: lseq (option perm) n{perm_ok p})
   = VUnit (varr' r i1 i2 p)
 
-unfold let mk_full_perm (n: nat)
-  (i1: nat)
-  (i2: nat{i1 <= i2 /\ i2 <= n})
-  : p:lseq (option perm) n{perm_ok p /\ H.zeroed (i1, i2) p}
-  =
-  let p' = Seq.create (i2 - i1) full_perm in
-  H.complete' n i1 i2 p'
-
 [@@ __steel_reduce__; __reduce__]
-let varr (#a: Type0) (#n: nat)
+unfold let varr (#a: Type0) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
@@ -680,13 +680,15 @@ let aselp (#a: Type0) (#n: nat) (#vp: vprop) (r: array_ref a #n)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (p: lseq (option perm) n{perm_ok p})
   (h: rmem vp{FStar.Tactics.with_tactic selector_tactic (can_be_split vp (varrp r i1 i2 p) /\ True)})
+  : GTot (lseq a (i2 - i1))
   = h (varrp r i1 i2 p)
 
 [@@ __steel_reduce__]
-let asel (#a: Type0) (#n: nat) (#vp: vprop) (r: array_ref a #n)
+unfold let asel (#a: Type0) (#n: nat) (#vp: vprop) (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (h: rmem vp{FStar.Tactics.with_tactic selector_tactic (can_be_split vp (varr r i1 i2) /\ True)})
+  : GTot (lseq a (i2 - i1))
   = h (varr r i1 i2)
 
 let intro_varr_lemma (#a: Type0) (#n: nat)
@@ -793,7 +795,7 @@ let free (#a: Type0) (#n: nat) (r: array_ref a #n)
   let v = elim_varr r 0 n (H.full_perm_seq n) in
       free_pt #a n r (H.full_perm_seq n) #_
 
-let readp (#a: Type0) (n: nat) (r: array_ref a #n)
+let readp_seq (#a: Type0) (n: nat) (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
   (p: lseq (option perm) n{perm_ok p /\ H.zeroed (i1, i2) p})
@@ -801,8 +803,9 @@ let readp (#a: Type0) (n: nat) (r: array_ref a #n)
   (varrp r i1 i2 p)
   (fun _ -> varrp r i1 i2 p)
   (requires fun _ -> True)
-  (ensures  fun _ subv h1 ->
-    subv == reveal (aselp #a #n #(varrp r i1 i2 p) r i1 i2 p h1))
+  (ensures  fun h0 v h1 ->
+    v == reveal (aselp #a #n #(varrp r i1 i2 p) r i1 i2 p h1) /\
+    aselp r i1 i2 p h0 == aselp r i1 i2 p h1)
   =
   let v = elim_varr r i1 i2 p in
   let content = read_pt n r i1 i2 p #v in
@@ -816,9 +819,11 @@ let read_seq (#a: Type0) (#n: nat) (r: array_ref a #n)
   (varr r i1 i2)
   (fun _ -> varr r i1 i2)
   (requires fun _ -> True)
-  (ensures fun _ v h1 -> asel r i1 i2 h1 == v)
+  (ensures fun h0 v h1 ->
+    v == asel r i1 i2 h1 /\
+    asel r i1 i2 h0 == asel r i1 i2 h1)
   =
-  let v = readp n r i1 i2 (mk_full_perm n i1 i2) in
+  let v = readp_seq n r i1 i2 (mk_full_perm n i1 i2) in
   return v
 
 let write_seq (#a: Type0) (#n: nat) (r: array_ref a #n)
@@ -836,7 +841,7 @@ let write_seq (#a: Type0) (#n: nat) (r: array_ref a #n)
   intro_varr r i1 i2 (mk_full_perm n i1 i2) v_write
 
 #push-options "--z3rlimit 20"
-let split (#a: Type0) (#opened:_) (#n: nat)
+let splitp (#a: Type0) (#opened:_) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
@@ -875,7 +880,117 @@ let split (#a: Type0) (#opened:_) (#n: nat)
   ()
 #pop-options
 
-let merge (#a: Type0) (#opened:_) (#n: nat)
+let split_aux_full_perm_lemma (n: nat)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  : Lemma
+  (fst (H.split_aux n (mk_full_perm n i1 i2) j) == mk_full_perm n i1 j /\
+  snd (H.split_aux n (mk_full_perm n i1 i2) j) == mk_full_perm n j i2)
+  =
+  let p = mk_full_perm n i1 i2 in
+  let s1 = fst (H.split_aux n p j) in
+  let s2 = snd (H.split_aux n p j) in
+  let t1 = mk_full_perm n i1 j in
+  let t2 = mk_full_perm n j i2 in
+  Seq.lemma_eq_intro s1 t1;
+  assert (s1 == t1);
+  Seq.lemma_eq_intro s2 t2;
+  assert (s2 == t2)
+
+let varrp_to_varr (#a: Type0) (#opened:_) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  : SteelGhost unit opened
+  (varrp r i1 i2 (mk_full_perm n i1 i2))
+  (fun _ -> varr r i1 i2)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    aselp r i1 i2 (mk_full_perm n i1 i2) h0
+    ==
+    asel r i1 i2 h1
+  )
+  =
+  change_slprop_rel
+    (varrp r i1 i2 (mk_full_perm n i1 i2))
+    (varr r i1 i2)
+    (fun x y -> x == y)
+    (fun _ -> ())
+
+let varr_to_varrp (#a: Type0) (#opened:_) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  : SteelGhost unit opened
+  (varr r i1 i2)
+  (fun _ -> varrp r i1 i2 (mk_full_perm n i1 i2))
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    aselp r i1 i2 (mk_full_perm n i1 i2) h1
+    ==
+    asel r i1 i2 h0
+  )
+  =
+  change_slprop_rel
+    (varr r i1 i2)
+    (varrp r i1 i2 (mk_full_perm n i1 i2))
+    (fun x y -> x == y)
+    (fun _ -> ())
+
+#push-options "--z3rlimit 20"
+let split (#a: Type0) (#opened:_) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  : SteelGhost unit opened
+  (varr r i1 i2)
+  (fun _ ->
+    varr r i1 j `star`
+    varr r j i2)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    asel r i1 i2 h0
+    == append
+      (asel r i1 j h1)
+      (asel r j i2 h1))
+  =
+  //let h0 = get () in
+  varr_to_varrp r i1 i2;
+  //let h1 = get () in
+  //assert (asel r i1 i2 h0 == aselp r i1 i2 (mk_full_perm n i1 i2) h1);
+  splitp r i1 i2 j (mk_full_perm n i1 i2);
+  //let h12 = get () in
+  change_slprop_rel
+    (varrp r i1 j (fst (H.split_aux n (mk_full_perm n i1 i2) j)) `star`
+    varrp r j i2 (snd (H.split_aux n (mk_full_perm n i1 i2) j)))
+    (varrp r i1 j (mk_full_perm n i1 j) `star`
+    varrp r j i2 (mk_full_perm n j i2))
+    (fun x y -> x == y)
+    (fun _ -> split_aux_full_perm_lemma n i1 i2 j);
+ // let h2 = get () in
+ // assert (
+ //   aselp r i1 j (fst (H.split_aux n (mk_full_perm n i1 i2) j)) h12
+ //   ==
+ //   aselp r i1 j (mk_full_perm n i1 j) h2
+ // );
+ // assert (
+ //   aselp r j i2 (snd (H.split_aux n (mk_full_perm n i1 i2) j)) h12
+ //   ==
+ //   aselp r j i2 (mk_full_perm n j i2) h2
+ // );
+  varrp_to_varr r i1 j;
+  varrp_to_varr r j i2;
+  //let h3 = get () in
+  //assert (
+  //  aselp r i1 j (mk_full_perm n i1 j) h2 == asel r i1 j h3 /\
+  //  aselp r j i2 (mk_full_perm n j i2) h2 == asel r j i2 h3
+  //)
+  ()
+#pop-options
+
+let mergep (#a: Type0) (#opened:_) (#n: nat)
   (r: array_ref a #n)
   (i1: nat)
   (i2: nat{i1 <= i2 /\ i2 <= n})
@@ -903,8 +1018,108 @@ let merge (#a: Type0) (#opened:_) (#n: nat)
   H.disjoint_perms_are_composable n i1 i2 j p1 p2;
   intro_varr #a #_ #n r i1 i2
     (map_seq2 H.f2 p1 p2)
-    (hide (append (reveal v1) (reveal v2)));
-  ()
+    (hide (append (reveal v1) (reveal v2)))
 
+#push-options "--z3rlimit 20"
+let merge (#a: Type0) (#opened:_) (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  : SteelGhost unit opened
+  (varr r i1 j `star`
+   varr r j i2)
+  (fun _ -> varr r i1 i2)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    asel r i1 i2 h1
+    == append
+      (asel r i1 j h0)
+      (asel r j i2 h0))
+  =
+  let h0 = get () in
+  varr_to_varrp r i1 j;
+  varr_to_varrp r j i2;
+  let h1 = get () in
+  let p1 = mk_full_perm n i1 j in
+  let p2 = mk_full_perm n j i2 in
+  assert (
+    aselp r i1 j p1 h1 == asel r i1 j h0 /\
+    aselp r j i2 p2 h1 == asel r j i2 h0
+  );
+  mergep r i1 i2 j
+    (mk_full_perm n i1 j)
+    (mk_full_perm n j i2);
+  //TODO: file a bug
+  //let h2 = get () in
+  map_seq2_len H.f2 p1 p2;
+  H.disjoint_perms_are_composable n i1 i2 j p1 p2;
+  assert (perm_ok #n (map_seq2 H.f2 p1 p2));
+  change_slprop_rel
+    (varrp r i1 i2 (map_seq2 H.f2
+      (mk_full_perm n i1 j)
+      (mk_full_perm n j i2)
+    ))
+    (varrp r i1 i2 (mk_full_perm n i1 i2))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  varrp_to_varr r i1 i2
+#pop-options
+
+let append_eq_to_slice_eq (#a: Type) (#n: nat)
+  (s: lseq a n)
+  (j: nat{j <= n})
+  (s1: lseq a j)
+  (s2: lseq a (n -j))
+  : Lemma
+  (requires
+    s == append s1 s2)
+  (ensures
+    s1 == slice s 0 j /\
+    s2 == slice s j n)
+  =
+  let s1', s2' = Seq.split s j in
+  Seq.lemma_split s j;
+  assert (append s1' s2' == s);
+  Seq.lemma_append_inj s1 s2 s1' s2';
+  assert (s1 == s1');
+  assert (s2 == s2')
+
+#push-options "--z3rlimit 20"
+let read (#a: Type0) (#n: nat) (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 < i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j < i2})
+  : Steel a
+  (varr r i1 i2)
+  (fun _ -> varr r i1 i2)
+  (requires fun _ -> n > 0)
+  (ensures fun h0 v h1 ->
+    Seq.index (asel r i1 i2 h1) (j - i1) == v /\
+    asel r i1 i2 h0 == asel r i1 i2 h1)
+  =
+  let arr : erased (lseq a (i2 - i1)) = gget (varr r i1 i2) in
+  split r i1 i2 j;
+  let arr1 = gget (varr r i1 j) in
+  let arr2 : erased (lseq a (i2 - j)) = gget (varr r j i2) in
+  append_eq_to_slice_eq (reveal arr) (j - i1)
+    (reveal arr1) (reveal arr2);
+  assert (reveal arr1 == slice (reveal arr) 0 (j - i1));
+  assert (reveal arr2 == slice (reveal arr) (j - i1) (i2 - i1));
+  split r j i2 (j+1);
+  let arr21 = gget (varr r j (j+1)) in
+  let arr22 = gget (varr r (j+1) i2) in
+  append_eq_to_slice_eq (reveal arr2) 1
+    (reveal arr21) (reveal arr22);
+  assert (reveal arr21 == slice (reveal arr2) 0 1);
+  assert (reveal arr22 == slice (reveal arr2) 1 (i2 - j));
+  Seq.slice_slice (reveal arr) (j - i1) (i2 - i1) 0 1;
+  assert (reveal arr21 == slice (reveal arr) (j - i1) (j - i1 + 1));
+  let v' = read_seq r j (j+1) in
+  let v = Seq.index v' 0 in
+  merge r j i2 (j+1);
+  merge r i1 i2 j;
+  return v
+#pop-options
 
 #set-options "--print_implicits"
