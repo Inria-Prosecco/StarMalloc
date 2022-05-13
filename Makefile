@@ -9,7 +9,7 @@ include Makefile.include
 
 INCLUDE_PATH = $(FSTAR_HOME)/ulib/.cache $(FSTAR_HOME)/ulib/experimental lib_avl/
 
-KRML_EXE = $(KREMLIN_HOME)/krml
+KRML_EXE = $(KRML_HOME)/krml
 
 world: verify
 
@@ -58,13 +58,24 @@ clean:
 
 .PRECIOUS: %.krml
 obj/%.krml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen Kremlin \
+	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
-FILTERED_KRML_FILES=$(filter-out obj/FStar_NMST.krml obj/Steel_%.krml \
-  obj/Allocator.krml obj/Some_lemmas.krml,\
-  $(ALL_KRML_FILES))
+FILTERED_STEEL_FILES = \
+  obj/FStar_MSTTotal.krml \
+  obj/FStar_NMSTTotal.krml \
+  obj/FStar_NMST.krml \
+  obj/FStar_MST.krml \
+  obj/Steel_Effect.krml \
+  obj/Steel_Effect_Atomic.krml \
+  obj/Steel_HigherReference.krml \
+  obj/Steel_Reference.krml \
+  obj/Steel_Semantics_Hoare_MST.krml \
+  obj/Some_lemmas.krml \
+  obj/Allocator.krml
+
+FILTERED_KRML_FILES = $(filter-out $(FILTERED_STEEL_FILES), $(ALL_KRML_FILES))
 
 extract: $(FILTERED_KRML_FILES)
 	mkdir -p dist
@@ -72,10 +83,10 @@ extract: $(FILTERED_KRML_FILES)
      -bundle 'FStar.\*,Steel.\*' $^
 
 test: verify extract
-	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist -lbsd \
+	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/kremlib/dist/minimal -I dist -lbsd \
 	-o bench/a.out bench/test.c
 testopt: verify extract
-	gcc -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -I dist -lbsd -O2 \
+	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/kremlib/dist/minimal -I dist -lbsd -O2 \
 	-o bench/a.out bench/test.c
 testocaml:
 	ocamlopt -o bench/ocaml.a.out bench/bench.ml
@@ -93,6 +104,6 @@ bench: testopt testocaml testcpp
 #ALL_O_FILES=$(subst .c,.o,$(ALL_C_FILES))
 #
 #$(ALL_O_FILES): %.o: %.c
-#	$(CC) $(CFLAGS) -DKRML_VERIFIED_UINT128 -I $(KREMLIN_HOME)/include -I $(KREMLIN_HOME)/kremlib/dist/minimal -o $@ -c $<
+#	$(CC) $(CFLAGS) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/kremlib/dist/minimal -o $@ -c $<
 
 .PHONY: all world verify clean depend hints obj test

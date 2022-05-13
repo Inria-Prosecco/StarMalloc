@@ -2,8 +2,8 @@ ifeq (,$(FSTAR_HOME))
   $(error FSTAR_HOME is not defined)
 endif
 
-ifeq (,$(KREMLIN_HOME))
-  $(error KREMLIN_HOME is not defined)
+ifeq (,$(KRML_HOME))
+  $(error KRML_HOME is not defined)
 endif
 
 PROJECT_HOME ?= .
