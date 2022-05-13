@@ -1285,7 +1285,9 @@ let malloc2 (#a: Type0) (v: a) (n: nat)
   (fun arr -> varray arr)
   (requires fun _ -> True)
   (ensures fun _ arr h1 ->
-    get_length arr == n /\
+    get_i1 arr = 0 /\
+    get_i2 arr = n /\
+    get_max_length arr == n /\
     asel2 arr h1 == Seq.create n v /\
     not (is_null (get_content arr)))
   =
@@ -1358,6 +1360,117 @@ let write2 (#a: Type0)
   =
   varray_to_varr arr;
   write (get_content arr) (get_i1 arr) (get_i2 arr) i v_write;
+  varr_to_varray (get_content arr) (get_i1 arr) (get_i2 arr);
+  change_slprop_rel
+    (varray (mk_array
+      (get_max_length arr)
+      (get_content arr)
+      (get_i1 arr)
+      (get_i2 arr)))
+    (varray arr)
+    (fun x y -> x == y)
+    (fun _ -> ());
+  return ()
+
+let split_l (#a: Type)
+  (arr: array a)
+  (i: nat)
+  : Pure (array a)
+  (requires
+    get_i1 arr <= i /\
+    i < get_i2 arr)
+  (ensures fun arr' ->
+    get_i1 arr' = get_i1 arr /\
+    get_i2 arr' = i /\
+    get_length arr' = i - get_i1 arr)
+  =
+  {arr with length = i - get_i1 arr}
+
+let split_r (#a: Type)
+  (arr: array a)
+  (i: nat)
+  : Pure (array a)
+  (requires
+    get_i1 arr <= i /\
+    i < get_i2 arr)
+  (ensures fun arr' ->
+    get_i1 arr' = i /\
+    get_i2 arr' = get_i2 arr /\
+    get_length arr' = get_i2 arr - i)
+  =
+  let arr = {arr with length = get_i2 arr - i} in
+  {arr with idx = i}
+
+let split2 (#a: Type)
+  (arr: array a)
+  (i: nat{get_i1 arr <= i /\ i < get_i2 arr})
+  : Steel unit
+  (varray arr)
+  (fun _ -> varray (split_l arr i) `star` varray (split_r arr i))
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    asel2 arr h0
+    == Seq.append
+      (asel2 (split_l arr i) h1)
+      (asel2 (split_r arr i) h1))
+  =
+  varray_to_varr arr;
+  split (get_content arr) (get_i1 arr) (get_i2 arr) i;
+  varr_to_varray (get_content arr) (get_i1 arr) i;
+  varr_to_varray (get_content arr) i (get_i2 arr);
+  change_slprop_rel
+    (varray (mk_array
+      (get_max_length arr)
+      (get_content arr)
+      (get_i1 arr)
+      i))
+    (varray (split_l arr i))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  change_slprop_rel
+    (varray (mk_array
+      (get_max_length arr)
+      (get_content arr)
+      i
+      (get_i2 arr)
+    ))
+    (varray (split_r arr i))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  return ()
+
+let merge2 (#a: Type)
+  (arr: array a)
+  (i: nat{get_i1 arr <= i /\ i < get_i2 arr})
+  : Steel unit
+  (varray (split_l arr i) `star` varray (split_r arr i))
+  (fun _ -> varray arr)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    asel2 arr h1
+    == Seq.append
+      (asel2 (split_l arr i) h0)
+      (asel2 (split_r arr i) h0))
+  =
+  varray_to_varr (split_l arr i);
+  varray_to_varr (split_r arr i);
+  change_slprop_rel
+    (varr
+      (get_content (split_l arr i))
+      (get_i1 (split_l arr i))
+      (get_i2 (split_l arr i)))
+    (varr (get_content arr) (get_i1 arr) i)
+    (fun x y -> x == y)
+    (fun _ -> ());
+  change_slprop_rel
+    (varr
+      (get_content (split_r arr i))
+      (get_i1 (split_r arr i))
+      (get_i2 (split_r arr i)))
+    (varr (get_content arr) i (get_i2 arr))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  merge (get_content arr) (get_i1 arr) (get_i2 arr) i;
   varr_to_varray (get_content arr) (get_i1 arr) (get_i2 arr);
   change_slprop_rel
     (varray (mk_array
