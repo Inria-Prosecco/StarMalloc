@@ -1,4 +1,4 @@
-module Test
+module ArrayTest
 
 open Steel.Effect.Atomic
 open Steel.Effect
