@@ -1163,3 +1163,209 @@ let write (#a: Type0) (#n: nat) (r: array_ref a #n)
 #pop-options
 
 #set-options "--print_implicits"
+
+noeq type array (a: Type0) : Type u#0
+  =
+  {
+    max_length: nat;
+    content: array_ref a #max_length;
+    idx: nat;
+    length: l:nat{idx + l <= max_length};
+  }
+
+unfold let get_max_length (#a: Type0) (arr: array a)
+  = arr.max_length
+unfold let get_content (#a: Type0) (arr: array a)
+  = arr.content
+unfold let get_i1 (#a: Type0) (arr: array a)
+  = arr.idx
+unfold let get_i2 (#a: Type0) (arr: array a)
+  = arr.idx + arr.length
+unfold let get_length (#a: Type0) (arr: array a)
+  = arr.length
+
+[@@ __steel_reduce__]
+unfold let mk_array (#a: Type0)
+  (n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  : arr:array a{
+    get_max_length arr = n /\
+    get_content arr == r /\
+    get_i1 arr = i1 /\
+    get_i2 arr = i2 /\
+    get_length arr = i2 - i1
+  }
+  = {
+    max_length = n;
+    content = r;
+    idx = i1;
+    length = i2 - i1;
+  }
+
+
+//[@@ __steel_reduce__; __reduce__]
+unfold let varrayp (#a: Type0)
+  (arr: array a)
+  (p: lseq (option perm) (get_max_length arr){perm_ok p})
+  : vprop
+  =
+  varrp
+    (get_content arr)
+    (get_i1 arr)
+    (get_i2 arr)
+    p
+
+//[@@ __steel_reduce__; __reduce__]
+unfold let varray (#a: Type0) (arr: array a) : vprop
+  =
+  varr
+    (get_content arr)
+    (get_i1 arr)
+    (get_i2 arr)
+
+[@@ __steel_reduce__]
+let aselp2 (#a: Type0) (#vp: vprop)
+  (arr: array a)
+  (p: lseq (option perm) (get_max_length arr){perm_ok p})
+  (h: rmem vp{FStar.Tactics.with_tactic selector_tactic
+    (can_be_split vp (varrayp arr p) /\ True)})
+  : GTot (lseq a (get_length arr))
+  = h (varrayp arr p)
+
+[@@ __steel_reduce__]
+let asel2 (#a: Type0) (#vp: vprop)
+  (arr: array a)
+  (h: rmem vp{FStar.Tactics.with_tactic selector_tactic
+    (can_be_split vp (varray arr) /\ True)})
+  : GTot (lseq a (get_length arr))
+  = h (varray arr)
+
+let varray_to_varr (#a: Type0) (#opened:_) (arr: array a)
+  : SteelGhost unit opened
+  (varray arr)
+  (fun _ -> varr (get_content arr) (get_i1 arr) (get_i2 arr))
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    asel (get_content arr) (get_i1 arr) (get_i2 arr) h1
+    ==
+    asel2 arr h0)
+  =
+  change_slprop_rel
+    (varray arr)
+    (varr (get_content arr) (get_i1 arr) (get_i2 arr))
+    (fun x y -> x == y)
+    (fun _ -> ())
+
+let varr_to_varray (#a: Type0) (#opened:_)
+  (#n: nat)
+  (r: array_ref a #n)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  : SteelGhost unit opened
+  (varr r i1 i2)
+  (fun _ -> varray (mk_array n r i1 i2))
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    asel2 (mk_array n r i1 i2) h1
+    ==
+    asel r i1 i2 h0)
+  =
+  change_slprop_rel
+    (varr r i1 i2)
+    (varray (mk_array n r i1 i2))
+    (fun x y -> x == y)
+    (fun _ -> ())
+
+let malloc2 (#a: Type0) (v: a) (n: nat)
+  //(v: lseq a n)
+  : Steel (array a)
+  emp
+  (fun arr -> varray arr)
+  (requires fun _ -> True)
+  (ensures fun _ arr h1 ->
+    get_length arr == n /\
+    asel2 arr h1 == Seq.create n v /\
+    not (is_null (get_content arr)))
+  =
+  let v = Seq.create n v in
+  let r = malloc n v in
+  varr_to_varray r 0 n;
+  let arr = mk_array n r 0 n in
+  return arr
+
+let free2 (#a: Type0) (arr: array a)
+  : Steel unit
+  (varray arr)
+  (fun _ -> emp)
+  (requires fun _ ->
+    get_i1 arr = 0 /\
+    get_i2 arr = get_max_length arr)
+  (ensures fun _ _ _ -> True)
+  =
+  varray_to_varr arr;
+  change_slprop_rel
+    (varr (get_content arr) (get_i1 arr) (get_i2 arr))
+    (varr (get_content arr) 0 (get_max_length arr))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  free (get_content arr)
+
+let read2 (#a: Type0)
+  (arr: array a)
+  (i: nat)
+  : Steel a
+  (varray arr)
+  (fun _ -> varray arr)
+  (requires fun _ ->
+    get_i1 arr <= i /\
+    i < get_i2 arr)
+  (ensures fun h0 v h1 ->
+    get_i1 arr <= i /\
+    i < get_i2 arr /\
+    asel2 arr h1 == asel2 arr h0 /\
+    Seq.index (asel2 arr h1) (i - get_i1 arr) == v)
+  =
+  varray_to_varr arr;
+  let v = read (get_content arr) (get_i1 arr) (get_i2 arr) i in
+  varr_to_varray (get_content arr) (get_i1 arr) (get_i2 arr);
+  change_slprop_rel
+    (varray (mk_array
+      (get_max_length arr)
+      (get_content arr)
+      (get_i1 arr)
+      (get_i2 arr)))
+    (varray arr)
+    (fun x y -> x == y)
+    (fun _ -> ());
+  return v
+
+let write2 (#a: Type0)
+  (arr: array a)
+  (i: nat)
+  (v_write: a)
+  : Steel unit
+  (varray arr)
+  (fun _ -> varray arr)
+  (requires fun _ ->
+    get_i1 arr <= i /\
+    i < get_i2 arr)
+  (ensures fun h0 v h1 ->
+    get_i1 arr <= i /\
+    i < get_i2 arr /\
+    Seq.index (asel2 arr h1) (i - get_i1 arr) == v_write)
+  =
+  varray_to_varr arr;
+  write (get_content arr) (get_i1 arr) (get_i2 arr) i v_write;
+  varr_to_varray (get_content arr) (get_i1 arr) (get_i2 arr);
+  change_slprop_rel
+    (varray (mk_array
+      (get_max_length arr)
+      (get_content arr)
+      (get_i1 arr)
+      (get_i2 arr)))
+    (varray arr)
+    (fun x y -> x == y)
+    (fun _ -> ());
+  return ()
