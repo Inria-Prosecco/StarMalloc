@@ -1020,6 +1020,27 @@ let mergep (#a: Type0) (#opened:_) (#n: nat)
     (map_seq2 H.f2 p1 p2)
     (hide (append (reveal v1) (reveal v2)))
 
+let merge_aux_mk_full_perm_lemma (n: nat)
+  (i1: nat)
+  (i2: nat{i1 <= i2 /\ i2 <= n})
+  (j: nat{i1 <= j /\ j <= i2})
+  : Lemma
+  (map_seq2_len H.f2
+    (mk_full_perm n i1 j)
+    (mk_full_perm n j i2);
+  map_seq2 H.f2
+    (mk_full_perm n i1 j)
+    (mk_full_perm n j i2)
+  == mk_full_perm n i1 i2)
+  =
+  let s1 = mk_full_perm n i1 j in
+  let s2 = mk_full_perm n j i2 in
+  let s = map_seq2 H.f2 s1 s2 in
+  map_seq2_len H.f2 s1 s2;
+  assert (Seq.length s == n);
+  Classical.forall_intro (map_seq2_index H.f2 s1 s2);
+  Seq.lemma_eq_intro s (mk_full_perm n i1 i2)
+
 #push-options "--z3rlimit 20"
 let merge (#a: Type0) (#opened:_) (#n: nat)
   (r: array_ref a #n)
@@ -1062,7 +1083,7 @@ let merge (#a: Type0) (#opened:_) (#n: nat)
     ))
     (varrp r i1 i2 (mk_full_perm n i1 i2))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun _ -> merge_aux_mk_full_perm_lemma n i1 i2 j);
   varrp_to_varr r i1 i2
 #pop-options
 
