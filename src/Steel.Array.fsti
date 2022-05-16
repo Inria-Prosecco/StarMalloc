@@ -10,6 +10,7 @@ open Steel.FractionalPermission
 module Mem = Steel.Memory
 module H = Steel.HigherArray
 module U = FStar.Universe
+module U32 = FStar.UInt32
 
 #set-options "--ide_id_info_off"
 
@@ -1299,7 +1300,7 @@ let varr_to_varray (#a: Type0) (#opened:_)
     (fun x y -> x == y)
     (fun _ -> ())
 
-let malloc2 (#a: Type0) (v: a) (n: nat)
+let malloc2 (#a: Type0) (v: a) (n: U32.t)
   //(v: lseq a n)
   : Steel (array a)
   emp
@@ -1307,15 +1308,15 @@ let malloc2 (#a: Type0) (v: a) (n: nat)
   (requires fun _ -> True)
   (ensures fun _ arr h1 ->
     get_i1 arr = 0 /\
-    get_i2 arr = n /\
-    get_max_length arr == n /\
-    asel2 arr h1 == Seq.create n v /\
+    get_i2 arr = (U32.v n) /\
+    get_max_length arr == (U32.v n) /\
+    asel2 arr h1 == Seq.create (U32.v n) v /\
     not (is_null (get_content arr)))
   =
-  let v = Seq.create n v in
-  let r = malloc n v in
-  varr_to_varray r 0 n;
-  let arr = mk_array n r 0 n in
+  let v = Seq.create (U32.v n) v in
+  let r = malloc (U32.v n) v in
+  varr_to_varray r 0 (U32.v n);
+  let arr = mk_array (U32.v n) r 0 (U32.v n) in
   return arr
 
 let free2 (#a: Type0) (arr: array a)
@@ -1337,21 +1338,21 @@ let free2 (#a: Type0) (arr: array a)
 
 let read2 (#a: Type0)
   (arr: array a)
-  (i: nat)
+  (i: U32.t)
   : Steel a
   (varray arr)
   (fun _ -> varray arr)
   (requires fun _ ->
-    get_i1 arr <= i /\
-    i < get_i2 arr)
+    get_i1 arr <= U32.v i /\
+    U32.v i < get_i2 arr)
   (ensures fun h0 v h1 ->
-    get_i1 arr <= i /\
-    i < get_i2 arr /\
+    get_i1 arr <= U32.v i /\
+    U32.v i < get_i2 arr /\
     asel2 arr h1 == asel2 arr h0 /\
-    Seq.index (asel2 arr h1) (i - get_i1 arr) == v)
+    Seq.index (asel2 arr h1) ((U32.v i) - get_i1 arr) == v)
   =
   varray_to_varr arr;
-  let v = read (get_content arr) (get_i1 arr) (get_i2 arr) i in
+  let v = read (get_content arr) (get_i1 arr) (get_i2 arr) (U32.v i) in
   varr_to_varray (get_content arr) (get_i1 arr) (get_i2 arr);
   change_slprop_rel
     (varray (mk_array
@@ -1366,21 +1367,21 @@ let read2 (#a: Type0)
 
 let write2 (#a: Type0)
   (arr: array a)
-  (i: nat)
+  (i: U32.t)
   (v_write: a)
   : Steel unit
   (varray arr)
   (fun _ -> varray arr)
   (requires fun _ ->
-    get_i1 arr <= i /\
-    i < get_i2 arr)
+    get_i1 arr <= U32.v  i /\
+    U32.v i < get_i2 arr)
   (ensures fun h0 v h1 ->
-    get_i1 arr <= i /\
-    i < get_i2 arr /\
-    Seq.index (asel2 arr h1) (i - get_i1 arr) == v_write)
+    get_i1 arr <= U32.v i /\
+    U32.v i < get_i2 arr /\
+    Seq.index (asel2 arr h1) (U32.v i - get_i1 arr) == v_write)
   =
   varray_to_varr arr;
-  write (get_content arr) (get_i1 arr) (get_i2 arr) i v_write;
+  write (get_content arr) (get_i1 arr) (get_i2 arr) (U32.v i) v_write;
   varr_to_varray (get_content arr) (get_i1 arr) (get_i2 arr);
   change_slprop_rel
     (varray (mk_array

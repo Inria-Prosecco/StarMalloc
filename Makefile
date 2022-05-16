@@ -21,7 +21,6 @@ obj:
 
 FSTAR_OPTIONS = --cache_checked_modules $(FSTAR_INCLUDES) \
 		--cmi --odir obj --cache_dir obj \
-	        --already_cached 'Prims,FStar,LowStar,Steel' \
 		$(OTHERFLAGS)
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
@@ -85,6 +84,9 @@ extract: $(FILTERED_KRML_FILES)
 test: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/kremlib/dist/minimal -I dist -lbsd \
 	-o bench/a.out bench/test.c
+test-array: verify extract
+	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/kremlib/dist/minimal -I dist -lbsd \
+	-o bench/array.a.out bench/test-array.c
 testopt: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/kremlib/dist/minimal -I dist -lbsd -O2 \
 	-o bench/a.out bench/test.c
