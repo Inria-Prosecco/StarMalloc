@@ -73,25 +73,6 @@ let f1 (#a: Type) : option a -> option a -> option a
 let f2 : option perm -> option perm -> option perm
   = fun x y -> sum_perm_opt x y
 
-//let f (#a: Type) : a & perm -> a & perm -> a & perm =
-//  fun x y -> f1 (fst x) (fst y), f2 (snd x) (snd y)
-
-//let l2 (p1 p2: perm)
-//  : Lemma
-//  (Some? (f2 p1 p2) = (Some? p1 || Some? p2))
-//  = ()
-//
-//let l1 (#a: Type) (v1 v2: option a)
-//  : Lemma
-//  (Some? (f1 v1 v2) = (Some? v1 || Some? v2))
-//  = ()
-//
-//let l (#a: Type) (v1 v2: option a) (p1 p2: perm)
-//  : Lemma
-//  (requires (Some? v1 = Some? p1) /\ (Some? v2 = Some? p2))
-//  (ensures Some? (f1 v1 v2) = Some? (f2 p1 p2))
-//  = ()
-
 unfold let op (#a: Type) (#n: nat)
   (s1: array a #n)
   (s2: array a #n{composable s1 s2})
