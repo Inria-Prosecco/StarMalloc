@@ -6,7 +6,6 @@ module A = Steel.Array0
 open Steel.Array0
 module P = Steel.FractionalPermission
 module U32 = FStar.UInt32
-open Temp2
 
 let temp (v1 v2: U32.t) (n: U32.t{U32.v n > 1})
   : SteelT U32.t
