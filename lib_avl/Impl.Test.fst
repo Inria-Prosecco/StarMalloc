@@ -272,3 +272,13 @@ let rec main7_aux (ptr: t a) (v: a)
     main7_aux ptr' v'
   )
 #pop-options
+
+let rec main8_aux (v: I64.t)
+  : SteelT (option I64.t)
+  emp (fun _ -> emp)
+  =
+  if I64.eq v zero then (
+    return None
+  ) else (
+    return (Some v)
+  )
