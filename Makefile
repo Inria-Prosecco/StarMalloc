@@ -79,13 +79,62 @@ FILTERED_KRML_FILES = $(filter-out $(FILTERED_STEEL_FILES), $(ALL_KRML_FILES))
 
 extract: $(FILTERED_KRML_FILES)
 	mkdir -p dist
-	$(KRML_EXE) -skip-compilation -skip-makefiles -no-prefix Mman -tmpdir dist \
+	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
      -bundle 'FStar.\*,Steel.\*' $^
 
 
 test: verify extract
-	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
-	-o bench/a.out bench/test.c
+	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/generic -I dist -lbsd \
+	-o bench/a.out dist/Impl_Test.c
+#-o bench/a.out bench/test.c
+#-shared -fPIC -o alloc/malloc.so \
+
+test2: verify extract
+	gcc -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmlib/dist/generic -I dist -lbsd \
+-o bench/a.out \
+dist/Aux.h \
+dist/Impl_AVL_M.h \
+dist/Impl_BST_M.h \
+dist/Impl_Test_Mono.h \
+dist/Impl_Trees_M.h \
+dist/Impl_Trees_Rotate3_M.h \
+dist/Impl_Trees_Rotate2_M.h \
+dist/Impl_Trees_Rotate_M.h \
+dist/Main.h \
+dist/Mman.h \
+dist/internal/Main.h \
+dist/internal/Prims.h \
+dist/Impl_AVL_M.c \
+dist/Impl_BST_M.c \
+dist/Impl_Test_Mono.c \
+dist/Impl_Trees_M.c \
+dist/Impl_Trees_Rotate3_M.c \
+dist/Impl_Trees_Rotate2_M.c \
+dist/Impl_Trees_Rotate_M.c \
+dist/Main.c
+
+
+
+#$(KRML_HOME)/krmllib/dist/generic/Prims.h \
+#alloc/lib-alloc.c \
+#$(KRML_HOME)/krmllib/dist/generic/prims.c \
+#$(KRML_HOME)/include/krml/internal/compat.h \
+#$(KRML_HOME)/krmllib/dist/generic/fstar_int32.c \
+#$(KRML_HOME)/include/krmllib.h \
+
+#dist/Impl_Test_Mono.c \
+#dist/Impl_BST_M.h \
+#dist/Map_M.h \
+#dist/Impl_Test.h \
+#alloc/lib-alloc.c \
+#dist/internal/Prims.h \
+#dist/internal/Main.h \
+
+
+#-o bench/a.out bench/test2.c alloc/lib-alloc0.c
+
 test-array: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
 	-o bench/array.a.out bench/test-array.c

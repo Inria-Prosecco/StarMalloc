@@ -1,33 +1,33 @@
 module Main
 
+open FStar.Ghost
 open Steel.Effect.Atomic
 open Steel.Effect
+open Steel.Reference
 
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module I64 = FStar.Int64
 module I32 = FStar.Int32
-//open Impl
-open Map
+
+open Impl.Core
+open Impl.Mono
+open Map.M
 
 #set-options "--ide_id_info_off"
 
 // machine representation
 unfold let ptr_t = U64.t
-unfold let size_t = U32.t
+unfold let size_t = U64.t
 
 let a = ptr_t & size_t
 
 let t = Impl.Core.t
 let linked_tree = Impl.Core.linked_tree
 
-//noextract
-//assume val mmap (size: size_t) : ptr_t
-//noextract
-//assume val munmap (addr: ptr_t) (size: size_t) : ptr_t
 
 inline_for_extraction noextract
-let mmap (len: U32.t) (prot: I32.t)
+let mmap (len: U64.t) (prot: I32.t)
   //= Mman.mmap 0UL len prot 33l (-1l) 0ul
   //MAP_PRIVATE instead of MAP_ANON (avoid filling the disk...)
   //34l = MAP_PRIVATE|MAP_ANON
@@ -36,7 +36,7 @@ let mmap (len: U32.t) (prot: I32.t)
 inline_for_extraction noextract
 let munmap = Mman.munmap
 
-let cmp (x y: U64.t & U32.t) : I64.t
+let cmp (x y: U64.t & U64.t) : I64.t
   =
   let x = fst x in
   let y = fst y in
@@ -57,55 +57,69 @@ let cmp (x y: U64.t & U32.t) : I64.t
 ////let cmp : Impl.Common.cmp (ptr_t & size_t)
 ////  = fun x y -> compare (fst x) (fst y)
 //let cmp : Impl.Common.cmp ptr_t = compare
-let create_leaf = Impl.Trees.create_leaf #(ptr_t & size_t)
-let insert = insert #ptr_t #size_t
-let delete = delete #ptr_t #size_t
-let mem = mem #ptr_t #size_t
-let find = find #ptr_t #size_t
 
-let malloc2 (metadata: t a) (size: size_t) (flags: I32.t)
+let create_leaf = Impl.Trees.M.create_leaf
+let insert = Impl.Mono.insert_avl
+let delete = Impl.Mono.delete_avl
+let mem = Impl.Mono.member
+//let find = find
+
+//assume val metadata_ptr: t a
+
+let malloc (metadata: t a) (size: size_t)
+//(flags: I32.t)
   : Steel (t a & ptr_t)
   (linked_tree metadata)
   (fun r -> linked_tree (fst r))
   (requires fun h0 ->
-    Spec.is_avl (spec_convert cmp) (Impl.v_linked_tree metadata h0) /\
-    Spec.size_of_tree (Impl.v_linked_tree metadata h0) < 100)
-  (ensures fun _ _ _ -> True)
+    Spec.is_avl (spec_convert cmp)
+      (v_linked_tree metadata h0) /\
+    Spec.size_of_tree (v_linked_tree metadata h0) < 100)
+  (ensures fun h0 r h1 ->
+    Spec.is_avl (spec_convert cmp)
+      (v_linked_tree (fst r) h1) /\
+    //v_linked_tree metadata_ptr h1
+    //== Spec.insert_avl false (spec_convert cmp) metadata_ptr ()
+    True)
   =
   let h0 = get () in
-  Spec.height_lte_size (Impl.v_linked_tree metadata h0);
-  let ptr = mmap size flags in
-  //let metadata' = insert false cmp metadata (ptr, size) in
-  let metadata' = metadata in
-  return (metadata', ptr)
+  Spec.height_lte_size (v_linked_tree metadata h0);
+  let ptr = mmap size 3l in
+  let metadata' : ref (Impl.Core.node a) = insert false cmp metadata (ptr, size) in
+  let r = (metadata', ptr) in
+  let _ = fst r in
+  let _ = snd r in
+  return r
 
 let free (metadata: t a) (ptr: ptr_t)
   : Steel (t a)
   (linked_tree metadata)
-  (fun r -> linked_tree r)
+  (fun _ -> linked_tree metadata)
   (requires fun h0 ->
-    Spec.is_avl (spec_convert cmp) (Impl.v_linked_tree metadata h0))
+    Spec.is_avl (spec_convert cmp) (v_linked_tree metadata h0))
   (ensures fun _ _ _ -> True)
   =
-  let size = find cmp metadata ptr 0ul in
-  if Some? size then (
-    let size = Some?.v size in
-    let status = munmap ptr size in
-    //let metadata' = delete cmp metadata (ptr, size) in
-    let metadata' = delete cmp metadata (0UL, 0ul) in
-    return metadata'
-  ) else (
-    return metadata
-  )
+  return metadata
 
-let malloc (n: U32.t) (flags: I32.t)
-  : SteelT U64.t
-  emp (fun _ -> emp)
-  =
-  let metadata = create_leaf () in
-  let ptr = malloc2 metadata n flags in
-  sladmit ();
-  return (snd ptr)
+
+//  let size = find cmp metadata (ptr, 0UL) in
+//  if Some? size then (
+//    let size = Some?.v size in
+//    let status = munmap ptr size in
+//    let metadata' = delete cmp metadata (ptr, size) in
+//    return metadata'
+//  ) else (
+//    return metadata
+//  )
+
+//let malloc (n: U32.t) (flags: I32.t)
+//  : SteelT U64.t
+//  emp (fun _ -> emp)
+//  =
+//  let metadata = create_leaf () in
+//  let ptr = malloc2 metadata n flags in
+//  sladmit ();
+//  return (snd ptr)
 
 
 (*)

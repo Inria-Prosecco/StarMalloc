@@ -4,19 +4,38 @@ open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
-module U32 = FStar.UInt32
-module U64 = FStar.UInt64
+
+module U = FStar.UInt64
 module I64 = FStar.Int64
-//open NTreeC3
-//open P1
 
-let t = Impl.Core.t
-let linked_tree = Impl.Core.linked_tree
+let a = U.t & U.t
+
+let compare (x y: a) : I64.t
+  =
+  let x = fst x in
+  let y = fst y in
+  if U.gt x y then 1L
+  else if U.eq x y then 0L
+  else -1L
+
+let create_leaf = Impl.create_leaf #a
+let create_tree = Impl.create_tree #a
+let merge_tree  = Impl.merge_tree #a
+let sot_wds     = Impl.sot_wds #a
+let hot_wdh     = Impl.hot_wdh #a
+
+let main (v: U.t) : SteelT U.t
+  emp (fun _ -> emp)
+  =
+  let ptr = create_tree (v, v) in
+  let s = sot_wds ptr in
+  sladmit ();
+  return s
 
 
-
-let a = I64.t
-
+(*)
+//let t = Impl.Core.t
+//let linked_tree = Impl.Core.linked_tree
 //inline_for_extraction noextract
 let one = Impl.Common.sone
 //inline_for_extraction noextract
@@ -28,11 +47,6 @@ let val2 = 2UL
 let val3 = 3UL
 let val4 = 4UL
 let val42 = 42UL
-let compare (x y: I64.t) : I64.t
-  =
-  if I64.gt x y then 1L
-  else if I64.eq x y then 0L
-  else -1L
 
 //let a = (U32.t & U32.t)
 //let val0 = 0ul, 0ul

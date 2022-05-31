@@ -7,7 +7,7 @@ module I32 = FStar.Int32
 noextract
 assume val mmap
   (addr: U64.t)
-  (len: U32.t)
+  (len: U64.t)
   (prot: I32.t)
   (flags: I32.t)
   (fildes: I32.t)
@@ -15,4 +15,4 @@ assume val mmap
   : U64.t
 
 noextract
-assume val munmap (addr: U64.t) (size_t: U32.t): U32.t
+assume val munmap (addr: U64.t) (size_t: U64.t): U32.t

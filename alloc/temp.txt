@@ -1,0 +1,3 @@
+- cat /proc/$pid/maps
+- cat /proc/$pid/smaps
+- ls /proc/$pid/

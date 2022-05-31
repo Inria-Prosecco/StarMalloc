@@ -1,4 +1,4 @@
-module Impl.Trees
+module Impl.Trees.M
 
 open FStar.Ghost
 
@@ -17,13 +17,20 @@ open Impl.Common
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
+open Aux
+let a = Aux.a
+
+//inline_for_extraction
+let unpack_tree = unpack_tree #a
+
 //@Trees
 inline_for_extraction noextract
-let create_leaf (#a: Type0) (_: unit) : Steel (t a)
+let create_leaf (_: unit) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
     v_linked_tree ptr h1 == Spec.Leaf)
+
   = intro_linked_tree_leaf ();
     // TODO: it should be possible to remove next line
     let h = get () in
@@ -32,27 +39,32 @@ let create_leaf (#a: Type0) (_: unit) : Steel (t a)
 //@Trees
 #push-options "--fuel 1 --ifuel 1"
 inline_for_extraction noextract
-let create_tree (#a: Type0) (v: a) : Steel (t a)
+let create_tree (v: a) : Steel (t a)
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
+    not (is_null_t ptr) /\
     v_linked_tree ptr h1 ==
     Spec.Node v Spec.Leaf Spec.Leaf (U.v one) (U.v one))
   =
   let l = create_leaf () in
   let r = create_leaf () in
-  let sr = malloc one in
-  let hr = malloc one in
+  let sr = trees_malloc one in
+  let hr = trees_malloc one in
   let n = mk_node v l r sr hr in
-  let ptr = malloc n in
+  let ptr = trees_malloc2 n in
   pack_tree ptr l r sr hr;
+  node_is_not_null ptr;
   return ptr
 #pop-options
 
+//inline_for_extraction noextract
+//let unpack_tree = unpack_tree #a
+
 //@Trees
 inline_for_extraction noextract
-let sot_wds (#a: Type) (ptr: t a)
-  : Steel (U.t)
+let sot_wds (ptr: t a)
+  : Steel U.t
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
   (requires fun _ -> True)
@@ -97,8 +109,8 @@ let sot_wds (#a: Type) (ptr: t a)
   )
 
 inline_for_extraction noextract
-let hot_wdh (#a: Type) (ptr: t a)
-  : Steel (U.t)
+let hot_wdh (ptr: t a)
+  : Steel U.t
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
   (requires fun _ -> True)
@@ -144,7 +156,7 @@ let hot_wdh (#a: Type) (ptr: t a)
 
 
 //@Trees
-let merge_tree (#a: Type0) (v: a) (l r: t a) : Steel (t a)
+let merge_tree (v: a) (l r: t a) : Steel (t a)
   (linked_tree l `star` linked_tree r)
   (fun ptr -> linked_tree ptr)
   (requires fun h0 ->
@@ -167,18 +179,18 @@ let merge_tree (#a: Type0) (v: a) (l r: t a) : Steel (t a)
   let s1 = sot_wds l in
   let s2 = sot_wds r in
   let s = U.add (U.add s1 s2) one in
-  let sr = malloc s in
+  let sr = trees_malloc s in
   let h1 = hot_wdh l in
   let h2 = hot_wdh r in
   let h = U.add (umax h1 h2) one in
-  let hr = malloc h in
+  let hr = trees_malloc h in
   let n = mk_node v l r sr hr in
-  let ptr = malloc n in
+  let ptr = trees_malloc2 n in
   pack_tree ptr l r sr hr;
   return ptr
 
 inline_for_extraction noextract
-let merge_tree_no_alloc (#a: Type0)
+let merge_tree_no_alloc
   (v: a) (l r: t a) (sr hr: ref U.t) (ptr: ref (node a))
   : Steel (t a)
   (linked_tree l `star`

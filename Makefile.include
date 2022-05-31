@@ -9,14 +9,11 @@ endif
 PROJECT_HOME ?= .
 
 SOURCE_DIRS = \
-  $(PROJECT_HOME)/bug \
-  $(PROJECT_HOME)
+  $(PROJECT_HOME)/lib_avl_common \
+  $(PROJECT_HOME)/lib_avl_mono \
+  $(PROJECT_HOME)/alloc
 
-  #$(PROJECT_HOME)/src \
   #$(PROJECT_HOME)/lib_avl \
-
-#$(PROJECT_HOME)/lib_list \
-#$(PROJECT_HOME)/lib_std \
 
 INCLUDE_DIRS = \
   $(SOURCE_DIRS) \

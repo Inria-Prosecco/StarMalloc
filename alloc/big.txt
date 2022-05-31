@@ -1,0 +1,21 @@
+9f8528fc000-9f8528fd000 r--p 00000000 fe:00 10241831                     /home/atn/fs2/steel-experiments/alloc/a.out
+9f8528fd000-9f8528fe000 r-xp 00001000 fe:00 10241831                     /home/atn/fs2/steel-experiments/alloc/a.out
+9f8528fe000-9f8528ff000 r--p 00002000 fe:00 10241831                     /home/atn/fs2/steel-experiments/alloc/a.out
+9f8528ff000-9f852900000 r--p 00002000 fe:00 10241831                     /home/atn/fs2/steel-experiments/alloc/a.out
+9f852900000-9f852901000 rw-p 00003000 fe:00 10241831                     /home/atn/fs2/steel-experiments/alloc/a.out
+9f8580fa000-ae85901b000 rw-p 00000000 00:00 0                            [heap]
+6ab20039b000-6ac21039d000 rw-p 00000000 00:00 0 
+6ac21039d000-6ac2103c5000 r--p 00000000 fe:00 14683671                   /usr/lib/libc.so.6
+6ac2103c5000-6ac21053f000 r-xp 00028000 fe:00 14683671                   /usr/lib/libc.so.6
+6ac21053f000-6ac210597000 r--p 001a2000 fe:00 14683671                   /usr/lib/libc.so.6
+6ac210597000-6ac21059b000 r--p 001f9000 fe:00 14683671                   /usr/lib/libc.so.6
+6ac21059b000-6ac21059d000 rw-p 001fd000 fe:00 14683671                   /usr/lib/libc.so.6
+6ac21059d000-6ac2105ac000 rw-p 00000000 00:00 0 
+6ac2105ea000-6ac2105ee000 r--p 00000000 00:00 0                          [vvar]
+6ac2105ee000-6ac2105f0000 r-xp 00000000 00:00 0                          [vdso]
+6ac2105f0000-6ac2105f2000 r--p 00000000 fe:00 14683644                   /usr/lib/ld-linux-x86-64.so.2
+6ac2105f2000-6ac210619000 r-xp 00002000 fe:00 14683644                   /usr/lib/ld-linux-x86-64.so.2
+6ac210619000-6ac210624000 r--p 00029000 fe:00 14683644                   /usr/lib/ld-linux-x86-64.so.2
+6ac210625000-6ac210627000 r--p 00034000 fe:00 14683644                   /usr/lib/ld-linux-x86-64.so.2
+6ac210627000-6ac210629000 rw-p 00036000 fe:00 14683644                   /usr/lib/ld-linux-x86-64.so.2
+7a8f1429b000-7a8f142bd000 rw-p 00000000 00:00 0                          [stack]
