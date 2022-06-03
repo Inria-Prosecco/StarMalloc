@@ -105,7 +105,6 @@ dist/Impl_Trees_Rotate_M.h \
 dist/Main.h \
 dist/Mman.h \
 dist/internal/Main.h \
-dist/internal/Prims.h \
 dist/Impl_AVL_M.c \
 dist/Impl_BST_M.c \
 dist/Impl_Test_Mono.c \
@@ -113,7 +112,8 @@ dist/Impl_Trees_M.c \
 dist/Impl_Trees_Rotate3_M.c \
 dist/Impl_Trees_Rotate2_M.c \
 dist/Impl_Trees_Rotate_M.c \
-dist/Main.c
+dist/Main.c \
+alloc/lib-alloc.c
 
 
 

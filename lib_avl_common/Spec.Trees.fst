@@ -25,6 +25,7 @@ let cheight (#a: Type) (t: tree a{Node? t}) =
   let Node _ _ _ _ h = t in h
 
 //@Trees.Misc
+noextract
 let proj (x: int) : r:int{-1 <= r /\ r <= 1}
   = if x < 0 then -1
     else if x = 0 then 0
@@ -118,6 +119,7 @@ let rec height_lte_size (#a: Type) (t: tree a)
       height_lte_size right
 
 //@Trees.Misc
+noextract
 let int_of_bool b : nat = match b with
   | true -> 1
   | false -> 0

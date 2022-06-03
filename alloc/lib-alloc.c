@@ -1,8 +1,7 @@
 #ifndef __LIB_ALLOC_C
 #define __LIB_ALLOC_C
 
-#include "Impl_Test_Mono.h"
-#include "Main.c"
+#include "Main.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -103,7 +102,6 @@ void* realloc(void* ptr, size_t size) {
 //- variable globale côté Steel
 
 int main() {
-  printf("OK.\n");
   return 0;
 }
 
