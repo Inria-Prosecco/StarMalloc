@@ -113,7 +113,8 @@ dist/Impl_Trees_Rotate3_M.c \
 dist/Impl_Trees_Rotate2_M.c \
 dist/Impl_Trees_Rotate_M.c \
 dist/Main.c \
-alloc/lib-alloc.c
+alloc/lib-alloc.c \
+alloc/main.c
 
 
 

@@ -100,9 +100,4 @@ void* realloc(void* ptr, size_t size) {
 //
 //- bench les arbres avec alloc custom
 //- variable globale côté Steel
-
-int main() {
-  return 0;
-}
-
 #endif
