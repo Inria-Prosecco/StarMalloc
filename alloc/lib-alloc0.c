@@ -2,12 +2,13 @@
 #include <stdint.h>
 
 uint64_t* metadata = NULL;
-Impl_Core_node__Aux_a* Main_metadata_ptr = NULL;
+Impl_Core_node__Aux_a* metadata_ptr = NULL;
 uint64_t size_metadata = 0UL;
 uint64_t status = 0UL;
 
 void malloc_init() {
   metadata = (uint64_t*) Main_mmap(1048576, 3l);
+  metadata_ptr = Main_create_leaf();
   status = 1;
 }
 
@@ -25,4 +26,12 @@ Impl_Core_node__Aux_a* Aux_trees_malloc2(Impl_Core_node__Aux_a n) {
   *ptr = n;
   size_metadata += sizeof(Impl_Core_node__Aux_a);
   return ptr;
+}
+
+Impl_Core_node__Aux_a* Main_get_metadata () {
+  return metadata_ptr;
+}
+
+void Main_set_metadata(Impl_Core_node__Aux_a* metadata) {
+  metadata_ptr = metadata;
 }

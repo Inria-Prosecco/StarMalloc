@@ -10,6 +10,11 @@ int main(){
     ptr = realloc(ptr, 1048577);
     free(ptr);
   }
-  printf("OK.\n");
+  //printf("OK.\n");
+  uint64_t s = 0UL;
+  s = size ();
+  printf("OK : %lui\n", s);
+  //s = size ();
+  //printf("OK : %lui\n", s);
   return 0;
 }

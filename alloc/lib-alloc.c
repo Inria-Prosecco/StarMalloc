@@ -28,7 +28,7 @@ void* malloc (size_t size) {
   //void* ptr_snd = (void*) ptr.snd;
   //*ptr_snd;
   //return NULL;
-  void* ptr = (void*) Main_malloc2(size);
+  void* ptr = (void*) Main_malloc(size);
   *ptr;
   //void* ptr = NULL;
   return ptr;
@@ -41,6 +41,10 @@ void free (void* ptr) {
   //  puts("a");
   //else
   //  puts("b");
+}
+
+uint64_t size () {
+  return Main_size ();
 }
 
 // required for realloc
