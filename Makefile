@@ -20,6 +20,7 @@ obj:
 	mkdir $@
 
 FSTAR_OPTIONS = --cache_checked_modules $(FSTAR_INCLUDES) \
+    --already_cached 'FStar Steel C Prims' \
 		--cmi --odir obj --cache_dir obj \
 		$(OTHERFLAGS)
 
@@ -82,18 +83,12 @@ extract: $(FILTERED_KRML_FILES)
 	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
      -bundle 'FStar.\*,Steel.\*' $^
 
-
+# test classic AVL trees
 test: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/generic -I dist -lbsd \
 	-o bench/a.out dist/Impl_Test.c
-#-o bench/a.out bench/test.c
-#-shared -fPIC -o alloc/malloc.so \
 
-test2: verify extract
-	gcc -DKRML_VERIFIED_UINT128 \
-	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmlib/dist/generic -I dist -lbsd \
--o bench/a.out \
+FILES = \
 dist/Aux.h \
 dist/Impl_AVL_M.h \
 dist/Impl_BST_M.h \
@@ -113,39 +108,50 @@ dist/Impl_Trees_Rotate3_M.c \
 dist/Impl_Trees_Rotate2_M.c \
 dist/Impl_Trees_Rotate_M.c \
 dist/Main.c \
-alloc/lib-alloc.c \
-alloc/main.c
+alloc/lib-alloc0.c
 
+# test AVL trees suited for allocator metadata (no malloc, manual mmap)
+test-tree: verify extract
+	gcc -g -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/generic -I dist -lbsd \
+	-o bench/mavl.out $(FILES) alloc/lib-alloc.c bench/test2.c
 
+# test the compilation of the allocator
+test-compile-alloc: verify extract
+	gcc -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
+-o bench/a.out \
+$(FILES) alloc/lib-alloc.c
 
-#$(KRML_HOME)/krmllib/dist/generic/Prims.h \
-#alloc/lib-alloc.c \
-#$(KRML_HOME)/krmllib/dist/generic/prims.c \
-#$(KRML_HOME)/include/krml/internal/compat.h \
-#$(KRML_HOME)/krmllib/dist/generic/fstar_int32.c \
-#$(KRML_HOME)/include/krmllib.h \
+# test the allocator with a static binary
+test-alloc-static: verify extract
+	gcc -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
+-o bench/a.out \
+$(FILES) \
+bench/test-alloc.c \
+alloc/lib-alloc.c
 
-#dist/Impl_Test_Mono.c \
-#dist/Impl_BST_M.h \
-#dist/Map_M.h \
-#dist/Impl_Test.h \
-#alloc/lib-alloc.c \
-#dist/internal/Prims.h \
-#dist/internal/Main.h \
+# test the compilation of the allocator as a shared library
+test-compile-alloc-lib: verify extract
+	gcc -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
+-shared -fPIC -o alloc/malloc.so \
+$(FILES)
 
-
-#-o bench/a.out bench/test2.c alloc/lib-alloc0.c
+# test the allocator as a shared library with a simple program
+test-alloc1: test-compile-alloc-lib
+	gcc -O0 bench/test-alloc.c -o bench/alloc.a.out
+	LD_PRELOAD=alloc/malloc.so ./bench/alloc.a.out
+# test the allocator as a shared library with zathura
+test-alloc2: test-compile-alloc-lib
+	LD_PRELOAD=alloc/malloc.so zathura
 
 test-array: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
 	-o bench/array.a.out bench/test-array.c
-liballoc: verify extract
-	gcc -O0 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -I /usr/include/sys -shared -fPIC alloc/lib-alloc.c -o bench/malloc.so
-	gcc -O0 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -I /usr/include/sys/ -o bench/alloc.a.out bench/test-alloc.c
-test-alloc1: liballoc
-	LD_PRELOAD=bench/malloc.so ./bench/alloc.a.out
-test-alloc2: liballoc
-	LD_PRELOAD=bench/malloc.so zathura
 
 testopt: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd -O2 \

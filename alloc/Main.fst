@@ -26,14 +26,12 @@ let t = Impl.Core.t
 let linked_tree = Impl.Core.linked_tree
 
 
-inline_for_extraction noextract
 let mmap (len: U64.t) (prot: I32.t)
   //= Mman.mmap 0UL len prot 33l (-1l) 0ul
   //MAP_PRIVATE instead of MAP_ANON (avoid filling the disk...)
   //34l = MAP_PRIVATE|MAP_ANON
   = Mman.mmap 0UL len prot 34l (-1l) 0ul
 
-inline_for_extraction noextract
 let munmap = Mman.munmap
 
 let cmp (x y: U64.t & U64.t) : I64.t
@@ -59,9 +57,11 @@ let cmp (x y: U64.t & U64.t) : I64.t
 //let cmp : Impl.Common.cmp ptr_t = compare
 
 let create_leaf = Impl.Trees.M.create_leaf
+
+inline_for_extraction noextract
 let insert = Impl.Mono.insert_avl
-let delete = Impl.Mono.delete_avl
-let mem = Impl.Mono.member
+//let delete = Impl.Mono.delete_avl
+//let mem = Impl.Mono.member
 //let find = find
 
 //assume val metadata_ptr: t a
@@ -87,6 +87,7 @@ let malloc (metadata: t a) (size: size_t)
   let ptr = mmap size 3l in
   let metadata' : ref (Impl.Core.node a) = insert false cmp metadata (ptr, size) in
   let r = (metadata', ptr) in
+  //let r = (metadata, ptr) in
   let _ = fst r in
   let _ = snd r in
   return r
@@ -112,14 +113,16 @@ let free (metadata: t a) (ptr: ptr_t)
 //    return metadata
 //  )
 
-//let malloc (n: U32.t) (flags: I32.t)
-//  : SteelT U64.t
-//  emp (fun _ -> emp)
-//  =
-//  let metadata = create_leaf () in
-//  let ptr = malloc2 metadata n flags in
-//  sladmit ();
-//  return (snd ptr)
+let malloc2 (size: size_t)
+  : SteelT U64.t
+  emp (fun _ -> emp)
+  =
+  let metadata = create_leaf () in
+  let ptr = malloc metadata size in
+  //let ptr = mmap size 3l in
+  sladmit ();
+  //return ptr
+  return (snd ptr)
 
 
 (*)

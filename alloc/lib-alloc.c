@@ -1,38 +1,7 @@
-#ifndef __LIB_ALLOC_C
-#define __LIB_ALLOC_C
-
 #include "Main.h"
-#include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
-
-uint64_t* metadata = NULL;
-Impl_Core_node__Aux_a* Main_metadata_ptr = NULL;
-uint64_t size_metadata = 0;
-uint64_t status = 0;
-
-void malloc_init() {
-  //metadata = (void*) Main_malloc(1048576, 3l);
-  status = 1;
-}
-
-uint64_t* Aux_trees_malloc(uint64_t v) {
-  uint64_t* ptr = (uint64_t*) metadata[size_metadata];
-  *ptr = v;
-  size_metadata += sizeof(uint64_t);
-  return ptr;
-}
-
-Impl_Core_node__Aux_a
-*Aux_trees_malloc2(Impl_Core_node__Aux_a n) {
-  Impl_Core_node__Aux_a * ptr = (Impl_Core_node__Aux_a*) metadata[size_metadata];
-  *ptr = n;
-  size_metadata += sizeof(Impl_Core_node__Aux_a);
-  return ptr;
-}
-
-
+//#include <stdio.h>
 
 // WARNING:
 // calling stdlib malloc before or inside the definition
@@ -43,7 +12,8 @@ Impl_Core_node__Aux_a
 // htop: VIRT \neq RES
 
 void* malloc (size_t size) {
-  if (status == 0) malloc_init ();
+  //if (status == 0) malloc_init ();
+  //malloc_count += 1;
 
   //volatile
   //K____Impl_Core_node__Aux_a__uint64_t
@@ -51,13 +21,17 @@ void* malloc (size_t size) {
 
   //Impl_Core_node__Aux_a* ptr = fst___Impl_Core_node_uint64_t___uint32_t__uint64_t(r);
 
-  K____Impl_Core_node__Aux_a__uint64_t ptr = (K____Impl_Core_node__Aux_a__uint64_t) Main_malloc(Main_metadata_ptr, size);
+  //K____Impl_Core_node__Aux_a__uint64_t ptr = (K____Impl_Core_node__Aux_a__uint64_t) Main_malloc(Main_metadata_ptr, size);
 
 //snd___Impl_Core_node_uint64_t___uint32_t__uint64_t
 //
-  void* ptr_snd = (void*) ptr.snd;
-  *ptr_snd;
-  return ptr_snd;
+  //void* ptr_snd = (void*) ptr.snd;
+  //*ptr_snd;
+  //return NULL;
+  void* ptr = (void*) Main_malloc2(size);
+  *ptr;
+  //void* ptr = NULL;
+  return ptr;
 }
 
 uint64_t free_count = 0;
@@ -93,6 +67,11 @@ void* realloc(void* ptr, size_t size) {
     return malloc(size);
   }
   void* ptr2 = (void*) malloc (size);
+  printf("src: %p\n", ptr);
+  printf("dst: %p\n", ptr2);
+  // size is incorrect here,
+  // need to know size of the previous allocation,
+  // otherwise a bus error can be raised
   memcpy2(ptr2, ptr, size);
   free(ptr);
   return ptr2;
@@ -100,4 +79,23 @@ void* realloc(void* ptr, size_t size) {
 //
 //- bench les arbres avec alloc custom
 //- variable globale côté Steel
-#endif
+
+//int main() {
+//  int i = 2;
+//  //puts("NIQUE\n");
+//  uint64_t* ptr = malloc(1267);
+//  printf("OK : %lui\n", malloc_count);
+//  puts("Test");
+//  printf("OK : %lui\n", malloc_count);
+//  puts("Test2");
+//  printf("OK : %lui\n", malloc_count);
+//  ptr[0] = 2;
+//  for (uint32_t i = 0; i < 1024ul; i++) {
+//    ptr = malloc(1048576);
+//    ptr[1] = 1ul;
+//    ptr = realloc(ptr, 1048577);
+//    free(ptr);
+//  }
+//  printf("OK : %lui\n", malloc_count);
+//  return 0;
+//}
