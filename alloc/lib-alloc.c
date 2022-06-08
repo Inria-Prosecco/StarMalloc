@@ -12,31 +12,15 @@
 // htop: VIRT \neq RES
 
 void* malloc (size_t size) {
-  //if (status == 0) malloc_init ();
-  //malloc_count += 1;
-
-  //volatile
-  //K____Impl_Core_node__Aux_a__uint64_t
-  //K____Impl_Core_node__Aux_a__uint64_t r = Main_malloc2(metadata, size, 3l);
-
-  //Impl_Core_node__Aux_a* ptr = fst___Impl_Core_node_uint64_t___uint32_t__uint64_t(r);
-
-  //K____Impl_Core_node__Aux_a__uint64_t ptr = (K____Impl_Core_node__Aux_a__uint64_t) Main_malloc(Main_metadata_ptr, size);
-
-//snd___Impl_Core_node_uint64_t___uint32_t__uint64_t
-//
-  //void* ptr_snd = (void*) ptr.snd;
-  //*ptr_snd;
-  //return NULL;
   void* ptr = (void*) Main_malloc(size);
-  *ptr;
-  //void* ptr = NULL;
+  //*ptr;
   return ptr;
 }
 
 uint64_t free_count = 0;
 void free (void* ptr) {
   free_count++;
+  Main_free(ptr);
   //if (f_cnt % 2 == 0)
   //  puts("a");
   //else

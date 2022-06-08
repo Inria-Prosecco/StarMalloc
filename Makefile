@@ -90,6 +90,7 @@ test: verify extract
 
 FILES = \
 dist/Aux.h \
+dist/Map_M.h \
 dist/Impl_AVL_M.h \
 dist/Impl_BST_M.h \
 dist/Impl_Test_Mono.h \
@@ -100,6 +101,7 @@ dist/Impl_Trees_Rotate_M.h \
 dist/Main.h \
 dist/Mman.h \
 dist/internal/Main.h \
+dist/Map_M.c \
 dist/Impl_AVL_M.c \
 dist/Impl_BST_M.c \
 dist/Impl_Test_Mono.c \

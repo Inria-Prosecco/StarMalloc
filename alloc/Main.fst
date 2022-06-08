@@ -56,20 +56,6 @@ let cmp (x y: U64.t & U64.t) : I64.t
   else if U64.eq x y then 0L
   else -1L
 
-//let compare_is_cmp () : Lemma
-//(
-//  (forall x. I64.eq (compare x x) I64.zero) /\
-//  (forall x y. I64.gt (compare x y) I64.zero
-//                 <==> I64.lt (compare y x) I64.zero) /\
-//  (forall x  y z. I64.gte (compare x y) I64.zero /\
-//                         I64.gte (compare y z) I64.zero ==>
-//                         I64.gte (compare x z) I64.zero)
-//) = ()
-//
-////let cmp : Impl.Common.cmp (ptr_t & size_t)
-////  = fun x y -> compare (fst x) (fst y)
-//let cmp : Impl.Common.cmp ptr_t = compare
-
 let create_leaf = Impl.Trees.M.create_leaf
 
 inline_for_extraction noextract
@@ -79,12 +65,11 @@ inline_for_extraction noextract
 let get_size = Impl.Mono.sot_wds
 //let delete = Impl.Mono.delete_avl
 //let mem = Impl.Mono.member
-//let find = find
+let find = Map.M.find
 
 //assume val metadata_ptr: t a
 
 let malloc (size: size_t)
-//(flags: I32.t)
   : Steel (ptr_t)
   (linked_tree (get_metadata_pure ()))
   (fun _ -> linked_tree (get_metadata_pure ()))
@@ -102,26 +87,36 @@ let malloc (size: size_t)
     True)
   =
   let metadata = get_metadata () in
-  //let metadata = create_leaf () in
   //let h0 = get () in
   //Spec.height_lte_size (v_linked_tree metadata h0);
   let ptr = mmap size 3l in
   admit ();
-  let metadata' : t a = insert false cmp metadata (ptr, size) in
-  let r = ptr in
-  sladmit ();
+  let metadata' = insert false cmp metadata (ptr, size) in
   set_metadata metadata';
-  return r
+  return ptr
 
-let free (metadata: t a) (ptr: ptr_t)
+let free (ptr: ptr_t)
   : Steel (t a)
-  (linked_tree metadata)
-  (fun _ -> linked_tree metadata)
+  (linked_tree (get_metadata_pure ()))
+  (fun _ -> linked_tree (get_metadata_pure ()))
   (requires fun h0 ->
+    let metadata = get_metadata_pure () in
     Spec.is_avl (spec_convert cmp) (v_linked_tree metadata h0))
   (ensures fun _ _ _ -> True)
   =
-  return metadata
+  let metadata = get_metadata () in
+  admit ();
+  let size = find cmp metadata (ptr, 0UL) in
+  if Some? size then (
+    let size = Some?.v size in
+    let status = munmap ptr size in
+    let metadata' = delete cmp metadata (ptr, size) in
+    set_metadata metadata';
+    return metadata'
+  ) else (
+    set_metadata metadata;
+    return metadata
+  )
 
 let size (_:unit) : SteelT U64.t
   (linked_tree (get_metadata_pure ()))
@@ -136,16 +131,6 @@ let size (_:unit) : SteelT U64.t
 
 
 
-//  let size = find cmp metadata (ptr, 0UL) in
-//  if Some? size then (
-//    let size = Some?.v size in
-//    let status = munmap ptr size in
-//    let metadata' = delete cmp metadata (ptr, size) in
-//    return metadata'
-//  ) else (
-//    return metadata
-//  )
-
 (*)
 [ok] - find
 [ok] - extraction with find
@@ -155,7 +140,7 @@ let size (_:unit) : SteelT U64.t
 => only first page is being accessed and written on, hence 131072*4096 bytes are allocated
 [ok] - extract as library in order to test with LD_PRELOAD
 
-# actually use tree to store metadata
+[ok] actually use tree to store metadata
 several issues:
 1) currently, AVL library rely on stdlib malloc => segfault
 => typeclasses? rewriting it with a hammer?

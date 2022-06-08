@@ -82,7 +82,6 @@ let mem
   =
   Impl.Mono.member cmp ptr v
 
-(*)
 let rec find
   (cmp: cmp a) (ptr: t a)
   (v: a)

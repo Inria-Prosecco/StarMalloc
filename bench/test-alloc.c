@@ -4,7 +4,7 @@
 
 int main(){
   uint32_t* ptr = NULL;
-  for (uint32_t i = 0; i < 1024ul; i++) {
+  for (uint32_t i = 0; i < 256ul; i++) {
     ptr = malloc(1048576);
     ptr[1] = 1ul;
     ptr = realloc(ptr, 1048577);
