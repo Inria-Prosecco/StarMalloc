@@ -60,10 +60,11 @@ let create_leaf = Impl.Trees.M.create_leaf
 
 inline_for_extraction noextract
 let insert = Impl.Mono.insert_avl
+inline_for_extraction noextract
+let delete = Impl.Mono.delete_avl
 
 inline_for_extraction noextract
 let get_size = Impl.Mono.sot_wds
-//let delete = Impl.Mono.delete_avl
 //let mem = Impl.Mono.member
 let find = Map.M.find
 
@@ -87,6 +88,7 @@ let malloc (size: size_t)
     True)
   =
   let metadata = get_metadata () in
+  //let metadata = create_leaf () in
   //let h0 = get () in
   //Spec.height_lte_size (v_linked_tree metadata h0);
   let ptr = mmap size 3l in
@@ -104,19 +106,23 @@ let free (ptr: ptr_t)
     Spec.is_avl (spec_convert cmp) (v_linked_tree metadata h0))
   (ensures fun _ _ _ -> True)
   =
+
   let metadata = get_metadata () in
-  admit ();
-  let size = find cmp metadata (ptr, 0UL) in
-  if Some? size then (
-    let size = Some?.v size in
-    let status = munmap ptr size in
-    let metadata' = delete cmp metadata (ptr, size) in
-    set_metadata metadata';
-    return metadata'
-  ) else (
-    set_metadata metadata;
-    return metadata
-  )
+  set_metadata metadata;
+  return metadata
+
+//  admit ();
+//  let size = find cmp metadata (ptr, 0UL) in
+//  if Some? size then (
+//    let size = Some?.v size in
+//    //let status = munmap ptr size in
+//    let metadata' = delete cmp metadata (ptr, size) in
+//    set_metadata metadata';
+//    return metadata'
+//  ) else (
+//    set_metadata metadata;
+//    return metadata
+//  )
 
 let size (_:unit) : SteelT U64.t
   (linked_tree (get_metadata_pure ()))
@@ -146,6 +152,10 @@ several issues:
 => typeclasses? rewriting it with a hammer?
 2) currently, hard to express global variables in F* (or am I missing something?)
 => C bindings hiding the use of a global variable when calling the F*/Steel-extracted function
+
+[ok] force thread-safe code with mutexes
+
+/!\ use nm to check for symbols
 
 # basic allocator, whats next
 - force reservation of to-be-allocated pages

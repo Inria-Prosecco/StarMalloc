@@ -114,34 +114,49 @@ alloc/lib-alloc0.c
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)
 test-tree: verify extract
-	gcc -g -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/generic -I dist -lbsd \
+	gcc -g -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
 	-o bench/mavl.out $(FILES) alloc/lib-alloc.c bench/test2.c
 
 # test the compilation of the allocator
 test-compile-alloc: verify extract
 	gcc -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
+	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
 -o bench/a.out \
 $(FILES) alloc/lib-alloc.c
 
 # test the allocator with a static binary
-test-alloc-static: verify extract
-	gcc -DKRML_VERIFIED_UINT128 \
+test-alloc0: verify extract
+	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
+	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
+  -pthread \
 -o bench/a.out \
 $(FILES) \
 bench/test-alloc.c \
 alloc/lib-alloc.c
+	./bench/a.out
+
+test-alloc0bis: verify extract
+	gcc -O0 -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
+  -pthread \
+-o bench/a.out \
+$(FILES) \
+bench/test-alloc2.c \
+alloc/lib-alloc.c
+	./bench/a.out
 
 # test the compilation of the allocator as a shared library
 test-compile-alloc-lib: verify extract
-	gcc -DKRML_VERIFIED_UINT128 \
+	gcc -g -O0 -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
+	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
+	-pthread \
 -shared -fPIC -o alloc/malloc.so \
-$(FILES)
+$(FILES) \
+alloc/lib-alloc.c
 
 # test the allocator as a shared library with a simple program
 test-alloc1: test-compile-alloc-lib
