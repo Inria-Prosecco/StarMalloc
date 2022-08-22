@@ -4,13 +4,14 @@
 
 int main(){
   uint32_t* ptr = NULL;
+  //printf("OK.\n");
   for (uint32_t i = 0; i < 256ul; i++) {
-    ptr = malloc(1048576);
+    //ptr = malloc(1048576);
+    ptr = malloc(100);
     ptr[1] = 1ul;
-    ptr = realloc(ptr, 1048577);
+    //ptr = realloc(ptr, 1048577);
     free(ptr);
   }
-  printf("OK.\n");
   // only for static test
   //uint64_t s = 0UL;
   //s = size ();

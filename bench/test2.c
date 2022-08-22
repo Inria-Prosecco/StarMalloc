@@ -13,16 +13,23 @@ int main(int argc, char** argv) {
     return 2;
   }
   printf("%s\n", argv[0]);
-  uint64_t x = strtoull(argv[1], NULL, 0);
-  uint64_t* random_data = malloc(x * sizeof(int64_t));
-  arc4random_buf(random_data, x * sizeof(int64_t));
+  uint64_t n = strtoull(argv[1], NULL, 0);
+  printf("s=%lu\n", n);
+  //uint64_t* random_data = malloc(n * sizeof(int64_t));
+  //arc4random_buf(random_data, n * sizeof(int64_t));
+  uint32_t x = 7;
+  uint32_t a = 1997;
+  uint32_t a2 = 13;
   Aux_a v = { .fst = 0UL, .snd = 0UL };
   //Impl_Core_node__Aux_a* ptr = Impl_Test_Mono_create_tree(v);
   Impl_Core_node__Aux_a* ptr = Impl_Test_Mono_create_leaf ();
   uint64_t rd = 0;
   uint64_t s = 0;
-  for (size_t i = 0; i < x; i++) {
-    rd = random_data[i];
+  for (size_t i = 0; i < n; i++) {
+    //rd = random_data[i];
+    //x = a * x + a2;
+    x = i;
+    rd = x;
     v = (Impl_Test_Mono_a) {.fst = rd, .snd = 0UL};
     //printf("rd=%lui\n", rd);
     ptr = Impl_Test_Mono_insert_avl(true, Impl_Test_Mono_compare, ptr, v);
@@ -32,8 +39,13 @@ int main(int argc, char** argv) {
   printf("s=%lu\n", s);
 
   bool b = false;
-  for (size_t i = 0; i < x; i++) {
-    rd = random_data[i];
+
+  x = 7;
+  for (size_t i = 0; i < n; i++) {
+    //rd = random_data[i];
+    //x = a * x + a2;
+    x = i;
+    rd = x;
     v = (Impl_Test_Mono_a) {.fst = rd, .snd = 0UL};
     b = Impl_Test_Mono_member(Impl_Test_Mono_compare, ptr, v);
     if (! b) {
@@ -42,8 +54,12 @@ int main(int argc, char** argv) {
     }
   }
 
-  for (size_t i = 0; i < x; i++) {
-    rd = random_data[i];
+  x = 7;
+  for (size_t i = 0; i < n; i++) {
+    //rd = random_data[i];
+    //x = a * x + a2;
+    x = i;
+    rd = x;
     v = (Impl_Test_Mono_a) {.fst = rd, .snd = 0UL};
     ptr = Impl_Test_Mono_delete_avl(Impl_Test_Mono_compare, ptr, v);
   }

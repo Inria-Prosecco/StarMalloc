@@ -25,19 +25,17 @@ let a = ptr_t & size_t
 let t = Impl.Core.t
 let linked_tree = Impl.Core.linked_tree
 
-assume val get_metadata_pure (_: unit) : t a
-
-assume val get_metadata (_: unit) : Steel (t a)
-  (linked_tree (get_metadata_pure ()))
-  (fun r -> linked_tree r)
-  (requires fun _ -> True)
-  (ensures fun _ r _ -> get_metadata_pure () == r)
-
-assume val set_metadata (m: t a) : Steel unit
-  (linked_tree m)
-  (fun _ -> linked_tree (get_metadata_pure ()))
-  (requires fun _ -> True)
-  (ensures fun h0 _ h1 -> get_metadata_pure () == m)
+//assume val get_metadata_pure (id: U32.t) : t a
+//assume val get_metadata (id: U32.t) : Steel (t a)
+//  (linked_tree (get_metadata_pure id))
+//  (fun r -> linked_tree r)
+//  (requires fun _ -> True)
+//  (ensures fun _ r _ -> get_metadata_pure id == r)
+//assume val set_metadata (id: U32.t) (m: t a) : Steel unit
+//  (linked_tree m)
+//  (fun _ -> linked_tree (get_metadata_pure id))
+//  (requires fun _ -> True)
+//  (ensures fun h0 _ h1 -> get_metadata_pure id == m)
 
 
 let mmap (len: U64.t) (prot: I32.t)
@@ -70,45 +68,34 @@ let find = Map.M.find
 
 //assume val metadata_ptr: t a
 
-let malloc (size: size_t)
-  : Steel (ptr_t)
-  (linked_tree (get_metadata_pure ()))
-  (fun _ -> linked_tree (get_metadata_pure ()))
+let malloc (metadata: t a) (size: size_t)
+  : Steel (t a & ptr_t)
+  (linked_tree metadata)
+  (fun r -> linked_tree (fst r))
   (requires fun h0 ->
-    let metadata = get_metadata_pure () in
     Spec.is_avl (spec_convert cmp)
       (v_linked_tree metadata h0) /\
     Spec.size_of_tree (v_linked_tree metadata h0) < 100)
-  (ensures fun h0 r h1 ->
-    let metadata = get_metadata_pure () in
-    Spec.is_avl (spec_convert cmp)
-      (v_linked_tree metadata h1) /\
-    //v_linked_tree metadata_ptr h1
-    //== Spec.insert_avl false (spec_convert cmp) metadata_ptr ()
-    True)
+  (ensures fun _ r h1 ->
+    let metadata = fst r in
+    Spec.is_avl (spec_convert cmp) (v_linked_tree metadata h1))
   =
-  let metadata = get_metadata () in
-  //let metadata = create_leaf () in
-  //let h0 = get () in
-  //Spec.height_lte_size (v_linked_tree metadata h0);
+  let h0 = get () in
+  Spec.height_lte_size (v_linked_tree metadata h0);
   let ptr = mmap size 3l in
-  admit ();
   let metadata' = insert false cmp metadata (ptr, size) in
-  set_metadata metadata';
-  return ptr
+  return (metadata', ptr)
 
-let free (ptr: ptr_t)
+let free (metadata: t a) (ptr: ptr_t)
   : Steel (t a)
-  (linked_tree (get_metadata_pure ()))
-  (fun _ -> linked_tree (get_metadata_pure ()))
+  (linked_tree metadata)
+  (fun r -> linked_tree r)
   (requires fun h0 ->
-    let metadata = get_metadata_pure () in
     Spec.is_avl (spec_convert cmp) (v_linked_tree metadata h0))
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ r h1 ->
+    Spec.is_avl (spec_convert cmp) (v_linked_tree r h1))
   =
-
-  let metadata = get_metadata () in
-  set_metadata metadata;
+  ();
   return metadata
 
 //  admit ();
@@ -124,14 +111,14 @@ let free (ptr: ptr_t)
 //    return metadata
 //  )
 
-let size (_:unit) : SteelT U64.t
-  (linked_tree (get_metadata_pure ()))
-  (fun _ -> linked_tree (get_metadata_pure ()))
-  =
-  let metadata = get_metadata () in
-  let size = get_size metadata in
-  sladmit ();
-  return size
+//let size (_:unit) : SteelT U64.t
+//  (linked_tree (get_metadata_pure ()))
+//  (fun _ -> linked_tree (get_metadata_pure ()))
+//  =
+//  let metadata = get_metadata () in
+//  let size = get_size metadata in
+//  sladmit ();
+//  return size
 
 
 

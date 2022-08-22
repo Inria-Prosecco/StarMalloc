@@ -114,7 +114,7 @@ alloc/lib-alloc0.c
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)
 test-tree: verify extract
-	gcc -g -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
+	gcc -O2 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
 	-o bench/mavl.out $(FILES) alloc/lib-alloc.c bench/test2.c
 
 # test the compilation of the allocator
@@ -138,7 +138,7 @@ alloc/lib-alloc.c
 	./bench/a.out
 
 test-alloc0bis: verify extract
-	gcc -O0 -DKRML_VERIFIED_UINT128 \
+	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
   -pthread \
@@ -164,6 +164,10 @@ test-alloc1: test-compile-alloc-lib
 	LD_PRELOAD=alloc/malloc.so ./bench/alloc.a.out
 # test the allocator as a shared library with zathura
 test-alloc2: test-compile-alloc-lib
+	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
+	LD_PRELOAD=alloc/malloc.so ./bench/alloc.a.out
+
+test-alloc3: test-compile-alloc-lib
 	LD_PRELOAD=alloc/malloc.so zathura
 
 test-array: verify extract
