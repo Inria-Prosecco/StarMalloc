@@ -4,17 +4,18 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-#define N_THREADS 64
+#define N_THREADS 256
+#define N_ALLOC 1000
 
 pthread_mutex_t m;
 pthread_t threads[N_THREADS];
 
 uint64_t value = 0;
-uint32_t* ptr = NULL;
 
 void* impl1 (void* _) {
   //printf("OK\n");
-  for (int n = 0; n < 100; n++) {
+  uint32_t* ptr = NULL;
+  for (int n = 0; n < N_ALLOC; n++) {
     pthread_mutex_lock(&m);
     value += 1;
     pthread_mutex_unlock(&m);

@@ -167,6 +167,14 @@ test-alloc2: test-compile-alloc-lib
 	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
 	LD_PRELOAD=alloc/malloc.so ./bench/alloc.a.out
 
+test-alloc2bis: test-compile-alloc-lib
+	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
+	LD_PRELOAD= ./bench/alloc.a.out
+
+#test-alloc2ter: test-compile-alloc-lib
+#	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
+#	LD_PRELOAD=../hardened_malloc/out/libhardened_malloc.so ./bench/alloc.a.out
+
 test-alloc3: test-compile-alloc-lib
 	LD_PRELOAD=alloc/malloc.so zathura
 
