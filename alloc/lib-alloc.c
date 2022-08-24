@@ -1,8 +1,6 @@
 #include "Main.h"
-//#include <stdbool.h>
 #include <stdint.h>
 #include <pthread.h>
-//#include <stdatomic.h>
 #include "config.h"
 #include "lib-alloc0.h"
 
@@ -13,17 +11,8 @@
 // TODO:
 // expose option to force reservation of the allocated memory
 // htop: VIRT \neq RES
-//static const unsigned n_arena = N_ARENA;
-//static LOCAL_ATTR unsigned thread_arena = n_arena;
-//static LOCAL_ATTR unsigned is_init = 0;
-//static atomic_uint thread_arena_counter = 0;
 
 void* malloc (size_t size) {
-  //if (! is_init) {
-  //  thread_arena = thread_arena_counter++ % n_arena;
-  //  is_init = 1;
-  //}
-  //lock(thread_arena);
   void* allocated_block = NULL;
   lock();
 #if BASIC
@@ -42,27 +31,14 @@ void* malloc (size_t size) {
   //return ptr;
 }
 
-//uint64_t free_count = 0;
 void free (void* ptr_to_block) {
-  //if (! is_init) {
-  //  thread_arena = thread_arena_counter++ % n_arena;
-  //  is_init = 1;
-  //}
-  //free_count++;
-  //lock();
+#if BASIC
+#else
   //void* ptr = get_metadata();
   //ptr = (void*) Main_free(ptr, (uint64_t) ptr_to_block);
   //set_metadata(ptr);
-  //unlock();
-  //if (f_cnt % 2 == 0)
-  //  puts("a");
-  //else
-  //  puts("b");
+#endif
 }
-
-//uint64_t size () {
-//  return Main_size ();
-//}
 
 // required for realloc
 // this small implementation is likely not very robust

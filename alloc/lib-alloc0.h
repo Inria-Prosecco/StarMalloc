@@ -1,5 +1,6 @@
-#ifndef TRUC
-#define TRUC
+#ifndef LIB_ALLOC0_H
+#define LIB_ALLOC0_H
+
 #include "Main.h"
 
 void lock();

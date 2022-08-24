@@ -1,9 +1,7 @@
-//#include "Main.h"
+#include "config.h"
 #include "lib-alloc0.h"
 #include <stdint.h>
 #include <pthread.h>
-#include "config.h"
-//#include <unistd.h>
 #include <stdatomic.h>
 
 const uint64_t uint64_size = sizeof(uint64_t);
@@ -13,7 +11,9 @@ const uint64_t allocated_size = ALLOCATED_SIZE;
 /*
 - (1) N_ARENA, N_THREADS arbitrary
 - (2) each thread must keep the same arena throughout its execution,
-as we want arenas isolated
+as:
+  - (correctness) free/realloc rely on accessing corresponding metadata
+  - (security) arenas should be isolated
 - (3) if N_THREADS > N_ARENA, two threads will have the same arena
 
 design decisions:
@@ -24,7 +24,7 @@ design decisions:
   - (b) thread arena attribution during init
 - v0: arena identifier was attributed in lib-alloc.c, changed
 - v1: 2 inits, one global (n_arena datas), one local (thread arena id)
-- v2: 1 init, one local (per thread) with corresponding n_arena datas
+- v2: 1 lazy init, one local (per thread) with corresponding arena data
   -> less contention
   -> less useless memory reservation
 */
@@ -70,25 +70,8 @@ void init1() {
   pthread_mutex_unlock(&init_mutex1);
 }
 
-//void init2() {
-//  pthread_mutex_lock(&init_mutex);
-//  if (status) return;
-//  for (size_t i = 0; i < N_ARENA; i++) {
-//    //metadatas1[i] = Main_mmap(allocated_size, 3l);
-//    //metadatas2[i] = Main_mmap(allocated_size, 3l);
-//    //metadatas1[i][0];
-//    //metadatas2[i][0];
-//    //metadata_ptrs[i] = Main_create_leaf();
-//    //pthread_mutex_init(&mutexes[i], NULL);
-//  }
-//  //pthread_mutex_init(&the_mutex, NULL);
-//  status = 1;
-//  pthread_mutex_unlock(&init_mutex);
-//}
-
 void lock() {
   if (! status1) init1();
-  //if (! status) init2 ();
   pthread_mutex_lock(&mutexes[thread_arena]);
 }
 void unlock() {
