@@ -123,6 +123,23 @@ let rec find
     )
   ))
 
+let find2
+  (cmp: cmp a) (ptr: t a)
+  (v: a)
+  : Steel (U.t)
+  (linked_tree ptr)
+  (fun _ -> linked_tree ptr)
+  (requires fun h0 ->
+    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0))
+  (ensures fun h0 r h1 ->
+    v_linked_tree ptr h1 == v_linked_tree ptr h0)
+  =
+  let a = find cmp ptr v in
+  if Some? a
+  then return 1UL
+  else return 0UL
+
+
 //let mem (#a #b: Type) (cmp: cmp a) (ptr: t (a & b))
 //  (v: a)
 //  (b_inhabitant: b)

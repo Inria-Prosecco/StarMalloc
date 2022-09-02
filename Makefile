@@ -72,9 +72,11 @@ FILTERED_STEEL_FILES = \
   obj/Steel_HigherReference.krml \
   obj/Steel_Reference.krml \
   obj/Steel_Semantics_Hoare_MST.krml \
-  obj/Some_lemmas.krml \
-  obj/Steel_HigherArray0.krml \
-  obj/Allocator.krml
+  obj/Steel_ST_Loops.krml \
+  obj/Steel_ST_Util.krml \
+  obj/Steel_ST_HigherArray.krml \
+  obj/Steel_ST_Effect_Atomic.krml \
+  obj/Steel_ST_Coercions.krml
 
 FILTERED_KRML_FILES = $(filter-out $(FILTERED_STEEL_FILES), $(ALL_KRML_FILES))
 
@@ -114,7 +116,7 @@ alloc/lib-alloc0.c
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)
 test-tree: verify extract
-	gcc -O2 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
+	gcc -O2 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist \
 	-o bench/mavl.out $(FILES) alloc/lib-alloc.c bench/test2.c
 
 # test the compilation of the allocator
@@ -130,7 +132,6 @@ test-alloc0: verify extract
 	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
-  -pthread \
 -o bench/a.out \
 $(FILES) \
 bench/test-alloc.c \
@@ -138,7 +139,7 @@ alloc/lib-alloc.c
 	./bench/a.out
 
 test-alloc0bis: verify extract
-	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
+	gcc -O0 -pg -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
   -pthread \
@@ -149,8 +150,9 @@ alloc/lib-alloc.c
 	./bench/a.out
 
 # test the compilation of the allocator as a shared library
+#gcc -g -O0 -DKRML_VERIFIED_UINT128
 test-compile-alloc-lib: verify extract
-	gcc -g -O0 -DKRML_VERIFIED_UINT128 \
+	gcc -O2 -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
 	-pthread \

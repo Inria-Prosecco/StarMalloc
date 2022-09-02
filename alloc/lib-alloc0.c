@@ -114,6 +114,9 @@ Impl_Core_node__Aux_a* Aux_trees_malloc2(Impl_Core_node__Aux_a n) {
   return ptr;
 }
 
+void Aux_trees_free(uint64_t* v) {}
+void Aux_trees_free2(Impl_Core_node__Aux_a* n) {}
+
 Impl_Core_node__Aux_a* get_metadata() {
   return metadata_ptrs[thread_arena];
 }

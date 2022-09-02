@@ -7,7 +7,7 @@ open Steel.Reference
 
 module U = FStar.UInt64
 module I64 = FStar.Int64
-module Impl = Impl.Mono
+module Impl = Map.M
 
 unfold let a = U.t & U.t
 
@@ -19,16 +19,17 @@ let compare (x y: a) : I64.t
   else if U.eq x y then 0L
   else -1L
 
-let mk_node = Impl.mk_node
-let create_leaf = Impl.create_leaf
-let create_tree = Impl.create_tree
-let merge_tree  = Impl.merge_tree
-let insert_avl = Impl.insert_avl
-let delete_avl = Impl.delete_avl
+let mk_node = Impl.Mono.mk_node
+let create_leaf = Impl.Mono.create_leaf
+let create_tree = Impl.Mono.create_tree
+let merge_tree  = Impl.Mono.merge_tree
+let insert_avl = Impl.insert
+let delete_avl = Impl.delete
+let find = Impl.find
 
-let sot_wds     = Impl.sot_wds
-let hot_wdh     = Impl.hot_wdh
-let member = Impl.member
+let sot_wds     = Impl.Mono.sot_wds
+let hot_wdh     = Impl.Mono.hot_wdh
+let member = Impl.Mono.member
 
 let main (v: a) : SteelT U.t
   emp (fun _ -> emp)

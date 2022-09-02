@@ -64,6 +64,7 @@ let delete = Impl.Mono.delete_avl
 inline_for_extraction noextract
 let get_size = Impl.Mono.sot_wds
 //let mem = Impl.Mono.member
+inline_for_extraction noextract
 let find = Map.M.find
 
 //assume val metadata_ptr: t a
@@ -95,34 +96,23 @@ let free (metadata: t a) (ptr: ptr_t)
   (ensures fun _ r h1 ->
     Spec.is_avl (spec_convert cmp) (v_linked_tree r h1))
   =
-  ();
-  return metadata
+  let h0 = get () in
+  Spec.height_lte_size (v_linked_tree metadata h0);
+  let size = find cmp metadata (ptr, 0UL) in
+  if Some? size then (
+    let size = Some?.v size in
+    let metadata' = delete cmp metadata (ptr, size) in
+    return metadata'
+  ) else (
+    return metadata
+  )
 
-//  admit ();
-//  let size = find cmp metadata (ptr, 0UL) in
-//  if Some? size then (
-//    let size = Some?.v size in
-//    //let status = munmap ptr size in
-//    let metadata' = delete cmp metadata (ptr, size) in
-//    set_metadata metadata';
-//    return metadata'
-//  ) else (
-//    set_metadata metadata;
-//    return metadata
-//  )
-
-//let size (_:unit) : SteelT U64.t
-//  (linked_tree (get_metadata_pure ()))
-//  (fun _ -> linked_tree (get_metadata_pure ()))
-//  =
-//  let metadata = get_metadata () in
-//  let size = get_size metadata in
-//  sladmit ();
-//  return size
-
-
-
-
+let _size (metadata: t a) : SteelT U64.t
+  (linked_tree metadata)
+  (fun _ -> linked_tree metadata)
+  =
+  let size = get_size metadata in
+  return size
 
 (*)
 [ok] - find

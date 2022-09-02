@@ -12,6 +12,14 @@
 // expose option to force reservation of the allocated memory
 // htop: VIRT \neq RES
 
+uint64_t _size() {
+  lock();
+  void* ptr = get_metadata();
+  uint64_t r = Main__size(ptr);
+  unlock();
+  return r;
+}
+
 void* malloc (size_t size) {
   void* allocated_block = NULL;
   lock();
@@ -32,12 +40,15 @@ void* malloc (size_t size) {
 }
 
 void free (void* ptr_to_block) {
+  lock();
 #if BASIC
 #else
-  //void* ptr = get_metadata();
-  //ptr = (void*) Main_free(ptr, (uint64_t) ptr_to_block);
-  //set_metadata(ptr);
+  void* ptr = get_metadata();
+  ptr = (void*) Main_free(ptr, (uint64_t) ptr_to_block);
+  set_metadata(ptr);
 #endif
+  unlock();
+  return;
 }
 
 // required for realloc

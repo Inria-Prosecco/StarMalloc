@@ -14,9 +14,9 @@ int main(){
   }
   // only for static test
   //uint64_t s = 0UL;
-  //s = size ();
-  //printf("OK : %lui\n", s);
-  //s = size ();
-  //printf("OK : %lui\n", s);
+  //s = _size ();
+  //printf("Size: %lui\n", s);
+  //s = _size ();
+  //printf("Size: %lui\n", s);
   return 0;
 }

@@ -2,8 +2,8 @@ module ArrayTest
 
 open Steel.Effect.Atomic
 open Steel.Effect
-module A = Steel.Array0
-open Steel.Array0
+module A = Steel.Array
+open Steel.Array
 module P = Steel.FractionalPermission
 module U32 = FStar.UInt32
 

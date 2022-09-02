@@ -39,6 +39,7 @@ int main(int argc, char** argv) {
   printf("s=%lu\n", s);
 
   bool b = false;
+  uint64_t opt = 0;
 
   x = 7;
   for (size_t i = 0; i < n; i++) {
@@ -48,11 +49,14 @@ int main(int argc, char** argv) {
     rd = x;
     v = (Impl_Test_Mono_a) {.fst = rd, .snd = 0UL};
     b = Impl_Test_Mono_member(Impl_Test_Mono_compare, ptr, v);
+    opt += Map_M_find2(Impl_Test_Mono_compare, ptr, v);
     if (! b) {
       puts("Error: some element was not properly inserted.");
       return 1;
     }
   }
+  puts("Should be equal to the supplied argument.");
+  printf("opt=%lu\n", opt);
 
   x = 7;
   for (size_t i = 0; i < n; i++) {

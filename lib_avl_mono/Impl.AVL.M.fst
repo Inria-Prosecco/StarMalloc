@@ -315,9 +315,9 @@ let rec remove_leftmost_avl (cmp:cmp a) (ptr: t a)
   if is_null_t (get_left node) then (
     let data = get_data node in
     elim_linked_tree_leaf (get_left node);
-    free (get_size node);
-    free (get_height node);
-    free ptr;
+    Aux.trees_free (get_size node);
+    Aux.trees_free (get_height node);
+    Aux.trees_free2 ptr;
     return (get_right node, data)
   ) else (
     (**) not_null_is_node (get_left node);
@@ -360,15 +360,15 @@ let delete_avl_aux0
   (**) let node = unpack_tree ptr in
   if is_null_t (get_right node) then (
     elim_linked_tree_leaf (get_right node);
-    free (get_size node);
-    free (get_height node);
-    free ptr;
+    Aux.trees_free (get_size node);
+    Aux.trees_free (get_height node);
+    Aux.trees_free2 ptr;
     return (get_left node)
   ) else if is_null_t (get_left node) then (
     elim_linked_tree_leaf (get_left node);
-    free (get_size node);
-    free (get_height node);
-    free ptr;
+    Aux.trees_free (get_size node);
+    Aux.trees_free (get_height node);
+    Aux.trees_free2 ptr;
     return (get_right node)
   ) else (
     not_null_is_node (get_right node);
