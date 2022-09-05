@@ -28,7 +28,7 @@ void* malloc (size_t size) {
 #else
   void* ptr = NULL;
   ptr = get_metadata();
-  K____Impl_Core_node__Aux_a__uint64_t r = Main_malloc(ptr, size);
+  K____Impl_Core_node__Aux_a__Aux_ptr_t r = Main_malloc(ptr, size);
   ptr = r.fst;
   set_metadata(ptr);
   allocated_block = (void*) r.snd;

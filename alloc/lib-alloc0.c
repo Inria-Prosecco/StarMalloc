@@ -124,3 +124,7 @@ Impl_Core_node__Aux_a* get_metadata() {
 void set_metadata(Impl_Core_node__Aux_a* metadata) {
   metadata_ptrs[thread_arena] = metadata;
 }
+
+uint64_t Main_ptr_to_u64(uint8_t* ptr) {
+  return (uint64_t) ptr;
+}

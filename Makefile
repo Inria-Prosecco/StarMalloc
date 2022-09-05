@@ -102,7 +102,6 @@ dist/Impl_Trees_Rotate2_M.h \
 dist/Impl_Trees_Rotate_M.h \
 dist/Main.h \
 dist/Mman.h \
-dist/internal/Main.h \
 dist/Map_M.c \
 dist/Impl_AVL_M.c \
 dist/Impl_BST_M.c \

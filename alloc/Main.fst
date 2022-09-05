@@ -3,12 +3,15 @@ module Main
 open FStar.Ghost
 open Steel.Effect.Atomic
 open Steel.Effect
-open Steel.Reference
+module A = Steel.Array
 
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module I64 = FStar.Int64
 module I32 = FStar.Int32
+module U8 = FStar.UInt8
+
+let array = Steel.ST.Array.array
 
 open Impl.Core
 open Impl.Mono
@@ -17,10 +20,9 @@ open Map.M
 #set-options "--ide_id_info_off"
 
 // machine representation
-unfold let ptr_t = U64.t
-unfold let size_t = U64.t
-
-let a = ptr_t & size_t
+unfold let ptr_t = Aux.ptr_t
+unfold let size_t = Aux.size_t
+unfold let a = Aux.a
 
 let t = Impl.Core.t
 let linked_tree = Impl.Core.linked_tree
@@ -42,14 +44,30 @@ let mmap (len: U64.t) (prot: I32.t)
   //= Mman.mmap 0UL len prot 33l (-1l) 0ul
   //MAP_PRIVATE instead of MAP_ANON (avoid filling the disk...)
   //34l = MAP_PRIVATE|MAP_ANON
+  : Steel (array U8.t)
+    emp
+    (fun a -> A.varray a)
+    (fun _ -> True)
+    (fun _ a h1 ->
+      A.length a == U64.v len /\
+      A.is_full_array a /\
+      A.asel a h1 == Seq.create (U64.v len) U8.zero
+    )
   = Mman.mmap 0UL len prot 34l (-1l) 0ul
 
 let munmap = Mman.munmap
 
-let cmp (x y: U64.t & U64.t) : I64.t
+noextract
+assume val ptr_to_u64 (x: ptr_t) : U64.t
+noextract
+assume val u64_to_ptr (x: U64.t) : ptr_t
+
+let cmp (x y: a) : I64.t
   =
   let x = fst x in
   let y = fst y in
+  let x = ptr_to_u64 x in
+  let y = ptr_to_u64 y in
   if U64.gt x y then 1L
   else if U64.eq x y then 0L
   else -1L
@@ -72,14 +90,17 @@ let find = Map.M.find
 let malloc (metadata: t a) (size: size_t)
   : Steel (t a & ptr_t)
   (linked_tree metadata)
-  (fun r -> linked_tree (fst r))
+  (fun r -> linked_tree (fst r) `star` A.varray (snd r))
   (requires fun h0 ->
     Spec.is_avl (spec_convert cmp)
       (v_linked_tree metadata h0) /\
     Spec.size_of_tree (v_linked_tree metadata h0) < 100)
   (ensures fun _ r h1 ->
-    let metadata = fst r in
-    Spec.is_avl (spec_convert cmp) (v_linked_tree metadata h1))
+    Spec.is_avl (spec_convert cmp) (v_linked_tree (fst r) h1) /\
+    A.length (snd r) == U64.v size /\
+    A.is_full_array (snd r) /\
+    A.asel (snd r) h1 == Seq.create (U64.v size) U8.zero
+  )
   =
   let h0 = get () in
   Spec.height_lte_size (v_linked_tree metadata h0);

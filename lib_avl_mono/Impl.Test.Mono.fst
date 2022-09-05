@@ -4,20 +4,16 @@ open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
+module A = Steel.Array
 
-module U = FStar.UInt64
+let array = Steel.ST.Array.array
+
+module U64 = FStar.UInt64
+module U8 = FStar.UInt8
 module I64 = FStar.Int64
 module Impl = Map.M
 
-unfold let a = U.t & U.t
-
-let compare (x y: a) : I64.t
-  =
-  let x = fst x in
-  let y = fst y in
-  if U.gt x y then 1L
-  else if U.eq x y then 0L
-  else -1L
+unfold let a = Aux.a
 
 let mk_node = Impl.Mono.mk_node
 let create_leaf = Impl.Mono.create_leaf
@@ -31,7 +27,7 @@ let sot_wds     = Impl.Mono.sot_wds
 let hot_wdh     = Impl.Mono.hot_wdh
 let member = Impl.Mono.member
 
-let main (v: a) : SteelT U.t
+let main (v: a) : SteelT U64.t
   emp (fun _ -> emp)
   =
   let ptr = create_tree v in
@@ -41,6 +37,14 @@ let main (v: a) : SteelT U.t
 
 
 (*)
+//let compare (x y: a) : I64.t
+//  =
+//  let x = fst x in
+//  let y = fst y in
+//  if U.gt x y then 1L
+//  else if U.eq x y then 0L
+//  else -1L
+
 module Impl.Test.Mono
 
 open Steel.Memory

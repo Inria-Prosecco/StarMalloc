@@ -1,18 +1,23 @@
 module Aux
 
-open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
+module A = Steel.Array
 
 open Impl.Core
 
-module U = FStar.UInt64
+module U64 = FStar.UInt64
+module U8 = FStar.UInt8
 
-let a = U.t & U.t
+let array = Steel.ST.Array.array
+
+unfold let ptr_t = array U8.t
+unfold let size_t = U64.t
+let a = ptr_t & size_t
 
 noextract
-assume val trees_malloc (x: U.t) : Steel (ref U.t)
+assume val trees_malloc (x: U64.t) : Steel (ref U64.t)
   emp (fun r -> vptr r)
   (requires fun _ -> True)
   (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
@@ -25,7 +30,7 @@ assume val trees_malloc2 (x: node a)
   (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
 
 noextract
-assume val trees_free (r: ref U.t) : Steel unit
+assume val trees_free (r: ref U64.t) : Steel unit
   (vptr r) (fun _ -> emp)
   (requires fun _ -> True)
   (ensures fun _ _ _-> True)
