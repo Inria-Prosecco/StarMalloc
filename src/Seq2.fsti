@@ -1,4 +1,4 @@
-module Seq.Aux
+module Seq2
 
 val map_seq2 (#a #b #c: Type) (f:a -> b -> Tot c)
   (s1:Seq.seq a) (s2:Seq.seq b{Seq.length s1 = Seq.length s2})

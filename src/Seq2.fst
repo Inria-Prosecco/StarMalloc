@@ -1,4 +1,4 @@
-module Seq.Aux
+module Seq2
 
 friend FStar.Seq.Base
 
