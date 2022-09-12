@@ -209,6 +209,7 @@ let spec_bv_set (#n:pos) (b:uint_t n) (m:nat{m < n})
   =
   logor_one_add #n (pow2_n m) b m
 
+#push-options "--z3rlimit 30"
 let logand_one_sub (#n: pos) (a:uint_t n) (b:uint_t n) (m:nat{m < n})
   : Lemma
   (requires
@@ -264,7 +265,7 @@ let logand_one_sub (#n: pos) (a:uint_t n) (b:uint_t n) (m:nat{m < n})
   assert (r == r2);
   assert (from_vec vb = b);
   assert (r = b - 1 * a)
-
+#pop-options
 let spec_bv_unset (#n:pos) (b:uint_t n) (m:nat{m < n})
   : Lemma
   (requires

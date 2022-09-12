@@ -3,18 +3,10 @@ module Bitmap4
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module Seq = FStar.Seq
-
 module FBV = FStar.BitVector
-
-open Steel.Effect.Atomic
-open Steel.Effect
-
-module A = Steel.Array
 
 open FStar.UInt
 open FStar.Mul
-
-let array = Steel.ST.Array.array
 
 let rec array_to_bv_aux
   (#n: nat)
@@ -88,3 +80,98 @@ let array_to_bv_lemma
   )
   =
   array_to_bv_aux_lemma #n s n i
+
+let get
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : bool
+  =
+  let i1 = U32.div i 64ul in
+  let i2 = U32.rem i 64ul in
+  let x = Seq.index s (U32.v i1) in
+  Bitmap3.get x i2
+
+let get_lemma
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (get s i = nth
+    (U64.v (Seq.index s (U32.v i / U64.n)))
+    (U64.n - (U32.v i % U64.n) - 1))
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  Bitmap3.bv_get_lemma x i2
+
+let set
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Seq.lseq U64.t n
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  let x' = Bitmap3.set x i2 in
+  Seq.upd s (U32.v i1) x'
+
+let set_lemma
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (requires
+    nth (U64.v (Seq.index s (U32.v i / U64.n)))
+        (U64.n - (U32.v i % U64.n) - 1) = false)
+  (ensures (
+    let s' = set s i in
+    nth (U64.v (Seq.index s' (U32.v i / U64.n)))
+        (U64.n - (U32.v i % U64.n) - 1) = true))
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  Bitmap3.bv_set_lemma x i2
+
+let unset
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Seq.lseq U64.t n
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  let x' = Bitmap3.unset x i2 in
+  Seq.upd s (U32.v i1) x'
+
+let unset_lemma
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (requires
+    nth (U64.v (Seq.index s (U32.v i / U64.n)))
+        (U64.n - (U32.v i % U64.n) - 1) = true)
+  (ensures (
+    let s' = unset s i in
+    nth (U64.v (Seq.index s' (U32.v i / U64.n)))
+        (U64.n - (U32.v i % U64.n) - 1) = false))
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  Bitmap3.bv_unset_lemma x i2
