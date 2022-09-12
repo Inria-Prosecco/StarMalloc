@@ -17,6 +17,9 @@ open Seq2
 
 let array = Steel.ST.Array.array
 
+open Bitmap5
+
+(*)
 //noextract
 //let size_classes : list nzn = [
 //  //(* 0 *) 0;
@@ -275,6 +278,29 @@ let equiv_smd_index_op2
   r11 = r21)
   =
   Classical.forall_intro logand1
+
+noextract
+let spec_smd_index_op3
+  (size_class: nzn{U32.v size_class >= 16})
+  (bucket: U64.t)
+  (mask_shift: nat)
+  : nat
+  =
+  let r = (U64.v bucket) + (pow2 mask_shift) in
+  r
+
+let smd_index_op3
+  (size_class: nzn{U32.v size_class >= 16})
+  (bucket: U64.t)
+  (mask_shift: U32.t{U32.v mask_shift < 64})
+  : U64.t
+  =
+  let shifted_one = mul64_shift2 mask_shift in
+  assert (U64.v shifted_one ==  pow2 (U32.v mask_shift));
+  let r = U64.logor bucket shifted_one in
+  r
+
+
 
 //@Spec
 noextract

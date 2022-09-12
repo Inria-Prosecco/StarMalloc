@@ -3,8 +3,11 @@ module Bitmap1
 open FStar.UInt
 open FStar.Mul
 
+noextract
 unfold let uint_of_bool (#n:nat{n <> 0}) (b: bool) : Tot (uint_t n)
   = if b then 1 else 0
+
+noextract
 unfold let bool_of_uint (#n:nat{n <> 0}) (b:uint_t n) : Tot bool
   = if b = 1 then true else false
 

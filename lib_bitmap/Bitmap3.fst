@@ -8,6 +8,7 @@ open FStar.Mul
 open Bitmap1
 open Bitmap2
 
+inline_for_extraction noextract
 let u64_bool_of_uint (x: U64.t)
   : bool
   =
@@ -20,6 +21,7 @@ let u64_bool_of_uint_lemma (x: U64.t)
   (u64_bool_of_uint x = bool_of_uint (U64.v x))
   = ()
 
+inline_for_extraction noextract
 let get (b: U64.t) (m:U32.t{U32.v m < U64.n})
   : bool
   =
@@ -40,6 +42,7 @@ let bv_get_lemma (b: U64.t) (m:U32.t{U32.v m < 64})
   u64_bool_of_uint_lemma r2;
   spec2_bv_get (U64.v b) (U32.v m)
 
+inline_for_extraction noextract
 let set (b: U64.t) (m:U32.t{U32.v m < U64.n})
   : U64.t
   =
@@ -65,6 +68,7 @@ let bv_set_lemma (b: U64.t) (m:U32.t{U32.v m < U64.n})
   assert (U64.v r == spec2_set (U64.v b) (U32.v m));
   spec2_bv_set (U64.v b) (U32.v m)
 
+inline_for_extraction noextract
 let unset (b: U64.t) (m:U32.t{U32.v m < U64.n})
   : U64.t
   =

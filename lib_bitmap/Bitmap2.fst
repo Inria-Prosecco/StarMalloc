@@ -6,7 +6,7 @@ open FStar.UInt
 open FStar.Mul
 open Bitmap1
 
-
+noextract
 let append_lemma (#n:pos) (#m:nat) (a:FBV.bv_t n) (b:FBV.bv_t m)
   : Lemma (from_vec #(n + m) (Seq.append a b) = (from_vec #n a) * pow2 m + (from_vec #m b))
   =
@@ -16,6 +16,7 @@ let append_lemma (#n:pos) (#m:nat) (a:FBV.bv_t n) (b:FBV.bv_t m)
   then ()
   else from_vec_propriety #(n + m) (Seq.append a b) n
 
+noextract
 let slice_right_lemma (#n:pos) (a:FBV.bv_t n) (s:nat{s < n})
   : Lemma
   (requires True)
@@ -34,6 +35,7 @@ let slice_right_lemma (#n:pos) (a:FBV.bv_t n) (s:nat{s < n})
 // shift_right_value_aux_3
 
 #push-options "--z3rlimit 30"
+noextract
 let logand_mask (#n:pos) (a:uint_t n) (m:nat{m < n})
   : Lemma (pow2 m < pow2 n /\ logand #n a (pow2 m - 1) == a % pow2 m)
   =
@@ -50,6 +52,7 @@ let logand_mask (#n:pos) (a:uint_t n) (m:nat{m < n})
   assert (from_vec #m (Seq.slice (to_vec a) (n - m) n) == a % pow2 m)
 #pop-options
 
+noextract
 let spec2_bv_get (#n:nat{n > 1}) (b: uint_t n) (m:nat{m < n})
   : Lemma
   (let r1 = shift_right b m in
@@ -64,6 +67,7 @@ let spec2_bv_get (#n:nat{n > 1}) (b: uint_t n) (m:nat{m < n})
   assert (r2 == r1 % 2);
   spec_bv_get b m
 
+noextract
 let spec2_set (#n: pos) (b: uint_t n) (m:nat{m < n})
   : uint_t n
   =
@@ -71,6 +75,7 @@ let spec2_set (#n: pos) (b: uint_t n) (m:nat{m < n})
   let r = logor a b in
   r
 
+noextract
 let spec2_bv_set (#n:pos) (b: uint_t n) (m:nat{m < n})
   : Lemma
   (requires
@@ -82,6 +87,7 @@ let spec2_bv_set (#n:pos) (b: uint_t n) (m:nat{m < n})
   =
   spec_bv_set b m
 
+noextract
 let spec2_unset (#n: pos) (b: uint_t n) (m:nat{m < n})
   : uint_t n
   =
@@ -90,6 +96,7 @@ let spec2_unset (#n: pos) (b: uint_t n) (m:nat{m < n})
   let r = logand c b in
   r
 
+noextract
 let spec2_bv_unset (#n:pos) (b: uint_t n) (m:nat{m < n})
   : Lemma
   (requires

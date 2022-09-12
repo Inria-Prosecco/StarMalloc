@@ -8,6 +8,7 @@ module FBV = FStar.BitVector
 open FStar.UInt
 open FStar.Mul
 
+noextract
 let rec array_to_bv_aux
   (#n: nat)
   (s: Seq.lseq U64.t n)
@@ -24,6 +25,7 @@ let rec array_to_bv_aux
       let s : FBV.bv_t (U64.n * (k - 1)) = array_to_bv_aux s (k - 1) in
       Seq.append x s
 
+noextract
 let array_to_bv
   (#n: nat)
   (s: Seq.lseq U64.t n)
@@ -81,6 +83,7 @@ let array_to_bv_lemma
   =
   array_to_bv_aux_lemma #n s n i
 
+noextract
 let get
   (#n: nat)
   (s: Seq.lseq U64.t n)
@@ -108,6 +111,7 @@ let get_lemma
   let x = Seq.index s (U32.v i1) in
   Bitmap3.bv_get_lemma x i2
 
+noextract
 let set
   (#n: nat)
   (s: Seq.lseq U64.t n)
@@ -142,6 +146,7 @@ let set_lemma
   let x = Seq.index s (U32.v i1) in
   Bitmap3.bv_set_lemma x i2
 
+noextract
 let unset
   (#n: nat)
   (s: Seq.lseq U64.t n)

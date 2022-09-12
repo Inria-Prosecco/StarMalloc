@@ -53,7 +53,6 @@ let div64_shift2 (k: U64.t) (s: U32.t)
   (requires U32.v s < U64.n)
   (ensures fun r -> U64.v r = U64.v k / (pow2 (U32.v s)))
   =
-  FStar.UInt.shift_right_value_aux_3 #U64.n (U64.v k) 6;
   assert (U64.v k / (pow2 (U32.v s))
   == FStar.UInt.shift_right (U64.v k) (U32.v s));
   let x2 = U64.shift_right k s in
@@ -64,3 +63,20 @@ let logand1 (x: U64.t)
   (FStar.UInt.logand (U64.v x) 1 == U64.v x % 2)
   =
   FStar.UInt.logand_mask #64 (U64.v x) 1
+
+let mul64_shift2 (s: U32.t)
+  : Pure U64.t
+  (requires U32.v s < U64.n)
+  //(ensures fun _ -> True)
+  (ensures fun r -> U64.v r = pow2 (U32.v s))
+  =
+  admit ();
+  let s_nat : nat = U32.v s in
+  assert (s_nat < U64.n);
+  let s_nat : n:pos{n < U64.n} = s_nat in
+  Classical.forall_intro
+    (FStar.UInt.shift_left_value_aux_3 #U64.n 1);
+  assert (pow2 (U32.v s)
+  == FStar.UInt.shift_left #U64.n 1 (U32.v s));
+  let x2 = U64.shift_left U64.one s in
+  x2
