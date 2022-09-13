@@ -72,7 +72,7 @@ let rec array_to_bv_aux_lemma
 let array_to_bv_lemma
   (#n: nat)
   (s: Seq.lseq U64.t n)
-  (i: nat)
+  (i:nat)
   : Lemma
   (requires i < U64.n * n)
   (ensures
@@ -80,8 +80,7 @@ let array_to_bv_lemma
     =
     nth (U64.v (Seq.index s (i/U64.n))) (i%U64.n)
   )
-  =
-  array_to_bv_aux_lemma #n s n i
+  = array_to_bv_aux_lemma #n s n i
 
 noextract
 let get
@@ -180,3 +179,37 @@ let unset_lemma
   assert (U32.v i2 = U32.v i % U64.n);
   let x = Seq.index s (U32.v i1) in
   Bitmap3.bv_unset_lemma x i2
+
+let array_to_bv_lemma_upd_set
+  (#n: nat)
+  (s0 s1: Seq.lseq U64.t n)
+  (i: nat)
+  : Lemma
+  (requires
+    i < U64.n * n /\
+    s1 == Seq.upd s0 (i/64) (Bitmap3.set (Seq.index s0 (i/64)) (U32.uint_to_t (i%64)))
+  )
+  (ensures
+    array_to_bv s1
+    ==
+    Seq.upd (array_to_bv s0) (i/U64.n*U64.n+(U64.n-1-i%U64.n)) true
+  )
+  =
+  admit ()
+
+let array_to_bv_lemma_upd_unset
+  (#n: nat)
+  (s0 s1: Seq.lseq U64.t n)
+  (i: nat)
+  : Lemma
+  (requires
+    i < U64.n * n /\
+    s1 == Seq.upd s0 (i/64) (Bitmap3.unset (Seq.index s0 (i/64)) (U32.uint_to_t (i%64)))
+  )
+  (ensures
+    array_to_bv s1
+    ==
+    Seq.upd (array_to_bv s0) (i/U64.n*U64.n+(U64.n-1-i%U64.n)) false
+  )
+  =
+  admit ()

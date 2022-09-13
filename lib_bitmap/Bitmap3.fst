@@ -61,12 +61,18 @@ let shift_left_is_pow2 (m:U32.t{U32.v m < U64.n})
 let bv_set_lemma (b: U64.t) (m:U32.t{U32.v m < U64.n})
   : Lemma
   (requires nth (U64.v b) (U64.n - U32.v m - 1) = false)
-  (ensures nth (U64.v (set b m)) (U64.n - U32.v m - 1) = true)
+  (ensures
+    nth (U64.v (set b m)) (U64.n - U32.v m - 1) = true /\
+    to_vec #64 (U64.v (set b m)) = Seq.upd (to_vec #64 (U64.v b)) (U64.n - U32.v m - 1) true
+  )
   =
   let r = set b m in
   shift_left_is_pow2 m;
   assert (U64.v r == spec2_set (U64.v b) (U32.v m));
-  spec2_bv_set (U64.v b) (U32.v m)
+  spec2_bv_set (U64.v b) (U32.v m);
+  Seq.lemma_eq_intro
+    (to_vec #64 (U64.v (set b m)))
+    (Seq.upd (to_vec #64 (U64.v b)) (U64.n - U32.v m - 1) true)
 
 inline_for_extraction noextract
 let unset (b: U64.t) (m:U32.t{U32.v m < U64.n})
@@ -80,9 +86,16 @@ let unset (b: U64.t) (m:U32.t{U32.v m < U64.n})
 let bv_unset_lemma (b: U64.t) (m:U32.t{U32.v m < U64.n})
   : Lemma
   (requires nth (U64.v b) (U64.n - U32.v m - 1) = true)
-  (ensures nth (U64.v (unset b m)) (U64.n - U32.v m - 1) = false)
+  (ensures
+    nth (U64.v (set b m)) (U64.n - U32.v m - 1) = false /\
+    to_vec #64 (U64.v (unset b m)) = Seq.upd (to_vec #64 (U64.v b)) (U64.n - U32.v m - 1) false
+  )
   =
   let r = unset b m in
   shift_left_is_pow2 m;
   assert (U64.v r == spec2_unset (U64.v b) (U32.v m));
-  spec2_bv_unset (U64.v b) (U32.v m)
+  spec2_bv_unset (U64.v b) (U32.v m);
+  admit ();
+  Seq.lemma_eq_intro
+    (to_vec #64 (U64.v (unset b m)))
+    (Seq.upd (to_vec #64 (U64.v b)) (U64.n - U32.v m - 1) false)
