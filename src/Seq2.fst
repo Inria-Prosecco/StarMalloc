@@ -268,3 +268,35 @@ let eq_bazar_some (#a: Type) (#n: nat)
   =
   eq_with_without_some_bij (to_some' s);
   invert_to_some s
+
+let append_upd1 (#a: Type)
+  (s1 s2: Seq.seq a)
+  (k: nat)
+  (v: a)
+  : Lemma
+  (requires k < Seq.length s2)
+  (ensures
+    Seq.append s1 (Seq.upd s2 k v)
+    ==
+    Seq.upd (Seq.append s1 s2) (Seq.length s1 + k) v
+  )
+  =
+  Seq.lemma_eq_intro
+    (Seq.append s1 (Seq.upd s2 k v))
+    (Seq.upd (Seq.append s1 s2) (Seq.length s1 + k) v)
+
+let append_upd2 (#a: Type)
+  (s1 s2: Seq.seq a)
+  (k: nat)
+  (v: a)
+  : Lemma
+  (requires k < Seq.length s1)
+  (ensures
+    Seq.append (Seq.upd s1 k v) s2
+    ==
+    Seq.upd (Seq.append s1 s2) k v
+  )
+  =
+  Seq.lemma_eq_intro
+    (Seq.append (Seq.upd s1 k v) s2)
+    (Seq.upd (Seq.append s1 s2) k v)

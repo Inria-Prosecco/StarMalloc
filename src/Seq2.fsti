@@ -168,3 +168,28 @@ val eq_bazar_some (#a: Type) (#n: nat)
   (requires True)
   (ensures
     from_some' (with_some (without_some (to_some' s))) == s)
+
+val append_upd1 (#a: Type)
+  (s1 s2: Seq.seq a)
+  (k: nat)
+  (v: a)
+  : Lemma
+  (requires k < Seq.length s2)
+  (ensures
+    Seq.append s1 (Seq.upd s2 k v)
+    ==
+    Seq.upd (Seq.append s1 s2) (Seq.length s1 + k) v
+  )
+
+val append_upd2 (#a: Type)
+  (s1 s2: Seq.seq a)
+  (k: nat)
+  (v: a)
+  : Lemma
+  (requires k < Seq.length s1)
+  (ensures
+    Seq.append (Seq.upd s1 k v) s2
+    ==
+    Seq.upd (Seq.append s1 s2) k v
+  )
+
