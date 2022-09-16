@@ -61,7 +61,7 @@ let bm_get_aux
   let r = Bitmap3.get x k2 in
   return r
 
-#push-options "--z3rlimit 40"
+#push-options "--z3rlimit 30"
 let bm_get
   (#n: nat)
   (arr: array U64.t{A.length arr = n})
@@ -71,7 +71,7 @@ let bm_get
   (fun _ -> A.varray arr)
   (requires fun _ -> True)
   (ensures fun h0 b h1 ->
-    let bm = Bitmap4.array_to_bv (A.asel arr h0) in
+    let bm = Bitmap4.array_to_bv2 (A.asel arr h0) in
     let idx = f #n (U32.v k) in
     b = Bitmap4.get (A.asel arr h0) k /\
     b = Seq.index bm idx /\
@@ -90,6 +90,7 @@ let bm_get
   assert (r = FU.nth (U64.v (Seq.index s (U32.v k1))) (f_aux (U32.v k2)));
   Bitmap4.array_to_bv_lemma s k';
   assert (r = Seq.index (Bitmap4.array_to_bv s) k');
+  Bitmap4.array_to_bv2_lemma s;
   return r
 #pop-options
 
@@ -121,13 +122,13 @@ let bm_set
   (A.varray arr)
   (fun _ -> A.varray arr)
   (requires fun h0 ->
-    let bm0 = Bitmap4.array_to_bv (A.asel arr h0) in
+    let bm0 = Bitmap4.array_to_bv2 (A.asel arr h0) in
     let idx = f #n (U32.v k) in
     Seq.index bm0 idx = false
   )
   (ensures fun h0 b h1 ->
-    let bm0 = Bitmap4.array_to_bv (A.asel arr h0) in
-    let bm1 = Bitmap4.array_to_bv (A.asel arr h1) in
+    let bm0 = Bitmap4.array_to_bv2 (A.asel arr h0) in
+    let bm1 = Bitmap4.array_to_bv2 (A.asel arr h1) in
     let idx = f #n (U32.v k) in
     A.asel arr h1 == Bitmap4.set (A.asel arr h0) k /\
     Seq.index bm1 idx = true /\
@@ -136,6 +137,7 @@ let bm_set
   =
   let h0 = get () in
   let s0 : G.erased (Seq.lseq U64.t n) = A.asel arr h0 in
+  Bitmap4.array_to_bv2_lemma s0;
   let k' = f #n (U32.v k) in
   let k1 = U32.div k 64ul in
   let k2 = U32.rem k 64ul in
@@ -151,14 +153,13 @@ let bm_set
 
   let h1 = get () in
   let s1 : G.erased (Seq.lseq U64.t n) = A.asel arr h1 in
+  Bitmap4.array_to_bv2_lemma s1;
   Bitmap4.array_to_bv_lemma s1 k';
   assert (Seq.index (Bitmap4.array_to_bv s1) k' = true);
   assert (G.reveal s1 == Seq.upd s0 (U32.v k1) r);
   let bm0 = Bitmap4.array_to_bv s0 in
   let bm1 = Bitmap4.array_to_bv s1 in
-  Bitmap4.array_to_bv_lemma_upd_set
-    #n
-    s0 s1 (U32.v k);
+  Bitmap4.array_to_bv_lemma_upd_set s0 s1 (U32.v k);
   Seq.lemma_eq_intro bm1 (Seq.upd bm0 k' true)
 #pop-options
 
@@ -190,13 +191,13 @@ let bm_unset
   (A.varray arr)
   (fun _ -> A.varray arr)
   (requires fun h0 ->
-    let bm0 = Bitmap4.array_to_bv (A.asel arr h0) in
+    let bm0 = Bitmap4.array_to_bv2 (A.asel arr h0) in
     let idx = f #n (U32.v k) in
     Seq.index bm0 idx = true
   )
   (ensures fun h0 b h1 ->
-    let bm0 = Bitmap4.array_to_bv (A.asel arr h0) in
-    let bm1 = Bitmap4.array_to_bv (A.asel arr h1) in
+    let bm0 = Bitmap4.array_to_bv2 (A.asel arr h0) in
+    let bm1 = Bitmap4.array_to_bv2 (A.asel arr h1) in
     let idx = f #n (U32.v k) in
     A.asel arr h1 == Bitmap4.unset (A.asel arr h0) k /\
     Seq.index bm1 idx = false /\
@@ -205,6 +206,7 @@ let bm_unset
   =
   let h0 = get () in
   let s0 : G.erased (Seq.lseq U64.t n) = A.asel arr h0 in
+  Bitmap4.array_to_bv2_lemma s0;
   let k' = f #n (U32.v k) in
   let k1 = U32.div k 64ul in
   let k2 = U32.rem k 64ul in
@@ -220,13 +222,12 @@ let bm_unset
 
   let h1 = get () in
   let s1 : G.erased (Seq.lseq U64.t n) = A.asel arr h1 in
+  Bitmap4.array_to_bv2_lemma s1;
   Bitmap4.array_to_bv_lemma s1 k';
   assert (Seq.index (Bitmap4.array_to_bv s1) k' = false);
   assert (G.reveal s1 == Seq.upd s0 (U32.v k1) r);
   let bm0 = Bitmap4.array_to_bv s0 in
   let bm1 = Bitmap4.array_to_bv s1 in
-  Bitmap4.array_to_bv_lemma_upd_unset
-    #n
-    s0 s1 (U32.v k);
+  Bitmap4.array_to_bv_lemma_upd_unset s0 s1 (U32.v k);
   Seq.lemma_eq_intro bm1 (Seq.upd bm0 k' false)
 #pop-options
