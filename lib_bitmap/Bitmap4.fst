@@ -82,6 +82,7 @@ let array_to_bv_lemma
   )
   = array_to_bv_aux_lemma #n s n i
 
+noextract
 let init_nat (len: nat)
   : Seq.lseq (k:nat{k < len}) len
   = Seq.init len (fun k -> k)
@@ -91,6 +92,7 @@ let init_nat_index (len: nat) (i:nat{i < len})
   (Seq.index (init_nat len) i = i)
   = ()
 
+noextract
 let array_to_bv2
   (#n: nat)
   (s: Seq.lseq U64.t n)

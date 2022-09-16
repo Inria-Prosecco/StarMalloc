@@ -28,7 +28,7 @@ let f_aux (k: nat{k < U64.n})
 
 noextract
 unfold
-let f (#n:nat)
+let f (#n: nat)
   (k:nat{k < n * U64.n})
   : r:nat{r < n * U64.n}
   =
@@ -61,10 +61,10 @@ let bm_get_aux
   let r = Bitmap3.get x k2 in
   return r
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 50"
 let bm_get
   (#n: nat)
-  (arr: array U64.t{A.length arr = n})
+  (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel bool
   (A.varray arr)
@@ -80,7 +80,7 @@ let bm_get
   =
   let h = get () in
   let s : G.erased (Seq.lseq U64.t n) = A.asel arr h in
-  let k' = f #n (U32.v k) in
+  let k' = G.hide (f #n (U32.v k)) in
 
   let k1 = U32.div k 64ul in
   let k2 = U32.rem k 64ul in
@@ -113,7 +113,7 @@ let bm_set_aux
   let r = Bitmap3.set x k2 in
   A.upd arr k1 r
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 50"
 let bm_set
   (#n: nat)
   (arr: array U64.t{A.length arr = n})
@@ -138,7 +138,7 @@ let bm_set
   let h0 = get () in
   let s0 : G.erased (Seq.lseq U64.t n) = A.asel arr h0 in
   Bitmap4.array_to_bv2_lemma s0;
-  let k' = f #n (U32.v k) in
+  let k' = G.hide (f #n (U32.v k)) in
   let k1 = U32.div k 64ul in
   let k2 = U32.rem k 64ul in
   let x = A.index arr k1 in
@@ -157,8 +157,8 @@ let bm_set
   Bitmap4.array_to_bv_lemma s1 k';
   assert (Seq.index (Bitmap4.array_to_bv s1) k' = true);
   assert (G.reveal s1 == Seq.upd s0 (U32.v k1) r);
-  let bm0 = Bitmap4.array_to_bv s0 in
-  let bm1 = Bitmap4.array_to_bv s1 in
+  let bm0 = G.hide (Bitmap4.array_to_bv s0) in
+  let bm1 = G.hide (Bitmap4.array_to_bv s1) in
   Bitmap4.array_to_bv_lemma_upd_set s0 s1 (U32.v k);
   Seq.lemma_eq_intro bm1 (Seq.upd bm0 k' true)
 #pop-options
@@ -182,7 +182,7 @@ let bm_unset_aux
   let r = Bitmap3.unset x k2 in
   A.upd arr k1 r
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 50"
 let bm_unset
   (#n: nat)
   (arr: array U64.t{A.length arr = n})
@@ -207,7 +207,7 @@ let bm_unset
   let h0 = get () in
   let s0 : G.erased (Seq.lseq U64.t n) = A.asel arr h0 in
   Bitmap4.array_to_bv2_lemma s0;
-  let k' = f #n (U32.v k) in
+  let k' = G.hide (f #n (U32.v k)) in
   let k1 = U32.div k 64ul in
   let k2 = U32.rem k 64ul in
   let x = A.index arr k1 in
@@ -226,8 +226,8 @@ let bm_unset
   Bitmap4.array_to_bv_lemma s1 k';
   assert (Seq.index (Bitmap4.array_to_bv s1) k' = false);
   assert (G.reveal s1 == Seq.upd s0 (U32.v k1) r);
-  let bm0 = Bitmap4.array_to_bv s0 in
-  let bm1 = Bitmap4.array_to_bv s1 in
+  let bm0 = G.hide (Bitmap4.array_to_bv s0) in
+  let bm1 = G.hide (Bitmap4.array_to_bv s1) in
   Bitmap4.array_to_bv_lemma_upd_unset s0 s1 (U32.v k);
   Seq.lemma_eq_intro bm1 (Seq.upd bm0 k' false)
 #pop-options
