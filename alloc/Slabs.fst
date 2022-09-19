@@ -16,8 +16,53 @@ module G = FStar.Ghost
 open Seq2
 
 let array = Steel.ST.Array.array
+let ptr = Steel.ST.Array.ptr
 
 open Bitmap5
+
+let slab_region_len : U64.t = 16777216UL
+
+let slab_region = r:array U8.t{A.length r = U64.v slab_region_len}
+
+assume val get_slab_region (_:unit)
+  : slab_region
+
+let slab_metadata = r:array U64.t{A.length r = 4}
+
+assume val get_slab_metadata (_:unit)
+  : slab_metadata
+
+assume val get_free_slot (ptr_md: slab_metadata)
+  : Steel U32.t
+  (A.varray ptr_md)
+  (fun _ -> A.varray ptr_md)
+  (fun _ -> True)
+  (fun h0 r h1 ->
+    A.asel ptr_md h1 == A.asel ptr_md h0 /\
+    U32.v r <= 255 /\
+    (let bm = Bitmap4.array_to_bv2 (A.asel ptr_md h0) in
+    let idx = Bitmap5.f #4 (U32.v r) in
+    Seq.index bm idx = false)
+  )
+
+let allocate_small (len: U32.t) (md: slab_metadata)
+  : Steel (ptr U8.t)
+    (A.varray (get_slab_region ()) `star`
+    A.varray md)
+    (fun a -> A.varray (get_slab_region ()) `star`
+    A.varray md)
+    (fun _ -> U32.v len = 32)
+    (fun _ r h1 ->
+      True
+    )
+  =
+  let a = get_slab_region () in
+  let slot = get_free_slot md in
+  bm_set #4 md slot;
+  let offset = U32.mul 32ul slot in
+  let ptr_slab_region = A.ptr_of a in
+  let ptr = A.ptr_shift ptr_slab_region offset in
+  return ptr
 
 (*)
 //noextract

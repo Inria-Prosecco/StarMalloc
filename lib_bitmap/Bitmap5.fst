@@ -64,7 +64,7 @@ let bm_get_aux
 #push-options "--z3rlimit 50"
 let bm_get
   (#n: nat)
-  (arr: array U64.t{A.length arr = G.reveal n})
+  (arr: array U64.t{A.length arr = n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel bool
   (A.varray arr)
