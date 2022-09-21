@@ -13,25 +13,129 @@ module U8 = FStar.UInt8
 
 module M = FStar.Math.Lib
 module G = FStar.Ghost
+module FU = FStar.UInt
 open Seq2
 
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
 
+open FStar.Mul
 open Utils
 
-assume val get_free_slot (ptr_md: slab_metadata)
+let array_to_bv_slice
+  (#n: nat)
+  (s0: Seq.lseq U64.t n)
+  (i: nat)
+  : Lemma
+  (requires
+    i < n
+  )
+  (ensures (
+    let bm0 = Bitmap4.array_to_bv2 s0 in
+    let x = Seq.index s0 i in
+    Seq.slice bm0 (i*64) ((i+1)*64)
+    =
+    FU.to_vec #64 (U64.v x)))
+  =
+  Bitmap4.array_to_bv_lemma_upd_set_aux4 s0 (i*64)
+
+#push-options "--z3rlimit 30"
+inline_for_extraction noextract
+let get_free_slot_aux (bitmap: slab_metadata) (i: U32.t)
   : Steel U32.t
-  (A.varray ptr_md)
-  (fun _ -> A.varray ptr_md)
-  (fun _ -> True)
-  (fun h0 r h1 ->
-    A.asel ptr_md h1 == A.asel ptr_md h0 /\
+  (A.varray bitmap)
+  (fun _ -> A.varray bitmap)
+  (requires fun h0 ->
+    U32.v i < 4 /\
+    U64.v (Seq.index (A.asel bitmap h0) (U32.v i)) <> 0)
+  (ensures fun h0 r h1 ->
+    A.asel bitmap h1 == A.asel bitmap h0 /\
     U32.v r <= 255 /\
-    (let bm = Bitmap4.array_to_bv2 (A.asel ptr_md h0) in
+    (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
     let idx = Bitmap5.f #4 (U32.v r) in
     Seq.index bm idx = false)
   )
+  =
+  let h0 = get () in
+  let x = A.index bitmap i in
+  let r = ffs64 x in
+  let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
+  let idx1 = G.hide ((U32.v i) * 64) in
+  let idx2 = G.hide ((U32.v i + 1) * 64) in
+  assert (x == Seq.index (A.asel bitmap h0) (U32.v i));
+  assert (FU.nth (U64.v x) (U64.n - 1 - U32.v r) = false);
+  array_to_bv_slice (A.asel bitmap h0) (U32.v i);
+  assert (FU.to_vec (U64.v x) == Seq.slice bm ((U32.v i)*64) ((U32.v i + 1)*64));
+  Seq.lemma_index_slice bm ((U32.v i)*64) ((U32.v i + 1)*64) (U32.v r);
+  let r' = U32.mul 64ul i in
+  U32.add r r'
+#pop-options
+
+let get_free_slot (bitmap: slab_metadata)
+  : Steel U32.t
+  (A.varray bitmap)
+  (fun _ -> A.varray bitmap)
+  (requires fun h0 ->
+    let s = A.asel bitmap h0 in
+    U64.v (Seq.index s 0) > 0 \/
+    U64.v (Seq.index s 1) > 0 \/
+    U64.v (Seq.index s 2) > 0 \/
+    U64.v (Seq.index s 3) > 0
+  )
+  (ensures fun h0 r h1 ->
+    A.asel bitmap h1 == A.asel bitmap h0 /\
+    U32.v r <= 255 /\
+    (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
+    let idx = Bitmap5.f #4 (U32.v r) in
+    Seq.index bm idx = false)
+  )
+  =
+  let x1 = A.index bitmap 0ul in
+  if U64.eq x1 0UL then (
+    let x2 = A.index bitmap 1ul in
+    if U64.eq x2 0UL then (
+      let x3 = A.index bitmap 2ul in
+      if U64.eq x3 0UL then (
+        get_free_slot_aux bitmap 3ul
+      ) else (
+        get_free_slot_aux bitmap 2ul
+      )
+    ) else (
+      get_free_slot_aux bitmap 1ul
+    )
+  ) else (
+    get_free_slot_aux bitmap 0ul
+  )
+
+(*)
+let allocate_small (len: U32.t) (md: slab_metadata)
+  : Steel (ptr U8.t)
+    (A.varray (get_slab_region ()) `star`
+    A.varray md)
+    (fun a -> A.varray (get_slab_region ()) `star`
+    A.varray md)
+    (fun _ -> U32.v len = 32)
+    (fun _ r h1 ->
+      True
+    )
+  =
+  let a = get_slab_region () in
+  let slot = get_free_slot md in
+  Bitmap5.bm_set #4 md slot;
+  let offset = U32.mul 32ul slot in
+  let ptr_slab_region = A.ptr_of a in
+      )
+    ) else (
+      let idx =
+    )
+  ) else (
+
+  )
+  admit ();
+  0ul
+
+
+
 
 let allocate_small (len: U32.t) (md: slab_metadata)
   : Steel (ptr U8.t)

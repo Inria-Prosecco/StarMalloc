@@ -36,7 +36,7 @@ assume val ffs64 (x: U64.t)
   (requires U64.v x > 0)
   (ensures fun r ->
     U32.v r < 64 /\
-    FStar.UInt.nth (U64.v x) (U32.v r) = true
+    FStar.UInt.nth (U64.v x) (U64.n - U32.v r - 1) = false
   )
 
 let slab_region_len : U64.t = 16777216UL
