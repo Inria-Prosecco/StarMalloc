@@ -12,15 +12,18 @@ module A = Steel.Array
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
 
+
+unfold let same_base_array (#a: Type) (arr1 arr2: array a)
+  =
+  A.base (A.ptr_of arr1) == A.base (A.ptr_of arr2)
+
 // 1) ptr_diff_t
 assume val ptrdiff (arr1 arr2: array U8.t)
   : Steel I32.t
   (A.varray arr1 `star` A.varray arr2)
   (fun _ -> A.varray arr1 `star` A.varray arr2)
   (requires fun h0 ->
-    let ptr1 = A.ptr_of arr1 in
-    let ptr2 = A.ptr_of arr2 in
-    A.base ptr1 == A.base ptr2)
+    same_base_array arr1 arr2)
   (ensures fun h0 r h1 ->
     let ptr1 = A.ptr_of arr1 in
     let ptr2 = A.ptr_of arr2 in
