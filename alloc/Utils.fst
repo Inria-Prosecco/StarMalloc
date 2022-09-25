@@ -50,7 +50,7 @@ let slab_region = r:array U8.t{A.length r = U64.v slab_region_len}
 assume val get_slab_region (_:unit)
   : slab_region
 
-let slab_metadata = r:array U64.t{A.length r = 4}
+unfold let slab_metadata = r:array U64.t{A.length r = 4}
 
 // C binding, no top-level Steel initialization
 assume val get_slab_metadata (_:unit)

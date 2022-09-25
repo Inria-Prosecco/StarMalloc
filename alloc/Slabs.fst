@@ -71,6 +71,7 @@ let get_free_slot_aux (bitmap: slab_metadata) (i: U32.t)
   U32.add r r'
 #pop-options
 
+noextract
 let has_free_slot (s: Seq.lseq U64.t 4)
   : bool
   =
@@ -118,8 +119,11 @@ let starl (l: list vprop)
   =
   L.fold_left star emp l
 
+//TODO
+noextract
 let page_size = 4096
 
+noextract
 let nb_slots (size_class: U32.t)
   : Pure nat
   (requires
@@ -151,14 +155,28 @@ let array_slot (size_class: U32.t) (arr: array U8.t) (slot: array U8.t)
   (requires
      same_base_array arr slot /\
      U32.v size_class > 0)
-  (ensures fun r -> 0 <= r /\ r < nb_slots size_class)
+  (ensures fun r -> True)
   =
-  admit ();
   let ptr1 = A.ptr_of arr in
+  assert (A.offset ptr1 <= A.base_len (A.base ptr1));
   let ptr2 = A.ptr_of slot in
+  assert (A.offset ptr2 <= A.base_len (A.base ptr2));
   let offset_bytes = A.offset ptr2 - A.offset ptr1 in
   let offset_slot = offset_bytes / (U32.v size_class) in
   offset_slot
+
+let lemma_div (x y z: nat)
+  : Lemma
+  (requires
+    x = y * z /\
+    z > 0
+  )
+  (ensures
+    x / z = y
+  )
+  =
+  FStar.Math.Lemmas.lemma_mod_plus 0 y z;
+  assert ((y * z) % z = 0)
 
 let array_slot_slot_array_bij (size_class: U32.t) (arr: array U8.t) (pos: U32.t)
   : Lemma
@@ -170,8 +188,21 @@ let array_slot_slot_array_bij (size_class: U32.t) (arr: array U8.t) (pos: U32.t)
     let slot_as_array = slot_array size_class arr pos in
     let slot_as_pos = array_slot size_class arr slot_as_array in
     G.reveal slot_as_pos = U32.v pos))
-  = admit ()
-
+  =
+  let ptr = A.ptr_of arr in
+  let shift = U32.mul pos size_class in
+  assert (U32.v shift < A.length arr);
+  let ptr_shifted = A.ptr_shift ptr shift in
+  let slot_as_array = slot_array size_class arr pos in
+  assert (A.ptr_of slot_as_array == ptr_shifted);
+  let offset_bytes = A.offset ptr_shifted - A.offset ptr in
+  assert (offset_bytes = U32.v shift);
+  assert (offset_bytes = U32.v pos * U32.v size_class);
+  let offset_slot = offset_bytes / (U32.v size_class) in
+  lemma_div offset_bytes (U32.v pos) (U32.v size_class);
+  assert (offset_slot = U32.v pos);
+  let slot_as_pos = array_slot size_class arr slot_as_array in
+  assert (G.reveal slot_as_pos == offset_slot)
 
 let slab_vprop1 (size_class: U32.t{U32.v size_class > 0}) (arr: array U8.t{A.length arr = page_size})
   (s: Seq.seq (r:nat{r < nb_slots size_class}))
@@ -195,8 +226,7 @@ let slab_vprop3 (size_class: U32.t{U32.v size_class > 0}) (arr: array U8.t{A.len
   (s: Seq.seq (r:nat{r < nb_slots size_class}))
   : GTot vprop
   =
-  let s' = slab_vprop1 size_class arr s in
-  let r = Seq.seq_to_list s' in
+  let r = slab_vprop2 size_class arr s in
   starl r
 
 let lemma_seq_to_list_append (#a:Type) (s1 s2: Seq.seq a)
@@ -223,6 +253,7 @@ let slab_vprop2_lemma
     (slab_vprop1 size_class arr s1)
     (slab_vprop1 size_class arr s2)
 
+// TODO @AF
 let starl_append (l1 l2: list vprop)
   : Lemma
   (starl (L.append l1 l2) `equiv` (starl l1 `star` starl l2))
@@ -248,10 +279,20 @@ let slab_vprop
   (arr: array U8.t{A.length arr = page_size})
   (i:nat)
   (j:nat{i <= j /\ j <= nb_slots size_class})
-  : GTot vprop
+  : Tot vprop
   =
   let s = Seq.slice (Seq.init (nb_slots size_class) (fun k -> k)) i j in
   slab_vprop3 size_class arr s
+
+let lemma_index_slice (#a:Type) (s:Seq.seq a)
+  (i:nat)
+  (j:nat{i <= j /\ j <= Seq.length s})
+  (k:nat{k < j - i})
+  : Lemma
+  (requires True)
+  (ensures (Seq.index (Seq.slice s i j) k == Seq.index s (k + i)))
+  =
+  Seq.lemma_index_slice s i j k
 
 let slab_vprop_lemma
   (size_class: U32.t{U32.v size_class > 0})
@@ -267,33 +308,135 @@ let slab_vprop_lemma
   =
   let s = Seq.init (nb_slots size_class) (fun k -> k) in
   let s1 = Seq.slice s i j in
-  let s2 = Seq.slice s i k in
-  let s3 = Seq.slice s k j in
-  assume (Seq.append s2 s3 == s1);
+  let s2, s3 = Seq.split s1 (k - i) in
+  Seq.lemma_split s1 (k - i);
+  assert (s2 == Seq.slice s1 0 (k - i));
+  Classical.forall_intro (lemma_index_slice s1 0 (k - i));
+  assert (s3 == Seq.slice s1 (k - i) (j - i));
+  Classical.forall_intro (lemma_index_slice s1 (k - i) (j - i));
   slab_vprop3_lemma size_class arr s2 s3
 
 module SM = Steel.Memory
 
+let slab_vprop_sl_lemma
+  (size_class: U32.t{U32.v size_class > 0})
+  (md: slab_metadata)
+  (arr: array U8.t{A.length arr = page_size})
+  (i:nat)
+  (j:nat{i <= j /\ j <= nb_slots size_class})
+  (k:nat{i <= k /\ k <= j})
+  (m: SM.mem)
+  : Lemma
+  (requires SM.interp (hp_of (
+    (slab_vprop size_class arr i j)
+  )) m)
+  (ensures SM.interp (hp_of (
+    (slab_vprop size_class arr i k `star`
+    slab_vprop size_class arr k j)
+  )) m)
+  =
+  slab_vprop_lemma size_class arr i j k;
+  let p = slab_vprop size_class arr i j in
+  let q = (slab_vprop size_class arr i k) `star`
+          (slab_vprop size_class arr k j) in
+  assert (p `equiv` q);
+  reveal_equiv p q;
+  assert (hp_of p `SM.equiv` hp_of q);
+  SM.reveal_equiv (hp_of p) (hp_of q)
+
+let slab_vprop_singleton_lemma
+  (size_class: U32.t{U32.v size_class > 0})
+  (arr: array U8.t{A.length arr = page_size})
+  (pos: U32.t{0 <= (U32.v pos) /\ (U32.v pos) < nb_slots size_class})
+  : Lemma
+  (slab_vprop size_class arr (U32.v pos) (U32.v pos + 1)
+  ==
+  (emp `star` A.varray (slot_array size_class arr pos))
+  )
+  =
+  let r = slab_vprop size_class arr (U32.v pos) (U32.v pos + 1) in
+  let s = Seq.slice (Seq.init (nb_slots size_class) (fun k -> k))
+    (U32.v pos) (U32.v pos + 1) in
+  //lemma_index_slice s (U32.v pos) (U32.v pos + 1) 0;
+  assert (r == slab_vprop3 size_class arr s);
+  assert (r == starl (slab_vprop2 size_class arr s));
+  assert (r == starl (Seq.seq_to_list (slab_vprop1 size_class arr s)));
+  let f = fun (k:nat{k < nb_slots size_class})
+    -> A.varray (slot_array size_class arr (U32.uint_to_t k)) in
+  Seq.map_seq_len f s;
+  assert (Seq.length (slab_vprop1 size_class arr s) == 1);
+  Seq.map_seq_index f s 0;
+  assert (r == starl ([A.varray (slot_array size_class arr pos)]));
+  assert (r == emp `star` A.varray (slot_array size_class arr pos))
+
+let allocate_slot_aux (#opened:_) (size_class: U32.t{U32.v size_class > 0})
+  (md: slab_metadata) (arr: array U8.t{A.length arr = page_size})
+  (pos: U32.t{U32.v pos < nb_slots size_class})
+  : SteelGhostT unit opened
+  (slab_vprop size_class arr 0 (nb_slots size_class) `star` A.varray md)
+  (fun _ ->
+    (slab_vprop size_class arr 0 (U32.v pos)) `star`
+    A.varray (slot_array size_class arr pos) `star`
+    (slab_vprop size_class arr (U32.v pos + 1) (nb_slots size_class) `star`
+    A.varray md))
+  =
+  rewrite_slprop
+    (slab_vprop size_class arr 0 (nb_slots size_class))
+    ((slab_vprop size_class arr 0 (U32.v pos)) `star`
+      (slab_vprop size_class arr (U32.v pos) (nb_slots size_class)))
+    (slab_vprop_sl_lemma size_class md arr
+      0 (nb_slots size_class) (U32.v pos));
+  rewrite_slprop
+    (slab_vprop size_class arr (U32.v pos) (nb_slots size_class))
+    ((slab_vprop size_class arr (U32.v pos) (U32.v pos + 1)) `star`
+    (slab_vprop size_class arr (U32.v pos + 1) (nb_slots size_class)))
+    (slab_vprop_sl_lemma size_class md arr
+      (U32.v pos) (nb_slots size_class) (U32.v pos + 1));
+  slab_vprop_singleton_lemma size_class arr pos;
+  assert (
+    slab_vprop size_class arr (U32.v pos) (U32.v pos + 1)
+    ==
+    emp `star` A.varray (slot_array size_class arr pos)
+    );
+  change_slprop_rel
+    (slab_vprop size_class arr (U32.v pos) (U32.v pos + 1))
+    (emp `star` A.varray (slot_array size_class arr pos))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  ()
+
+#set-options "--ide_id_info_off"
+
 let allocate_slot (size_class: U32.t{U32.v size_class > 0})
   (md: slab_metadata) (arr: array U8.t{A.length arr = page_size})
-  : Steel (r:array U8.t{same_base_array r arr})
+  : Steel
+    (r:(G.erased nat & array U8.t){
+      G.reveal (fst r) < nb_slots size_class /\
+      same_base_array (snd r) arr})
   (slab_vprop size_class arr 0 (nb_slots size_class) `star` A.varray md)
   (fun r ->
-    //assume (same_base_array r arr);
-    let i = array_slot size_class arr r in
-    (slab_vprop size_class arr 0 i) `star`
-    A.varray r `star`
-    (slab_vprop size_class arr (i+1) (nb_slots size_class) `star`
+    (slab_vprop size_class arr 0 (fst r)) `star`
+    A.varray (snd r) `star`
+    (slab_vprop size_class arr (fst r + 1) (nb_slots size_class) `star`
     A.varray md)
   )
   (requires fun h0 -> has_free_slot (A.asel md h0))
   (ensures fun _ _ _ -> True)
   =
-  admit ();
   let slot_pos = get_free_slot md in
-  let i = U32.v slot_pos in
-  Bitmap5.bm_set #4 md slot_pos;
+  assume (U32.v slot_pos < nb_slots size_class);
+  Bitmap5.bm_set #(G.hide 4) md slot_pos;
   let slot = slot_array size_class arr slot_pos in
+  array_slot_slot_array_bij size_class arr slot_pos;
+  allocate_slot_aux size_class md arr slot_pos;
+  change_slprop_rel
+    (A.varray (slot_array size_class arr slot_pos))
+    (A.varray slot)
+    (fun x y -> x == y)
+    (fun _ -> ());
+  return (G.hide (U32.v slot_pos), slot)
+
+(*)
   let slab_vprop_sl_lemma (m: SM.mem)
     : Lemma
     (requires SM.interp (hp_of (
