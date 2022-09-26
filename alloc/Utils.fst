@@ -9,6 +9,11 @@ open Steel.Effect.Atomic
 open Steel.Effect
 module A = Steel.Array
 
+module FU = FStar.UInt
+module L = FStar.List.Tot
+
+open FStar.Mul
+
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
 
@@ -42,16 +47,59 @@ assume val ffs64 (x: U64.t)
     FStar.UInt.nth (U64.v x) (U64.n - U32.v r - 1) = false
   )
 
-let slab_region_len : U64.t = 16777216UL
+let array_to_bv_slice
+  (#n: nat)
+  (s0: Seq.lseq U64.t n)
+  (i: nat)
+  : Lemma
+  (requires
+    i < n
+  )
+  (ensures (
+    let bm0 = Bitmap4.array_to_bv2 s0 in
+    let x = Seq.index s0 i in
+    Seq.slice bm0 (i*64) ((i+1)*64)
+    =
+    FU.to_vec #64 (U64.v x)))
+  =
+  Bitmap4.array_to_bv_lemma_upd_set_aux4 s0 (i*64)
 
-let slab_region = r:array U8.t{A.length r = U64.v slab_region_len}
+let starl (l: list vprop)
+  : vprop
+  =
+  L.fold_left star emp l
 
-// C binding, no top-level Steel initialization
-assume val get_slab_region (_:unit)
-  : slab_region
+// TODO @AF
+let starl_append (l1 l2: list vprop)
+  : Lemma
+  (starl (L.append l1 l2) `equiv` (starl l1 `star` starl l2))
+  = admit ()
 
-unfold let slab_metadata = r:array U64.t{A.length r = 4}
+let lemma_div (x y z: nat)
+  : Lemma
+  (requires
+    x = y * z /\
+    z > 0
+  )
+  (ensures
+    x / z = y
+  )
+  =
+  FStar.Math.Lemmas.lemma_mod_plus 0 y z;
+  assert ((y * z) % z = 0)
 
-// C binding, no top-level Steel initialization
-assume val get_slab_metadata (_:unit)
-  : slab_metadata
+let lemma_seq_to_list_append (#a:Type) (s1 s2: Seq.seq a)
+  : Lemma
+  (Seq.seq_to_list (Seq.append s1 s2) == L.append (Seq.seq_to_list s1) (Seq.seq_to_list s2))
+  =
+  admit ()
+
+let lemma_index_slice (#a:Type) (s:Seq.seq a)
+  (i:nat)
+  (j:nat{i <= j /\ j <= Seq.length s})
+  (k:nat{k < j - i})
+  : Lemma
+  (requires True)
+  (ensures (Seq.index (Seq.slice s i j) k == Seq.index s (k + i)))
+  =
+  Seq.lemma_index_slice s i j k
