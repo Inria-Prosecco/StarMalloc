@@ -67,13 +67,40 @@ let array_to_bv_slice
 let starl (l: list vprop)
   : vprop
   =
-  L.fold_left star emp l
+  L.fold_right star l emp
 
-// TODO @AF
-let starl_append (l1 l2: list vprop)
+let rec starl_append (l1 l2: list vprop)
   : Lemma
   (starl (L.append l1 l2) `equiv` (starl l1 `star` starl l2))
-  = admit ()
+  = match l1 with
+    | [] ->
+      cm_identity (starl l2);
+      equiv_sym (emp `star` starl l2) (starl l2)
+    | hd :: tl ->
+      // Unfortunately, the transitivity rules for equiv are not automatic,
+      // which prevents us from using a single calc
+      calc (equiv) {
+        starl (L.append l1 l2);
+        (equiv) {
+          starl_append tl l2;
+          equiv_refl hd;
+          star_congruence hd (starl (L.append tl l2)) hd (starl tl `star` starl l2)  }
+        hd `star` (starl tl `star` starl l2);
+      };
+
+      calc (equiv) {
+        hd `star` (starl tl `star` starl l2);
+        (equiv) {
+          star_associative hd (starl tl) (starl l2);
+          equiv_sym (starl l1 `star` starl l2) (hd `star` (starl tl `star` starl l2))
+        }
+        starl l1 `star` starl l2;
+      };
+
+      equiv_trans
+        (starl (L.append l1 l2))
+        (hd `star` (starl tl `star` starl l2))
+        (starl l1 `star` starl l2)
 
 let lemma_div (x y z: nat)
   : Lemma
@@ -88,11 +115,19 @@ let lemma_div (x y z: nat)
   FStar.Math.Lemmas.lemma_mod_plus 0 y z;
   assert ((y * z) % z = 0)
 
-let lemma_seq_to_list_append (#a:Type) (s1 s2: Seq.seq a)
+let rec lemma_seq_to_list_append (#a:Type) (s1 s2: Seq.seq a)
   : Lemma
-  (Seq.seq_to_list (Seq.append s1 s2) == L.append (Seq.seq_to_list s1) (Seq.seq_to_list s2))
-  =
-  admit ()
+  (ensures
+    Seq.seq_to_list (Seq.append s1 s2) == L.append (Seq.seq_to_list s1) (Seq.seq_to_list s2))
+  (decreases Seq.length s1)
+  = if Seq.length s1 = 0 then (assert (Seq.append s1 s2 `Seq.equal` s2))
+    else (
+      let s1' = Seq.slice s1 1 (Seq.length s1) in
+      let s12 = Seq.append s1 s2 in
+      let s12' = Seq.slice s12 1 (Seq.length s12) in
+      lemma_seq_to_list_append s1' s2;
+      assert (s12' `Seq.equal` Seq.append s1' s2)
+    )
 
 let lemma_index_slice (#a:Type) (s:Seq.seq a)
   (i:nat)

@@ -328,7 +328,7 @@ let slab_vprop_singleton_lemma
   : Lemma
   (slab_vprop size_class arr (U32.v pos) (U32.v pos + 1)
   ==
-  (emp `star` A.varray (slot_array size_class arr pos))
+  (A.varray (slot_array size_class arr pos) `star` emp)
   )
   =
   let r = slab_vprop size_class arr (U32.v pos) (U32.v pos + 1) in
@@ -343,7 +343,7 @@ let slab_vprop_singleton_lemma
   assert (Seq.length (slab_vprop1 size_class arr s) == 1);
   Seq.map_seq_index f s 0;
   assert (r == starl ([A.varray (slot_array size_class arr pos)]));
-  assert (r == emp `star` A.varray (slot_array size_class arr pos))
+  assert (r == A.varray (slot_array size_class arr pos) `star` emp)
 
 let allocate_slot_aux (#opened:_)
   (size_class: sc)
@@ -373,11 +373,11 @@ let allocate_slot_aux (#opened:_)
   assert (
     slab_vprop size_class arr (U32.v pos) (U32.v pos + 1)
     ==
-    emp `star` A.varray (slot_array size_class arr pos)
+    A.varray (slot_array size_class arr pos) `star` emp
     );
   change_slprop_rel
     (slab_vprop size_class arr (U32.v pos) (U32.v pos + 1))
-    (emp `star` A.varray (slot_array size_class arr pos))
+    (A.varray (slot_array size_class arr pos) `star` emp)
     (fun x y -> x == y)
     (fun _ -> ());
   ()
