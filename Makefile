@@ -111,12 +111,12 @@ dist/Impl_Trees_Rotate3_M.c \
 dist/Impl_Trees_Rotate2_M.c \
 dist/Impl_Trees_Rotate_M.c \
 dist/Main.c \
-alloc/lib-alloc0.c
+src/lib-alloc0.c
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)
 test-tree: verify extract
 	gcc -O2 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist \
-	-o bench/mavl.out $(FILES) alloc/lib-alloc.c bench/test2.c
+	-o bench/mavl.out $(FILES) src/lib-alloc.c bench/test2.c
 
 # test the compilation of the allocator
 test-compile-alloc: verify extract
@@ -124,7 +124,7 @@ test-compile-alloc: verify extract
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
 -o bench/a.out \
-$(FILES) alloc/lib-alloc.c
+$(FILES) src/lib-alloc.c
 
 # test the allocator with a static binary
 test-alloc0: verify extract
@@ -134,7 +134,7 @@ test-alloc0: verify extract
 -o bench/a.out \
 $(FILES) \
 bench/test-alloc.c \
-alloc/lib-alloc.c
+src/lib-alloc.c
 	./bench/a.out
 
 test-alloc0bis: verify extract
@@ -145,7 +145,7 @@ test-alloc0bis: verify extract
 -o bench/a.out \
 $(FILES) \
 bench/test-alloc2.c \
-alloc/lib-alloc.c
+src/lib-alloc.c
 	./bench/a.out
 
 # test the compilation of the allocator as a shared library
@@ -155,18 +155,18 @@ test-compile-alloc-lib: verify extract
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmlib/dist/minimal -I dist \
 	-pthread \
--shared -fPIC -o alloc/malloc.so \
+-shared -fPIC -o bench/malloc.so \
 $(FILES) \
-alloc/lib-alloc.c
+src/lib-alloc.c
 
 # test the allocator as a shared library with a simple program
 test-alloc1: test-compile-alloc-lib
 	gcc -O0 bench/test-alloc.c -o bench/alloc.a.out
-	LD_PRELOAD=alloc/malloc.so ./bench/alloc.a.out
+	LD_PRELOAD=bench/malloc.so ./bench/alloc.a.out
 # test the allocator as a shared library with zathura
 test-alloc2: test-compile-alloc-lib
 	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
-	LD_PRELOAD=alloc/malloc.so ./bench/alloc.a.out
+	LD_PRELOAD=bench/malloc.so ./bench/alloc.a.out
 
 test-alloc2bis: test-compile-alloc-lib
 	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
@@ -177,7 +177,7 @@ test-alloc2bis: test-compile-alloc-lib
 #	LD_PRELOAD=../hardened_malloc/out/libhardened_malloc.so ./bench/alloc.a.out
 
 test-alloc3: test-compile-alloc-lib
-	LD_PRELOAD=alloc/malloc.so zathura
+	LD_PRELOAD=bench/malloc.so zathura
 
 test-array: verify extract
 	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmlib/dist/minimal -I dist -lbsd \
