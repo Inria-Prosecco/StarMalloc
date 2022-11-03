@@ -130,8 +130,6 @@ let llist_sel_cell #a p ptr =
 let llist_sel #a p ptr =
   fun h -> llist_view (llist_sel_cell p ptr h)
 
-
-
 let llist_sel_interp (#a:Type0) (p : a -> vprop) (ptr:t a) (l:list (cell a)) (m:mem) : Lemma
   (requires interp (llist_sl' p ptr l) m)
   (ensures interp (llist_sl p ptr) m /\ llist_sel_cell' p ptr m == l)
@@ -436,30 +434,38 @@ val tail_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
     v_cell p ptr h0 ==
       (sel ptr h1) :: (v_cell p (get_next n) h1))
 
+#push-options "--ifuel 1 --fuel 1 --z3rlimit 30"
 let tail_cell #a p ptr
   =
   let h = get () in
-  let l = hide (v_cell p ptr h) in
   reveal_non_empty_cell p ptr;
+  let l = hide (v_cell p ptr h) in
 
   let x = hide (L.hd l) in
   let tl = hide (L.tl l) in
   //sladmit ();
-  admit ();
+  //admit ();
   //let s = gget (p (get_data x)) in
 
-  change_slprop
+  change_slprop_rel
     (llist_cell p ptr)
     (vptr ptr `star`
     llist_cell p (get_next x) `star`
     p (get_data x))
-    l
-    ((reveal x, reveal tl), sel_of (p (get_data x)))
+    //l
+    //((reveal x, reveal tl), sel_of (p (get_data x)))
+    (fun a b ->
+      normal a == reveal l)
+      //L.tl (normal a) == snd (fst (normal b)))
+      //admit ();
+      //L.hd (normal a) == fst (fst (normal b)) /\
+      //L.tl (normal a) == snd (fst (normal b)))
     (fun m -> tail_cell_lemma p ptr l m);
   let n = read ptr in
   change_slprop_rel (llist_cell p (get_next x)) (llist_cell p (get_next n)) (fun x y -> x == y) (fun _ -> ());
   change_slprop_rel (p (get_data x)) (p (get_data n)) (fun x y -> x == y) (fun _ -> ());
   return n
+#pop-options
 
 val to_list_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
   : Steel unit (llist p ptr) (fun _ -> llist_cell p ptr)
