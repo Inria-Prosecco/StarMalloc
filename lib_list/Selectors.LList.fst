@@ -434,7 +434,33 @@ val tail_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
     v_cell p ptr h0 ==
       (sel ptr h1) :: (v_cell p (get_next n) h1))
 
-#push-options "--ifuel 1 --fuel 2 --z3rlimit 30"
+let tail_cell_lemma2 (#a:Type0) (p : a -> vprop) (r:t a) (l:list (cell a)) (m:mem) (x : cell a) (tl : list (cell a)) : Lemma
+  (requires interp (llist_sl p r) m /\ llist_sel_cell p r m == l /\ l == x :: tl)
+  (ensures
+    interp (
+      ptr r `Mem.star`
+      llist_sl p (get_next x) `Mem.star`
+      hp_of (p (get_data x))
+    ) m /\
+    sel_of (vptr r) m == x /\
+    llist_sel_cell p (get_next x) m == tl)
+    // //sel_of (llist_cell p (get_next x)) m == L.tl l))
+    // sel_of (p (get_data x)) m == sel_of (p (get_data x)) m /\
+    // llist_sel_cell p (get_next x) m == L.tl l))
+   = tail_cell_lemma p r l m
+
+let change_slprop_rel_with_cond (#opened:inames)
+  (p q:vprop)
+  (cond:  normal (t_of p) -> prop)
+  (rel :  normal (t_of p) ->  normal (t_of q) -> prop)
+  (l:(m:mem) -> Lemma
+    (requires interp (hp_of p) m /\ cond (sel_of p m))
+    (ensures interp (hp_of q) m /\
+      rel (sel_of p m) (sel_of q m))
+  ) : SteelGhost unit opened p (fun _ -> q) (fun h0 -> cond (h0 p)) (fun h0 _ h1 -> rel (h0 p) (h1 q))
+  = change_slprop_rel_with_cond #opened p q cond rel l
+
+//#push-options "--ifuel 1 --fuel 2 --z3rlimit 30"
 let tail_cell #a p ptr
   =
   reveal_non_empty_cell p ptr;
@@ -447,25 +473,36 @@ let tail_cell #a p ptr
   //admit ();
   //let s = gget (p (get_data x)) in
 
-  change_slprop_rel
+  change_slprop_rel_with_cond
     (llist_cell p ptr)
     (vptr ptr `star`
     llist_cell p (get_next x) `star`
     p (get_data x))
     //l
     //((reveal x, reveal tl), sel_of (p (get_data x)))
+    (fun tp -> hide tp == l)
     (fun a ((fs, sn), _) -> hide fs == x /\ hide sn == tl) // /\ hide a == l)
       // normal a == reveal l)
       //L.tl (normal a) == snd (fst (normal b)))
       //admit ();
       //L.hd (normal a) == fst (fst (normal b)) /\
       //L.tl (normal a) == snd (fst (normal b)))
-    (fun m -> admit ()); // ; tail_cell_lemma p ptr l m);
+    (fun m ->
+      tail_cell_lemma2 p ptr l m x tl);
+    //    let vq = vptr ptr `star`
+    // llist_cell p (get_next x) `star`
+    // p (get_data x) in
+    //    assert_norm (t_of vq == t_of (vptr ptr) * t_of (llist_cell p (get_next x)) * t_of (p (get_data x)));
+    //    let selq:t_of (vptr ptr) * t_of (llist_cell p (get_next x)) * t_of (p (get_data x)) = sel_of vq m in
+       // let ((fs, sn), _) = selq in
+       // admit());
+       // assume (let ((fs, sn), _) = sel_of
+       // tail_cell_lemma p ptr l m);
   let n = read ptr in
   change_slprop_rel (llist_cell p (get_next x)) (llist_cell p (get_next n)) (fun x y -> x == y) (fun _ -> ());
   change_slprop_rel (p (get_data x)) (p (get_data n)) (fun x y -> x == y) (fun _ -> ());
   return n
-#pop-options
+//#pop-options
 
 val to_list_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
   : Steel unit (llist p ptr) (fun _ -> llist_cell p ptr)
