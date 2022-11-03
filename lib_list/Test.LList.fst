@@ -26,4 +26,7 @@ let temp (_:unit)
   intro_llist_nil U64.t (fun _ -> emp);
   intro_llist_cons (fun _ -> emp) r1 null_t 0UL;
   intro_llist_cons (fun _ -> emp) r2 r1 1UL;
+  cons_is_not_null (fun _ -> emp) r2;
+  let n = tail (fun _ -> emp) r2 in
+  intro_llist_cons (fun _ -> emp) r2 (get_next n) 1UL;
   r2

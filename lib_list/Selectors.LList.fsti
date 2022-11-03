@@ -108,7 +108,8 @@ val tail (#a:Type0) (p : a -> vprop) (ptr:t a)
                    (ensures fun h0 n h1 ->
                      Cons? (v_llist p ptr h0) /\
                      v_llist p ptr h0 ==
-                       (get_data (sel ptr h1)) :: (v_llist p (get_next n) h1))
+                       (get_data (sel ptr h1)) :: (v_llist p (get_next n) h1) /\
+                      sel ptr h1 == n)
                      //sel ptr h1 == mk_cell n (L.hd (v_llist p ptr h0)) /\
                      //v_llist p n h1 == L.tl (v_llist p ptr h0))
 
