@@ -76,22 +76,41 @@ val cons_is_not_null (#a:Type0) (p : a -> vprop) (ptr:t a)
                v_llist p ptr h0 == v_llist p ptr h1 /\
                ptr =!= null_t)
 
-(*)
-val intro_llist_cons (#a:Type0) (p : a -> vprop) (ptr1 ptr2:t a)
-  : Steel unit (vptr ptr1 `star` llist p ptr2)
-                  (fun _ -> llist p ptr1)
-                  (requires fun h -> get_next (sel ptr1 h) == ptr2)
-                  (ensures fun h0 _ h1 -> v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
-*)
+//val intro_llist_cons (#a:Type0) (p : a -> vprop) (ptr1 ptr2:t a)
+//  : Steel unit (vptr ptr1 `star` llist p ptr2)
+//                  (fun _ -> llist p ptr1)
+//                  (requires fun h -> get_next (sel ptr1 h) == ptr2)
+//                  (ensures fun h0 _ h1 -> v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
+
+val intro_llist_cons (#a:Type0) (p : a -> vprop)
+  (ptr1 ptr2:t a) (x: a)
+  //(y: t_of (p (get_data x)))
+  : Steel unit
+  (vptr ptr1 `star`
+  llist p ptr2 `star`
+  p x)
+  (fun _ -> llist p ptr1)
+  (requires fun h ->
+    get_next (sel ptr1 h) == ptr2 /\
+    x == get_data (sel ptr1 h)
+    ///\
+    //y == sel (sel_of (p (get_data x))) h
+  )
+  (ensures fun h0 _ h1 ->
+  v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
+
+
 
 val tail (#a:Type0) (p : a -> vprop) (ptr:t a)
-  : Steel (t a) (llist p ptr)
-                   (fun n -> vptr ptr `star` llist p n)
+  : Steel (cell a) (llist p ptr)
+                   (fun n -> vptr ptr `star` llist p (get_next n) `star` p (get_data n))
                    (requires fun _ -> ptr =!= null_t)
                    (ensures fun h0 n h1 ->
                      Cons? (v_llist p ptr h0) /\
-                     sel ptr h1 == mk_cell n (L.hd (v_llist p ptr h0)) /\
-                     v_llist p n h1 == L.tl (v_llist p ptr h0))
+                     v_llist p ptr h0 ==
+                       (get_data (sel ptr h1)) :: (v_llist p (get_next n) h1))
+                     //sel ptr h1 == mk_cell n (L.hd (v_llist p ptr h0)) /\
+                     //v_llist p n h1 == L.tl (v_llist p ptr h0))
 
 (*)
 (** A variant of lists with an additional indirection pointer to enable in-place operations **)

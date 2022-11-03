@@ -8,13 +8,13 @@ open Steel.Effect
 open Steel.Reference
 //open Impl.Core
 
-#push-options "--__no_positivity"
+//#push-options "--__no_positivity"
 noeq
 type cell (a: Type0) = {
   next: ref (cell a);
   data: a;
 }
-#pop-options
+//#pop-options
 
 let get_next #a (c:cell a) : t a = c.next
 let get_data #a (c:cell a) : a = c.data
@@ -240,22 +240,30 @@ let intro_cons_lemma (#a:Type0) (p : a -> vprop) (ptr1 ptr2:t a)
   ()
 
 
-val intro_llist_cons (#a:Type0) (p : a -> vprop)
-  (ptr1 ptr2:t a) (x: a)
-  //(y: t_of (p (get_data x)))
-  : Steel unit
-  (vptr ptr1 `star`
-  llist p ptr2 `star`
-  p x)
-  (fun _ -> llist p ptr1)
-  (requires fun h ->
-    get_next (sel ptr1 h) == ptr2 /\
-    x == get_data (sel ptr1 h)
-    ///\
-    //y == sel (sel_of (p (get_data x))) h
-  )
-  (ensures fun h0 _ h1 ->
-  v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
+//val intro_llist_cons (#a:Type0) (p : a -> vprop)
+//  (ptr1 ptr2:t a)
+//  //(x: a)
+//  //(y: t_of (p (get_data x)))
+//  : Steel unit
+//  (vptr ptr1 `star`
+//  llist p ptr2)
+//  //`star` p x)
+//  (fun _ -> llist p ptr1)
+//  (requires fun h ->
+//    get_next (sel ptr1 h) == ptr2
+//    ///\x == get_data (sel ptr1 h)
+//    ///\
+//    //y == sel (sel_of (p (get_data x))) h
+//  )
+//  (ensures fun h0 _ h1 ->
+//  v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
+
+
+//val intro_llist_cons (#a:Type0) (p : a -> vprop) (ptr1 ptr2:t a)
+//  : Steel unit (vptr ptr1 `star` llist p ptr2)
+//                  (fun _ -> llist p ptr1)
+//                  (requires fun h -> get_next (sel ptr1 h) == ptr2)
+//                  (ensures fun h0 _ h1 -> v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
 
 let intro_llist_cons p ptr1 ptr2 x =
   let h = get () in
@@ -310,23 +318,23 @@ let intro_llist_cons p ptr1 ptr2 x =
     (get_data x' :: l)
   (fun m -> intro_cons_lemma p ptr1 ptr2 x' l m)
 
-val intro_llist_cons2 (#a:Type0) (p : a -> vprop)
-  (ptr1 ptr2:t a)
-  //(y: t_of (p (get_data x)))
-  : Steel unit
-  (let h = get () in
-  vptr ptr1 `star`
-  llist p ptr2 `star`
-  p (sel ptr1 h))
-  (fun _ -> llist p ptr1)
-  (requires fun h ->
-    get_next (sel ptr1 h) == ptr2
-    //x == sel ptr1 h
-    ///\
-    //y == sel (sel_of (p (get_data x))) h
-  )
-  (ensures fun h0 _ h1 ->
-  v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
+//val intro_llist_cons2 (#a:Type0) (p : a -> vprop)
+//  (ptr1 ptr2:t a)
+//  //(y: t_of (p (get_data x)))
+//  : Steel unit
+//  (let h = get () in
+//  vptr ptr1 `star`
+//  llist p ptr2 `star`
+//  p (sel ptr1 h))
+//  (fun _ -> llist p ptr1)
+//  (requires fun h ->
+//    get_next (sel ptr1 h) == ptr2
+//    //x == sel ptr1 h
+//    ///\
+//    //y == sel (sel_of (p (get_data x))) h
+//  )
+//  (ensures fun h0 _ h1 ->
+//  v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
 
 
 
@@ -368,55 +376,90 @@ let reveal_non_empty_cell #a p ptr =
 let tail_cell_lemma (#a:Type0) (p : a -> vprop) (r:t a) (l:list (cell a)) (m:mem) : Lemma
   (requires Cons? l /\ interp (llist_sl p r) m /\ llist_sel_cell p r m == l)
   (ensures (let x = L.hd l in
-    interp (ptr r `Mem.star` llist_sl p (get_next x)) m /\
+    interp (
+      ptr r `Mem.star`
+      llist_sl p (get_next x) `Mem.star`
+      hp_of (p (get_data x))
+    ) m /\
     sel_of (vptr r) m == x /\
-    sel_of (llist_cell p (get_next x)) m == L.tl l))
-  = llist_sel_interp p r l m;
-    assert (interp (llist_sl' p r l) m);
-    let x = L.hd l in
-    let tl = L.tl l in
-    let sl = pts_to_sl r full_perm x `Mem.star` llist_sl' p (get_next x) tl in
-    pure_star_interp sl (r =!= null_t) m;
-    emp_unit sl;
-    assert (interp sl m);
-    let aux (m:mem) (ml mr:mem) : Lemma
-      (requires disjoint ml mr /\ m == join ml mr /\
-        interp (pts_to_sl r full_perm x) ml /\ interp (llist_sl' p (get_next x) tl) mr)
-      (ensures interp (ptr r `Mem.star` llist_sl p (get_next x)) m /\
-        sel_of (vptr r) m == x /\
-        sel_of (llist_cell p (get_next x)) m == tl)
-      = intro_ptr_interp r (hide x) ml;
-        llist_sel_interp p (get_next x) tl mr;
-        intro_star (ptr r) (llist_sl p (get_next x)) ml mr;
-        ptr_sel_interp r ml;
-        pts_to_witinv r full_perm;
-        join_commutative ml mr
-    in
-    elim_star (pts_to_sl r full_perm x) (llist_sl' p (get_next x) tl) m;
-    Classical.forall_intro_2 (Classical.move_requires_2 (aux m))
+    //sel_of (llist_cell p (get_next x)) m == L.tl l))
+    sel_of (p (get_data x)) m == sel_of (p (get_data x)) m /\
+    llist_sel_cell p (get_next x) m == L.tl l))
+  =
+  let x = L.hd l in
+  let tl = L.tl l in
+  llist_sel_interp p r l m;
 
+  let p1 = pts_to_sl r full_perm x in
+  let p2 = llist_sl' p (get_next x) tl in
+  let p3 = hp_of (p (get_data x)) in
+  let sl = p1 `Mem.star` p2 `Mem.star` p3 in
+  assert (interp sl m);
+
+  let m12, m3 = id_elim_star
+    (p1 `Mem.star` p2) p3 m in
+  assert (join m12 m3 == m);
+  let m1, m2 = id_elim_star
+    p1 p2 m12 in
+  assert (reveal m12 == join m1 m2);
+
+  // #1
+  intro_ptr_interp r (hide x) m1;
+  ptr_sel_interp r m1;
+  pts_to_witinv r full_perm;
+  // #2
+  llist_sel_interp p (get_next x) tl m2;
+  llist_sl'_witinv p (get_next x);
+  intro_star
+    (ptr r)
+    (llist_sl p (get_next x)) m1 m2;
+  assert (reveal m12 == join m1 m2);
+  // #3
+  intro_star
+    (ptr r `Mem.star` llist_sl p (get_next x))
+    (hp_of (p (get_data x)))
+    m12 m3;
+  assert (m == join m12 m3);
+  ()
 
 val tail_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
-  : Steel (t a) (llist_cell p ptr)
-                   (fun n -> vptr ptr `star` llist_cell p n)
-                   (requires fun _ -> ptr =!= null_t)
-                   (ensures fun h0 n h1 ->
-                     Cons? (v_cell p ptr h0) /\
-                     n == get_next (sel ptr h1) /\
-                     sel ptr h1 == L.hd (v_cell p ptr h0) /\
-                     v_cell p n h1 == L.tl (v_cell p ptr h0))
+  : Steel (cell a)
+  (llist_cell p ptr)
+  (fun n ->
+    vptr ptr `star`
+    llist_cell p (get_next n) `star`
+    p (get_data n))
+  (requires fun _ -> ptr =!= null_t)
+  (ensures fun h0 n h1 ->
+    Cons? (v_cell p ptr h0) /\
+    sel ptr h1 == n /\
+    v_cell p ptr h0 ==
+      (sel ptr h1) :: (v_cell p (get_next n) h1))
 
-let tail_cell #a p ptr =
+let tail_cell #a p ptr
+  =
   let h = get () in
   let l = hide (v_cell p ptr h) in
   reveal_non_empty_cell p ptr;
+
   let x = hide (L.hd l) in
-  change_slprop (llist_cell p ptr) (vptr ptr `star` llist_cell p (get_next x)) l (reveal x, L.tl l)
+  let tl = hide (L.tl l) in
+  //sladmit ();
+  admit ();
+  //let s = gget (p (get_data x)) in
+
+  change_slprop
+    (llist_cell p ptr)
+    (vptr ptr `star`
+    llist_cell p (get_next x) `star`
+    p (get_data x))
+    l
+    ((reveal x, reveal tl), sel_of (p (get_data x)))
     (fun m -> tail_cell_lemma p ptr l m);
-  reveal_star (vptr ptr) (llist_cell p (get_next x));
-  let v = read ptr in
-  change_slprop (llist_cell p (get_next x)) (llist_cell p (get_next v)) (L.tl l) (L.tl l) (fun _ -> ());
-  return (get_next v)
+  let n = read ptr in
+  change_slprop_rel (llist_cell p (get_next x)) (llist_cell p (get_next n)) (fun x y -> x == y) (fun _ -> ());
+  change_slprop_rel (p (get_data x)) (p (get_data n)) (fun x y -> x == y) (fun _ -> ());
+  return n
 
 val to_list_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
   : Steel unit (llist p ptr) (fun _ -> llist_cell p ptr)
@@ -436,12 +479,22 @@ let from_list_cell p ptr =
   change_slprop_rel (llist_cell p  ptr) (llist p ptr)
   (fun x y -> llist_view x == y) (fun _ -> ())
 
+
+//val tail (#a:Type0) (p : a -> vprop) (ptr:t a)
+//  : Steel (cell a) (llist p ptr)
+//                   (fun n -> vptr ptr `star` llist p (get_next n) `star` p (get_data n))
+//                   (requires fun _ -> ptr =!= null_t)
+//                   (ensures fun h0 n h1 ->
+//                     Cons? (v_llist p ptr h0) /\
+//                     v_llist p ptr h0 ==
+//                       (get_data (sel ptr h1)) :: (v_llist p (get_next n) h1))
+
 //#push-options "--fuel 2"
 let tail #a p ptr =
   to_list_cell p ptr;
   let n = tail_cell #a p ptr in
-  from_list_cell p n;
-  n
+  from_list_cell p (get_next n);
+  return n
 //#pop-options
 
 

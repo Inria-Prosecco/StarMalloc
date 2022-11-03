@@ -543,22 +543,14 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:wdm (node a)) (m:mem) : Lemma
     assert (s == Spec.size_of_tree t);
     tree_sel_interp pt t m;
 
-    let sl = pts_to_sl pt full_perm x `Mem.star`
-    tree_sl' (get_left x) l `Mem.star`
-    tree_sl' (get_right x) r `Mem.star`
-    pts_to_sl (get_size x) full_perm (U.uint_to_t s) `Mem.star`
-    pts_to_sl (get_height x) full_perm (U.uint_to_t h)
-    in
-
-    pure_star_interp sl (pt =!= null_t) m;
-    emp_unit sl;
-    assert (interp sl m);
-
     let p1 = pts_to_sl pt full_perm x in
     let p2 = tree_sl' (get_left x) l in
     let p3 = tree_sl' (get_right x) r in
     let p4 = pts_to_sl (get_size x) full_perm (U.uint_to_t s) in
     let p5 = pts_to_sl (get_height x) full_perm (U.uint_to_t h) in
+    let sl = p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5 in
+    assert (interp sl m);
+
     let m1234, m5 = id_elim_star
       (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4) p5 m in
     assert (join m1234 m5 == m);
