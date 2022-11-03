@@ -434,11 +434,11 @@ val tail_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
     v_cell p ptr h0 ==
       (sel ptr h1) :: (v_cell p (get_next n) h1))
 
-#push-options "--ifuel 1 --fuel 1 --z3rlimit 30"
+#push-options "--ifuel 1 --fuel 2 --z3rlimit 30"
 let tail_cell #a p ptr
   =
-  let h = get () in
   reveal_non_empty_cell p ptr;
+  let h = get () in
   let l = hide (v_cell p ptr h) in
 
   let x = hide (L.hd l) in
@@ -454,13 +454,13 @@ let tail_cell #a p ptr
     p (get_data x))
     //l
     //((reveal x, reveal tl), sel_of (p (get_data x)))
-    (fun a b ->
-      normal a == reveal l)
+    (fun a ((fs, sn), _) -> hide fs == x /\ hide sn == tl) // /\ hide a == l)
+      // normal a == reveal l)
       //L.tl (normal a) == snd (fst (normal b)))
       //admit ();
       //L.hd (normal a) == fst (fst (normal b)) /\
       //L.tl (normal a) == snd (fst (normal b)))
-    (fun m -> tail_cell_lemma p ptr l m);
+    (fun m -> admit ()); // ; tail_cell_lemma p ptr l m);
   let n = read ptr in
   change_slprop_rel (llist_cell p (get_next x)) (llist_cell p (get_next n)) (fun x y -> x == y) (fun _ -> ());
   change_slprop_rel (p (get_data x)) (p (get_data n)) (fun x y -> x == y) (fun _ -> ());
@@ -640,4 +640,3 @@ let pack_ind r p =
   reveal_star (vptr r) (llist p);
   let gl = hide (v_llist p h) in
   change_slprop (vptr r `star` llist p) (ind_llist r) (p, reveal gl) gl (fun m -> pack_ind_lemma r p gl m)
-
