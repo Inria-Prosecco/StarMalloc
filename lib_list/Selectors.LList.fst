@@ -145,7 +145,7 @@ let intro_nil_lemma (a:Type0) (p : a -> vprop) (m:mem) : Lemma
       assert (llist_sl' p ptr [] == Mem.pure (ptr == null_t)) by (norm [delta; zeta; iota]);
       llist_sel_interp p ptr [] m
 
-let intro_llist_nil a p =
+let intro_llist_nil #opened #a p =
     change_slprop_2 emp (llist p (null_t #a)) ([] <: list a) (intro_nil_lemma a p)
 
 let elim_nil_lemma (#a:Type0) (p : a -> vprop) (ptr:t a) (m:mem) : Lemma
@@ -155,7 +155,7 @@ let elim_nil_lemma (#a:Type0) (p : a -> vprop) (ptr:t a) (m:mem) : Lemma
       pure_interp (ptr == null_t) m;
       llist_sel_interp p ptr [] m
 
-let elim_llist_nil #a p ptr =
+let elim_llist_nil #opened #a p ptr =
   change_slprop_rel (llist p ptr) (llist p ptr)
     (fun x y -> x == y /\ y == [])
     (fun m -> elim_nil_lemma p ptr m)
@@ -171,7 +171,7 @@ let lemma_cons_not_null (#a:Type) (p : a -> vprop) (ptr:t a) (l:list a) (m:mem) 
     match reveal l' with
     | hd::tl -> pts_to_not_null ptr full_perm hd m
 
-let cons_is_not_null #a p ptr =
+let cons_is_not_null #opened #a p ptr =
   let h = get () in
   let l = hide (v_llist p ptr h) in
   extract_info (llist p ptr) l (ptr =!= null_t) (lemma_cons_not_null p ptr l)
@@ -263,7 +263,7 @@ let intro_cons_lemma (#a:Type0) (p : a -> vprop) (ptr1 ptr2:t a)
 //                  (requires fun h -> get_next (sel ptr1 h) == ptr2)
 //                  (ensures fun h0 _ h1 -> v_llist p ptr1 h1 == (get_data (sel ptr1 h0)) :: v_llist p ptr2 h0)
 
-let intro_llist_cons p ptr1 ptr2 x =
+let pack_list #opened #a p ptr1 ptr2 x =
   let h = get () in
   let x' = hide (sel ptr1 h) in
   assert (get_data (reveal x') == x);
@@ -361,10 +361,11 @@ let v_cell (#a:Type0) (#p2:vprop) (p : a -> vprop) (r:t a)
   (h:rmem p2{FStar.Tactics.with_tactic selector_tactic (can_be_split p2 (llist_cell p r) /\ True)}) : GTot (list (cell a))
   = h (llist_cell p r)
 
-val reveal_non_empty_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
-  : Steel unit (llist_cell p ptr) (fun _ -> llist_cell p ptr)
-             (requires fun _ -> ptr =!= null_t)
-             (ensures fun h0 _ h1 -> v_cell p ptr h0 == v_cell p ptr h1 /\ Cons? (v_cell p ptr h0))
+val reveal_non_empty_cell (#opened:inames) (#a:Type0) (p : a -> vprop) (ptr:t a)
+  : SteelGhost unit opened
+  (llist_cell p ptr) (fun _ -> llist_cell p ptr)
+  (requires fun _ -> ptr =!= null_t)
+  (ensures fun h0 _ h1 -> v_cell p ptr h0 == v_cell p ptr h1 /\ Cons? (v_cell p ptr h0))
 
 let reveal_non_empty_cell #a p ptr =
   let h = get () in
@@ -420,6 +421,7 @@ let tail_cell_lemma (#a:Type0) (p : a -> vprop) (r:t a) (l:list (cell a)) (m:mem
   assert (m == join m12 m3);
   ()
 
+inline_for_extraction noextract
 val tail_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
   : Steel (cell a)
   (llist_cell p ptr)
@@ -479,8 +481,9 @@ let tail_cell #a p ptr
   change_slprop_rel (p (get_data x)) (p (get_data n)) (fun x y -> x == y) (fun _ -> ());
   return n
 
-val to_list_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
-  : Steel unit (llist p ptr) (fun _ -> llist_cell p ptr)
+val to_list_cell (#opened:inames) (#a:Type0) (p : a -> vprop) (ptr:t a)
+  : SteelGhost unit opened
+  (llist p ptr) (fun _ -> llist_cell p ptr)
   (requires fun _ -> True)
   (ensures fun h0 _ h1 -> v_llist p ptr h0 == llist_view (v_cell p ptr h1))
 
@@ -488,8 +491,9 @@ let to_list_cell p ptr =
   change_slprop_rel (llist p ptr) (llist_cell p ptr)
   (fun x y -> x == llist_view y) (fun _ -> ())
 
-val from_list_cell (#a:Type0) (p : a -> vprop) (ptr:t a)
-  : Steel unit (llist_cell p ptr) (fun _ -> llist p ptr)
+val from_list_cell (#opened:inames) (#a:Type0) (p : a -> vprop) (ptr:t a)
+  : SteelGhost unit opened
+  (llist_cell p ptr) (fun _ -> llist p ptr)
   (requires fun _ -> True)
   (ensures fun h0 _ h1 -> v_llist p ptr h1 == llist_view (v_cell p ptr h0))
 
@@ -508,7 +512,7 @@ let from_list_cell p ptr =
 //                       (get_data (sel ptr h1)) :: (v_llist p (get_next n) h1))
 
 //#push-options "--fuel 2"
-let tail #a p ptr =
+let unpack_list #a p ptr =
   to_list_cell p ptr;
   let n = tail_cell #a p ptr in
   from_list_cell p (get_next n);

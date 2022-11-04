@@ -150,7 +150,7 @@ val pack_tree (#opened:inames) (#a: Type0)
       vptr sr `star`
       vptr hr)
       (fun _ -> linked_tree ptr)
-      (requires (fun h0 ->
+      (requires fun h0 ->
         get_left (sel ptr h0) == left /\
         get_right (sel ptr h0) == right /\
         get_size (sel ptr h0) == sr /\
@@ -163,7 +163,7 @@ val pack_tree (#opened:inames) (#a: Type0)
           (Spec.height_of_tree (v_linked_tree right h0))
           + 1 /\
         U.v (sel sr h0) <= c
-        ))
+      )
       (ensures (fun h0 _ h1 ->
         let x = get_data (sel ptr h0) in
         let l = v_linked_tree left h0 in

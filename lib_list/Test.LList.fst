@@ -23,10 +23,10 @@ let temp (_:unit)
   let r1 = malloc c1 in
   let c2 = mk_cell r1 1UL in
   let r2 = malloc c2 in
-  intro_llist_nil U64.t (fun _ -> emp);
-  intro_llist_cons (fun _ -> emp) r1 null_t 0UL;
-  intro_llist_cons (fun _ -> emp) r2 r1 1UL;
+  intro_llist_nil (fun _ -> emp);
+  pack_list (fun _ -> emp) r1 null_t 0UL;
+  pack_list (fun _ -> emp) r2 r1 1UL;
   cons_is_not_null (fun _ -> emp) r2;
-  let n = tail (fun _ -> emp) r2 in
-  intro_llist_cons (fun _ -> emp) r2 (get_next n) 1UL;
-  r2
+  let n = unpack_list (fun _ -> emp) r2 in
+  pack_list (fun _ -> emp) r2 (get_next n) 1UL;
+  return r2
