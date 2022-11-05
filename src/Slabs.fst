@@ -456,67 +456,118 @@ unfold let p (size_class: sc)
      `star` slab_vprop size_class (f md) 0 (U32.v (nb_slots size_class))
 
 // Given a size class, return a free slot and update metadata
-// TODO: add ind_llist
+// TODO: refine spec
 // TODO: remove assume with pure predicates inside p
 //   this will yield two different versions of p
-let allocate_slab2
+
+inline_for_extraction noextract
+let allocate_slab_aux_1
   (sc: sc)
-  (partial_slabs: SL.t (slab_metadata))
-  (empty_slabs: SL.t (slab_metadata))
-  //: Steel (SL.cell (slab_metadata))
-  : Steel (array U8.t & (SL.t slab_metadata & SL.t slab_metadata))
-  (
-  SL.llist (p sc) partial_slabs
-  `star`
-  SL.llist (p sc) empty_slabs
-  )
-  (
-  fun r ->
-  SL.llist (p sc) (fst (snd r))
-  `star`
-  SL.llist (p sc) (snd (snd r))
-  )
+  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t slab_metadata))
+  (partial_slabs empty_slabs: SL.t slab_metadata)
+  : Steel (array U8.t)
+  (vptr partial_slabs_ptr `star`
+  SL.llist (p sc) partial_slabs `star`
+  vptr empty_slabs_ptr `star`
+  SL.llist (p sc) empty_slabs)
+  (fun r -> SL.ind_llist (p sc) partial_slabs_ptr `star`
+  SL.ind_llist (p sc) empty_slabs_ptr)
   (requires fun h0 ->
-    not (SL.is_null_t partial_slabs) \/
+    sel partial_slabs_ptr h0 == partial_slabs /\
+    sel empty_slabs_ptr h0 == empty_slabs /\
     not (SL.is_null_t empty_slabs))
   (ensures fun _ _ _ -> True)
   =
-  if SL.is_null_t partial_slabs then (
-    assert (not (SL.is_null_t empty_slabs));
-    let n_empty = SL.unpack_list (p sc) empty_slabs in
-    let n_partial = SL.mk_cell partial_slabs (SL.get_data n_empty) in
-    let h = get () in
-    let md = SL.get_data n_empty in
-    assume (has_free_slot sc (A.asel md h));
-    let r = allocate_slot_kiss sc
-      (SL.get_data n_empty)
-      (f (SL.get_data n_empty)) in
-    write empty_slabs n_partial;
-    slassert (
-      SL.llist (p sc) (SL.get_next n_empty) `star`
-      vptr empty_slabs `star`
-      (p sc) (SL.get_data n_empty)
-    );
-    SL.pack_list (p sc)
-      empty_slabs
-      partial_slabs
-      (SL.get_data n_empty);
-    return (snd r, (SL.get_next n_empty, empty_slabs))
+  let n_empty = SL.unpack_list (p sc) empty_slabs in
+  let h = get () in
+  let md = SL.get_data n_empty in
+  assume (has_free_slot sc (A.asel md h));
+  let r = allocate_slot_kiss sc
+    (SL.get_data n_empty)
+    (f (SL.get_data n_empty)) in
+  let n_partial = SL.mk_cell partial_slabs (SL.get_data n_empty) in
+  write empty_slabs n_partial;
+  slassert (
+    SL.llist (p sc) (SL.get_next n_empty) `star`
+    vptr empty_slabs `star`
+    (p sc) (SL.get_data n_empty)
+  );
+  SL.pack_list (p sc)
+    empty_slabs
+    partial_slabs
+    (SL.get_data n_empty);
+  SL.pack_ind (p sc) empty_slabs_ptr empty_slabs;
+  write partial_slabs_ptr (SL.get_next n_empty);
+  SL.pack_ind (p sc) partial_slabs_ptr (SL.get_next n_empty);
+  return (snd r)
+
+inline_for_extraction noextract
+let allocate_slab_aux_2
+  (sc: sc)
+  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t slab_metadata))
+  (partial_slabs empty_slabs: SL.t slab_metadata)
+  : Steel (array U8.t)
+  (vptr partial_slabs_ptr `star`
+  SL.llist (p sc) partial_slabs `star`
+  vptr empty_slabs_ptr `star`
+  SL.llist (p sc) empty_slabs)
+  (fun r -> SL.ind_llist (p sc) partial_slabs_ptr `star`
+  SL.ind_llist (p sc) empty_slabs_ptr)
+  (requires fun h0 ->
+    sel partial_slabs_ptr h0 == partial_slabs /\
+    sel empty_slabs_ptr h0 == empty_slabs /\
+    not (SL.is_null_t partial_slabs))
+  (ensures fun _ _ _ -> True)
+  =
+  assert (not (SL.is_null_t partial_slabs));
+  let n_partial = SL.unpack_list (p sc) partial_slabs in
+  let h = get () in
+  let md = SL.get_data n_partial in
+  assume (has_free_slot sc (A.asel md h));
+  let r = allocate_slot_kiss sc
+    (SL.get_data n_partial)
+    (f (SL.get_data n_partial)) in
+  SL.pack_list (p sc)
+    partial_slabs
+    (SL.get_next n_partial)
+    (SL.get_data n_partial);
+  //return (snd r, (partial_slabs, empty_slabs))
+  SL.pack_ind (p sc) partial_slabs_ptr partial_slabs;
+  SL.pack_ind (p sc) empty_slabs_ptr empty_slabs;
+  return (snd r)
+
+let allocate_slab
+  (sc: sc)
+  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t slab_metadata))
+  (partial_slabs empty_slabs: SL.t slab_metadata)
+  : Steel (array U8.t)
+  (vptr partial_slabs_ptr `star`
+  SL.llist (p sc) partial_slabs `star`
+  vptr empty_slabs_ptr `star`
+  SL.llist (p sc) empty_slabs)
+  (fun r -> SL.ind_llist (p sc) partial_slabs_ptr `star`
+  SL.ind_llist (p sc) empty_slabs_ptr)
+  (requires fun h0 ->
+    sel partial_slabs_ptr h0 == partial_slabs /\
+    sel empty_slabs_ptr h0 == empty_slabs /\
+    (not (SL.is_null_t partial_slabs) \/
+    not (SL.is_null_t empty_slabs)))
+  (ensures fun _ _ _ -> True)
+  =
+  if (SL.is_null_t partial_slabs) then (
+    let r = allocate_slab_aux_1 sc
+      partial_slabs_ptr empty_slabs_ptr
+      partial_slabs empty_slabs in
+    return r
   ) else (
-    assert (not (SL.is_null_t partial_slabs));
-    let n_partial = SL.unpack_list (p sc) partial_slabs in
-    let h = get () in
-    let md = SL.get_data n_partial in
-    assume (has_free_slot sc (A.asel md h));
-    let r = allocate_slot_kiss sc
-      (SL.get_data n_partial)
-      (f (SL.get_data n_partial)) in
-    SL.pack_list (p sc)
-      partial_slabs
-      (SL.get_next n_partial)
-      (SL.get_data n_partial);
-    return (snd r, (partial_slabs, empty_slabs))
+    let r = allocate_slab_aux_2 sc
+      partial_slabs_ptr empty_slabs_ptr
+      partial_slabs empty_slabs in
+    return r
   )
+
+// Given a size, return a size_class
+// TODO
 
 (*)
 //noextract
