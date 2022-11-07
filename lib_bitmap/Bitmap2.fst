@@ -34,7 +34,7 @@ let slice_right_lemma (#n:pos) (a:FBV.bv_t n) (s:nat{s < n})
 // shift_left_value_aux_3
 // shift_right_value_aux_3
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 40"
 noextract
 let logand_mask (#n:pos) (a:uint_t n) (m:nat{m < n})
   : Lemma (pow2 m < pow2 n /\ logand #n a (pow2 m - 1) == a % pow2 m)
