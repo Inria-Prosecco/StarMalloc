@@ -8,6 +8,14 @@ endif
 
 PROJECT_HOME ?= .
 
+# Prettifying output, except if we are in verbose mode
+Q?=@
+SIL?=--silent
+ifneq ($(V),)
+	Q=
+	SIL=
+endif
+
 SOURCE_DIRS = \
   $(PROJECT_HOME)/lib_avl_common \
   $(PROJECT_HOME)/lib_avl_mono \

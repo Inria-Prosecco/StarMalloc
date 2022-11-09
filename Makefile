@@ -19,7 +19,7 @@ hints:
 obj:
 	mkdir $@
 
-FSTAR_OPTIONS = --cache_checked_modules $(FSTAR_INCLUDES) \
+FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_INCLUDES) \
     --already_cached 'FStar Steel C Prims' \
 		--cmi --odir obj --cache_dir obj \
 		$(OTHERFLAGS)
@@ -42,7 +42,8 @@ include .depend
 depend: .depend
 
 $(ALL_CHECKED_FILES): %.checked:
-	$(FSTAR) $<
+	@echo "[CHECK      $(basename $(notdir $@))]"
+	$(Q)$(FSTAR) $<
 	@touch -c $@
 
 verify: $(ALL_CHECKED_FILES)
@@ -50,7 +51,8 @@ verify: $(ALL_CHECKED_FILES)
 
 .PRECIOUS: %.ml
 %.ml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml \
+	@echo "[EXTRACT-ML $(basename $(notdir $@))]"
+	$(Q)$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml \
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 clean:
@@ -58,7 +60,8 @@ clean:
 
 .PRECIOUS: %.krml
 obj/%.krml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
+	@echo "[EXTRACT    $(basename $(notdir $@))]"
+	$(Q)$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
