@@ -79,14 +79,16 @@ FILTERED_STEEL_FILES = \
   obj/Steel_ST_Util.krml \
   obj/Steel_ST_HigherArray.krml \
   obj/Steel_ST_Effect_Atomic.krml \
-  obj/Steel_ST_Coercions.krml
+  obj/Steel_ST_Coercions.krml \
+  obj/Steel_SpinLock.krml
 
 FILTERED_KRML_FILES = $(filter-out $(FILTERED_STEEL_FILES), $(ALL_KRML_FILES))
 
 extract: $(FILTERED_KRML_FILES)
 	mkdir -p dist
 	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
-     -bundle 'FStar.\*,Steel.\*' $^
+		-bundle 'FStar.\*,Steel.\*' \
+		-add-include 'Steel:"krml/steel_types.h"' $^
 
 # test classic AVL trees
 test: verify extract

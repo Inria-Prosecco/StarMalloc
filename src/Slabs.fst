@@ -16,6 +16,7 @@ module FU = FStar.UInt
 module L = FStar.List.Tot
 
 module SL = Selectors.LList
+module Temp = TempLock
 
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
