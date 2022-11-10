@@ -79,8 +79,7 @@ FILTERED_STEEL_FILES = \
   obj/Steel_ST_Util.krml \
   obj/Steel_ST_HigherArray.krml \
   obj/Steel_ST_Effect_Atomic.krml \
-  obj/Steel_ST_Coercions.krml \
-  obj/Steel_SpinLock.krml
+  obj/Steel_ST_Coercions.krml
 
 FILTERED_KRML_FILES = $(filter-out $(FILTERED_STEEL_FILES), $(ALL_KRML_FILES))
 
