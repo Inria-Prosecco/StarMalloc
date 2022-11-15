@@ -80,18 +80,6 @@ let get_free_slot_aux
   U32.add r r'
 #pop-options
 
-noextract
-let has_free_slot
-  (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : bool
-  =
-  let bound = U32.v (nb_slots size_class) / 64 in
-  (U64.v (Seq.index s 0) > 0) ||
-  (bound > 1 && (U64.v (Seq.index s 1) > 0)) ||
-  (bound > 2 && (U64.v (Seq.index s 2) > 0)) ||
-  (bound > 3 && (U64.v (Seq.index s 3) > 0))
-
 let get_free_slot (size_class: sc) (bitmap: slab_metadata)
   : Steel U32.t
   (A.varray bitmap)
