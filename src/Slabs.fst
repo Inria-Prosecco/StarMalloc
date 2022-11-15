@@ -114,6 +114,7 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
   ) else (
     get_free_slot_aux size_class bitmap 0ul
   )
+
 let allocate_slot_aux (#opened:_)
   (size_class: sc)
   (md: slab_metadata) (arr: array U8.t{A.length arr = U32.v page_size})

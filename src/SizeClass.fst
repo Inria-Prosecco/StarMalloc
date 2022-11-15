@@ -8,7 +8,6 @@ module U8 = FStar.UInt8
 open FStar.Ghost
 
 module SL = Selectors.LList
-//friend Selectors.LList
 
 open Steel.FractionalPermission
 module Mem = Steel.Memory
@@ -36,6 +35,7 @@ let is_empty
   (bound > 2 && (U64.v (Seq.index s 2) = 0)) /\
   (bound > 3 && (U64.v (Seq.index s 3) = 0))
 
+// TODO: bad constants
 noextract
 let has_free_slot
   (size_class: sc)
@@ -45,9 +45,9 @@ let has_free_slot
   let max = FStar.Int.max_int U64.n in
   let bound = U32.v (nb_slots size_class) / 64 in
   (U64.v (Seq.index s 0) < max) ||
-  (bound > 1 && (U64.v (Seq.index s 1) < max)) ||
-  (bound > 2 && (U64.v (Seq.index s 2) < max)) ||
-  (bound > 3 && (U64.v (Seq.index s 3) < max))
+  (bound > 1 && (U64.v (Seq.index s 1) <> 0)) ||
+  (bound > 2 && (U64.v (Seq.index s 2) <> 0)) ||
+  (bound > 3 && (U64.v (Seq.index s 3) <> 0))
 
 noextract
 let has_nonfree_slot
@@ -72,7 +72,8 @@ let p (size_class: sc)
   (A.varray md `star`
   slab_vprop size_class (f md) 0 (U32.v (nb_slots size_class)))
 
-[@@ __reduce__]
+//[@@ __reduce__; __steel_reduce__]
+//[@@ __steel_reduce__]
 //unfold
 let p_empty (size_class: sc)
   =
@@ -241,7 +242,6 @@ let unpack_sc_lemma
   assert (m == Mem.join m12 m3);
   ()
 
-#push-options "--z3rlimit 30"
 let unpack_sc (r: ref size_class_struct)
   : Steel size_class_struct
   (size_class_full r)
@@ -249,19 +249,14 @@ let unpack_sc (r: ref size_class_struct)
     vptr r `star`
     SL.ind_llist (p_empty scs.size) scs.partial_slabs `star`
     SL.ind_llist (p_empty scs.size) scs.empty_slabs
-    //SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.partial_slabs m == b.partial_slabs_v /\
-    //SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.empty_slabs m == b.empty_slabs_v /\
   )
   (requires fun _ -> True)
   (ensures fun h0 scs h1 ->
     let b = v_sc_full r h0 in
     sel r h1 == scs /\
-    //TODO
-    //SL.v_ind_llist (p_empty scs.size) scs.partial_slabs h1 == b.partial_slabs_v /\
-    //SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h1 == b.empty_slabs_v /\
-    True
-    //@2 b.scs_v.partial_slabs == sel scs.partial_slabs h1 /\
-    //@2 b.scs_v.empty_slabs == sel scs.empty_slabs h1
+    sel r h1 == b.scs_v /\
+    SL.v_ind_llist (p_empty scs.size) scs.partial_slabs h1 == b.partial_slabs_v /\
+    SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h1 == b.empty_slabs_v
   )
   =
   let h = get () in
@@ -289,29 +284,24 @@ let unpack_sc (r: ref size_class_struct)
 
 let pack_sc_lemma
   (r: ref size_class_struct)
-  (scs: size_class_struct)
   (b: blob)
   (m: Mem.mem)
   : Lemma
   (requires
     Mem.interp (
       SR.ptr r `Mem.star`
-      SL.ind_llist_sl (p_empty scs.size) scs.partial_slabs `Mem.star`
-      SL.ind_llist_sl (p_empty scs.size) scs.empty_slabs
+      SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.partial_slabs `Mem.star`
+      SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs
     ) m /\
     sel_of (vptr r) m == b.scs_v /\
-    SL.ind_llist_sel (p_empty scs.size) scs.partial_slabs m == b.partial_slabs_v /\
-    SL.ind_llist_sel (p_empty scs.size) scs.empty_slabs m == b.empty_slabs_v /\
-    True
-    //sel_of (vptr b.scs_v.partial_slabs) m == b.partial_slabs_v /\
-    //sel_of (vptr b.scs_v.empty_slabs) m == b.empty_slabs_v
+    SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.partial_slabs m == b.partial_slabs_v /\
+    SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.empty_slabs m == b.empty_slabs_v
   )
   (ensures
     Mem.interp (size_class_sl r) m /\
     size_class_sel r m == b
   )
   =
-  admit ();
   let p1 = SR.ptr r in
   let p2 = SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.partial_slabs in
   let p3 = SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs in
@@ -319,19 +309,17 @@ let pack_sc_lemma
   assert (Mem.interp sl m);
 
   let m12, m3 = Mem.id_elim_star (p1 `Mem.star` p2) p3 m in
-  Mem.join_commutative m12 m3;
   let m1, m2 = Mem.id_elim_star p1 p2 m12 in
-  Mem.join_commutative m1 m2;
   // #1
   ptr_sel_interp r m1;
+  let p1' = pts_to_sl r full_perm b.scs_v in
   // #2
   // #3
   //
-  Mem.intro_star p1 p2 m1 m2;
-  assert (reveal m12 == Mem.join m1 m2);
-  Mem.intro_star (p1 `Mem.star` p2) p3 m12 m3;
-  assert (m == Mem.join m12 m3);
-  ()
+  Mem.intro_star p1' p2 m1 m2;
+  Mem.intro_star (p1' `Mem.star` p2) p3 m12 m3;
+  Mem.intro_h_exists b.scs_v (size_class_sl' r) m;
+  size_class_sl'_witinv r
 
 let pack_sc (#opened:_)
   (r: ref size_class_struct)
@@ -342,9 +330,13 @@ let pack_sc (#opened:_)
   SL.ind_llist (p_empty scs.size) scs.empty_slabs)
   (fun _ -> size_class_full r)
   (requires fun h0 -> sel r h0 == scs)
-  (ensures fun _ _ _ ->
-    //@2
-    True)
+  (ensures fun h0 _ h1 ->
+    let b = v_sc_full r h1 in
+    b.scs_v == sel r h0 /\
+    b.scs_v == scs /\
+    b.partial_slabs_v == SL.v_ind_llist (p_empty scs.size) scs.partial_slabs h0 /\
+    b.empty_slabs_v == SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0
+  )
   =
   let h0 = get () in
   assert (scs == sel r h0);
@@ -352,14 +344,8 @@ let pack_sc (#opened:_)
     hide (SL.v_ind_llist (p_empty scs.size) scs.partial_slabs h0) in
   let empty_slabs_v : list slab_metadata =
     hide (SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0) in
-  //let m : erased ((size_class_struct * list slab_metadata) * list slab_metadata)
-  //= hide ((scs, reveal partial_slabs_v), reveal empty_slabs_v) in
-  let m2 : erased ((size_class_struct * list slab_metadata) * list slab_metadata)
-  = gget (vptr r `star`
-  SL.ind_llist (p_empty scs.size) scs.partial_slabs `star`
-  SL.ind_llist (p_empty scs.size) scs.empty_slabs) in
-  //assert (m == m2);
-  //admit ();
+  let m : erased ((size_class_struct * list slab_metadata) * list slab_metadata) =
+    hide ((scs, reveal partial_slabs_v), reveal empty_slabs_v) in
   let b : blob = hide ({
     scs_v = scs;
     partial_slabs_v = reveal partial_slabs_v;
@@ -370,19 +356,19 @@ let pack_sc (#opened:_)
     SL.ind_llist (p_empty scs.size) scs.partial_slabs `star`
     SL.ind_llist (p_empty scs.size) scs.empty_slabs)
     (size_class_full r)
-    m2
+    m
     b
-    (fun m -> admit (); pack_sc_lemma r scs (reveal b) m);
+    (fun m -> pack_sc_lemma r (reveal b) m);
   ()
 
-// TODO
-// - intermediate step with lemmas in order to have packing/unpacking
-// @2- vptr -> llist: which predicate ?
-
 let temp (r1 r2: ref size_class_struct)
-  : SteelT U32.t
+  : Steel U32.t
   (size_class_full r1)
   (fun _ -> size_class_full r1)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    v_sc_full r1 h0 == v_sc_full r1 h1
+  )
   =
   let scs = unpack_sc r1 in
   pack_sc r1 scs;
