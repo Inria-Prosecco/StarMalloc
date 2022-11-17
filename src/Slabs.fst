@@ -4,6 +4,7 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 module A = Steel.Array
+module SM = Steel.Memory
 
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
@@ -96,6 +97,7 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     Seq.index bm idx = false)
   )
   =
+  admit ();
   let bound = U32.div (nb_slots size_class) (U32.uint_to_t U64.n) in
   assert (U32.v bound == U32.v (nb_slots size_class) / 64);
   let x1 = A.index bitmap 0ul in
@@ -339,6 +341,219 @@ let select_size_class (size: U32.t)
   ) else (
     return 64ul
   )
+
+let select_size_class2 (size: U32.t)
+  (sc16 sc32 sc64: ref size_class_struct)
+  : Steel (ref size_class_struct & G.erased U32.t)
+  (size_class_full sc16 `star` size_class_full sc32 `star` size_class_full sc64)
+  (fun _ -> size_class_full sc16 `star` size_class_full sc32 `star` size_class_full sc64)
+  (requires fun h0 ->
+    (v_sc_full sc16 h0).scs_v.size == 16ul /\
+    (v_sc_full sc32 h0).scs_v.size == 32ul /\
+    (v_sc_full sc64 h0).scs_v.size == 64ul /\
+    U32.v size <= max_sc)
+  (ensures fun h0 r h1 ->
+    U32.lte size (snd r))
+  =
+
+  if U32.lte size 16ul then (
+    let sc_size = G.hide 16ul in
+    return (sc16, sc_size)
+  ) else if U32.lte size 32ul then (
+    let sc_size = G.hide 32ul in
+    return (sc32, sc_size)
+  ) else (
+    let sc_size = G.hide 64ul in
+    return (sc64, sc_size)
+  )
+
+let size_classes : list sc = [16ul ; 32ul ; 64ul]
+
+let scl_to_vprop (scl: list (ref size_class_struct))
+  : vprop
+  = starl (L.map (fun sc -> size_class_full sc) scl)
+
+let f ()
+  =
+  assert (L.memP 16ul size_classes);
+  assert_norm (L.memP 32ul size_classes);
+  assert_norm (L.memP 64ul size_classes)
+
+let partition_equiv_filter (#a: Type) (f: a -> Tot bool) (l: list a)
+  : Lemma
+  (L.partition f l == (L.filter f l, L.filter (fun x -> not (f x)) l))
+  = admit ()
+
+let filter_lemma (#a: eqtype) (l: list a) (x: a)
+  : Lemma
+  (requires L.count x l == 1)
+  (ensures ([x], L.filter (fun y -> y <> x) l) == L.partition (fun y -> y = x) l)
+  =
+  // use partition_equiv_filter
+  // use L.count x l == 1 + partition_count
+  admit ()
+
+let starl_filter (#a: eqtype) (f: a -> Tot vprop) (l: list a) (x: a)
+  : Lemma
+  (requires L.mem x l)
+  (ensures (let l1, l2 = L.partition (fun y -> y = x) l in
+  starl (L.map f l) `equiv` (starl (L.map f l1) `star` starl (L.map f l2))))
+  =
+  // arbitrary permutation do not change validity of vprop
+  admit ()
+
+let starl_singleton (#a: eqtype) (f: a -> Tot vprop) (l: list a)
+  : Lemma
+  (requires L.length l == 1)
+  (ensures starl (L.map f l) `equiv` f (L.hd l))
+  =
+  assert (l ==  [L.hd l]);
+  assert (L.tl l == []);
+  assert (L.map f l == [f (L.hd l)]);
+  assert (starl (L.map f l) == starl [f (L.hd l)]);
+  assume (starl [f (L.hd l)] == f (L.hd l));
+  equiv_refl (starl (L.map f l))
+
+let starl_partition_equiv (#a: eqtype)
+  (f: a -> Tot vprop)
+  (l: list a)
+  (x: a)
+  : Lemma
+  (requires L.count x l == 1)
+  (ensures
+    starl (L.map f l)
+    `equiv`
+    (f x `star`
+    starl (L.map f (L.filter (fun y -> y <> x) l))))
+  =
+ L.mem_count l x;
+  filter_lemma l x;
+  starl_filter f l x;
+  let p1 = starl (L.map f l) in
+  let p21 = starl (L.map f [x]) in
+  let p22 = starl (L.map f (L.filter (fun y -> y <> x) l)) in
+  let p31 = f x in
+  let p2 = p21 `star` p22 in
+  let p3 = p31 `star` p22 in
+  assert (p1 `equiv` p2);
+  assert_norm (L.length [x] == 1);
+  starl_singleton f [x];
+  equiv_refl p22;
+  star_congruence
+    p21 p22
+    p31 p22;
+  assert (p2 `equiv` p3);
+  equiv_trans p1 p2 p3;
+  assert (p1 `equiv` p3)
+
+let starl_partition_unpack (#a: eqtype)
+  (f: a -> Tot vprop)
+  (l: list a)
+  (x: a)
+  (m: SM.mem)
+  : Lemma
+  (requires L.count x l == 1 /\
+  SM.interp (hp_of (
+    starl (L.map f l)
+  )) m)
+  (ensures SM.interp (hp_of (
+    f x `star`
+    starl (L.map f (L.filter (fun y -> y <> x) l))
+  )) m)
+  =
+  let p1 = starl (L.map f l) in
+  let p2 =
+    f x `star`
+    starl (L.map f (L.filter (fun y -> y <> x) l)) in
+  starl_partition_equiv f l x;
+  reveal_equiv p1 p2;
+  SM.reveal_equiv (hp_of p1) (hp_of p2)
+
+let starl_partition_pack (#a: eqtype)
+  (f: a -> Tot vprop)
+  (l: list a)
+  (x: a)
+  (m: SM.mem)
+  : Lemma
+  (requires L.count x l == 1 /\
+  SM.interp (hp_of (
+    f x `star`
+    starl (L.map f (L.filter (fun y -> y <> x) l))
+  )) m)
+  (ensures SM.interp (hp_of (
+    starl (L.map f l)
+  )) m)
+  =
+  let p1 = starl (L.map f l) in
+  let p2 =
+    f x `star`
+    starl (L.map f (L.filter (fun y -> y <> x) l)) in
+  starl_partition_equiv f l x;
+  equiv_sym p1 p2;
+  reveal_equiv p2 p1;
+  SM.reveal_equiv (hp_of p2) (hp_of p1)
+
+
+(*)
+let rec select_size_class3
+  (scl: list (ref size_class_struct))
+  (size: U32.t)
+  : Steel (ref size_class_struct)
+  (scl_to_vprop scl)
+  (fun r ->
+    size_class_full r `star`
+    scl_to_vprop (L.filter (fun r2 -> r2 =!= r) scl)
+  )
+  (requires fun h0 -> Cons? scl)
+  (ensures fun h0 r h1 ->
+    not (is_null r)
+  )
+  =
+  let r = L.hd scl in
+
+
+
+
+  admit ();
+  return null
+
+let a = 42
+(*)
+
+  (fun r ->
+    size_class_full r `star`
+    SL.ind_llist (fun sc -> size_class_full sc) size_classes)
+  (requires fun h0 ->
+    Cons? (SL.v_ind_llist (fun sc -> size_class_full sc) size_classes h0))
+  (ensures fun h0 r h1 ->
+
+  )
+
+
+
+  (size_class_full sc16 `star` size_class_full sc32 `star` size_class_full sc64)
+  (fun _ -> size_class_full sc16 `star` size_class_full sc32 `star` size_class_full sc64)
+  (requires fun h0 ->
+    (v_sc_full sc16 h0).scs_v.size == 16ul /\
+    (v_sc_full sc32 h0).scs_v.size == 32ul /\
+    (v_sc_full sc64 h0).scs_v.size == 64ul /\
+    U32.v size <= max_sc)
+  (ensures fun h0 r h1 ->
+    U32.lte size (snd r))
+  =
+
+  if U32.lte size 16ul then (
+    let sc_size = G.hide 16ul in
+    return (sc16, sc_size)
+  ) else if U32.lte size 32ul then (
+    let sc_size = G.hide 32ul in
+    return (sc32, sc_size)
+  ) else (
+    let sc_size = G.hide 64ul in
+    return (sc64, sc_size)
+  )
+
+
 
 (*)
 //noextract

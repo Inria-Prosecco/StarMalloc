@@ -13,6 +13,7 @@ open Steel.Effect
 open Steel.Reference
 //module SR = Steel.Reference
 module A = Steel.Array
+module SM = Steel.Memory
 
 
 open Utils
@@ -162,7 +163,6 @@ let slab_vprop_lemma
   Classical.forall_intro (lemma_index_slice s1 (k - i) (j - i));
   slab_vprop3_lemma size_class arr s2 s3
 
-module SM = Steel.Memory
 
 let slab_vprop_sl_lemma
   (size_class: sc)
