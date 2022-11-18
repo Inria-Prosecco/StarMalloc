@@ -429,20 +429,9 @@ let filter_lemma (#a: eqtype) (l: list a) (x: a)
   L.mem_count (fst r) x;
   assert (L.mem x (fst r));
   assert (fst r = [x]);
-  filter_equiv l (fun y -> not (y = x)) (fun y -> y <> x);
-  ()
-  //
+  filter_equiv l (fun y -> not (y = x)) (fun y -> y <> x)
 
-let starl_filter (#a: eqtype) (f: a -> Tot vprop) (l: list a) (x: a)
-  : Lemma
-  (requires L.mem x l)
-  (ensures (let l1, l2 = L.partition (fun y -> y = x) l in
-  starl (L.map f l) `equiv` (starl (L.map f l1) `star` starl (L.map f l2))))
-  =
-  // arbitrary permutation do not change validity of vprop
-  admit ()
-
-let starl_singleton (#a: eqtype) (f: a -> Tot vprop) (l: list a)
+let starl_singleton (#a: Type) (f: a -> Tot vprop) (l: list a)
   : Lemma
   (requires L.length l == 1)
   (ensures starl (L.map f l) `equiv` f (L.hd l))
@@ -467,6 +456,119 @@ let starl_singleton (#a: eqtype) (f: a -> Tot vprop) (l: list a)
   assert (p2 `equiv` p3);
   equiv_trans p1 p2 p3
 
+let starl_append_hd_map (#a: Type) (f: a -> vprop) (l: list a) (x: a)
+  : Lemma
+  (starl (L.map f (x::l)) `equiv` (f x `star` starl (L.map f l)))
+  =
+  let p0 = starl (L.map f (x::l)) in
+  let p1 = starl (L.map f l) in
+  L.map_append f [x] l;
+  assert (L.map f (x::l) == L.append (L.map f [x]) (L.map f l));
+  starl_append (L.map f [x]) (L.map f l);
+  assert (p0 `equiv` (starl (L.map f [x]) `star` p1));
+  starl_singleton f [x];
+  assert (starl (L.map f [x]) `equiv` f x);
+  equiv_refl p1;
+  star_congruence
+    (starl (L.map f [x])) p1
+    (f x) p1;
+  equiv_trans
+    p0
+    (starl (L.map f [x]) `star` p1)
+    (f x `star` p1)
+
+let rec starl_filter (#a: Type) (g: a -> bool) (f: a -> vprop) (l: list a)
+  : Lemma
+  (ensures (let l1, l2 = L.partition g l in
+  starl (L.map f l) `equiv` (starl (L.map f l1) `star` starl (L.map f l2))))
+  (decreases l)
+  =
+  // arbitrary permutation do not change validity of vprop
+  // no need for permutation, induction should be ok
+  match l with
+  | [] ->
+      let l1, l2 = L.partition g l in
+      assert (L.map f l == []);
+      L.partition_length g l;
+      assert (L.map f l1 == []);
+      assert (L.map f l2 == []);
+      cm_identity emp;
+      equiv_sym (emp `star` emp) emp
+
+  | hd::tl ->
+      let l1, l2 = L.partition g tl in
+      starl_filter g f tl;
+      let p0 = starl (L.map f l) in
+      let p1 = starl (L.map f tl) in
+      let p2 = starl (L.map f l1) in
+      let p3 = starl (L.map f l2) in
+      assert (p1 `equiv` (p2 `star` p3));
+      starl_append_hd_map f tl hd;
+      assert (p0 `equiv` (f hd `star` p1));
+      equiv_refl (f hd);
+      star_congruence
+        (f hd) p1
+        (f hd) (p2 `star` p3);
+      assert ((f hd `star` p1) `equiv` (f hd `star` (p2 `star` p3)));
+      if g hd then (
+        star_associative (f hd) p2 p3;
+        equiv_sym
+          ((f hd `star` p2) `star` p3)
+          (f hd `star` (p2 `star` p3));
+        equiv_trans
+          (f hd `star` p1)
+          (f hd `star` (p2 `star` p3))
+          ((f hd `star` p2) `star` p3);
+        assert ((f hd `star` p1) `equiv` ((f hd `star` p2) `star` p3));
+        let p2' = starl (L.map f (hd::l1)) in
+        assert (hd::l1 == fst (L.partition g l));
+        starl_append_hd_map f l1 hd;
+        equiv_sym p2' (f hd `star` p2);
+        assert ((f hd `star` p2) `equiv` p2');
+        equiv_refl p3;
+        star_congruence
+          (f hd `star` p2) p3
+          p2' p3;
+        equiv_trans
+          p0
+          (f hd `star` (p2 `star` p3))
+          (p2' `star` p3)
+      ) else (
+        star_commutative (f hd) (p2 `star` p3);
+        equiv_trans
+          (f hd `star` p1)
+          (f hd `star` (p2 `star` p3))
+          ((p2 `star` p3) `star` f hd);
+        star_associative p2 p3 (f hd);
+        equiv_refl p2;
+        star_commutative p3 (f hd);
+        star_congruence
+          p2 (p3 `star` f hd)
+          p2 (f hd `star` p3);
+        equiv_trans
+          (f hd `star` p1)
+          ((p2 `star` p3) `star` f hd)
+          (p2 `star` (p3 `star` f hd));
+        equiv_trans
+          (f hd `star` p1)
+          (p2 `star` (p3 `star` f hd))
+          (p2 `star` (f hd `star` p3));
+        assert ((f hd `star` p1) `equiv` (p2 `star` (f hd `star` p3)));
+        let p3' = starl (L.map f (hd::l2)) in
+        assert (hd::l2 == snd (L.partition g l));
+        starl_append_hd_map f l2 hd;
+        equiv_sym p3' (f hd `star` p3);
+        assert ((f hd `star` p3) `equiv` p3');
+        equiv_refl p2;
+        star_congruence
+          p2 (f hd `star` p3)
+          p2 p3';
+        equiv_trans
+          p0
+          (f hd `star` p1)
+          (p2 `star` p3')
+      )
+
 let starl_partition_equiv (#a: eqtype)
   (f: a -> Tot vprop)
   (l: list a)
@@ -479,7 +581,7 @@ let starl_partition_equiv (#a: eqtype)
     (f x `star`
     starl (L.map f (L.filter (fun y -> y <> x) l))))
   =
- L.mem_count l x;
+  L.mem_count l x;
   filter_lemma l x;
   starl_filter f l x;
   let p1 = starl (L.map f l) in
