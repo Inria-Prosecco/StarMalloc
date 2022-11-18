@@ -583,7 +583,7 @@ let starl_partition_equiv (#a: eqtype)
   =
   L.mem_count l x;
   filter_lemma l x;
-  starl_filter f l x;
+  starl_filter (fun y -> y = x) f l;
   let p1 = starl (L.map f l) in
   let p21 = starl (L.map f [x]) in
   let p22 = starl (L.map f (L.filter (fun y -> y <> x) l)) in
