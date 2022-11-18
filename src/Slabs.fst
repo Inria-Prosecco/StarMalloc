@@ -379,19 +379,59 @@ let f ()
   assert_norm (L.memP 32ul size_classes);
   assert_norm (L.memP 64ul size_classes)
 
-let partition_equiv_filter (#a: Type) (f: a -> Tot bool) (l: list a)
+let rec partition_equiv_filter (#a: Type) (f: a -> Tot bool) (l: list a)
   : Lemma
   (L.partition f l == (L.filter f l, L.filter (fun x -> not (f x)) l))
-  = admit ()
+  = match l with
+  | [] -> ()
+  | hd::tl -> partition_equiv_filter f tl
+
+let rec count_equiv_filter (#a: eqtype) (l: list a) (x: a)
+  : Lemma
+  (ensures L.count x l = L.length (L.filter (fun y -> y = x) l))
+  (decreases l)
+  = match l with
+  | [] -> ()
+  | hd::tl -> count_equiv_filter tl x
+
+let rec filter_equiv (#a: Type) (l: list a) (f1 f2: a -> Tot bool)
+  : Lemma
+  (requires forall x. f1 x = f2 x)
+  (ensures L.filter f1 l == L.filter f2 l)
+  (decreases l)
+  = match l with
+  | [] -> ()
+  | hd::tl -> filter_equiv tl f1 f2
 
 let filter_lemma (#a: eqtype) (l: list a) (x: a)
   : Lemma
   (requires L.count x l == 1)
   (ensures ([x], L.filter (fun y -> y <> x) l) == L.partition (fun y -> y = x) l)
   =
-  // use partition_equiv_filter
-  // use L.count x l == 1 + partition_count
-  admit ()
+  let f = fun y -> y = x in
+  let r = L.partition f l in
+  partition_equiv_filter f l;
+  L.partition_count f l x;
+  assert (L.count x l == L.count x (fst r) + L.count x (snd r));
+  assert (1 == L.count x (fst r) + L.count x (snd r));
+  assert (L.count x (fst r) = 1 || L.count x (snd r) = 1);
+  if (L.count x (snd r) = 1) then (
+    L.mem_count (snd r) x;
+    L.mem_memP x (snd r);
+    assert (L.memP x (snd r));
+    L.mem_filter (fun x -> not (f x)) (snd r) x;
+    assert (not (f x));
+    assert (f x)
+  );
+  assert (L.count x (fst r) = 1);
+  count_equiv_filter l x;
+  assert (L.length (fst r) = 1);
+  L.mem_count (fst r) x;
+  assert (L.mem x (fst r));
+  assert (fst r = [x]);
+  filter_equiv l (fun y -> not (y = x)) (fun y -> y <> x);
+  ()
+  //
 
 let starl_filter (#a: eqtype) (f: a -> Tot vprop) (l: list a) (x: a)
   : Lemma
@@ -407,12 +447,25 @@ let starl_singleton (#a: eqtype) (f: a -> Tot vprop) (l: list a)
   (requires L.length l == 1)
   (ensures starl (L.map f l) `equiv` f (L.hd l))
   =
-  assert (l ==  [L.hd l]);
-  assert (L.tl l == []);
+  assert (l == [L.hd l]);
   assert (L.map f l == [f (L.hd l)]);
-  assert (starl (L.map f l) == starl [f (L.hd l)]);
-  assume (starl [f (L.hd l)] == f (L.hd l));
-  equiv_refl (starl (L.map f l))
+  let p1 = starl (L.map f l) in
+  let p3 = f (L.hd l) in
+  let p2 = p3 `star` emp in
+  assert (starl [f (L.hd l)] == f (L.hd l) `star` emp);
+  equiv_refl p1;
+  assert (p1 `equiv` p2);
+  cm_identity p3;
+  assert ((emp `star` p3) `equiv` p3);
+  star_commutative emp p3;
+  assert ((emp `star` p3) `equiv` p2);
+  equiv_sym (emp `star` p3) p2;
+  equiv_trans
+    p2
+    (emp `star` p3)
+    p3;
+  assert (p2 `equiv` p3);
+  equiv_trans p1 p2 p3
 
 let starl_partition_equiv (#a: eqtype)
   (f: a -> Tot vprop)
