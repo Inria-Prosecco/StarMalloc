@@ -18,6 +18,7 @@ module SM = Steel.Memory
 
 open Utils
 open Utils2
+open SteelUtils
 
 #push-options "--z3rlimit 20"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)

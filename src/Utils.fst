@@ -63,45 +63,6 @@ let array_to_bv_slice
     FU.to_vec #64 (U64.v x)))
   =
   Bitmap4.array_to_bv_lemma_upd_set_aux4 s0 (i*64)
-
-let starl (l: list vprop)
-  : vprop
-  =
-  L.fold_right star l emp
-
-let rec starl_append (l1 l2: list vprop)
-  : Lemma
-  (starl (L.append l1 l2) `equiv` (starl l1 `star` starl l2))
-  = match l1 with
-    | [] ->
-      cm_identity (starl l2);
-      equiv_sym (emp `star` starl l2) (starl l2)
-    | hd :: tl ->
-      // Unfortunately, the transitivity rules for equiv are not automatic,
-      // which prevents us from using a single calc
-      calc (equiv) {
-        starl (L.append l1 l2);
-        (equiv) {
-          starl_append tl l2;
-          equiv_refl hd;
-          star_congruence hd (starl (L.append tl l2)) hd (starl tl `star` starl l2)  }
-        hd `star` (starl tl `star` starl l2);
-      };
-
-      calc (equiv) {
-        hd `star` (starl tl `star` starl l2);
-        (equiv) {
-          star_associative hd (starl tl) (starl l2);
-          equiv_sym (starl l1 `star` starl l2) (hd `star` (starl tl `star` starl l2))
-        }
-        starl l1 `star` starl l2;
-      };
-
-      equiv_trans
-        (starl (L.append l1 l2))
-        (hd `star` (starl tl `star` starl l2))
-        (starl l1 `star` starl l2)
-
 let lemma_div (x y z: nat)
   : Lemma
   (requires
