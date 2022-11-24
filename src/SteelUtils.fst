@@ -5,6 +5,7 @@ open Steel.Effect
 open Steel.Reference
 module SM = Steel.Memory
 module L = FStar.List.Tot
+module G = FStar.Ghost
 
 
 let rec partition_equiv_filter (#a: Type) (f: a -> Tot bool) (l: list a)
@@ -317,3 +318,90 @@ let starl_partition_pack (#a: eqtype)
   equiv_sym p1 p2;
   reveal_equiv p2 p1;
   SM.reveal_equiv (hp_of p2) (hp_of p1)
+
+#push-options "--print_implicits --print_universes"
+
+let starl_sl (l: list SM.slprop)
+  : SM.slprop u#1
+  =
+  L.fold_right SM.star l SM.emp
+
+//let rec norm_lemma
+//  (#a: Type)
+//  (f: a -> vprop)
+//  (l: list a)
+//  : Lemma
+//  (hp_of (starl (L.map f l))
+//  ==
+//  starl_sl (L.map (fun y -> hp_of (f y)) l))
+//  = match l with
+//  | [] -> admit ()
+//  | _ -> admit ()
+
+let starl_sel'
+  (#a #b: Type0)
+  (f: a -> (p:vprop{t_of p == b}))
+  (l: list a)
+  : selector' (list b) (hp_of (starl (L.map f l)))
+  =
+  fun h ->
+    assert (SM.interp (hp_of (starl (L.map f l))) h);
+    let r = L.map_gtot
+      (fun (y: a) ->
+        assume (SM.interp (hp_of (f y)) h);
+        let v : b = sel_of (f y) h in v)
+      l
+    in
+    G.reveal r
+
+let starl_sel_depends_only_on (#a #b: Type0)
+  (f: a -> (p:vprop{t_of p == b}))
+  (l: list a)
+  (m0: SM.hmem (hp_of (starl (L.map f l))))
+  (m1: SM.mem{SM.disjoint m0 m1})
+  : Lemma
+  (starl_sel' #a #b f l m0 == starl_sel' #a #b f l (SM.join m0 m1))
+  =
+  let m' = SM.join m0 m1 in
+  admit ();
+  ()
+
+let starl_sel_depends_only_on_core (#a #b: Type0)
+  (f: a -> (p:vprop{t_of p == b}))
+  (l: list a)
+  (m0: SM.hmem (hp_of (starl (L.map f l))))
+  : Lemma
+  (starl_sel' #a #b f l m0 == starl_sel' #a #b f l (SM.core_mem m0))
+  =
+  admit ();
+  ()
+
+let starl_sel
+  (#a #b: Type0)
+  (f: a -> (p:vprop{t_of p == b}))
+  (l: list a)
+  : selector (list b) (hp_of (starl (L.map f l)))
+  =
+  Classical.forall_intro_2 (starl_sel_depends_only_on #a #b f l);
+  Classical.forall_intro (starl_sel_depends_only_on_core #a #b f l);
+  starl_sel' f l
+
+
+[@@ __steel_reduce__]
+let starl'_v
+  (#a #b: Type)
+  (f: a -> (p:vprop{t_of p == b}))
+  (l: list a)
+  : vprop'
+  =
+  {
+    hp = hp_of (starl (L.map f l));
+    t = list b;
+    sel = fun h -> starl_sel f l h
+  }
+unfold
+let starl_v
+  (#a #b: Type)
+  (f: a -> (p:vprop{t_of p == b}))
+  (l: list a)
+  = VUnit (starl'_v #a #b f l)
