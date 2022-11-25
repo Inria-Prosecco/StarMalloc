@@ -1,5 +1,6 @@
 module Utils
 
+module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module I32 = FStar.Int32
@@ -40,11 +41,11 @@ assume val ptrdiff (arr1 arr2: array U8.t)
 // 2) ffs64/ffz64
 open Bitmap5
 assume val ffs64 (x: U64.t)
-  : Pure U32.t
+  : Pure US.t
   (requires U64.v x > 0)
   (ensures fun r ->
-    U32.v r < 64 /\
-    FStar.UInt.nth (U64.v x) (U64.n - U32.v r - 1) = false
+    US.v r < 64 /\
+    FStar.UInt.nth (U64.v x) (U64.n - US.v r - 1) = false
   )
 
 let array_to_bv_slice

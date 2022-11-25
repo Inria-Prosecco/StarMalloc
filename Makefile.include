@@ -21,6 +21,7 @@ SOURCE_DIRS = \
   $(PROJECT_HOME)/lib_avl_mono \
   $(PROJECT_HOME)/lib_bitmap \
   $(PROJECT_HOME)/lib_list \
+  $(PROJECT_HOME)/lib_misc \
   $(PROJECT_HOME)/src
 
   #$(PROJECT_HOME)/lib_avl \

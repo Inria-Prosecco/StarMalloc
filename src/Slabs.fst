@@ -1,11 +1,11 @@
 module Slabs
-
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
+module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module I64 = FStar.Int64
@@ -27,6 +27,8 @@ open SteelUtils
 open SlabsUtils
 open SizeClass
 
+#push-options "--fuel 0 --ifuel 0"
+
 let slab_region_len : U32.t = normalize_term (U32.mul page_size slab_max_number)
 unfold let slab_region
   = r:array U8.t{A.length r = U32.v slab_region_len}
@@ -47,23 +49,23 @@ assume val get_slab_md_region (_:unit)
 noextract
 let slab_md_bitmap_length = nb_slots (U32.uint_to_t min_sc)
 
-#push-options "--z3rlimit 30"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 30 --query_stats"
 inline_for_extraction noextract
 let get_free_slot_aux
   (size_class: sc)
   (bitmap: slab_metadata)
-  (i: U32.t)
-  : Steel U32.t
+  (i: US.t)
+  : Steel US.t
   (A.varray bitmap)
   (fun _ -> A.varray bitmap)
   (requires fun h0 ->
-    U32.v i < U32.v (nb_slots size_class) / 64 /\
-    U64.v (Seq.index (A.asel bitmap h0) (U32.v i)) <> 0)
+    US.v i < U32.v (nb_slots size_class) / 64 /\
+    U64.v (Seq.index (A.asel bitmap h0) (US.v i)) <> 0)
   (ensures fun h0 r h1 ->
     A.asel bitmap h1 == A.asel bitmap h0 /\
-    U32.v r < U32.v (nb_slots size_class) /\
+    US.v r < U32.v (nb_slots size_class) /\
     (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
-    let idx = Bitmap5.f #4 (U32.v r) in
+    let idx = Bitmap5.f #4 (US.v r) in
     Seq.index bm idx = false)
   )
   =
@@ -71,19 +73,21 @@ let get_free_slot_aux
   let x = A.index bitmap i in
   let r = ffs64 x in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
-  let idx1 = G.hide ((U32.v i) * 64) in
-  let idx2 = G.hide ((U32.v i + 1) * 64) in
-  assert (x == Seq.index (A.asel bitmap h0) (U32.v i));
-  assert (FU.nth (U64.v x) (U64.n - 1 - U32.v r) = false);
-  array_to_bv_slice (A.asel bitmap h0) (U32.v i);
-  assert (FU.to_vec (U64.v x) == Seq.slice bm ((U32.v i)*64) ((U32.v i + 1)*64));
-  Seq.lemma_index_slice bm ((U32.v i)*64) ((U32.v i + 1)*64) (U32.v r);
-  let r' = U32.mul 64ul i in
-  U32.add r r'
+  let idx1 = G.hide ((US.v i) * 64) in
+  let idx2 = G.hide ((US.v i + 1) * 64) in
+  assert (x == Seq.index (A.asel bitmap h0) (US.v i));
+  assert (FU.nth (U64.v x) (U64.n - 1 - US.v r) = false);
+  array_to_bv_slice (A.asel bitmap h0) (US.v i);
+  assert (FU.to_vec (U64.v x) == Seq.slice bm ((US.v i)*64) ((US.v i + 1)*64));
+  Seq.lemma_index_slice bm ((US.v i)*64) ((US.v i + 1)*64) (US.v r);
+  //TODO: FIXME
+  admit ();
+  let r' = US.mul i 64sz in
+  US.add r r'
 #pop-options
 
 let get_free_slot (size_class: sc) (bitmap: slab_metadata)
-  : Steel U32.t
+  : Steel US.t
   (A.varray bitmap)
   (fun _ -> A.varray bitmap)
   (requires fun h0 ->
@@ -92,32 +96,34 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
   )
   (ensures fun h0 r h1 ->
     A.asel bitmap h1 == A.asel bitmap h0 /\
-    U32.v r < U32.v (nb_slots size_class) /\
+    US.v r < U32.v (nb_slots size_class) /\
     (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
-    let idx = Bitmap5.f #4 (U32.v r) in
+    let idx = Bitmap5.f #4 (US.v r) in
     Seq.index bm idx = false)
   )
   =
+  //TODO: FIXME
   admit ();
   let bound = U32.div (nb_slots size_class) (U32.uint_to_t U64.n) in
   assert (U32.v bound == U32.v (nb_slots size_class) / 64);
-  let x1 = A.index bitmap 0ul in
-  if (U64.eq x1 0UL && U32.gt bound 1ul) then (
-    let x2 = A.index bitmap 1ul in
-    if (U64.eq x2 0UL && U32.gt bound 2ul) then (
-      let x3 = A.index bitmap 2ul in
-      if (U64.eq x3 0UL && U32.gt bound 3ul) then (
-        get_free_slot_aux size_class bitmap 3ul
+  let x1 = A.index bitmap 0sz in
+  if (not (U64.eq x1 0UL) && U32.gt bound 1ul) then (
+    let x2 = A.index bitmap 1sz in
+    if (not (U64.eq x2 0UL) && U32.gt bound 2ul) then (
+      let x3 = A.index bitmap 2sz in
+      if (not (U64.eq x3 0UL) && U32.gt bound 3ul) then (
+        get_free_slot_aux size_class bitmap 3sz
       ) else (
-        get_free_slot_aux size_class bitmap 2ul
+        get_free_slot_aux size_class bitmap 2sz
       )
     ) else (
-      get_free_slot_aux size_class bitmap 1ul
+      get_free_slot_aux size_class bitmap 1sz
     )
   ) else (
-    get_free_slot_aux size_class bitmap 0ul
+    get_free_slot_aux size_class bitmap 0sz
   )
 
+(*)
 let allocate_slot_aux (#opened:_)
   (size_class: sc)
   (md: slab_metadata) (arr: array U8.t{A.length arr = U32.v page_size})

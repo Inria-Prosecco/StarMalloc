@@ -69,19 +69,18 @@ let p (size_class: sc)
   =
   fun (md: slab_metadata)
   ->
-  (A.varray md `star`
-  slab_vprop size_class (f md) 0 (U32.v (nb_slots size_class)))
-
+  (A.varray md `star` slab_vprop size_class (f md) md)
 //[@@ __reduce__; __steel_reduce__]
 //[@@ __steel_reduce__]
 //unfold
+
 let p_empty (size_class: sc)
   =
   fun (md: slab_metadata)
   ->
-  (A.varray md `vrefine` (fun s -> is_empty size_class s))
+  ((A.varray md `vrefine` (fun s -> is_empty size_class s))
   `star`
-  slab_vprop size_class (f md) 0 (U32.v (nb_slots size_class))
+  slab_vprop size_class (f md) md)
 
 noeq
 type size_class_struct = {

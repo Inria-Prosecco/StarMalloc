@@ -39,3 +39,11 @@ let nb_slots (size_class: sc)
   )
   =
   U32.div page_size size_class
+
+let nb_slots_correct
+  (size_class: sc)
+  (pos: U32.t)
+  : Lemma
+  (requires U32.v pos < U32.v (nb_slots size_class))
+  (ensures U32.v (U32.mul pos size_class) <= U32.v page_size)
+  = ()

@@ -1,8 +1,12 @@
 module Bitmap5
 
-
+module STU = SizeTUtils
+module FI = FStar.Int
+module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
+module U16 = FStar.UInt16
+
 module Seq = FStar.Seq
 module FBV = FStar.BitVector
 
@@ -43,7 +47,7 @@ let f_lemma (#n: nat) (k:nat{k < n * U64.n})
 
 noextract
 let bm_get_aux
-  (#n: nat)
+  (#n: nat{n < FI.max_int U16.n})
   (arr: array U64.t{A.length arr = n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel bool
@@ -56,14 +60,15 @@ let bm_get_aux
   )
   =
   let k1 = U32.div k 64ul in
+  let k_index = STU.small_uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
-  let x = A.index arr k1 in
+  let x = A.index arr k_index in
   let r = Bitmap3.get x k2 in
   return r
 
 #push-options "--z3rlimit 50"
 let bm_get
-  (#n: nat)
+  (#n: nat{n < FI.max_int U16.n})
   (arr: array U64.t{A.length arr = n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel bool
@@ -83,8 +88,9 @@ let bm_get
   let k' = G.hide (f #n (U32.v k)) in
 
   let k1 = U32.div k 64ul in
+  let k_index = STU.small_uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
-  let x = A.index arr k1 in
+  let x = A.index arr k_index in
   let r = Bitmap3.get x k2 in
   Bitmap3.bv_get_lemma x k2;
   assert (r = FU.nth (U64.v (Seq.index s (U32.v k1))) (f_aux (U32.v k2)));
@@ -96,7 +102,7 @@ let bm_get
 
 noextract
 let bm_set_aux
-  (#n: nat)
+  (#n: nat{n < FI.max_int U16.n})
   (arr: array U64.t{A.length arr = n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
@@ -108,14 +114,15 @@ let bm_set_aux
   )
   =
   let k1 = U32.div k 64ul in
+  let k_index = STU.small_uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
-  let x = A.index arr k1 in
+  let x = A.index arr k_index in
   let r = Bitmap3.set x k2 in
-  A.upd arr k1 r
+  A.upd arr k_index r
 
 #push-options "--z3rlimit 50"
 let bm_set
-  (#n: G.erased nat)
+  (#n: nat{n < FI.max_int U16.n})
   (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
@@ -140,16 +147,17 @@ let bm_set
   Bitmap4.array_to_bv2_lemma s0;
   let k' = G.hide (f #n (U32.v k)) in
   let k1 = U32.div k 64ul in
+  let k_index = STU.small_uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
-  let x = A.index arr k1 in
+  let x = A.index arr k_index in
   Bitmap4.array_to_bv_lemma s0 k';
   assert (Seq.index (Bitmap4.array_to_bv s0) k' = false);
-  assert (U32.v k1 = U32.v k / 64);
+  assert (US.v k_index = U32.v k / 64);
   f_lemma #n (U32.v k);
   assert (k' / U64.n = U32.v k1);
   let r = Bitmap3.set x k2 in
   Bitmap3.bv_set_lemma x k2;
-  A.upd arr k1 r;
+  A.upd arr k_index r;
 
   let h1 = get () in
   let s1 : G.erased (Seq.lseq U64.t n) = A.asel arr h1 in
@@ -165,7 +173,7 @@ let bm_set
 
 noextract
 let bm_unset_aux
-  (#n: nat)
+  (#n: nat{n < FI.max_int U16.n})
   (arr: array U64.t{A.length arr = n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
@@ -177,14 +185,15 @@ let bm_unset_aux
   )
   =
   let k1 = U32.div k 64ul in
+  let k_index = STU.small_uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
-  let x = A.index arr k1 in
+  let x = A.index arr k_index in
   let r = Bitmap3.unset x k2 in
-  A.upd arr k1 r
+  A.upd arr k_index r
 
 #push-options "--z3rlimit 50"
 let bm_unset
-  (#n: nat)
+  (#n: nat{n < FI.max_int U16.n})
   (arr: array U64.t{A.length arr = n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
@@ -209,8 +218,9 @@ let bm_unset
   Bitmap4.array_to_bv2_lemma s0;
   let k' = G.hide (f #n (U32.v k)) in
   let k1 = U32.div k 64ul in
+  let k_index = STU.small_uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
-  let x = A.index arr k1 in
+  let x = A.index arr k_index in
   Bitmap4.array_to_bv_lemma s0 k';
   assert (Seq.index (Bitmap4.array_to_bv s0) k' = true);
   assert (U32.v k1 = U32.v k / 64);
@@ -218,7 +228,7 @@ let bm_unset
   assert (k' / U64.n = U32.v k1);
   let r = Bitmap3.unset x k2 in
   Bitmap3.bv_unset_lemma x k2;
-  A.upd arr k1 r;
+  A.upd arr k_index r;
 
   let h1 = get () in
   let s1 : G.erased (Seq.lseq U64.t n) = A.asel arr h1 in
