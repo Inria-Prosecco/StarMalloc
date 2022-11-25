@@ -459,6 +459,7 @@ let change_slprop_rel_with_cond (#opened:inames)
   ) : SteelGhost unit opened p (fun _ -> q) (fun h0 -> cond (h0 p)) (fun h0 _ h1 -> rel (h0 p) (h1 q))
   = change_slprop_rel_with_cond #opened p q cond rel l
 
+#push-options "--compat_pre_typed_indexed_effects"
 let tail_cell #a p ptr
   =
   reveal_non_empty_cell p ptr;
@@ -480,6 +481,7 @@ let tail_cell #a p ptr
   change_slprop_rel (llist_cell p (get_next x)) (llist_cell p (get_next n)) (fun x y -> x == y) (fun _ -> ());
   change_slprop_rel (p (get_data x)) (p (get_data n)) (fun x y -> x == y) (fun _ -> ());
   return n
+#pop-options
 
 val to_list_cell (#opened:inames) (#a:Type0) (p : a -> vprop) (ptr:t a)
   : SteelGhost unit opened

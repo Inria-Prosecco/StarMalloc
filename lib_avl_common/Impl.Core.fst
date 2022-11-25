@@ -254,21 +254,27 @@ let lemma_leaf_is_null (#a:Type) (ptr:t a) (t:wdm a) (m:mem) : Lemma
   | Spec.Leaf -> Mem.pure_interp (ptr == null_t) m
   | _ -> ()
 
+#push-options "--compat_pre_typed_indexed_effects"
 let leaf_is_null #opened #a ptr =
   let h = get () in
   let t = hide (v_linked_tree ptr h) in
   extract_info (linked_tree ptr) t (ptr == null_t)
     (lemma_leaf_is_null ptr t)
+#pop-options
 
+#push-options "--compat_pre_typed_indexed_effects"
 let node_is_not_null #opened #a ptr =
   let h = get () in
   let t = hide (v_linked_tree ptr h) in
   extract_info (linked_tree ptr) t (ptr =!= null_t) (lemma_node_is_not_null ptr t)
+#pop-options
 
+#push-options "--compat_pre_typed_indexed_effects"
 let not_null_is_node #opened #a ptr =
   let h = get () in
   let t = hide (v_linked_tree ptr h) in
   extract_info (linked_tree ptr) t (Spec.Node? t == true) (lemma_not_null_is_node ptr t)
+#pop-options
 
 let pack_tree_lemma_aux (#a:Type0) (pt:t a)
   (x: node a) (l r: wdm (node a)) (s h:nat) (m:mem) : Lemma
@@ -481,10 +487,12 @@ let is_node (#a:Type) (t:wdm (node a)) : prop = match t with
   | Spec.Leaf -> False
   | Spec.Node _ _ _ _ _ -> True
 
+#push-options "--compat_pre_typed_indexed_effects"
 let reveal_non_empty_tree #opened #a ptr =
   let h = get () in
   let t = hide (v_node ptr h) in
   extract_info (tree_node ptr) t (is_node t) (reveal_non_empty_lemma ptr t)
+#pop-options
 
 let head (#a:Type0) (t:erased (wdm (node a)))
   : Pure (erased (node a)) (requires Spec.Node? (reveal t)) (ensures fun _ -> True) =
