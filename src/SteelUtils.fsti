@@ -28,10 +28,11 @@ val starl_seq_append (s1 s2: Seq.seq vprop)
   : Lemma
   (starl_seq (Seq.append s1 s2) `equiv` (starl_seq s1 `star` starl_seq s2))
 
-val starl_seq_unpack (s: Seq.seq vprop) (n: nat)
+val starl_seq_unpack (s: Seq.seq vprop) (n: nat{n < Seq.length s})
   : Lemma
-  (requires n < Seq.length s)
-  (ensures
+  //(requires n < Seq.length s)
+  //(ensures
+  (
     starl_seq s
     `equiv`
     (Seq.index s n `star`

@@ -49,10 +49,11 @@ let starl_seq_append (s1 s2: Seq.seq vprop)
   SeqUtils.lemma_seq_to_list_append s1 s2;
   starl_append l1 l2
 
-let starl_seq_unpack (s: Seq.seq vprop) (n: nat)
+let starl_seq_unpack (s: Seq.seq vprop) (n: nat{n < Seq.length s})
   : Lemma
-  (requires n < Seq.length s)
-  (ensures
+  //(requires n < Seq.length s)
+  //(ensures
+  (
     starl_seq s
     `equiv`
     (Seq.index s n `star`
@@ -187,6 +188,8 @@ let starl_seq_map_imp (#a #b: Type0)
   Seq.map_seq_len f s;
   Classical.forall_intro (Seq.map_seq_index f s);
   starl_seq_imp (Seq.map_seq f s) k
+
+//let vpb (b: Type0) = vp:vprop{t_of vp == b}
 
 let starl_seq_sel_aux (#a #b: Type0)
   (f: a -> (vp:vprop{t_of vp == b}))
@@ -376,3 +379,251 @@ let starl_seq_sel (#a #b: Type0)
   Classical.forall_intro_2 (starl_seq_sel_depends_only_on #a #b f s);
   Classical.forall_intro (starl_seq_sel_depends_only_on_core #a #b f s);
   starl_seq_sel' f s
+
+let starseq_equiv (#a #b: Type0)
+  (f: a -> (vp:vprop{t_of vp == b}))
+  (s: Seq.seq a)
+  : Lemma
+  (starseq #a #b f s `equiv` starl_seq (Seq.map_seq f s))
+  =
+  let p1 = starseq #a #b f s in
+  let p2 = starl_seq (Seq.map_seq f s) in
+  assert (hp_of p1 `SM.equiv` hp_of p2);
+  reveal_equiv p1 p2
+
+#set-options "--print_implicits --print_universes"
+
+//module U = FStar.Universe
+//
+//let map_rm_ref
+//  (p: vprop -> prop)
+//  (s: Seq.seq (v:vprop{p v}))
+//  : Pure (Seq.seq vprop)
+//  (requires True)
+//  (ensures fun s -> forall x. p (Seq.index s x))
+//  =
+//  let f = (fun (x:vprop{p x}) -> x <: vprop) in
+//  let s' = Seq.map_seq f s in
+//  Seq.map_seq_len f s;
+//  Classical.forall_intro (fun i -> Seq.map_seq_index f s i);
+//  s'
+//
+//let map_add_ref
+//  (p: vprop -> prop)
+//  (s: Seq.seq vprop)
+//  : Pure (Seq.seq (v:vprop{p v}))
+//  (requires forall x. p (Seq.index s x))
+//  (ensures fun _ -> True)
+//  =
+//  let f = (fun (i:nat{i < Seq.length s}) ->
+//    (Seq.index s i) <: v:vprop{p v}) in
+//  Seq.map_seq f (SeqUtils.init_nat (Seq.length s))
+//
+//let map_add_rm_ref_id
+//  (p: vprop -> prop)
+//  (s: Seq.seq (x:vprop{p x}))
+//  : Lemma
+//  (map_add_ref p (map_rm_ref p s) == s)
+//  =
+//  let f1 = (fun (x:vprop{p x}) -> x <: vprop) in
+//  Seq.map_seq_len f1 s;
+//  Classical.forall_intro (fun i -> Seq.map_seq_index f1 s i);
+//  let s' : Seq.seq vprop = Seq.map_seq f1 s in
+//  let f2 = (fun (i:nat{i < Seq.length s'}) ->
+//    (Seq.index s' i) <: v:vprop{p v}) in
+//  let init = SeqUtils.init_nat (Seq.length s') in
+//  Seq.map_seq_len f2 init;
+//  Classical.forall_intro (fun i -> Seq.map_seq_index f2 init i);
+//  admit ();
+//  Seq.lemma_eq_intro (map_add_ref p (map_rm_ref p s)) s;
+//  ()
+
+let starseq_append (#a #b: Type0)
+  (f: a -> (vp:vprop{t_of vp == b}))
+  (s1 s2: Seq.seq u#0 a)
+  : Lemma
+  (starseq #a #b f (Seq.append s1 s2)
+  `equiv`
+  (starseq #a #b f s1 `star` starseq #a #b f s2))
+  =
+  let s = Seq.append s1 s2 in
+  //let t1 = Seq.map_seq f s1 in
+  //let t2 = Seq.map_seq f s2 in
+  let u1 : Seq.seq vprop = Seq.map_seq f s1 in
+  let u2 : Seq.seq vprop = Seq.map_seq f s2 in
+  let u : Seq.seq vprop= Seq.map_seq f s in
+  Seq.map_seq_append (f <: a -> vprop) s1 s2;
+  assert (u == Seq.append u1 u2);
+  starseq_equiv #a #b f s;
+  starl_seq_append u1 u2;
+  equiv_trans
+    (starseq #a #b f (Seq.append s1 s2))
+    (starl_seq (Seq.append u1 u2))
+    (starl_seq u1 `star` starl_seq u2);
+  starseq_equiv #a #b f s1;
+  equiv_sym
+    (starseq #a #b f s1)
+    (starl_seq u1);
+  starseq_equiv #a #b f s2;
+  equiv_sym
+    (starseq #a #b f s2)
+    (starl_seq u2);
+  star_congruence
+    (starl_seq u1) (starl_seq u2)
+    (starseq #a #b f s1) (starseq #a #b f s2);
+  equiv_trans
+    (starseq #a #b f (Seq.append s1 s2))
+    (starl_seq u1 `star` starl_seq u2)
+    (starseq #a #b f s1 `star` starseq #a #b f s2)
+
+open FStar.Mul
+
+#push-options "--z3rlimit 30"
+let starseq_unpack (#a #b: Type0)
+  (f: a -> (vp:vprop{t_of vp == b}))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  : Lemma
+  (
+    starseq #a #b f s
+    `equiv`
+    (f (Seq.index s n) `star`
+      (starseq #a #b f (Seq.slice s 0 n) `star`
+       starseq #a #b f (Seq.slice s (n+1) (Seq.length s))))
+  )
+  =
+  let f' = f <: a -> vprop in
+  Seq.map_seq_len f' s;
+  starseq_equiv #a #b f s;
+  starl_seq_unpack (Seq.map_seq f s) n;
+  equiv_trans
+    (starseq #a #b f s)
+    (starl_seq (Seq.map_seq f' s))
+    (Seq.index (Seq.map_seq f s) n `star`
+      (starl_seq (Seq.slice (Seq.map_seq f s) 0 n) `star`
+       starl_seq (Seq.slice (Seq.map_seq f s) (n+1) (Seq.length s))));
+  assume (Seq.slice (Seq.map_seq f' s) 0 n
+  == Seq.map_seq f (Seq.slice s 0 n));
+  assume (Seq.slice (Seq.map_seq f' s) (n+1) (Seq.length s)
+  == Seq.map_seq f (Seq.slice s (n+1) (Seq.length s)));
+  starseq_equiv #a #b f (Seq.slice s 0 n);
+  equiv_sym
+    (starseq #a #b f (Seq.slice s 0 n))
+    (starl_seq (Seq.slice (Seq.map_seq f' s) 0 n));
+  starseq_equiv #a #b f (Seq.slice s (n+1) (Seq.length s));
+  equiv_sym
+    (starseq #a #b f (Seq.slice s (n+1) (Seq.length s)))
+    (starl_seq (Seq.slice (Seq.map_seq f s) (n+1) (Seq.length s)));
+  star_congruence
+    (starl_seq (Seq.slice (Seq.map_seq f s) 0 n))
+    (starl_seq (Seq.slice (Seq.map_seq f s) (n+1) (Seq.length s)))
+    (starseq #a #b f (Seq.slice s 0 n))
+    (starseq #a #b f (Seq.slice s (n+1) (Seq.length s)));
+  //Seq.map_seq_len f s;
+  assume (Seq.index (Seq.map_seq f' s) n
+  == f (Seq.index s n));
+
+  //assert (
+  //  f' (Seq.index s n)
+  //  `equiv`
+  //  Seq.index (Seq.map_seq f' s) n
+  //);
+  //assert (Seq.index (Seq.map_seq f' s) n
+  //`equiv` f (Seq.index s n));
+  //admit ();
+  //star_congruence
+  //  (Seq.index (Seq.map_seq f' s) n)
+  //  (starl_seq (Seq.slice (Seq.map_seq f s) 0 n) `star`
+  //  starl_seq (Seq.slice (Seq.map_seq f s) (n+1) (Seq.length s)))
+  //  (f (Seq.index s n))
+  //  (starseq #a #b f (Seq.slice s 0 n) `star`
+  //  starseq #a #b f (Seq.slice s (n+1) (Seq.length s)));
+
+  admit ();
+  ()
+
+let starseq_pack (#a #b: Type0)
+  (f: a -> (vp:vprop{t_of vp == b}))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  : Lemma
+  (
+    (f (Seq.index s n) `star`
+      (starseq #a #b f (Seq.slice s 0 n) `star`
+       starseq #a #b f (Seq.slice s (n+1) (Seq.length s))))
+    `equiv`
+    starseq #a #b f s
+  )
+  =
+  let p1 =
+    (f (Seq.index s n) `star`
+      (starseq #a #b f (Seq.slice s 0 n) `star`
+       starseq #a #b f (Seq.slice s (n+1) (Seq.length s))))
+  in
+  let p2 =
+    starseq #a #b f s
+  in
+  starseq_unpack #a #b f s n;
+  equiv_sym p2 p1
+
+
+let starseq_unpack_lemma (#a #b: Type0)
+  (f: a -> (vp:vprop{t_of vp == b}))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  (v: Seq.seq (G.erased b))
+  (m: SM.mem)
+  : Lemma
+  (requires
+    SM.interp (hp_of (starseq #a #b f s)) m /\
+    sel_of (starseq #a #b f s) m == v
+  )
+  (ensures
+    SM.interp (hp_of (
+      f (Seq.index s n) `star`
+      starseq #a #b f (Seq.slice s 0 n) `star`
+      starseq #a #b f (Seq.slice s (n+1) (Seq.length s))
+    )) m
+  )
+  =
+  let p1 = starseq #a #b f s in
+  let p2 =
+    f (Seq.index s n) `star`
+    starseq #a #b f (Seq.slice s 0 n) `star`
+    starseq #a #b f (Seq.slice s (n+1) (Seq.length s)) in
+  starseq_unpack #a #b f s n;
+  admit ();
+  can_be_split_interp p1 p2 m;
+  reveal_equiv p1 p2
+
+// TODO
+// starseq_unpack (pure equiv)
+// starseq_pack (pure equiv, equiv_sym of starseq_unpack)
+// starseq_unpack_lemma (pure on SM.mem)
+// starseq_pack_lemma (pure on SM.mem)
+// starseq_unpack (Steel)
+// starseq_pack (Steel)
+// remove refined type n:nat{n < Seq.length s} and add req/ens again
+
+(*)
+let starl_seq_pack_s (#opened:_) (s: Seq.seq vprop) (n: nat{n < Seq.length s})
+  : SteelGhost unit opened
+  (Seq.index s n `star`
+    (starl_seq (Seq.slice s 0 n) `star`
+     starl_seq (Seq.slice s (n+1) (Seq.length s))))
+  (starl_seq s)
+  (requires fun h0 -> True)
+  (ensures fun h0 _ h1 ->
+    v_starseq w
+
+  
+  )
+
+  (requires n < Seq.length s)
+  (ensures
+    (Seq.index s n `star`
+      (starl_seq (Seq.slice s 0 n) `star`
+       starl_seq (Seq.slice s (n+1) (Seq.length s))))
+    `equiv`
+    starl_seq s
+  )
