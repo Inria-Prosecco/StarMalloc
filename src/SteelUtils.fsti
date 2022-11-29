@@ -60,12 +60,11 @@ val starl_seq_imp (s: Seq.seq vprop) (k: nat)
   )
 
 val starl_seq_map_imp (#a #b: Type0)
-  (#n: nat)
   (f: a -> vprop)
-  (s: Seq.lseq a n)
+  (s: Seq.seq a)
   (k: nat)
   : Lemma
-  (requires k < n)
+  (requires k < Seq.length s)
   (ensures
     starl_seq (Seq.map_seq f s)
     `can_be_split`

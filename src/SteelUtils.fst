@@ -173,12 +173,11 @@ let starl_seq_imp (s: Seq.seq vprop) (k: nat)
      starl_seq (Seq.slice s (k+1) (Seq.length s)))
 
 let starl_seq_map_imp (#a #b: Type0)
-  (#n: nat)
   (f: a -> vprop)
-  (s: Seq.lseq a n)
+  (s: Seq.seq a)
   (k: nat)
   : Lemma
-  (requires k < n)
+  (requires k < Seq.length s)
   (ensures
     starl_seq (Seq.map_seq f s)
     `can_be_split`
@@ -186,13 +185,8 @@ let starl_seq_map_imp (#a #b: Type0)
   )
   =
   Seq.map_seq_len f s;
-  let s' : Seq.lseq vprop n = Seq.map_seq f s in
-  assert (Seq.length (Seq.map_seq f s) == Seq.length s);
-  assert (k < Seq.length s);
-  assert (k < Seq.length (Seq.map_seq f s));
   Classical.forall_intro (Seq.map_seq_index f s);
-  assert (Seq.index s' k == f (Seq.index s k));
-  starl_seq_imp s' k
+  starl_seq_imp (Seq.map_seq f s) k
 
 let starl_seq_sel_aux (#a #b: Type0)
   (f: a -> (vp:vprop{t_of vp == b}))
@@ -203,7 +197,7 @@ let starl_seq_sel_aux (#a #b: Type0)
   =
   Seq.map_seq_len f s;
   let v = Seq.index s k in
-  starl_seq_map_imp #a #b #(Seq.length s) f s k;
+  starl_seq_map_imp #a #b f s k;
   assert (starl_seq (Seq.map_seq f s) `can_be_split` (f (Seq.index s k)));
   can_be_split_interp
     (starl_seq (Seq.map_seq f s))
@@ -245,7 +239,7 @@ let starl_seq_sel_depends_only_on_aux (#a #b: Type0)
     (SeqUtils.init_nat (Seq.length s));
   let v1 = starl_seq_sel_aux #a #b f s m0 k in
   let v2 = starl_seq_sel_aux #a #b f s m' k in
-  starl_seq_map_imp #a #b #(Seq.length s) f s k;
+  starl_seq_map_imp #a #b f s k;
   can_be_split_interp
     (starl_seq (Seq.map_seq f s))
     (f (Seq.index s k)) m0;
@@ -274,7 +268,7 @@ let starl_seq_sel_depends_only_on_core_aux (#a #b: Type0)
     (SeqUtils.init_nat (Seq.length s));
   let v1 = starl_seq_sel_aux #a #b f s m0 k in
   let v2 = starl_seq_sel_aux #a #b f s (SM.core_mem m0) k in
-  starl_seq_map_imp #a #b #(Seq.length s) f s k;
+  starl_seq_map_imp #a #b f s k;
   can_be_split_interp
     (starl_seq (Seq.map_seq f s))
     (f (Seq.index s k)) m0;
