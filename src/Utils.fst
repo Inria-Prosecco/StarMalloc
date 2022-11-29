@@ -64,6 +64,7 @@ let array_to_bv_slice
     FU.to_vec #64 (U64.v x)))
   =
   Bitmap4.array_to_bv_lemma_upd_set_aux4 s0 (i*64)
+
 let lemma_div (x y z: nat)
   : Lemma
   (requires
@@ -77,26 +78,3 @@ let lemma_div (x y z: nat)
   FStar.Math.Lemmas.lemma_mod_plus 0 y z;
   assert ((y * z) % z = 0)
 
-let rec lemma_seq_to_list_append (#a:Type) (s1 s2: Seq.seq a)
-  : Lemma
-  (ensures
-    Seq.seq_to_list (Seq.append s1 s2) == L.append (Seq.seq_to_list s1) (Seq.seq_to_list s2))
-  (decreases Seq.length s1)
-  = if Seq.length s1 = 0 then (assert (Seq.append s1 s2 `Seq.equal` s2))
-    else (
-      let s1' = Seq.slice s1 1 (Seq.length s1) in
-      let s12 = Seq.append s1 s2 in
-      let s12' = Seq.slice s12 1 (Seq.length s12) in
-      lemma_seq_to_list_append s1' s2;
-      assert (s12' `Seq.equal` Seq.append s1' s2)
-    )
-
-let lemma_index_slice (#a:Type) (s:Seq.seq a)
-  (i:nat)
-  (j:nat{i <= j /\ j <= Seq.length s})
-  (k:nat{k < j - i})
-  : Lemma
-  (requires True)
-  (ensures (Seq.index (Seq.slice s i j) k == Seq.index s (k + i)))
-  =
-  Seq.lemma_index_slice s i j k

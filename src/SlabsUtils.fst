@@ -23,7 +23,8 @@ open Utils
 open Utils2
 open SteelUtils
 
-#push-options "--z3rlimit 30"
+//TODO: FIXME
+#push-options "--z3rlimit 50"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   : Pure (array U8.t)
   (requires
