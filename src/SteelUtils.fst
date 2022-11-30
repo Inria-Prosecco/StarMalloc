@@ -305,9 +305,6 @@ let starl_seq_sel_depends_only_on (#a #b: Type0)
     Seq.map_seq
       (fun k -> starl_seq_sel_aux f s m' k)
       (SeqUtils.init_nat (Seq.length s)) in
-    //Seq.map_seq
-    //  (starl_seq_sel_aux f s m0)
-    //  (SeqUtils.init_nat (Seq.length s)) in
   assert (s1 == s1');
   assert_norm (s2 == s2');
   Classical.forall_intro (
@@ -344,9 +341,6 @@ let starl_seq_sel_depends_only_on_core (#a #b: Type0)
     Seq.map_seq
       (fun k -> starl_seq_sel_aux f s m' k)
       (SeqUtils.init_nat (Seq.length s)) in
-    //Seq.map_seq
-    //  (starl_seq_sel_aux f s m0)
-    //  (SeqUtils.init_nat (Seq.length s)) in
   assert (s1 == s1');
   assert_norm (s2 == s2');
   Seq.map_seq_len
@@ -402,8 +396,6 @@ let starseq_append (#a #b: Type0)
   (starseq #a #b f s1 `star` starseq #a #b f s2))
   =
   let s = Seq.append s1 s2 in
-  //let t1 = Seq.map_seq f s1 in
-  //let t2 = Seq.map_seq f s2 in
   let u1 : Seq.seq vprop = Seq.map_seq f s1 in
   let u2 : Seq.seq vprop = Seq.map_seq f s2 in
   let u : Seq.seq vprop= Seq.map_seq f s in
