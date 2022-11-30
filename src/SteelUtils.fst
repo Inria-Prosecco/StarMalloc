@@ -374,6 +374,57 @@ let starl_seq_sel (#a #b: Type0)
   Classical.forall_intro (starl_seq_sel_depends_only_on_core #a #b f s);
   starl_seq_sel' f s
 
+let starseq_sel_len (#a #b: Type0)
+  (f: a -> (vp:vprop{t_of vp == b}))
+  (s: Seq.seq a)
+  (m: SM.mem)
+  : Lemma
+  (requires
+    SM.interp (hp_of (starseq #a #b f s)) m
+  )
+  (ensures
+    Seq.length (sel_of (starseq #a #b f s) m) == Seq.length s
+  )
+  = admit ()
+
+let starseq_sel_index (#a #b: Type0)
+  (f: a -> (vp:vprop{t_of vp == b}))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  (m: SM.mem)
+  : Lemma
+  (requires
+    SM.interp (hp_of (starseq #a #b f s)) m
+  )
+  (ensures (
+    starseq_sel_len #a #b f s m;
+    SM.interp (hp_of (f (Seq.index s n))) m /\
+    G.reveal (Seq.index (sel_of (starseq #a #b f s) m) n)
+    ==
+    sel_of (f (Seq.index s n)) m
+  ))
+  =
+  admit ()
+
+let starseq_sel_slice (#a #b: Type0)
+  (f: a -> (vp:vprop{t_of vp == b}))
+  (s: Seq.seq a)
+  (i: nat)
+  (j: nat{i <= j /\ j <= Seq.length s})
+  (m: SM.mem)
+  : Lemma
+  (requires
+    SM.interp (hp_of (starseq #a #b f s)) m
+  )
+  (ensures (
+    starseq_sel_len #a #b f s m;
+    SM.interp (hp_of (starseq #a #b f (Seq.slice s i j))) m /\
+    sel_of (starseq #a #b f (Seq.slice s i j)) m
+      == Seq.slice (sel_of (starseq #a #b f s) m) i j
+  ))
+  =
+  admit ()
+
 let starseq_equiv (#a #b: Type0)
   (f: a -> (vp:vprop{t_of vp == b}))
   (s: Seq.seq a)
@@ -525,26 +576,36 @@ let starseq_unpack_lemma (#a #b: Type0)
   (ensures
     SM.interp (hp_of (
       f (Seq.index s n) `star`
-      starseq #a #b f (Seq.slice s 0 n) `star`
-      starseq #a #b f (Seq.slice s (n+1) (Seq.length s))
-    )) m
+      (starseq #a #b f (Seq.slice s 0 n) `star`
+      starseq #a #b f (Seq.slice s (n+1) (Seq.length s)))
+    )) m /\
+    Seq.length v == Seq.length s /\
+    sel_of (f (Seq.index s n)) m
+      == G.reveal (Seq.index v n) /\
+    sel_of (starseq #a #b f (Seq.slice s 0 n)) m
+      == Seq.slice v 0 n /\
+    sel_of (starseq #a #b f (Seq.slice s (n+1) (Seq.length s))) m
+      == Seq.slice v (n+1) (Seq.length s)
   )
   =
   let p1 = starseq #a #b f s in
   let p2 =
     f (Seq.index s n) `star`
-    starseq #a #b f (Seq.slice s 0 n) `star`
-    starseq #a #b f (Seq.slice s (n+1) (Seq.length s)) in
+    (starseq #a #b f (Seq.slice s 0 n) `star`
+    starseq #a #b f (Seq.slice s (n+1) (Seq.length s))) in
   starseq_unpack #a #b f s n;
-  admit ();
-  can_be_split_interp p1 p2 m;
-  reveal_equiv p1 p2
+  reveal_equiv p1 p2;
+  starseq_sel_len #a #b f s m;
+  starseq_sel_index #a #b f s n m;
+  starseq_sel_slice #a #b f s 0 n m;
+  starseq_sel_slice #a #b f s (n+1) (Seq.length s) m
 
 // TODO
 // [ok] starseq_unpack (pure equiv)
 //   [ok] aux lemma
 // [ok] starseq_pack (pure equiv, equiv_sym of starseq_unpack)
-// starseq_unpack_lemma (pure on SM.mem)
+// [ok] starseq_unpack_lemma (pure on SM.mem)
+//   aux lemma
 // starseq_pack_lemma (pure on SM.mem)
 // starseq_unpack (Steel)
 // starseq_pack (Steel)
