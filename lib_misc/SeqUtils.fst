@@ -68,6 +68,34 @@ let init_u32_refined (len: nat)
     = Seq.map_seq f s in
   s'
 
+let map_seq_slice_aux (#a #b:Type)
+  (f: a -> Tot b)
+  (s:Seq.seq a)
+  (i:nat)
+  (j:nat{i <= j /\ j <= Seq.length s})
+  (k:nat{k < j - i})
+  : Lemma
+  (
+  Seq.map_seq_len f s;
+  Seq.map_seq_len f (Seq.slice s i j);
+  Seq.index (Seq.map_seq f (Seq.slice s i j)) k
+  ==
+  Seq.index (Seq.slice (Seq.map_seq f s) i j) k
+  )
+  =
+  Seq.map_seq_len f s;
+  Seq.map_seq_len f (Seq.slice s i j);
+  let v1 = Seq.index (Seq.map_seq f (Seq.slice s i j)) k in
+  let v2 = Seq.index (Seq.slice (Seq.map_seq f s) i j) k in
+  lemma_index_slice (Seq.map_seq f s) i j k;
+  assert (v2 == Seq.index (Seq.map_seq f s) (i + k));
+  Seq.map_seq_index f s (i + k);
+  assert (v2 == f (Seq.index s (i + k)));
+  Seq.map_seq_index f (Seq.slice s i j) k;
+  assert (v1 == f (Seq.index (Seq.slice s i j) k));
+  lemma_index_slice s i j k;
+  assert (v1 == v2)
+
 let map_seq_slice (#a #b:Type)
   (f: a -> Tot b)
   (s:Seq.seq a)
@@ -80,4 +108,9 @@ let map_seq_slice (#a #b:Type)
   ==
   Seq.slice (Seq.map_seq f s) i j)
   =
-  admit ()
+  Seq.map_seq_len f s;
+  Seq.map_seq_len f (Seq.slice s i j);
+  Classical.forall_intro (map_seq_slice_aux f s i j);
+  Seq.lemma_eq_intro
+    (Seq.map_seq f (Seq.slice s i j))
+    (Seq.slice (Seq.map_seq f s) i j)

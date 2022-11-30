@@ -542,7 +542,7 @@ let starseq_unpack_lemma (#a #b: Type0)
 
 // TODO
 // [ok] starseq_unpack (pure equiv)
-// - aux lemma
+//   [ok] aux lemma
 // [ok] starseq_pack (pure equiv, equiv_sym of starseq_unpack)
 // starseq_unpack_lemma (pure on SM.mem)
 // starseq_pack_lemma (pure on SM.mem)
