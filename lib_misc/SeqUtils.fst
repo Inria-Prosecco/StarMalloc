@@ -68,3 +68,16 @@ let init_u32_refined (len: nat)
     = Seq.map_seq f s in
   s'
 
+let map_seq_slice (#a #b:Type)
+  (f: a -> Tot b)
+  (s:Seq.seq a)
+  (i:nat)
+  (j:nat{i <= j /\ j <= Seq.length s})
+  : Lemma
+  (
+  Seq.map_seq_len f s;
+  Seq.map_seq f (Seq.slice s i j)
+  ==
+  Seq.slice (Seq.map_seq f s) i j)
+  =
+  admit ()

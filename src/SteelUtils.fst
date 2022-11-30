@@ -393,51 +393,6 @@ let starseq_equiv (#a #b: Type0)
 
 #set-options "--print_implicits --print_universes"
 
-//module U = FStar.Universe
-//
-//let map_rm_ref
-//  (p: vprop -> prop)
-//  (s: Seq.seq (v:vprop{p v}))
-//  : Pure (Seq.seq vprop)
-//  (requires True)
-//  (ensures fun s -> forall x. p (Seq.index s x))
-//  =
-//  let f = (fun (x:vprop{p x}) -> x <: vprop) in
-//  let s' = Seq.map_seq f s in
-//  Seq.map_seq_len f s;
-//  Classical.forall_intro (fun i -> Seq.map_seq_index f s i);
-//  s'
-//
-//let map_add_ref
-//  (p: vprop -> prop)
-//  (s: Seq.seq vprop)
-//  : Pure (Seq.seq (v:vprop{p v}))
-//  (requires forall x. p (Seq.index s x))
-//  (ensures fun _ -> True)
-//  =
-//  let f = (fun (i:nat{i < Seq.length s}) ->
-//    (Seq.index s i) <: v:vprop{p v}) in
-//  Seq.map_seq f (SeqUtils.init_nat (Seq.length s))
-//
-//let map_add_rm_ref_id
-//  (p: vprop -> prop)
-//  (s: Seq.seq (x:vprop{p x}))
-//  : Lemma
-//  (map_add_ref p (map_rm_ref p s) == s)
-//  =
-//  let f1 = (fun (x:vprop{p x}) -> x <: vprop) in
-//  Seq.map_seq_len f1 s;
-//  Classical.forall_intro (fun i -> Seq.map_seq_index f1 s i);
-//  let s' : Seq.seq vprop = Seq.map_seq f1 s in
-//  let f2 = (fun (i:nat{i < Seq.length s'}) ->
-//    (Seq.index s' i) <: v:vprop{p v}) in
-//  let init = SeqUtils.init_nat (Seq.length s') in
-//  Seq.map_seq_len f2 init;
-//  Classical.forall_intro (fun i -> Seq.map_seq_index f2 init i);
-//  admit ();
-//  Seq.lemma_eq_intro (map_add_ref p (map_rm_ref p s)) s;
-//  ()
-
 let starseq_append (#a #b: Type0)
   (f: a -> (vp:vprop{t_of vp == b}))
   (s1 s2: Seq.seq u#0 a)
@@ -476,9 +431,6 @@ let starseq_append (#a #b: Type0)
     (starl_seq u1 `star` starl_seq u2)
     (starseq #a #b f s1 `star` starseq #a #b f s2)
 
-open FStar.Mul
-
-#push-options "--z3rlimit 30"
 let starseq_unpack (#a #b: Type0)
   (f: a -> (vp:vprop{t_of vp == b}))
   (s: Seq.seq a)
@@ -492,55 +444,56 @@ let starseq_unpack (#a #b: Type0)
        starseq #a #b f (Seq.slice s (n+1) (Seq.length s))))
   )
   =
-  let f' = f <: a -> vprop in
-  Seq.map_seq_len f' s;
+  Seq.map_seq_len (f <: a -> vprop) s;
+  let u : Seq.seq vprop = Seq.map_seq f s in
+  let u1 : Seq.seq vprop = Seq.slice u 0 n in
+  let u2 : Seq.seq vprop = Seq.slice u (n+1) (Seq.length s) in
   starseq_equiv #a #b f s;
   starl_seq_unpack (Seq.map_seq f s) n;
   equiv_trans
     (starseq #a #b f s)
-    (starl_seq (Seq.map_seq f' s))
+    (starl_seq (Seq.map_seq f s))
     (Seq.index (Seq.map_seq f s) n `star`
-      (starl_seq (Seq.slice (Seq.map_seq f s) 0 n) `star`
-       starl_seq (Seq.slice (Seq.map_seq f s) (n+1) (Seq.length s))));
-  assume (Seq.slice (Seq.map_seq f' s) 0 n
-  == Seq.map_seq f (Seq.slice s 0 n));
-  assume (Seq.slice (Seq.map_seq f' s) (n+1) (Seq.length s)
-  == Seq.map_seq f (Seq.slice s (n+1) (Seq.length s)));
+      (starl_seq u1 `star` starl_seq u2));
+  let t1 : Seq.seq vprop = Seq.map_seq f (Seq.slice s 0 n) in
+  let t2 : Seq.seq vprop = Seq.map_seq f (Seq.slice s (n+1) (Seq.length s)) in
+  SeqUtils.map_seq_slice (f <: a -> vprop) s 0 n;
+  SeqUtils.map_seq_slice (f <: a -> vprop) s (n+1) (Seq.length s);
+  assert (u1 == t1);
+  assert (u2 == t2);
   starseq_equiv #a #b f (Seq.slice s 0 n);
   equiv_sym
     (starseq #a #b f (Seq.slice s 0 n))
-    (starl_seq (Seq.slice (Seq.map_seq f' s) 0 n));
+    (starl_seq u1);
   starseq_equiv #a #b f (Seq.slice s (n+1) (Seq.length s));
   equiv_sym
     (starseq #a #b f (Seq.slice s (n+1) (Seq.length s)))
-    (starl_seq (Seq.slice (Seq.map_seq f s) (n+1) (Seq.length s)));
+    (starl_seq u2);
   star_congruence
-    (starl_seq (Seq.slice (Seq.map_seq f s) 0 n))
-    (starl_seq (Seq.slice (Seq.map_seq f s) (n+1) (Seq.length s)))
+    (starl_seq u1)
+    (starl_seq u2)
     (starseq #a #b f (Seq.slice s 0 n))
     (starseq #a #b f (Seq.slice s (n+1) (Seq.length s)));
-  //Seq.map_seq_len f s;
-  assume (Seq.index (Seq.map_seq f' s) n
-  == f (Seq.index s n));
-
-  //assert (
-  //  f' (Seq.index s n)
-  //  `equiv`
-  //  Seq.index (Seq.map_seq f' s) n
-  //);
-  //assert (Seq.index (Seq.map_seq f' s) n
-  //`equiv` f (Seq.index s n));
-  //admit ();
-  //star_congruence
-  //  (Seq.index (Seq.map_seq f' s) n)
-  //  (starl_seq (Seq.slice (Seq.map_seq f s) 0 n) `star`
-  //  starl_seq (Seq.slice (Seq.map_seq f s) (n+1) (Seq.length s)))
-  //  (f (Seq.index s n))
-  //  (starseq #a #b f (Seq.slice s 0 n) `star`
-  //  starseq #a #b f (Seq.slice s (n+1) (Seq.length s)));
-
-  admit ();
-  ()
+  let u0 : vprop = Seq.index u n in
+  let t0 : vprop = f (Seq.index s n) in
+  Classical.forall_intro (Seq.map_seq_index (f <: a -> vprop) s);
+  assert (u0 == t0);
+  equiv_refl u0;
+  assert (u0 `equiv` t0);
+  star_congruence
+    u0
+    (starl_seq u1 `star`
+    starl_seq u2)
+    t0
+    (starseq #a #b f (Seq.slice s 0 n) `star`
+    starseq #a #b f (Seq.slice s (n+1) (Seq.length s)));
+  equiv_trans
+    (starseq #a #b f s)
+    (Seq.index (Seq.map_seq f s) n `star`
+      (starl_seq u1 `star` starl_seq u2))
+    (t0 `star`
+      (starseq #a #b f (Seq.slice s 0 n) `star`
+      starseq #a #b f (Seq.slice s (n+1) (Seq.length s))))
 
 let starseq_pack (#a #b: Type0)
   (f: a -> (vp:vprop{t_of vp == b}))
@@ -565,7 +518,6 @@ let starseq_pack (#a #b: Type0)
   in
   starseq_unpack #a #b f s n;
   equiv_sym p2 p1
-
 
 let starseq_unpack_lemma (#a #b: Type0)
   (f: a -> (vp:vprop{t_of vp == b}))
@@ -597,8 +549,9 @@ let starseq_unpack_lemma (#a #b: Type0)
   reveal_equiv p1 p2
 
 // TODO
-// starseq_unpack (pure equiv)
-// starseq_pack (pure equiv, equiv_sym of starseq_unpack)
+// [ok] starseq_unpack (pure equiv)
+// - aux lemma
+// [ok] starseq_pack (pure equiv, equiv_sym of starseq_unpack)
 // starseq_unpack_lemma (pure on SM.mem)
 // starseq_pack_lemma (pure on SM.mem)
 // starseq_unpack (Steel)
