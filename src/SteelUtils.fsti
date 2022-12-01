@@ -73,33 +73,37 @@ val starl_seq_map_imp (#a #b: Type0)
   )
 
 val starl_seq_sel (#a #b: Type0)
-  (f: a -> (vp:vprop{t_of vp == b}))
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   : selector (Seq.seq (G.erased b)) (hp_of (starl_seq (Seq.map_seq f s)))
 
 [@@ __steel_reduce__]
 let starseq' (#a #b: Type)
-  (f: a -> (vp:vprop{t_of vp == b}))
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   : vprop'
   = {
     hp = hp_of (starl_seq (Seq.map_seq f s));
     t = Seq.seq (G.erased b);
-    sel = starl_seq_sel f s;
+    sel = starl_seq_sel f f_lemma s;
   }
 unfold
 let starseq (#a #b: Type)
-  (f: a -> (vp:vprop{t_of vp == b}))
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
-  = VUnit (starseq' #a #b f s)
+  = VUnit (starseq' #a #b f f_lemma s)
 
 [@@ __steel_reduce__]
 let v_starseq (#a #b: Type)
   (#p: vprop)
-  (f: a -> (vp:vprop{t_of vp == b}))
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
-  (h: rmem p{FStar.Tactics.with_tactic selector_tactic (can_be_split p (starseq #a #b f s) /\ True)})
-  = h (starseq #a #b f s)
+  (h: rmem p{FStar.Tactics.with_tactic selector_tactic (can_be_split p (starseq #a #b f f_lemma s) /\ True)})
+  = h (starseq #a #b f f_lemma s)
 
 // TODO: pack/unpack
 // TODO: starl_seq_sel without f/map?
