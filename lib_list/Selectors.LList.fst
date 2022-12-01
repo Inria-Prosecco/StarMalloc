@@ -448,17 +448,6 @@ let tail_cell_lemma2 (#a:Type0) (p : a -> vprop) (r:t a) (l:list (cell a)) (m:me
     llist_sel_cell p (get_next x) m == tl)
    = tail_cell_lemma p r l m
 
-let change_slprop_rel_with_cond (#opened:inames)
-  (p q:vprop)
-  (cond: normal (t_of p) -> prop)
-  (rel : normal (t_of p) -> normal (t_of q) -> prop)
-  (l:(m:mem) -> Lemma
-    (requires interp (hp_of p) m /\ cond (sel_of p m))
-    (ensures interp (hp_of q) m /\
-      rel (sel_of p m) (sel_of q m))
-  ) : SteelGhost unit opened p (fun _ -> q) (fun h0 -> cond (h0 p)) (fun h0 _ h1 -> rel (h0 p) (h1 q))
-  = change_slprop_rel_with_cond #opened p q cond rel l
-
 #push-options "--compat_pre_typed_indexed_effects"
 let tail_cell #a p ptr
   =
@@ -469,7 +458,7 @@ let tail_cell #a p ptr
   let x = hide (L.hd l) in
   let tl = hide (L.tl l) in
 
-  change_slprop_rel_with_cond
+  SteelFix.change_slprop_rel_with_cond
     (llist_cell p ptr)
     (vptr ptr `star`
     llist_cell p (get_next x) `star`
