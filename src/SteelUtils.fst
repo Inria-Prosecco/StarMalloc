@@ -797,13 +797,10 @@ let starseq_unpack_lemma (#a #b: Type0)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   (n: nat{n < Seq.length s})
-  //(v: Seq.seq (G.erased b))
   (m: SM.mem)
   : Lemma
   (requires
-    SM.interp (hp_of (starseq #a #b f f_lemma s)) m /\
-    //sel_of (starseq #a #b f f_lemma s) m == v
-    True
+    SM.interp (hp_of (starseq #a #b f f_lemma s)) m
   )
   (ensures (
     f_lemma (Seq.index s n);
@@ -857,12 +854,27 @@ let starseq_pack_lemma (#a #b: Type0)
     //sel_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) m
     //  == Seq.slice v (n+1) (Seq.length s)
   ))
-  (ensures
+  (ensures (
+    f_lemma (Seq.index s n);
+    SM.interp (hp_of (f (Seq.index s n))) m /\
+    SM.interp (hp_of (starseq #a #b f f_lemma (Seq.slice s 0 n))) m /\
+    SM.interp (hp_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)))) m /\
+    (let v_0 = sel_of (f (Seq.index s n)) m in
+    let v_1 = sel_of (starseq #a #b f f_lemma (Seq.slice s 0 n)) m in
+    let v_2 = sel_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) m in
     SM.interp (hp_of (starseq #a #b f f_lemma s)) m /\
+    (let v = sel_of (starseq #a #b f f_lemma s) m in
+    Seq.length v == Seq.length s /\
+    v_0 == G.reveal (Seq.index v n) /\
+    v_1 == Seq.slice v 0 n /\
+    v_2 == Seq.slice v (n+1) (Seq.length s) /\
+
+
     True
     //sel_of (starseq #a #b f f_lemma s) m == v
-  )
+  ))))
   =
+  admit ();
   let p1 = starseq #a #b f f_lemma  s in
   let p2 =
     f (Seq.index s n) `star`
@@ -916,34 +928,72 @@ let starseq_pack_s (#a #b: Type0)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   (n: nat{n < Seq.length s})
-  : SteelT unit
+  : Steel unit
   (f (Seq.index s n) `star`
   (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
   starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))))
   (fun _ ->
     starseq #a #b f f_lemma s
   )
-  //(requires fun _ -> True)
-  //(ensures fun h0 _ h1 ->
-  //  f_lemma (Seq.index s n);
-  //  let v = G.reveal (v_starseq #a #b f f_lemma s h0) in
-  //  Seq.length v = Seq.length s /\
-  //  //TODO: FIXME
-  //  //starseq #a #b f f_lemma s `can_be_split` f (Seq.index s n) /\
-  //  //(normalize_term (sel_of (f (Seq.index s n)))) h1
-  //  //  == Seq.index v n /\
-  //  v_starseq #a #b f f_lemma (Seq.slice s 0 n) h1
-  //    == Seq.slice v 0 n /\
-  //  v_starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)) h1
-  //    == Seq.slice v (n+1) (Seq.length s)
-  //)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    f_lemma (Seq.index s n);
+    let v = v_starseq #a #b f f_lemma s h1 in
+    Seq.length v = Seq.length s /\
+    h0 (f (Seq.index s n)) == G.reveal (Seq.index v n) /\
+    v_starseq #a #b f f_lemma (Seq.slice s 0 n) h0
+      == Seq.slice v 0 n /\
+    v_starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)) h0
+      == Seq.slice v (n+1) (Seq.length s)
+  )
   =
-  rewrite_slprop
+  change_slprop_rel
     (f (Seq.index s n) `star`
     (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
     starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))))
     (starseq #a #b f f_lemma s)
+    (fun (x, (y, z)) v ->
+      Seq.length v = Seq.length s /\
+      (f_lemma (Seq.index s n);
+      x == G.reveal (Seq.index v n) /\
+      y == Seq.slice v 0 n /\
+      z == Seq.slice v (n+1) (Seq.length s))
+    )
     (fun m -> starseq_pack_lemma #a #b f f_lemma s n m);
+  return ()
+
+let starseq_idem (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  : Steel unit
+  (starseq #a #b f f_lemma s)
+  (fun _ -> starseq #a #b f f_lemma s)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    v_starseq #a #b f f_lemma s h0
+    ==
+    v_starseq #a #b f f_lemma s h1
+  )
+  =
+  let h0 = get () in
+  let v0 = G.hide (v_starseq #a #b f f_lemma s h0) in
+  starseq_unpack_s #a #b f f_lemma s n;
+  starseq_pack_s #a #b f f_lemma s n;
+  let h1 = get () in
+  let v1 = G.hide (v_starseq #a #b f f_lemma s h1) in
+  assert (Seq.length v0 = Seq.length v1);
+  assert (Seq.slice v0 0 n == Seq.slice v1 0 n);
+  assert (Seq.index v0 n == Seq.index v1 n);
+  assert (Seq.slice v0 (n+1) (Seq.length s) == Seq.slice v1 (n+1) (Seq.length s));
+  Classical.forall_intro (Classical.move_requires (
+    SeqUtils.lemma_slice_index v0 v1 0 n));
+  Classical.forall_intro (Classical.move_requires (
+    SeqUtils.lemma_slice_index v0 v1 (n+1) (Seq.length s)));
+  assert (forall (x:nat{x < Seq.length s}).
+    Seq.index v0 x == Seq.index v1 x);
+  Seq.lemma_eq_intro v0 v1;
   return ()
 
 // TODO
@@ -954,7 +1004,8 @@ let starseq_pack_s (#a #b: Type0)
 //   [ok] aux lemma
 // [on] starseq_pack_lemma (pure on SM.mem)
 // [ok] starseq_unpack (Steel)
-// [on] starseq_pack (Steel)
-// remove refined type n:nat{n < Seq.length s} and add req/ens again
-// simplify code (remove old tricky casts for f with refinement)
-// reduce as much as possible # of assert_norm calls
+// [ok] starseq_pack (Steel)
+// [ok] starseq_idem (Steel)
+// [sk?] remove refined type n:nat{n < Seq.length s} and add req/ens again
+// [ok?] reduce as much as possible # of assert_norm calls
+// [ok?] simplify code (remove old tricky casts for f with refinement)

@@ -236,3 +236,18 @@ let map_seq_weakening (#a #b:Type)
   Seq.lemma_eq_intro
     (Seq.map_seq f1 s1)
     (Seq.map_seq f2 s2)
+
+let lemma_slice_index (#a:Type)
+  (s1 s2:Seq.seq a)
+  (i:nat)
+  (j:nat{i <= j /\ j <= Seq.length s1})
+  (k:nat{i <= k /\ k < j})
+  : Lemma
+  (requires
+    Seq.length s1 = Seq.length s2 /\
+    Seq.slice s1 i j == Seq.slice s2 i j)
+  (ensures
+    Seq.index s1 k == Seq.index s2 k)
+  =
+  lemma_index_slice s1 i j (k-i);
+  lemma_index_slice s1 i j (k-i)
