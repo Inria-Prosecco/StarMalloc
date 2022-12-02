@@ -315,11 +315,13 @@ let starl_seq_sel_depends_only_on (#a #b: Type0)
   assert (forall x. Seq.index s1' x == f1 (Seq.index s' x));
   Classical.forall_intro (Seq.map_seq_index f2 s');
   assert (forall x. Seq.index s2' x == f2 (Seq.index s' x));
-  assert_norm (forall x. f1 (Seq.index s' x)
+  SeqUtils.init_nat_len (Seq.length s);
+  assert (Seq.length s == Seq.length s');
+  Classical.forall_intro (SeqUtils.init_nat_index (Seq.length s));
+  assert (forall x. f1 (Seq.index s' x)
     == starl_seq_sel_aux #a #b f f_lemma s m0 x);
-  assert_norm (forall x. f2 (Seq.index s' x)
+  assert (forall x. f2 (Seq.index s' x)
     == starl_seq_sel_aux #a #b f f_lemma s m' x);
-  assert_norm (Seq.length s == Seq.length s');
   Classical.forall_intro (
     starl_seq_sel_depends_only_on_aux #a #b f f_lemma s m0 m1
   );
@@ -351,11 +353,13 @@ let starl_seq_sel_depends_only_on_core (#a #b: Type0)
   assert (forall x. Seq.index s1' x == f1 (Seq.index s' x));
   Classical.forall_intro (Seq.map_seq_index f2 s');
   assert (forall x. Seq.index s2' x == f2 (Seq.index s' x));
-  assert_norm (forall x. f1 (Seq.index s' x)
+  SeqUtils.init_nat_len (Seq.length s);
+  assert (Seq.length s == Seq.length s');
+  Classical.forall_intro (SeqUtils.init_nat_index (Seq.length s));
+  assert (forall x. f1 (Seq.index s' x)
     == starl_seq_sel_aux #a #b f f_lemma s m0 x);
-  assert_norm (forall x. f2 (Seq.index s' x)
+  assert (forall x. f2 (Seq.index s' x)
     == starl_seq_sel_aux #a #b f f_lemma s m' x);
-  assert_norm (Seq.length s == Seq.length s');
   Classical.forall_intro (
     starl_seq_sel_depends_only_on_core_aux #a #b f f_lemma s m0
   );
@@ -525,7 +529,8 @@ let starseq_sel_len (#a #b: Type0)
   Seq.map_seq_len f s;
   let f' = fun k -> starl_seq_sel_aux #a #b f f_lemma  s m k in
   let s' = SeqUtils.init_nat (Seq.length s) in
-  assert_norm (Seq.length s' = Seq.length s);
+  SeqUtils.init_nat_len (Seq.length s);
+  assert (Seq.length s' = Seq.length s);
   Seq.map_seq_len f' s'
 
 let starseq_imp_index (#a #b: Type0)
@@ -582,7 +587,8 @@ let starseq_sel_index (#a #b: Type0)
   assert (Seq.length (Seq.map_seq f' s') = Seq.length s);
   starseq_imp_index #a #b f f_lemma s n m;
   Seq.map_seq_index f' s' n;
-  assert_norm (Seq.index s' n == n);
+  SeqUtils.init_nat_index (Seq.length s) n;
+  assert (Seq.index s' n == n);
   f_lemma (Seq.index s n);
   assert (Seq.index (sel_of (starseq #a #b f f_lemma s) m) n == f' n)
 
@@ -695,7 +701,7 @@ let starseq_sel_slice_1 (#a #b: Type0)
   ))
   =
   Seq.map_seq_len f s;
-  let f' = fun (k:nat{k < Seq.length s}) -> starl_seq_sel_aux #a #b f f_lemma s m k in
+  let f' = fun k -> starl_seq_sel_aux #a #b f f_lemma s m k in
   let s' = SeqUtils.init_nat (Seq.length s) in
   Seq.map_seq_len f' s';
 
@@ -709,15 +715,18 @@ let starseq_sel_slice_1 (#a #b: Type0)
   let r2 = sel_of (starseq #a #b f f_lemma (Seq.slice s 0 n)) m in
   // prove (r1 == r2)
 
-  let f2' = fun (k:nat{k < Seq.length (Seq.slice s 0 n)}) -> starl_seq_sel_aux #a #b f f_lemma (Seq.slice s 0 n) m k in
+  let f2' = fun k -> starl_seq_sel_aux #a #b f f_lemma (Seq.slice s 0 n) m k in
   let s2' = SeqUtils.init_nat (Seq.length (Seq.slice s 0 n)) in
   SeqUtils.init_nat_len (Seq.length (Seq.slice s 0 n));
   assert (Seq.length s2' = n);
   assert_norm (r2 == Seq.map_seq f2' s2');
-  assert_norm (forall x. Seq.index s2' x == Seq.index (Seq.slice s' 0 n) x);
   Seq.lemma_len_slice s' 0 n;
   assert (Seq.length (Seq.slice s' 0 n) = n);
   assert (Seq.length s2' = Seq.length (Seq.slice s' 0 n));
+  Classical.forall_intro (SeqUtils.init_nat_index (Seq.length (Seq.slice s 0 n)));
+  Classical.forall_intro (SeqUtils.init_nat_index (Seq.length s));
+  Classical.forall_intro (SeqUtils.lemma_index_slice s' 0 n);
+  assert (forall x. Seq.index s2' x == Seq.index (Seq.slice s' 0 n) x);
   SeqUtils.map_seq_weakening
     f'
     f2'
@@ -747,19 +756,21 @@ let starseq_sel_slice_2 (#a #b: Type0)
   ))
   =
   Seq.map_seq_len f s;
-  let f' = fun k -> starl_seq_sel_aux #a #b f f_lemma s m k in
+  let f' = fun (k:nat{k < Seq.length s}) -> starl_seq_sel_aux #a #b f f_lemma s m k in
   let s' = SeqUtils.init_nat (Seq.length s) in
   Seq.map_seq_len f' s';
-  assert (sel_of (starseq #a #b f f_lemma s) m == Seq.map_seq f' s');
+
+  let r0 = Seq.map_seq f' s' in
+  assert (r0 == sel_of (starseq #a #b f f_lemma s) m);
   starseq_sel_len #a #b f f_lemma s m;
-  assert (Seq.length (Seq.map_seq f' s') = Seq.length s);
+  assert (Seq.length r0 = Seq.length s);
   starseq_imp_slice_2 #a #b f f_lemma s n m;
-  //Seq.map_seq_index f' s' n;
-  Classical.forall_intro (Seq.map_seq_index f' s');
-  assert_norm (forall x. Seq.index s' x == x);
-  SeqUtils.map_seq_slice f' s' 0 n;
-  //assert (Seq.index (sel_of (starseq #a #b f s) m) n == f' n);
-  admit ()
+  assert (SM.interp (hp_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)))) m);
+  let r1 = Seq.slice r0 (n+1) (Seq.length s) in
+  let r2 = sel_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) m in
+  // prove (r1 == r2)
+  // 2 weakenings are likely required
+  assume (r1 == r2)
 
 let starseq_unpack_lemma (#a #b: Type0)
   (f: a -> vprop)
@@ -812,7 +823,6 @@ let starseq_pack_lemma (#a #b: Type0)
   (m: SM.mem)
   : Lemma
   (requires (
-    admit ();
     SM.interp (hp_of (
       f (Seq.index s n) `star`
       (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
@@ -840,7 +850,6 @@ let starseq_pack_lemma (#a #b: Type0)
     starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) in
   starseq_pack #a #b f f_lemma s n;
   reveal_equiv p2 p1;
-  //admit ();
   ()
 
 let starseq_unpack_s (#a #b: Type0)
