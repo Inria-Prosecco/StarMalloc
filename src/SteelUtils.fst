@@ -878,8 +878,6 @@ let starseq_unpack_s (#a #b: Type0)
       == Seq.slice v (n+1) (Seq.length s)
   )
   =
-  let h0 = get () in
-  let v = G.hide (v_starseq #a #b f f_lemma s h0) in
   change_slprop_rel
     (starseq #a #b f f_lemma s)
     (f (Seq.index s n) `star`
