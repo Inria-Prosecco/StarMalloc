@@ -867,12 +867,11 @@ let starseq_unpack_s (#a #b: Type0)
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
     f_lemma (Seq.index s n);
-    let v = G.reveal (v_starseq #a #b f f_lemma s h0) in
+    let v = v_starseq #a #b f f_lemma s h0 in
     Seq.length v = Seq.length s /\
     //TODO: FIXME
     //starseq #a #b f f_lemma s `can_be_split` f (Seq.index s n) /\
-    //(normalize_term (sel_of (f (Seq.index s n)))) h1
-    //  == Seq.index v n /\
+    h1 (f (Seq.index s n)) == G.reveal (Seq.index v n) /\
     v_starseq #a #b f f_lemma (Seq.slice s 0 n) h1
       == Seq.slice v 0 n /\
     v_starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)) h1
@@ -887,9 +886,11 @@ let starseq_unpack_s (#a #b: Type0)
     (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
     starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))))
     (fun v (x, (y, z)) ->
-      Seq.length (G.reveal v) = Seq.length s /\
+      Seq.length v = Seq.length s /\
+      (f_lemma (Seq.index s n);
+      x == G.reveal (Seq.index v n) /\
       y == Seq.slice v 0 n /\
-      z == Seq.slice v (n+1) (Seq.length s)
+      z == Seq.slice v (n+1) (Seq.length s))
     )
     (fun m -> starseq_unpack_lemma #a #b f f_lemma s n m);
   return ()
