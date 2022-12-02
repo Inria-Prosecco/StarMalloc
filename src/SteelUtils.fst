@@ -769,8 +769,28 @@ let starseq_sel_slice_2 (#a #b: Type0)
   let r1 = Seq.slice r0 (n+1) (Seq.length s) in
   let r2 = sel_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) m in
   // prove (r1 == r2)
-  // 2 weakenings are likely required
-  assume (r1 == r2)
+
+  let f2' = fun k -> starl_seq_sel_aux #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)) m k in
+  let s2' = SeqUtils.init_nat (Seq.length (Seq.slice s (n+1) (Seq.length s))) in
+  SeqUtils.init_nat_len (Seq.length (Seq.slice s (n+1) (Seq.length s)));
+  assert (Seq.length s2' = Seq.length s - (n+1));
+  assert_norm (r2 == Seq.map_seq f2' s2');
+  Seq.lemma_len_slice s' (n+1) (Seq.length s);
+  assert (Seq.length (Seq.slice s' (n+1) (Seq.length s)) = Seq.length s - (n+1));
+  assert (Seq.length s2' = Seq.length (Seq.slice s' (n+1) (Seq.length s)));
+  Classical.forall_intro (SeqUtils.init_nat_index (Seq.length (Seq.slice s (n+1) (Seq.length s))));
+  Classical.forall_intro (SeqUtils.init_nat_index (Seq.length s));
+  Classical.forall_intro (SeqUtils.lemma_index_slice s' (n+1) (Seq.length s));
+  assert (forall x. Seq.index s2' x + n+1 == Seq.index (Seq.slice s' (n+1) (Seq.length s)) x);
+  SeqUtils.map_seq_weakening
+    f'
+    f2'
+    (Seq.slice s' (n+1) (Seq.length s))
+    s2';
+  assert (r2 == Seq.map_seq f' (Seq.slice s' (n+1) (Seq.length s)));
+  SeqUtils.map_seq_slice f' s' (n+1) (Seq.length s);
+  assert (r1 == Seq.map_seq f' (Seq.slice s' (n+1) (Seq.length s)));
+  ()
 
 let starseq_unpack_lemma (#a #b: Type0)
   (f: a -> vprop)
@@ -869,8 +889,6 @@ let starseq_unpack_s (#a #b: Type0)
     f_lemma (Seq.index s n);
     let v = v_starseq #a #b f f_lemma s h0 in
     Seq.length v = Seq.length s /\
-    //TODO: FIXME
-    //starseq #a #b f f_lemma s `can_be_split` f (Seq.index s n) /\
     h1 (f (Seq.index s n)) == G.reveal (Seq.index v n) /\
     v_starseq #a #b f f_lemma (Seq.slice s 0 n) h1
       == Seq.slice v 0 n /\
@@ -933,9 +951,10 @@ let starseq_pack_s (#a #b: Type0)
 //   [ok] aux lemma
 // [ok] starseq_pack (pure equiv, equiv_sym of starseq_unpack)
 // [ok] starseq_unpack_lemma (pure on SM.mem)
-//   [on] aux lemma (1 remaining)
+//   [ok] aux lemma
 // [on] starseq_pack_lemma (pure on SM.mem)
-// [idle] starseq_unpack (Steel) (waiting for fix)
+// [ok] starseq_unpack (Steel)
 // [on] starseq_pack (Steel)
 // remove refined type n:nat{n < Seq.length s} and add req/ens again
 // simplify code (remove old tricky casts for f with refinement)
+// reduce as much as possible # of assert_norm calls

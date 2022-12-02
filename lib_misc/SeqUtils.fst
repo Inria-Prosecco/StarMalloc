@@ -222,7 +222,6 @@ let map_seq_weakening (#a #b:Type)
   : Lemma
   (requires
     Seq.length s1 = Seq.length s2 /\
-    (forall x. Seq.index s1 x == Seq.index s2 x) /\
     (forall (k:nat{k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k))
   )
