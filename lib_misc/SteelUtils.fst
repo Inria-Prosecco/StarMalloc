@@ -1002,7 +1002,7 @@ let starseq_idem (#a #b: Type0)
 // [ok] starseq_pack (pure equiv, equiv_sym of starseq_unpack)
 // [ok] starseq_unpack_lemma (pure on SM.mem)
 //   [ok] aux lemma
-// [on] starseq_pack_lemma (pure on SM.mem)
+// [sk] starseq_pack_lemma (pure on SM.mem)
 // [ok] starseq_unpack (Steel)
 // [ok] starseq_pack (Steel)
 // [ok] starseq_idem (Steel)

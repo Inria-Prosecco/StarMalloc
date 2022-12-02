@@ -105,6 +105,50 @@ let v_starseq (#a #b: Type)
   (h: rmem p{FStar.Tactics.with_tactic selector_tactic (can_be_split p (starseq #a #b f f_lemma s) /\ True)})
   = h (starseq #a #b f f_lemma s)
 
-// TODO: pack/unpack
-// TODO: starl_seq_sel without f/map?
-// TODO: wrapper around v_stars for selector over starl and not only starl_seq?
+val starseq_unpack_s (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  : Steel unit
+  (starseq #a #b f f_lemma s)
+  (fun _ ->
+    f (Seq.index s n) `star`
+    (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
+    starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)))
+  )
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    f_lemma (Seq.index s n);
+    let v = v_starseq #a #b f f_lemma s h0 in
+    Seq.length v = Seq.length s /\
+    h1 (f (Seq.index s n)) == G.reveal (Seq.index v n) /\
+    v_starseq #a #b f f_lemma (Seq.slice s 0 n) h1
+      == Seq.slice v 0 n /\
+    v_starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)) h1
+      == Seq.slice v (n+1) (Seq.length s)
+  )
+
+val starseq_pack_s (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  : Steel unit
+  (f (Seq.index s n) `star`
+  (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
+  starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))))
+  (fun _ ->
+    starseq #a #b f f_lemma s
+  )
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    f_lemma (Seq.index s n);
+    let v = v_starseq #a #b f f_lemma s h1 in
+    Seq.length v = Seq.length s /\
+    h0 (f (Seq.index s n)) == G.reveal (Seq.index v n) /\
+    v_starseq #a #b f f_lemma (Seq.slice s 0 n) h0
+      == Seq.slice v 0 n /\
+    v_starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)) h0
+      == Seq.slice v (n+1) (Seq.length s)
+  )
