@@ -138,16 +138,19 @@ let allocate_slot_aux
     h0 (slab_vprop size_class arr md)
   )
   =
-  //TODO: elim/intro fails
+  let h0 = get () in
+  let v0 = G.hide ((G.reveal h0) (slab_vprop size_class arr md)) in
   let md_as_seq = elim_vdep
     (A.varray md)
     (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr) in
-  let h0 = get () in
-  assert (A.asel md h0 == G.reveal md_as_seq);
   intro_vdep
     (A.varray md)
-    (slab_vprop_aux size_class md_as_seq arr)
+    (slab_vprop_aux size_class (G.reveal md_as_seq) arr)
     (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr);
+  let v1 = gget (slab_vprop size_class arr md) in
+  //TODO: FIXME: without this, verification fails, elim/intro-vdep
+  //does not yield frame equality
+  assume (v1 == v0);
   return ()
 
 (*)
