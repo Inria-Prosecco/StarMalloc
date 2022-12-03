@@ -18,8 +18,6 @@ open Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
-
-open Utils
 open Utils2
 open SteelUtils
 
@@ -39,6 +37,7 @@ let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   let shift = U32.mul pos size_class in
   nb_slots_correct size_class pos;
   assert (U32.v shift <= U32.v page_size);
+  admit ();
   assert_norm (U32.v shift <= FStar.Int.max_int U16.n);
   let shift_size_t = STU.small_uint32_to_sizet shift in
   assert (US.v shift_size_t < A.length arr);
@@ -89,33 +88,132 @@ let array_slot_slot_array_bij (size_class: sc) (arr: array U8.t) (pos: U32.t)
 let slot_vprop
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
-  (pos: nat{pos < U32.v (nb_slots size_class)})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   =
-  A.varray (slot_array size_class arr (U32.uint_to_t pos))
+  A.varray (slot_array size_class arr pos)
+
+let c
+ (#a: Type0)
+ (vp: vprop)
+ (b: bool)
+ : Pure vprop
+ (requires
+   t_of vp == a
+ )
+ (ensures fun r ->
+   b ==> t_of r == a /\
+   not b ==> t_of r == unit
+ )
+ =
+ if b then vp else emp
+
+let none_as_emp
+  (#a: Type0)
+  : Pure vprop
+  (requires True)
+  (ensures fun r -> t_of r == option a)
+  =
+  VUnit ({
+    hp = SM.emp;
+    t = option a;
+    sel = fun _ -> None
+  })
+
+let some_as_vp
+  (#a: Type0)
+  (vp: vprop)
+  : Pure vprop
+  (requires t_of vp == a /\ VUnit? vp)
+  (ensures fun r -> t_of r == option a)
+  =
+  VUnit ({
+    hp = hp_of vp;
+    t = option a;
+    sel = fun h -> Some (sel_of vp h)
+  })
+
+
+let c2
+ (#a: Type0)
+ (b: bool)
+ (vp: vprop{t_of vp == a /\ VUnit? vp})
+ : vprop
+ =
+ if b
+ then some_as_vp #a vp
+ else none_as_emp #a
+
+let c2_t
+ (#a: Type0)
+ (b: bool)
+ (vp: vprop{t_of vp == a /\ VUnit? vp})
+ : Lemma
+ (t_of (c2 #a b vp) == option a)
+ = ()
+
+#set-options "--print_implicits"
+
+let c2_lemma
+  (#a: Type0)
+  (b: bool)
+  (vp: vprop{t_of vp == a /\ VUnit? vp})
+  (h: hmem (c2 #a b vp))
+  : Lemma
+  (
+    c2_t #a b vp;
+    (b ==> Some? (sel_of (c2 #a b vp) h <: option a)) /\
+    (not b ==> None? (sel_of (c2 #a b vp) h <: option a))
+  )
+  = ()
+
+let slab_vprop_aux_f
+  (size_class: sc)
+  (md_as_seq: Seq.lseq U64.t 4)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (i: U32.t{U32.v i < U32.v (nb_slots size_class)})
+  : vprop
+  =
+  let vp = slot_vprop size_class arr i in
+  assume (t_of vp == Seq.seq U8.t);
+  assert_norm (VUnit? vp);
+  c2 #(Seq.seq U8.t) (Bitmap4.get md_as_seq i) vp
+
+let slab_vprop_aux_f_lemma
+  (size_class: sc)
+  (md_as_seq: Seq.lseq U64.t 4)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  : (i: U32.t{U32.v i < U32.v (nb_slots size_class)}) ->
+    Lemma (
+      t_of (slab_vprop_aux_f size_class md_as_seq arr i)
+      ==
+      option (Seq.seq U8.t))
+  =
+  fun i ->
+  let vp = slot_vprop size_class arr i in
+  assume (t_of vp == Seq.seq U8.t);
+  assert_norm (VUnit? vp);
+  c2_t #(Seq.seq U8.t) (Bitmap4.get md_as_seq i) vp
 
 let slab_vprop_aux
   (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
   (md_as_seq: Seq.lseq U64.t 4)
+  (arr: array U8.t{A.length arr = U32.v page_size})
   : vprop
   =
-  let incr_seq = SeqUtils.init_u32_refined (U32.v (nb_slots size_class))
-  in
-  let f = fun (i: U32.t{U32.v i < U32.v (nb_slots size_class)}) ->
-    if Bitmap4.get md_as_seq i
-    then slot_vprop size_class arr (U32.v i)
-    else emp
-  in
-  Seq.map_seq_len f incr_seq;
-  let vprop_seq
-    : Seq.lseq vprop (U32.v (nb_slots size_class))
-    = Seq.map_seq f incr_seq in
-  let vprop_list = Seq.seq_to_list vprop_seq in
-  starl vprop_list
+  let nb_slots_as_nat = U32.v (nb_slots size_class) in
+  let incr_seq = SeqUtils.init_u32_refined nb_slots_as_nat in
+  starseq
+    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+    #(option (Seq.seq U8.t))
+    (slab_vprop_aux_f size_class md_as_seq arr)
+    (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+    incr_seq
 
+//unfold
+//[@@__steel_reduce__]
 let slab_vprop
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md: slab_metadata)
   =
-  A.varray md `vdep` (fun md_as_seq -> slab_vprop_aux size_class arr md_as_seq)
+  A.varray md `vdep` (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr)

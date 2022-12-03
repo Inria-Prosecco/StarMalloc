@@ -21,7 +21,6 @@ module Temp = TempLock
 
 
 open FStar.Mul
-open Utils
 open Utils2
 open SteelUtils
 open SlabsUtils
@@ -123,10 +122,55 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     get_free_slot_aux size_class bitmap 0sz
   )
 
-(*)
 let allocate_slot_aux (#opened:_)
   (size_class: sc)
-  (md: slab_metadata) (arr: array U8.t{A.length arr = U32.v page_size})
+  (md: slab_metadata)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  //: Steel (array U8.t)
+  : Steel unit
+  //TODO: FIXME (unfold/steel_reduce do not work)
+  (slab_vprop size_class arr md)
+  //(A.varray md `vdep` (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr))
+  (fun r ->
+    slab_vprop size_class arr md)
+  //A.varray md `vdep` (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr))
+    //`star`
+    //A.varray r)
+  (requires fun h0 ->
+    //TODO: FIXME: how should one use vdep_sel?
+    //how should one use vdep vprop selector?
+    //(let x = (vdep_sel
+    //  (A.varray md)
+    //  (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr)) h0
+    //  in
+    True
+    //)
+
+  )
+  (ensures fun h0 _ h1 -> True
+    //A.asel md h1 == A.asel md h0
+  )
+  =
+  //TODO: does not work if slab_vprop definition is inlined
+  let md_as_seq = elim_vdep
+    (A.varray md)
+    (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr) in
+  let h0 = get () in
+  assert (A.asel md h0 == G.reveal md_as_seq);
+  intro_vdep
+    (A.varray md)
+    (slab_vprop_aux size_class md_as_seq arr)
+    (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr);
+  return ()
+
+(*)
+
+
+let allocate_slot_aux (#opened:_)
+  (size_class: sc)
+  (md: slab_metadata)
+  (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : SteelGhostT unit opened
   (slab_vprop size_class arr 0 (U32.v (nb_slots size_class)) `star` A.varray md)
