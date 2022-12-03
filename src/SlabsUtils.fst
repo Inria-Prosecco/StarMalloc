@@ -196,8 +196,8 @@ let slab_vprop_aux_f_lemma
 
 let slab_vprop_aux
   (size_class: sc)
-  (md_as_seq: Seq.lseq U64.t 4)
   (arr: array U8.t{A.length arr = U32.v page_size})
+  (md_as_seq: Seq.lseq U64.t 4)
   : vprop
   =
   let nb_slots_as_nat = U32.v (nb_slots size_class) in
@@ -216,4 +216,58 @@ let slab_vprop
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md: slab_metadata)
   =
-  A.varray md `vdep` (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr)
+  A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq)
+
+//works
+let slab_vprop1
+  (md: slab_metadata)
+  =
+  reveal_emp ();
+  emp `vdep` (fun (_:unit) -> emp)
+
+//works
+let slab_vprop2
+  (md: slab_metadata)
+  =
+  A.varray md `vdep` (fun (x: Seq.seq U64.t) -> emp)
+
+let slab_vprop3
+  (md: slab_metadata)
+  =
+  A.varray md `vdep` (fun (x: Seq.lseq U64.t 4) -> emp)
+
+let slab_vprop4_aux
+  = fun (x: Seq.lseq U64.t 4) -> emp
+
+let slab_vprop4
+  (md: slab_metadata)
+  =
+  A.varray md `vdep`
+    (fun (x: Seq.lseq U64.t 4) -> slab_vprop4_aux x)
+
+let slab_vprop_test
+  (md: slab_metadata)
+  = slab_vprop4 md
+
+#push-options "--print_implicits"
+
+let elim_intro_vdep_test
+  (md: slab_metadata)
+  : Steel unit
+  (slab_vprop_test md)
+  (fun r -> slab_vprop_test md)
+  (requires fun h0 -> True)
+  (ensures fun h0 _ h1 ->
+    h1 (slab_vprop_test md)
+    ==
+    h0 (slab_vprop_test md)
+  )
+  =
+  let md_as_seq = elim_vdep
+    (A.varray md)
+    (fun (x:Seq.lseq U64.t 4) -> slab_vprop4_aux x) in
+  intro_vdep
+    (A.varray md)
+    emp
+    (fun (x:Seq.lseq U64.t 4) -> slab_vprop4_aux x);
+  return ()
