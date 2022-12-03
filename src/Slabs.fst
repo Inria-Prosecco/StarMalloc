@@ -138,8 +138,11 @@ let allocate_slot_aux
     h0 (slab_vprop size_class arr md)
   )
   =
+  //TODO: without a gget probably trigerring some normalization
+  //of the underlying type, it is then not possible to use dfst/dsnd
   let h0 = get () in
   let v0 = G.hide ((G.reveal h0) (slab_vprop size_class arr md)) in
+  //let v0 = gget (slab_vprop size_class arr md) in
   let md_as_seq = elim_vdep
     (A.varray md)
     (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr) in
@@ -147,10 +150,14 @@ let allocate_slot_aux
     (A.varray md)
     (slab_vprop_aux size_class (G.reveal md_as_seq) arr)
     (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr);
-  let v1 = gget (slab_vprop size_class arr md) in
+  //let v1 = gget (slab_vprop size_class arr md) in
+  let h1 = get () in
+  let v1 = G.hide ((G.reveal h1) (slab_vprop size_class arr md)) in
   //TODO: FIXME: without this, verification fails, elim/intro-vdep
   //does not yield frame equality
-  assume (v1 == v0);
+  assume (dfst v1 == dfst v0);
+  assume (dsnd v1 == dsnd v0);
+  assert (v1 == v0);
   return ()
 
 (*)
