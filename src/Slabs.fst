@@ -142,7 +142,10 @@ let allocate_slot_aux
     v1 == v0
   )
   =
-  let v0 = gget (slab_vprop size_class arr md) in
+  //TODO: FIXME, only gget works with dfst
+  let h0 = get () in
+  let v0 = G.hide ((G.reveal h0) (slab_vprop size_class arr md)) in
+  //let v0 = gget (slab_vprop size_class arr md) in
   let md_as_seq = elim_vdep
     (A.varray md)
     (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x) in
@@ -153,7 +156,7 @@ let allocate_slot_aux
     (slab_vprop_aux size_class arr md_as_seq)
     (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
   let v2 = gget (slab_vprop size_class arr md) in
-  assert (dfst v0 == G.reveal v1);
+  //assert (dfst v0 == G.reveal v1);
   assert (dfst v2 == G.reveal v1);
   return ()
 
