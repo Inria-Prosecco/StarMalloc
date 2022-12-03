@@ -26,7 +26,7 @@ open SteelUtils
 open SlabsUtils
 open SizeClass
 
-#push-options "--fuel 0 --ifuel 0"
+//#push-options "--fuel 0 --ifuel 0"
 
 let slab_region_len : U32.t = normalize_term (U32.mul page_size slab_max_number)
 unfold let slab_region
@@ -122,15 +122,13 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     get_free_slot_aux size_class bitmap 0sz
   )
 
-[@@handle_smt_goals]
-let f () = FStar.Tactics.(norm normal_steps; dump "here")
+#push-options "--fuel 1 --ifuel 0"
 
 let allocate_slot_aux
   (size_class: sc)
   (md: slab_metadata)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-  //: Steel (array U8.t)
   : Steel unit
   (slab_vprop size_class arr md)
   (fun r -> slab_vprop size_class arr md)
@@ -141,37 +139,18 @@ let allocate_slot_aux
     h0 (slab_vprop size_class arr md)
   )
   =
-  //TODO: without a gget probably trigerring some normalization
-  //of the underlying type, it is then not possible to use dfst/dsnd
   let v0 = gget (slab_vprop size_class arr md) in
-  //let v0 = gget (slab_vprop size_class arr md) in
   let md_as_seq = elim_vdep
     (A.varray md)
-    (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr) in
-  let va = gget (A.varray md) in
-  assert (dfst v0 == G.reveal va);
-  sladmit()
-
-
-(*
+    (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x) in
   intro_vdep
     (A.varray md)
-    (slab_vprop_aux size_class (G.reveal md_as_seq) arr)
-    (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr);
-
-  //let v1 = gget (slab_vprop size_class arr md) in
-  let h1 = get () in
-  let v1 = G.hide ((G.reveal h1) (slab_vprop size_class arr md)) in
-  //TODO: FIXME: without this, verification fails, elim/intro-vdep
-  //does not yield frame equality
-  assume (dfst v1 == dfst v0);
-  assume (dsnd v1 == dsnd v0);
-  assert (v1 == v0);
+    (slab_vprop_aux size_class arr md_as_seq)
+    (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
+  let v1 = gget (slab_vprop size_class arr md) in
   return ()
-*)
+
 (*)
-
-
 let allocate_slot_aux (#opened:_)
   (size_class: sc)
   (md: slab_metadata)

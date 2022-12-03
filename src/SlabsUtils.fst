@@ -252,22 +252,24 @@ let slab_vprop_test
 #push-options "--print_implicits"
 
 let elim_intro_vdep_test
+  (size_class: sc)
   (md: slab_metadata)
+  (arr: array U8.t{A.length arr = U32.v page_size})
   : Steel unit
-  (slab_vprop_test md)
-  (fun r -> slab_vprop_test md)
+  (slab_vprop size_class arr md)
+  (fun r -> slab_vprop size_class arr md)
   (requires fun h0 -> True)
   (ensures fun h0 _ h1 ->
-    h1 (slab_vprop_test md)
+    h1 (slab_vprop size_class arr md)
     ==
-    h0 (slab_vprop_test md)
+    h0 (slab_vprop size_class arr md)
   )
   =
   let md_as_seq = elim_vdep
     (A.varray md)
-    (fun (x:Seq.lseq U64.t 4) -> slab_vprop4_aux x) in
+    (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x) in
   intro_vdep
     (A.varray md)
-    emp
-    (fun (x:Seq.lseq U64.t 4) -> slab_vprop4_aux x);
+    (slab_vprop_aux size_class arr md_as_seq)
+    (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
   return ()
