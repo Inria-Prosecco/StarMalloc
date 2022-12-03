@@ -134,20 +134,27 @@ let allocate_slot_aux
   (fun r -> slab_vprop size_class arr md)
   (requires fun h0 -> True)
   (ensures fun h0 _ h1 ->
-    h1 (slab_vprop size_class arr md)
-    ==
-    h0 (slab_vprop size_class arr md)
+    let v1 = h1 (slab_vprop size_class arr md) in
+    let v0 = h0 (slab_vprop size_class arr md) in
+    //TODO: FIXME
+    //let md1 = dfst v1 in
+    //let md0 = dfst v0 in
+    v1 == v0
   )
   =
   let v0 = gget (slab_vprop size_class arr md) in
   let md_as_seq = elim_vdep
     (A.varray md)
     (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x) in
+  let h1 = get () in
+  let v1 = G.hide (A.asel md h1) in
   intro_vdep
     (A.varray md)
     (slab_vprop_aux size_class arr md_as_seq)
     (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
-  let v1 = gget (slab_vprop size_class arr md) in
+  let v2 = gget (slab_vprop size_class arr md) in
+  assert (dfst v0 == G.reveal v1);
+  assert (dfst v2 == G.reveal v1);
   return ()
 
 (*)
