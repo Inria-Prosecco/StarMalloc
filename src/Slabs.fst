@@ -122,6 +122,9 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     get_free_slot_aux size_class bitmap 0sz
   )
 
+[@@handle_smt_goals]
+let f () = FStar.Tactics.(norm normal_steps; dump "here")
+
 let allocate_slot_aux
   (size_class: sc)
   (md: slab_metadata)
@@ -140,16 +143,22 @@ let allocate_slot_aux
   =
   //TODO: without a gget probably trigerring some normalization
   //of the underlying type, it is then not possible to use dfst/dsnd
-  let h0 = get () in
-  let v0 = G.hide ((G.reveal h0) (slab_vprop size_class arr md)) in
+  let v0 = gget (slab_vprop size_class arr md) in
   //let v0 = gget (slab_vprop size_class arr md) in
   let md_as_seq = elim_vdep
     (A.varray md)
     (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr) in
+  let va = gget (A.varray md) in
+  assert (dfst v0 == G.reveal va);
+  sladmit()
+
+
+(*
   intro_vdep
     (A.varray md)
     (slab_vprop_aux size_class (G.reveal md_as_seq) arr)
     (fun md_as_seq -> slab_vprop_aux size_class md_as_seq arr);
+
   //let v1 = gget (slab_vprop size_class arr md) in
   let h1 = get () in
   let v1 = G.hide ((G.reveal h1) (slab_vprop size_class arr md)) in
@@ -159,7 +168,7 @@ let allocate_slot_aux
   assume (dsnd v1 == dsnd v0);
   assert (v1 == v0);
   return ()
-
+*)
 (*)
 
 
