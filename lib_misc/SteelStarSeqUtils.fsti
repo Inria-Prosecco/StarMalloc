@@ -115,7 +115,19 @@ let v_starseq (#a #b: Type)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   (h: rmem p{FStar.Tactics.with_tactic selector_tactic (can_be_split p (starseq #a #b f f_lemma s) /\ True)})
+  : GTot (Seq.seq (G.erased b))
   = h (starseq #a #b f f_lemma s)
+
+let v_starseq_len (#a #b: Type)
+  (#p: vprop)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  (h: rmem p{FStar.Tactics.with_tactic selector_tactic (can_be_split p (starseq #a #b f f_lemma s) /\ True)})
+  : Lemma
+  (Seq.length (v_starseq #a #b #p f f_lemma s h) = Seq.length s)
+  =
+  admit ()
 
 val starseq_unpack_s (#a #b: Type0)
   (f: a -> vprop)
@@ -251,4 +263,29 @@ val starseq_upd2 (#a #b: Type0)
     h1 (f1 (Seq.index s1 n))
     ==
     h0 (f1 (Seq.index s1 n))
+  )
+
+val starseq_upd3 (#a #b: Type0)
+  (f1 f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
+  (s1: Seq.seq a)
+  (s2: Seq.seq a{Seq.length s1 = Seq.length s2})
+  (n: nat{n < Seq.length s1})
+  : Steel unit
+  (starseq #a #(option b) f1 f1_lemma s1)
+  (fun _ ->
+    f1 (Seq.index s1 n) `star`
+    starseq #a #(option b) f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 = Seq.length s2 /\
+    (forall (k:nat{k <> n /\ k < Seq.length s1}).
+      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
+    f2 (Seq.index s2 n) == none_as_emp #b)
+  (ensures fun h0 _ h1 ->
+    v_starseq_len #a #(option b) f1 f1_lemma s1 h0;
+    v_starseq_len #a #(option b) f2 f2_lemma s2 h1;
+    let v0 = v_starseq #a #(option b) f1 f1_lemma s1 h0 in
+    let v1 = v_starseq #a #(option b) f2 f2_lemma s2 h1 in
+    v1 == Seq.upd v0 n None
   )

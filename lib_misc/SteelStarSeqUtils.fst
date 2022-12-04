@@ -1219,19 +1219,18 @@ let starseq_upd3 (#a #b: Type0)
     (forall (k:nat{k <> n /\ k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
     f2 (Seq.index s2 n) == none_as_emp #b)
-  (ensures fun h0 _ h1 -> True
-    //starseq_sel_index #a #(option b) f2 f2_lemma s2 n h1;
-    //v_starseq #a #(option b) f2 f2_lemma s2 h1
-    //==
-    //Seq.upd
-    //  (v_starseq #a #(option b) f1 f1_lemma s1 h0)
-    //  n
-    //  (G.hide (none_as_emp #b))
+  (ensures fun h0 _ h1 ->
+    v_starseq_len #a #(option b) f1 f1_lemma s1 h0;
+    v_starseq_len #a #(option b) f2 f2_lemma s2 h1;
+    let v0 = v_starseq #a #(option b) f1 f1_lemma s1 h0 in
+    let v1 = v_starseq #a #(option b) f2 f2_lemma s2 h1 in
+    v1 == Seq.upd v0 n None
   )
   =
   starseq_unpack_s #a #(option b) f1 f1_lemma s1 n;
   starseq_upd2 #a #b f1 f2 f1_lemma f2_lemma s1 s2 n;
-  starseq_pack_s #a #(option b) f2 f2_lemma s2 n
+  starseq_pack_s #a #(option b) f2 f2_lemma s2 n;
+  admit ()
 
 
 (*)
