@@ -412,16 +412,10 @@ let elim_intro_vdep_test_aux2_lemma4
   (size_class: sc)
   (md: array U64.t{A.length md = 4})
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
-  (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
-  (requires (
-    let bm1 = a2bv (G.reveal md_as_seq1) in
-    let bm2 = a2bv (G.reveal md_as_seq2) in
-    Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false /\
-    bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) true
-  ))
+  (requires True)
   (ensures (
     slot_vprop_lemma size_class arr pos;
     ((slab_vprop_aux_f size_class md_as_seq1 arr)
@@ -515,6 +509,33 @@ let elim_intro_vdep_test_aux3
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (U32.v pos)
 
+let rewriting_f1_seq_index_s_n_as_returned_value
+  (size_class: sc)
+  (md: array U64.t{A.length md = 4})
+  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Steel (array U8.t)
+  ((slab_vprop_aux_f size_class md_as_seq arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)))
+  (fun r -> A.varray r)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 -> True)
+  =
+  let r = slot_array size_class arr pos in
+  //TODO: selector relation
+  rewrite_slprop
+    ((slab_vprop_aux_f size_class md_as_seq arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)))
+    (A.varray r)
+    //(fun x y -> Some?.v x == y)
+    (fun _ -> admit ());
+  return r
+
 //#push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 inline_for_extraction
 let elim_intro_vdep_test_aux
@@ -523,7 +544,7 @@ let elim_intro_vdep_test_aux
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-  : Steel unit
+  : Steel (array U8.t)
   (
   A.varray md `star`
   starseq
@@ -534,12 +555,9 @@ let elim_intro_vdep_test_aux
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
   )
   (
-  fun _ ->
+  fun r ->
   A.varray md `star`
-  ((slab_vprop_aux_f size_class md_as_seq arr)
-      (Seq.index
-        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-        (U32.v pos))) `star`
+  A.varray r `star`
   starseq
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(option (Seq.seq U8.t))
@@ -593,7 +611,9 @@ let elim_intro_vdep_test_aux
     (Bitmap4.set md_as_seq pos)
     arr
     pos;
-  return ()
+  let r = rewriting_f1_seq_index_s_n_as_returned_value
+    size_class md md_as_seq arr pos in
+  return r
 
 (*)
 #push-options "--z3rlimit 30"
