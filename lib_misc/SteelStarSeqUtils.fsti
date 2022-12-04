@@ -129,12 +129,12 @@ let v_starseq_len (#a #b: Type)
   =
   admit ()
 
-val starseq_unpack_s (#a #b: Type0)
+val starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   (n: nat{n < Seq.length s})
-  : Steel unit
+  : SteelGhost unit opened
   (starseq #a #b f f_lemma s)
   (fun _ ->
     f (Seq.index s n) `star`
@@ -153,12 +153,12 @@ val starseq_unpack_s (#a #b: Type0)
       == Seq.slice v (n+1) (Seq.length s)
   )
 
-val starseq_pack_s (#a #b: Type0)
+val starseq_pack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   (n: nat{n < Seq.length s})
-  : Steel unit
+  : SteelGhost unit opened
   (f (Seq.index s n) `star`
   (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
   starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))))
@@ -177,12 +177,12 @@ val starseq_pack_s (#a #b: Type0)
       == Seq.slice v (n+1) (Seq.length s)
   )
 
-val starseq_weakening (#a #b: Type0)
+val starseq_weakening (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == b)))
   (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b)))
   (s1 s2: Seq.seq a)
-  : Steel unit
+  : SteelGhost unit opened
   (starseq #a #b f1 f1_lemma s1)
   (fun _ -> starseq #a #b f2 f2_lemma s2)
   (requires fun _ ->
@@ -195,14 +195,14 @@ val starseq_weakening (#a #b: Type0)
     v_starseq #a #b f2 f2_lemma s2 h1
   )
 
-val starseq_upd (#a #b: Type0)
+val starseq_upd (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == b)))
   (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b)))
   (s1: Seq.seq a)
   (s2: Seq.seq a{Seq.length s1 = Seq.length s2})
   (n: nat{n < Seq.length s1})
-  : Steel unit
+  : SteelGhost unit opened
   (f1 (Seq.index s1 n) `star`
   (starseq #a #b f1 f1_lemma (Seq.slice s1 0 n) `star`
   starseq #a #b f1 f1_lemma (Seq.slice s1 (n+1) (Seq.length s1))))
@@ -229,14 +229,14 @@ val starseq_upd (#a #b: Type0)
     h0 (f1 (Seq.index s1 n))
   )
 
-val starseq_upd2 (#a #b: Type0)
+val starseq_upd2 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
   (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
   (s1: Seq.seq a)
   (s2: Seq.seq a{Seq.length s1 = Seq.length s2})
   (n: nat{n < Seq.length s1})
-  : Steel unit
+  : SteelGhost unit opened
   (f1 (Seq.index s1 n) `star`
   (starseq #a #(option b) f1 f1_lemma (Seq.slice s1 0 n) `star`
   starseq #a #(option b) f1 f1_lemma (Seq.slice s1 (n+1) (Seq.length s1))))
@@ -265,14 +265,14 @@ val starseq_upd2 (#a #b: Type0)
     h0 (f1 (Seq.index s1 n))
   )
 
-val starseq_upd3 (#a #b: Type0)
+val starseq_upd3 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
   (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
   (s1: Seq.seq a)
   (s2: Seq.seq a{Seq.length s1 = Seq.length s2})
   (n: nat{n < Seq.length s1})
-  : Steel unit
+  : SteelGhost unit opened
   (starseq #a #(option b) f1 f1_lemma s1)
   (fun _ ->
     f1 (Seq.index s1 n) `star`

@@ -355,6 +355,7 @@ let t (md: array U64.t)
 //        (U32.v pos)))
 //  (fun _ -> slot_vprop size_class arr pos)
 
+noextract
 let a2bv = Bitmap4.array_to_bv2 #4
 
 inline_for_extraction
@@ -541,6 +542,7 @@ let elim_intro_vdep_test_aux3
   elim_intro_vdep_test_aux2_lemma3
     size_class md md_as_seq1 md_as_seq2 arr pos;
   starseq_upd3
+    #_
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.seq U8.t)
     (slab_vprop_aux_f size_class md_as_seq1 arr)

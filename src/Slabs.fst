@@ -19,12 +19,13 @@ module L = FStar.List.Tot
 module SL = Selectors.LList
 module Temp = TempLock
 
-
+(*)
 open FStar.Mul
 open Utils2
 open SteelUtils
 open SlabsUtils
 open SizeClass
+open SteelFix
 
 //#push-options "--fuel 0 --ifuel 0"
 
@@ -48,7 +49,7 @@ assume val get_slab_md_region (_:unit)
 noextract
 let slab_md_bitmap_length = nb_slots (U32.uint_to_t min_sc)
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 30 --query_stats"
+//#push-options "--fuel 1 --ifuel 1 --z3rlimit 30 --query_stats"
 inline_for_extraction noextract
 let get_free_slot_aux
   (size_class: sc)
@@ -83,7 +84,7 @@ let get_free_slot_aux
   admit ();
   let r' = US.mul i 64sz in
   US.add r r'
-#pop-options
+//#pop-options
 
 let get_free_slot (size_class: sc) (bitmap: slab_metadata)
   : Steel US.t
@@ -122,7 +123,9 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     get_free_slot_aux size_class bitmap 0sz
   )
 
-#push-options "--fuel 1 --ifuel 0"
+//#push-options "--fuel 1 --ifuel 0"
+#push-options "--z3rlimit 30"
+#push-options "--print_implicits"
 
 let allocate_slot_aux
   (size_class: sc)
@@ -134,30 +137,43 @@ let allocate_slot_aux
   (fun r -> slab_vprop size_class arr md)
   (requires fun h0 -> True)
   (ensures fun h0 _ h1 ->
-    let v1 = h1 (slab_vprop size_class arr md) in
-    let v0 = h0 (slab_vprop size_class arr md) in
-    //TODO: FIXME
+    True
+    //let v1 : (t_of (slab_vprop size_class arr md))
+    //  = h1 (slab_vprop size_class arr md) in
+    //let v0 : (t_of (slab_vprop size_class arr md))
+    //  = h0 (slab_vprop size_class arr md) in
+    ////TODO: FIXME
     //let md1 = dfst v1 in
     //let md0 = dfst v0 in
-    v1 == v0
+    //v1 == v0
   )
   =
   //TODO: FIXME, only gget works with dfst
-  let h0 = get () in
-  let v0 = G.hide ((G.reveal h0) (slab_vprop size_class arr md)) in
+  //let h0 = get () in
+  //let v0 = G.hide ((G.reveal h0) (slab_vprop size_class arr md)) in
   //let v0 = gget (slab_vprop size_class arr md) in
+  //assume (t_of (A.varray md) == Seq.lseq U64.t 4);
+  //let md_as_seq : G.erased (normal (t_of (A.varray md))) = elim_vdep
+  //let md_as_seq : G.erased (t_of (A.varray md)) = elim_vdep
   let md_as_seq = elim_vdep
     (A.varray md)
-    (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x) in
-  let h1 = get () in
-  let v1 = G.hide (A.asel md h1) in
+    (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x)
+  in
+  //let h1 = get () in
+  //slassert (A.varray md `star` slab_vprop_aux size_class arr (G.reveal md_as_seq));
+  //let nb_slots_as_nat = U32.v (nb_slots size_class) in
+  //let incr_seq = SeqUtils.init_u32_refined nb_slots_as_nat in
+  //slab_vprop_aux_unpack size_class arr md_as_seq;
+  //slab_vprop_aux_idem size_class arr md_as_seq;
+  //slab_vprop_aux_pack size_class arr md_as_seq;
+  //let v1 = G.hide (A.asel md h1) in
   intro_vdep
     (A.varray md)
-    (slab_vprop_aux size_class arr md_as_seq)
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
     (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
-  let v2 = gget (slab_vprop size_class arr md) in
+  //let v2 = gget (slab_vprop size_class arr md) in
   //assert (dfst v0 == G.reveal v1);
-  assert (dfst v2 == G.reveal v1);
+  //assert (dfst v2 == G.reveal v1);
   return ()
 
 (*)
