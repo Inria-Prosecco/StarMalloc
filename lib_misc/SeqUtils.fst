@@ -43,20 +43,6 @@ let init_nat_len (len: nat)
   (Seq.length (init_nat len) = len)
   = ()
 
-//let init_nat_slice (len:nat) (n:nat{n < len})
-//  : Lemma
-//  (
-//  let r1 = Seq.slice (init_nat len) 0 n in
-//  let r2 = init_nat n in
-//  assume (Seq.length r1 = Seq.length r2);
-//  assume (forall x. Seq.index r1 x = Seq.index r2 x);
-//  Seq.lemma_eq_intro r1 r2;
-//  Seq.lemma_eq_elim r1 r2;
-//  r1 == r2)
-//  = admit ()
-
-
-
 noextract
 let init_nat_refined (len: nat) (len2: nat)
   : Pure (Seq.lseq (k:nat{k < len2}) len)
@@ -133,84 +119,6 @@ let map_seq_slice (#a #b:Type)
   Seq.lemma_eq_intro
     (Seq.map_seq f (Seq.slice s i j))
     (Seq.slice (Seq.map_seq f s) i j)
-
-//let map_seq_init_nat_equiv_aux (#a #b:Type)
-//  (f: a -> Tot b)
-//  (s:Seq.seq a)
-//  (k:nat{k < Seq.length s})
-//  : Lemma
-//  (
-//  Seq.map_seq_len (fun k -> f (Seq.index s k)) (init_nat (Seq.length s));
-//  init_nat_len (Seq.length s);
-//  Seq.map_seq_len f s;
-//  Seq.index (Seq.map_seq (fun k -> f (Seq.index s k)) (init_nat (Seq.length s))) k
-//  ==
-//  Seq.index (Seq.map_seq f s) k
-//  )
-//  = admit ()
-//
-//let map_init_nat_equiv (#a #b:Type)
-//  (f: a -> Tot b)
-//  (s:Seq.seq a)
-//  : Lemma
-//  (
-//  Seq.map_seq (fun k -> f (Seq.index s k)) (init_nat (Seq.length s))
-//  ==
-//  Seq.map_seq f s
-//  )
-//  =
-//  let f' = fun k -> f (Seq.index s k) in
-//  let s' = init_nat (Seq.length s) in
-//  Seq.map_seq_len f' s';
-//  Seq.map_seq_len f s;
-//  init_nat_len (Seq.length s);
-//  Seq.map_seq_len f s;
-//  let r1 = Seq.map_seq f' s' in
-//  let r2 = Seq.map_seq f s in
-//  assert (Seq.length r1 = Seq.length r2);
-//  Classical.forall_intro (map_seq_init_nat_equiv_aux f s);
-//  assert (forall x. Seq.index r1 x == Seq.index r2 x);
-//  Seq.lemma_eq_intro r1 r2;
-//  Seq.lemma_eq_elim r1 r2
-
-//let map_init_nat_slice (#a #b: Type)
-//  (f: a -> Tot b)
-//  (s:Seq.seq a)
-//  (i:nat)
-//  (j:nat{i <= j /\ j <= Seq.length s})
-//  : Lemma
-//  (Seq.map_seq_len (fun k -> f (Seq.index s k)) (init_nat (Seq.length s));
-//  init_nat_len (Seq.length s);
-//  Seq.map_seq_len f s;
-//  Seq.slice
-//    (Seq.map_seq (fun k -> f (Seq.index s k)) (init_nat (Seq.length s))) i j
-//  ==
-//  Seq.slice (Seq.map_seq f s) i j)
-//  =
-//  map_init_nat_equiv f s
-//
-//let map_init_nat_slice2 (#a #b: Type)
-//  (f: a -> Tot b)
-//  (s:Seq.seq a)
-//  (i:nat)
-//  (j:nat{i <= j /\ j <= Seq.length s})
-//  : Lemma
-//  (
-//  Seq.map_seq_len
-//    (fun k -> f (Seq.index s k))
-//    (init_nat (Seq.length s));
-//  init_nat_len (Seq.length s);
-//  Seq.slice
-//    (Seq.map_seq
-//      (fun k -> f (Seq.index s k))
-//      (init_nat (Seq.length s))
-//    ) i j
-//  ==
-//  Seq.map_seq
-//    (fun k -> f (Seq.index (Seq.slice s i j) k))
-//    (init_nat (j - i))
-//  )
-//  = admit ()
 
 let map_seq_weakening (#a #b:Type)
   (#p1: a -> bool)
