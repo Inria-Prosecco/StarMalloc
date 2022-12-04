@@ -408,6 +408,31 @@ let elim_intro_vdep_test_aux2_lemma3
   )
   = admit ()
 
+let elim_intro_vdep_test_aux2_lemma4
+  (size_class: sc)
+  (md: array U64.t{A.length md = 4})
+  (md_as_seq1: G.erased (Seq.lseq U64.t 4))
+  (md_as_seq2: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Lemma
+  (requires (
+    let bm1 = a2bv (G.reveal md_as_seq1) in
+    let bm2 = a2bv (G.reveal md_as_seq2) in
+    Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false /\
+    bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) true
+  ))
+  (ensures (
+    slot_vprop_lemma size_class arr pos;
+    ((slab_vprop_aux_f size_class md_as_seq1 arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)))
+    ==
+    some_as_vp #(Seq.seq U8.t) (slot_vprop size_class arr pos)
+  ))
+  = admit ()
+
 inline_for_extraction
 let elim_intro_vdep_test_aux2
   (size_class: sc)
@@ -489,25 +514,65 @@ let elim_intro_vdep_test_aux2
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (U32.v pos)
 
-//  starseq_unpack_s
-//    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-//    #(option (Seq.seq U8.t))
-//    (slab_vprop_aux_f size_class md_as_seq arr)
-//    (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-//    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-//    (U32.v pos)
-
-
-    //let v0 = A.asel md h0 in
-    //let v1 = A.asel md h1 in
-    //let bm0 = Bitmap4.array_to_bv2 v0 in
-    //let bm1 = Bitmap4.array_to_bv2 v1 in
-    //let idx = Bitmap5.f #4 (U32.v pos) in
-    //Seq.index bm1 idx = true /\
-    //bm1 == Seq.upd bm0 idx true /\
-    //True)
-
-
+inline_for_extraction
+let elim_intro_vdep_test_aux3
+  (size_class: sc)
+  (md: array U64.t{A.length md = 4})
+  (md_as_seq1: G.erased (Seq.lseq U64.t 4))
+  (md_as_seq2: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Steel unit
+  (
+  starseq
+    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+    #(option (Seq.seq U8.t))
+    (slab_vprop_aux_f size_class md_as_seq1 arr)
+    (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+  )
+  (
+  fun _ ->
+  //A.varray md `star`
+  (slab_vprop_aux_f size_class md_as_seq1 arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)) `star`
+  starseq
+    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+    #(option (Seq.seq U8.t))
+    (slab_vprop_aux_f size_class md_as_seq2 arr)
+    (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+  )
+  (requires fun h0 ->
+    let bm1 = a2bv (G.reveal md_as_seq1) in
+    let bm2 = a2bv (G.reveal md_as_seq2) in
+    Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false /\
+    bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) true)
+  (ensures fun h0 _ h1 -> True)
+  =
+  starseq_unpack_s
+    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+    #(option (Seq.seq U8.t))
+    (slab_vprop_aux_f size_class md_as_seq1 arr)
+    (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    (U32.v pos);
+  elim_intro_vdep_test_aux2
+    size_class
+    md
+    md_as_seq1
+    md_as_seq2
+    arr
+    pos;
+  starseq_pack_s
+    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+    #(option (Seq.seq U8.t))
+    (slab_vprop_aux_f size_class md_as_seq2 arr)
+    (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    (U32.v pos)
 
 //#push-options "--z3rlimit 30"
 inline_for_extraction
