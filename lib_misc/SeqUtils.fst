@@ -62,7 +62,7 @@ noextract
 let init_u32_refined (len: nat)
   : Pure (Seq.lseq (k:U32.t{U32.v k < len}) len)
   (requires FStar.UInt.size len U32.n)
-  (ensures fun _ -> True)
+  (ensures fun r -> Seq.length r = len)
   =
   let s : Seq.lseq (k:nat{k < len}) len
     = Seq.init len (fun k -> k) in
