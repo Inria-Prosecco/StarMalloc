@@ -496,9 +496,48 @@ let elim_intro_vdep_test_aux2
     let bm2 = a2bv (G.reveal md_as_seq2) in
     Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false /\
     bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) true)
-  (ensures fun h0 _ h1 -> True)
+  (ensures fun h0 _ h1 ->
+    (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
+      (Seq.index (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) (U32.v pos));
+    v_starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.seq U8.t))
+      (slab_vprop_aux_f size_class md_as_seq2 arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+      (Seq.slice (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) 0 (U32.v pos))
+      h1
+    ==
+    v_starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.seq U8.t))
+      (slab_vprop_aux_f size_class md_as_seq1 arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
+      (Seq.slice (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) 0 (U32.v pos))
+      h0
+    /\
+    v_starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.seq U8.t))
+      (slab_vprop_aux_f size_class md_as_seq2 arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+      (Seq.slice (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) (U32.v pos + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))))
+      h1
+    ==
+    v_starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.seq U8.t))
+      (slab_vprop_aux_f size_class md_as_seq1 arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
+      (Seq.slice (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) (U32.v pos + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))))
+      h0
+    /\
+    h1 ((slab_vprop_aux_f size_class md_as_seq1 arr)
+      (Seq.index (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) (U32.v pos)))
+    ==
+    h1 ((slab_vprop_aux_f size_class md_as_seq1 arr)
+      (Seq.index (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) (U32.v pos)))
+  )
   =
-
   elim_intro_vdep_test_aux2_lemma2
     size_class md md_as_seq1 md_as_seq2 arr pos;
   elim_intro_vdep_test_aux2_lemma3
