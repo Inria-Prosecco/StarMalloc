@@ -589,27 +589,49 @@ let elim_intro_vdep_test_aux3
     let bm2 = a2bv (G.reveal md_as_seq2) in
     Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false /\
     bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) true)
-  (ensures fun h0 _ h1 -> True)
+  (ensures fun h0 _ h1 ->
+    v_starseq_len
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.seq U8.t))
+      (slab_vprop_aux_f size_class md_as_seq1 arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+      h0;
+    v_starseq_len
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.seq U8.t))
+      (slab_vprop_aux_f size_class md_as_seq2 arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+      h1;
+    let v1 = v_starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.seq U8.t))
+      (slab_vprop_aux_f size_class md_as_seq1 arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+      h0 in
+    let v2 = v_starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.seq U8.t))
+      (slab_vprop_aux_f size_class md_as_seq2 arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+      h1 in
+    v2 == Seq.upd v1 (U32.v pos) None)
   =
-  starseq_unpack_s
+  elim_intro_vdep_test_aux2_lemma2
+    size_class md md_as_seq1 md_as_seq2 arr pos;
+  elim_intro_vdep_test_aux2_lemma3
+    size_class md md_as_seq1 md_as_seq2 arr pos;
+  starseq_upd3
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(option (Seq.seq U8.t))
+    #(Seq.seq U8.t)
     (slab_vprop_aux_f size_class md_as_seq1 arr)
-    (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
-    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-    (U32.v pos);
-  elim_intro_vdep_test_aux2
-    size_class
-    md
-    md_as_seq1
-    md_as_seq2
-    arr
-    pos;
-  starseq_pack_s
-    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(option (Seq.seq U8.t))
     (slab_vprop_aux_f size_class md_as_seq2 arr)
+    (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
     (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (U32.v pos)
 
