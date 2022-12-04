@@ -1121,7 +1121,7 @@ let starseq_upd (#a #b: Type0)
   starseq #a #b f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2))))
   (requires fun _ ->
     Seq.length s1 = Seq.length s2 /\
-    (forall (k:nat{k < Seq.length s1}).
+    (forall (k:nat{k <> n /\ k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
     Seq.slice s2 0 n == Seq.slice s1 0 n /\
     Seq.slice s2 (n+1) (Seq.length s2) == Seq.slice s1 (n+1) (Seq.length s1))
