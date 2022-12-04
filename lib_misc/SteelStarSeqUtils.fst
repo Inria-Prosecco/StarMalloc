@@ -1200,6 +1200,40 @@ let starseq_upd2 (#a #b: Type0)
     (fun _ -> admit ());
   return ()
 
+
+#push-options "--print_implicits"
+let starseq_upd3 (#a #b: Type0)
+  (f1 f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
+  (s1: Seq.seq a)
+  (s2: Seq.seq a{Seq.length s1 = Seq.length s2})
+  (n: nat{n < Seq.length s1})
+  : Steel unit
+  (starseq #a #(option b) f1 f1_lemma s1)
+  (fun _ ->
+    f1 (Seq.index s1 n) `star`
+    starseq #a #(option b) f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 = Seq.length s2 /\
+    (forall (k:nat{k <> n /\ k < Seq.length s1}).
+      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
+    f2 (Seq.index s2 n) == none_as_emp #b)
+  (ensures fun h0 _ h1 -> True
+    //starseq_sel_index #a #(option b) f2 f2_lemma s2 n h1;
+    //v_starseq #a #(option b) f2 f2_lemma s2 h1
+    //==
+    //Seq.upd
+    //  (v_starseq #a #(option b) f1 f1_lemma s1 h0)
+    //  n
+    //  (G.hide (none_as_emp #b))
+  )
+  =
+  starseq_unpack_s #a #(option b) f1 f1_lemma s1 n;
+  starseq_upd2 #a #b f1 f2 f1_lemma f2_lemma s1 s2 n;
+  starseq_pack_s #a #(option b) f2 f2_lemma s2 n
+
+
 (*)
   equiv_sym
     (emp `star` f1 (Seq.index s1 n))
