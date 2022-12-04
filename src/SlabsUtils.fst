@@ -22,8 +22,7 @@ open Utils2
 open SteelUtils
 //open SteelFix
 
-//TODO: FIXME
-#push-options "--z3rlimit 50"
+#push-options "--z3rlimit 30"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   : Pure (array U8.t)
   (requires
@@ -38,8 +37,8 @@ let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   let shift = U32.mul pos size_class in
   nb_slots_correct size_class pos;
   assert (U32.v shift <= U32.v page_size);
-  admit ();
   assert_norm (U32.v shift <= FStar.Int.max_int U16.n);
+  assert (U32.v shift <= FStar.Int.max_int U16.n);
   let shift_size_t = STU.small_uint32_to_sizet shift in
   assert (US.v shift_size_t < A.length arr);
   let ptr_shifted = A.ptr_shift ptr shift_size_t in
@@ -384,7 +383,10 @@ let elim_intro_vdep_test_aux
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
   )
   (requires fun h0 ->
-    A.asel md h0 == G.reveal md_as_seq
+    let bm0 = Bitmap4.array_to_bv2 (A.asel md h0) in
+    let idx = Bitmap5.f #4 (U32.v pos) in
+    A.asel md h0 == G.reveal md_as_seq /\
+    Seq.index bm0 idx = false
   )
   (ensures fun h0 _ h1 ->
     let v0 = A.asel md h0 in
@@ -392,8 +394,8 @@ let elim_intro_vdep_test_aux
     let bm0 = Bitmap4.array_to_bv2 v0 in
     let bm1 = Bitmap4.array_to_bv2 v1 in
     let idx = Bitmap5.f #4 (U32.v pos) in
-    v0 == v1 /\
-    bm1 == bm0 /\
+    Seq.index bm1 idx = true /\
+    bm1 == Seq.upd bm0 idx true /\
     v_starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
       #(option (Seq.seq U8.t))
@@ -410,7 +412,7 @@ let elim_intro_vdep_test_aux
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       h1)
   =
-  admit ();
+  Bitmap5.bm_set #4 md pos;
   return ()
 
 

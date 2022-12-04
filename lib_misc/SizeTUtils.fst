@@ -8,7 +8,7 @@ module U16 = FStar.UInt16
 
 let small_uint32_to_sizet (x: U32.t)
   : Pure US.t
-  (requires U32.v x < FI.max_int U16.n)
+  (requires U32.v x <= FI.max_int U16.n)
   (ensures fun r ->
     US.v r = U32.v x
   )
