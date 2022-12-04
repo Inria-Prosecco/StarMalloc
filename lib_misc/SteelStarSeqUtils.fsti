@@ -1,4 +1,4 @@
-module SteelUtils
+module SteelStarSeqUtils
 
 open Steel.Effect.Atomic
 open Steel.Effect
@@ -6,6 +6,7 @@ open Steel.Reference
 module SM = Steel.Memory
 module L = FStar.List.Tot
 module G = FStar.Ghost
+open SteelOptUtils
 
 
 let starl (l: list vprop)
@@ -200,9 +201,7 @@ val starseq_upd (#a #b: Type0)
   (requires fun _ ->
     Seq.length s1 = Seq.length s2 /\
     (forall (k:nat{k <> n /\ k < Seq.length s1}).
-      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
-    Seq.slice s2 0 n == Seq.slice s1 0 n /\
-    Seq.slice s2 (n+1) (Seq.length s2) == Seq.slice s1 (n+1) (Seq.length s1))
+      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
   (ensures fun h0 _ h1 ->
     f1_lemma (Seq.index s1 n);
     v_starseq #a #b f2 f2_lemma (Seq.slice s2 0 n) h1
@@ -212,6 +211,42 @@ val starseq_upd (#a #b: Type0)
     v_starseq #a #b f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2)) h1
     ==
     v_starseq #a #b f1 f1_lemma (Seq.slice s1 (n+1) (Seq.length s1)) h0
+    /\
+    h1 (f1 (Seq.index s1 n))
+    ==
+    h0 (f1 (Seq.index s1 n))
+  )
+
+val starseq_upd2 (#a #b: Type0)
+  (f1 f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
+  (s1: Seq.seq a)
+  (s2: Seq.seq a{Seq.length s1 = Seq.length s2})
+  (n: nat{n < Seq.length s1})
+  : Steel unit
+  (f1 (Seq.index s1 n) `star`
+  (starseq #a #(option b) f1 f1_lemma (Seq.slice s1 0 n) `star`
+  starseq #a #(option b) f1 f1_lemma (Seq.slice s1 (n+1) (Seq.length s1))))
+  (fun _ ->
+  f1 (Seq.index s1 n) `star`
+  ((f2 (Seq.index s2 n)) `star`
+  (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
+  starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2)))))
+  (requires fun _ ->
+    Seq.length s1 = Seq.length s2 /\
+    (forall (k:nat{k <> n /\ k < Seq.length s1}).
+      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
+    f2 (Seq.index s2 n) == none_as_emp #b)
+  (ensures fun h0 _ h1 ->
+    f1_lemma (Seq.index s1 n);
+    v_starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) h1
+    ==
+    v_starseq #a #(option b) f1 f1_lemma (Seq.slice s1 0 n) h0
+    /\
+    v_starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2)) h1
+    ==
+    v_starseq #a #(option b) f1 f1_lemma (Seq.slice s1 (n+1) (Seq.length s1)) h0
     /\
     h1 (f1 (Seq.index s1 n))
     ==
