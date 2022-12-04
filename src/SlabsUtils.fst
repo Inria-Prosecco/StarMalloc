@@ -146,11 +146,11 @@ let slab_vprop_aux
     (slab_vprop_aux_f_lemma size_class md_as_seq arr)
     incr_seq
 
-let slab_vprop_aux_unpack
+let slab_vprop_aux_unpack (#opened:_)
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
-  : Steel unit
+  : SteelGhost unit opened
   (slab_vprop_aux size_class arr (G.reveal md_as_seq))
   (fun _ ->
     starseq
@@ -184,11 +184,11 @@ let slab_vprop_aux_unpack
     (fun x y -> x == y)
     (fun _ -> ())
 
-let slab_vprop_aux_pack
+let slab_vprop_aux_pack (#opened:_)
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
-  : Steel unit
+  : SteelGhost unit opened
   (starseq
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(option (Seq.seq U8.t))
@@ -222,11 +222,11 @@ let slab_vprop_aux_pack
     (fun x y -> x == y)
     (fun _ -> ())
 
-let slab_vprop_aux_idem
+let slab_vprop_aux_idem (#opened:_)
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
-  : Steel unit
+  : SteelGhost unit opened
   (slab_vprop_aux size_class arr (G.reveal md_as_seq))
   (fun _ -> slab_vprop_aux size_class arr (G.reveal md_as_seq))
   (requires fun _ -> True)
@@ -238,7 +238,7 @@ let slab_vprop_aux_idem
   =
   slab_vprop_aux_unpack size_class arr md_as_seq;
   slab_vprop_aux_pack size_class arr md_as_seq;
-  return ()
+  ()
 
 //unfold
 //[@@__steel_reduce__]
@@ -335,30 +335,9 @@ let t (md: array U64.t)
   )
   = ()
 
-
-//inline_for_extraction
-//let elim_intro_vdep_test_aux3
-//  (size_class: sc)
-//  (md: array U64.t{A.length md = 4})
-//  (md_as_seq1: G.erased (Seq.lseq U64.t 4))
-//  (md_as_seq2: G.erased (Seq.lseq U64.t 4))
-//  (arr: array U8.t{A.length arr = U32.v page_size})
-//  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-//  : Lemma
-//  (requires
-//    Bitmap4.get
-//  )
-//  (
-//    (slab_vprop_aux_f size_class md_as_seq1 arr)
-//      (Seq.index
-//        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-//        (U32.v pos)))
-//  (fun _ -> slot_vprop size_class arr pos)
-
 noextract
 let a2bv = Bitmap4.array_to_bv2 #4
 
-inline_for_extraction
 let elim_intro_vdep_test_aux2_lemma
   (size_class: sc)
   (md: array U64.t{A.length md = 4})
@@ -394,7 +373,6 @@ let elim_intro_vdep_test_aux2_lemma
   //assert (Bitmap4.get md_as_seq1 k == Bitmap4.get md_as_seq2 k);
   admit ()
 
-inline_for_extraction
 let elim_intro_vdep_test_aux2_lemma2
   (size_class: sc)
   (md: array U64.t{A.length md = 4})
@@ -470,15 +448,14 @@ let elim_intro_vdep_test_aux2_lemma4
   ))
   = admit ()
 
-inline_for_extraction
-let elim_intro_vdep_test_aux3
+let elim_intro_vdep_test_aux3 (#opened:_)
   (size_class: sc)
   (md: array U64.t{A.length md = 4})
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-  : Steel unit
+  : SteelGhost unit opened
   (
   starseq
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
@@ -553,6 +530,7 @@ let elim_intro_vdep_test_aux3
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (U32.v pos)
 
+noextract inline_for_extraction
 let rewriting_f1_seq_index_s_n_as_returned_value
   (size_class: sc)
   (md: array U64.t{A.length md = 4})
@@ -581,7 +559,7 @@ let rewriting_f1_seq_index_s_n_as_returned_value
   return r
 
 //#push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
-inline_for_extraction
+noextract inline_for_extraction
 let elim_intro_vdep_test_aux
   (size_class: sc)
   (md: array U64.t{A.length md = 4})
