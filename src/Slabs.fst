@@ -1,9 +1,4 @@
 module Slabs
-open Steel.Effect.Atomic
-open Steel.Effect
-open Steel.Reference
-module A = Steel.Array
-module SM = Steel.Memory
 
 module US = FStar.SizeT
 module U64 = FStar.UInt64
@@ -16,18 +11,19 @@ module G = FStar.Ghost
 module FU = FStar.UInt
 module L = FStar.List.Tot
 
+open Steel.Effect.Atomic
+open Steel.Effect
+open Steel.Reference
+module A = Steel.Array
+module SM = Steel.Memory
+
 module SL = Selectors.LList
-module Temp = TempLock
 
-(*)
-open FStar.Mul
+//module Temp = TempLock
+
 open Utils2
-open SteelUtils
-open SlabsUtils
-open SizeClass
-open SteelFix
-
-//#push-options "--fuel 0 --ifuel 0"
+//open SteelOptUtils
+//open SteelStarSeqUtils
 
 let slab_region_len : U32.t = normalize_term (U32.mul page_size slab_max_number)
 unfold let slab_region
@@ -37,249 +33,28 @@ let slab_md_region_len : U32.t = normalize_term (U32.mul 40ul slab_max_number)
 unfold let slab_md_region
   = r:array U8.t{A.length r = U32.v slab_md_region_len}
 
-// C binding, no top-level Steel initialization
-assume val get_slab_region (_:unit)
-  : slab_region
+//// C binding, no top-level Steel initialization
+//assume val get_slab_region (_:unit)
+//  : slab_region
+//
+//// C binding, no top-level Steel initialization
+//assume val get_slab_md_region (_:unit)
+//  : slab_md_region
 
-// C binding, no top-level Steel initialization
-assume val get_slab_md_region (_:unit)
-  : slab_md_region
+////TODO
+//noextract
+//let slab_md_bitmap_length = nb_slots (U32.uint_to_t min_sc)
 
-//TODO
-noextract
-let slab_md_bitmap_length = nb_slots (U32.uint_to_t min_sc)
-
-//#push-options "--fuel 1 --ifuel 1 --z3rlimit 30 --query_stats"
-inline_for_extraction noextract
-let get_free_slot_aux
-  (size_class: sc)
-  (bitmap: slab_metadata)
-  (i: US.t)
-  : Steel US.t
-  (A.varray bitmap)
-  (fun _ -> A.varray bitmap)
-  (requires fun h0 ->
-    US.v i < U32.v (nb_slots size_class) / 64 /\
-    U64.v (Seq.index (A.asel bitmap h0) (US.v i)) <> 0)
-  (ensures fun h0 r h1 ->
-    A.asel bitmap h1 == A.asel bitmap h0 /\
-    US.v r < U32.v (nb_slots size_class) /\
-    (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
-    let idx = Bitmap5.f #4 (US.v r) in
-    Seq.index bm idx = false)
-  )
-  =
-  let h0 = get () in
-  let x = A.index bitmap i in
-  let r = ffs64 x in
-  let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
-  let idx1 = G.hide ((US.v i) * 64) in
-  let idx2 = G.hide ((US.v i + 1) * 64) in
-  assert (x == Seq.index (A.asel bitmap h0) (US.v i));
-  assert (FU.nth (U64.v x) (U64.n - 1 - US.v r) = false);
-  array_to_bv_slice (A.asel bitmap h0) (US.v i);
-  assert (FU.to_vec (U64.v x) == Seq.slice bm ((US.v i)*64) ((US.v i + 1)*64));
-  Seq.lemma_index_slice bm ((US.v i)*64) ((US.v i + 1)*64) (US.v r);
-  //TODO: FIXME
-  admit ();
-  let r' = US.mul i 64sz in
-  US.add r r'
-//#pop-options
-
-let get_free_slot (size_class: sc) (bitmap: slab_metadata)
-  : Steel US.t
-  (A.varray bitmap)
-  (fun _ -> A.varray bitmap)
-  (requires fun h0 ->
-    let s = A.asel bitmap h0 in
-    has_free_slot size_class s
-  )
-  (ensures fun h0 r h1 ->
-    A.asel bitmap h1 == A.asel bitmap h0 /\
-    US.v r < U32.v (nb_slots size_class) /\
-    (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
-    let idx = Bitmap5.f #4 (US.v r) in
-    Seq.index bm idx = false)
-  )
-  =
-  //TODO: FIXME
-  admit ();
-  let bound = U32.div (nb_slots size_class) (U32.uint_to_t U64.n) in
-  assert (U32.v bound == U32.v (nb_slots size_class) / 64);
-  let x1 = A.index bitmap 0sz in
-  if (not (U64.eq x1 0UL) && U32.gt bound 1ul) then (
-    let x2 = A.index bitmap 1sz in
-    if (not (U64.eq x2 0UL) && U32.gt bound 2ul) then (
-      let x3 = A.index bitmap 2sz in
-      if (not (U64.eq x3 0UL) && U32.gt bound 3ul) then (
-        get_free_slot_aux size_class bitmap 3sz
-      ) else (
-        get_free_slot_aux size_class bitmap 2sz
-      )
-    ) else (
-      get_free_slot_aux size_class bitmap 1sz
-    )
-  ) else (
-    get_free_slot_aux size_class bitmap 0sz
-  )
-
-//#push-options "--fuel 1 --ifuel 0"
-#push-options "--z3rlimit 30"
 #push-options "--print_implicits"
 
-let allocate_slot_aux
-  (size_class: sc)
-  (md: slab_metadata)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-  : Steel unit
-  (slab_vprop size_class arr md)
-  (fun r -> slab_vprop size_class arr md)
-  (requires fun h0 -> True)
-  (ensures fun h0 _ h1 ->
-    True
-    //let v1 : (t_of (slab_vprop size_class arr md))
-    //  = h1 (slab_vprop size_class arr md) in
-    //let v0 : (t_of (slab_vprop size_class arr md))
-    //  = h0 (slab_vprop size_class arr md) in
-    ////TODO: FIXME
-    //let md1 = dfst v1 in
-    //let md0 = dfst v0 in
-    //v1 == v0
-  )
-  =
-  //TODO: FIXME, only gget works with dfst
-  //let h0 = get () in
-  //let v0 = G.hide ((G.reveal h0) (slab_vprop size_class arr md)) in
-  //let v0 = gget (slab_vprop size_class arr md) in
-  //assume (t_of (A.varray md) == Seq.lseq U64.t 4);
-  //let md_as_seq : G.erased (normal (t_of (A.varray md))) = elim_vdep
-  //let md_as_seq : G.erased (t_of (A.varray md)) = elim_vdep
-  let md_as_seq = elim_vdep
-    (A.varray md)
-    (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x)
-  in
-  //let h1 = get () in
-  //slassert (A.varray md `star` slab_vprop_aux size_class arr (G.reveal md_as_seq));
-  //let nb_slots_as_nat = U32.v (nb_slots size_class) in
-  //let incr_seq = SeqUtils.init_u32_refined nb_slots_as_nat in
-  //slab_vprop_aux_unpack size_class arr md_as_seq;
-  //slab_vprop_aux_idem size_class arr md_as_seq;
-  //slab_vprop_aux_pack size_class arr md_as_seq;
-  //let v1 = G.hide (A.asel md h1) in
-  intro_vdep
-    (A.varray md)
-    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-    (fun (x:Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
-  //let v2 = gget (slab_vprop size_class arr md) in
-  //assert (dfst v0 == G.reveal v1);
-  //assert (dfst v2 == G.reveal v1);
-  return ()
-
-(*)
-let allocate_slot_aux (#opened:_)
-  (size_class: sc)
-  (md: slab_metadata)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-  : SteelGhostT unit opened
-  (slab_vprop size_class arr 0 (U32.v (nb_slots size_class)) `star` A.varray md)
-  (fun _ ->
-    (slab_vprop size_class arr 0 (U32.v pos)) `star`
-    A.varray (slot_array size_class arr pos) `star`
-    (slab_vprop size_class arr (U32.v pos + 1) (U32.v (nb_slots size_class)) `star`
-    A.varray md))
-  =
-  rewrite_slprop
-    (slab_vprop size_class arr 0 (U32.v (nb_slots size_class)))
-    ((slab_vprop size_class arr 0 (U32.v pos)) `star`
-      (slab_vprop size_class arr (U32.v pos) (U32.v (nb_slots size_class))))
-    (slab_vprop_sl_lemma size_class md arr
-      0 (U32.v (nb_slots size_class)) (U32.v pos));
-  rewrite_slprop
-    (slab_vprop size_class arr (U32.v pos) (U32.v (nb_slots size_class)))
-    ((slab_vprop size_class arr (U32.v pos) (U32.v pos + 1)) `star`
-    (slab_vprop size_class arr (U32.v pos + 1) (U32.v (nb_slots size_class))))
-    (slab_vprop_sl_lemma size_class md arr
-      (U32.v pos) (U32.v (nb_slots size_class)) (U32.v pos + 1));
-  slab_vprop_singleton_lemma size_class arr pos;
-  assert (
-    slab_vprop size_class arr (U32.v pos) (U32.v pos + 1)
-    ==
-    A.varray (slot_array size_class arr pos) `star` emp
-    );
-  change_slprop_rel
-    (slab_vprop size_class arr (U32.v pos) (U32.v pos + 1))
-    (A.varray (slot_array size_class arr pos) `star` emp)
-    (fun x y -> x == y)
-    (fun _ -> ());
-  ()
-
 #set-options "--ide_id_info_off"
-
-// Given a size class and a slab of this size class, return a free slot and update metadata
-let allocate_slot (size_class: sc)
-  (md: slab_metadata) (arr: array U8.t{A.length arr = U32.v page_size})
-  : Steel
-    (r:(G.erased nat & array U8.t){
-      G.reveal (fst r) < U32.v (nb_slots size_class) /\
-      same_base_array (snd r) arr})
-  (slab_vprop size_class arr 0 (U32.v (nb_slots size_class)) `star` A.varray md)
-  (fun r ->
-    (slab_vprop size_class arr 0 (fst r)) `star`
-    A.varray (snd r) `star`
-    (slab_vprop size_class arr (fst r + 1) (U32.v (nb_slots size_class)) `star`
-    A.varray md)
-  )
-  (requires fun h0 -> has_free_slot size_class (A.asel md h0))
-  (ensures fun _ _ _ -> True)
-  =
-  let slot_pos = get_free_slot size_class md in
-  Bitmap5.bm_set #(G.hide 4) md slot_pos;
-  let slot = slot_array size_class arr slot_pos in
-  array_slot_slot_array_bij size_class arr slot_pos;
-  allocate_slot_aux size_class md arr slot_pos;
-  change_slprop_rel
-    (A.varray (slot_array size_class arr slot_pos))
-    (A.varray slot)
-    (fun x y -> x == y)
-    (fun _ -> ());
-  return (G.hide (U32.v slot_pos), slot)
-
-let allocate_slot_kiss (size_class: sc)
-  (md: slab_metadata) (arr: array U8.t{A.length arr = U32.v page_size})
-  : Steel
-    (r:(G.erased nat & array U8.t){
-      G.reveal (fst r) < U32.v (nb_slots size_class) /\
-      same_base_array (snd r) arr})
-  (slab_vprop size_class arr 0 (U32.v (nb_slots size_class)) `star` A.varray md)
-  (fun r -> slab_vprop size_class arr 0 (U32.v (nb_slots size_class)) `star` A.varray md)
-  (requires fun h0 -> has_free_slot size_class (A.asel md h0))
-  (ensures fun h0 r h1 ->
-    let bm0 = Bitmap4.array_to_bv2 (A.asel md h0) in
-    let bm1 = Bitmap4.array_to_bv2 (A.asel md h1) in
-    let idx = Bitmap5.f #4 (G.reveal (fst r)) in
-    Seq.index bm0 idx = false /\
-    bm1 == Seq.upd bm0 idx true
-    )
-  =
-  let slot_pos = get_free_slot size_class md in
-  Bitmap5.bm_set #(G.hide 4) md slot_pos;
-  let slot = slot_array size_class arr slot_pos in
-  array_slot_slot_array_bij size_class arr slot_pos;
-  //allocate_slot_aux size_class md arr slot_pos;
-  //change_slprop_rel
-  //  (A.varray (slot_array size_class arr slot_pos))
-  //  (A.varray slot)
-  //  (fun x y -> x == y)
-  //  (fun _ -> ());
-  return (G.hide (U32.v slot_pos), slot)
 
 // Given a size class, return a free slot and update metadata
 // TODO: refine spec
 // TODO: remove assume with pure predicates inside p
 //   this will yield two different versions of p
 
+(*)
 inline_for_extraction noextract
 let allocate_slab_aux_1
   (sc: sc)

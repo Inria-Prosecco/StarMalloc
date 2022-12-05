@@ -1,5 +1,7 @@
-module SlabsUtils
+module Slots
 
+module FU = FStar.UInt
+module FI = FStar.Int
 module STU = SizeTUtils
 module US = FStar.SizeT
 module U64 = FStar.UInt64
@@ -8,20 +10,17 @@ module U16 = FStar.UInt16
 module U8 = FStar.UInt8
 
 module G = FStar.Ghost
-module L = FStar.List.Tot
-open FStar.Mul
 
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
-//module SR = Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
 open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
-//open SteelFix
+open FStar.Mul
 
 #push-options "--z3rlimit 30"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
@@ -38,53 +37,13 @@ let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   let shift = U32.mul pos size_class in
   nb_slots_correct size_class pos;
   assert (U32.v shift <= U32.v page_size);
-  assert_norm (U32.v shift <= FStar.Int.max_int U16.n);
-  assert (U32.v shift <= FStar.Int.max_int U16.n);
+  assert_norm (U32.v shift <= FI.max_int U16.n);
+  assert (U32.v shift <= FI.max_int U16.n);
   let shift_size_t = STU.small_uint32_to_sizet shift in
   assert (US.v shift_size_t < A.length arr);
   let ptr_shifted = A.ptr_shift ptr shift_size_t in
   (| ptr_shifted, G.hide (U32.v size_class) |)
 #pop-options
-
-let array_slot (size_class: sc) (arr: array U8.t) (slot: array U8.t)
-  : Pure (G.erased int)
-  (requires same_base_array arr slot)
-  (ensures fun r -> True)
-  =
-  let ptr1 = A.ptr_of arr in
-  assert (A.offset ptr1 <= A.base_len (A.base ptr1));
-  let ptr2 = A.ptr_of slot in
-  assert (A.offset ptr2 <= A.base_len (A.base ptr2));
-  let offset_bytes = A.offset ptr2 - A.offset ptr1 in
-  let offset_slot = offset_bytes / (U32.v size_class) in
-  offset_slot
-
-let array_slot_slot_array_bij (size_class: sc) (arr: array U8.t) (pos: U32.t)
-  : Lemma
-  (requires
-    U32.v pos < U32.v (nb_slots size_class) /\
-    A.length arr = U32.v page_size)
-  (ensures (
-    let slot_as_array = slot_array size_class arr pos in
-    let slot_as_pos = array_slot size_class arr slot_as_array in
-    G.reveal slot_as_pos = U32.v pos))
-  =
-  let ptr = A.ptr_of arr in
-  let shift = U32.mul pos size_class in
-  nb_slots_correct size_class pos;
-  let shift_size_t = STU.small_uint32_to_sizet shift in
-  assert (US.v shift_size_t < A.length arr);
-  let ptr_shifted = A.ptr_shift ptr shift_size_t in
-  let slot_as_array = slot_array size_class arr pos in
-  assert (A.ptr_of slot_as_array == ptr_shifted);
-  let offset_bytes = A.offset ptr_shifted - A.offset ptr in
-  assert (offset_bytes = U32.v shift);
-  assert (offset_bytes = U32.v pos * U32.v size_class);
-  let offset_slot = offset_bytes / (U32.v size_class) in
-  lemma_div offset_bytes (U32.v pos) (U32.v size_class);
-  assert (offset_slot = U32.v pos);
-  let slot_as_pos = array_slot size_class arr slot_as_array in
-  assert (G.reveal slot_as_pos == offset_slot)
 
 let slot_vprop
   (size_class: sc)
@@ -146,99 +105,98 @@ let slab_vprop_aux
     (slab_vprop_aux_f_lemma size_class md_as_seq arr)
     incr_seq
 
-let slab_vprop_aux_unpack (#opened:_)
-  (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (md_as_seq: G.erased (Seq.lseq U64.t 4))
-  : SteelGhost unit opened
-  (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-  (fun _ ->
-    starseq
-      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.seq U8.t))
-      (slab_vprop_aux_f size_class md_as_seq arr)
-      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-  )
-  (requires fun _ -> True)
-  (ensures fun h0 _ h1 ->
-    h0 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-    ==
-    h1 (starseq
-      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.seq U8.t))
-      (slab_vprop_aux_f size_class md_as_seq arr)
-      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-    )
-  )
-  =
-  change_slprop_rel
-    (slab_vprop_aux size_class arr md_as_seq)
-    (starseq
-      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.seq U8.t))
-      (slab_vprop_aux_f size_class md_as_seq arr)
-      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))))
-    (fun x y -> x == y)
-    (fun _ -> ())
-
-let slab_vprop_aux_pack (#opened:_)
-  (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (md_as_seq: G.erased (Seq.lseq U64.t 4))
-  : SteelGhost unit opened
-  (starseq
-    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(option (Seq.seq U8.t))
-    (slab_vprop_aux_f size_class md_as_seq arr)
-    (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))))
-  (fun _ ->
-    slab_vprop_aux size_class arr (G.reveal md_as_seq)
-  )
-  (requires fun _ -> True)
-  (ensures fun h0 _ h1 ->
-    h1 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-    ==
-    h0 (starseq
-      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.seq U8.t))
-      (slab_vprop_aux_f size_class md_as_seq arr)
-      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-    )
-  )
-  =
-  change_slprop_rel
-    (starseq
-      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.seq U8.t))
-      (slab_vprop_aux_f size_class md_as_seq arr)
-      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))))
-    (slab_vprop_aux size_class arr md_as_seq)
-    (fun x y -> x == y)
-    (fun _ -> ())
-
-let slab_vprop_aux_idem (#opened:_)
-  (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (md_as_seq: G.erased (Seq.lseq U64.t 4))
-  : SteelGhost unit opened
-  (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-  (fun _ -> slab_vprop_aux size_class arr (G.reveal md_as_seq))
-  (requires fun _ -> True)
-  (ensures fun h0 _ h1 ->
-    h1 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-    ==
-    h0 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-  )
-  =
-  slab_vprop_aux_unpack size_class arr md_as_seq;
-  slab_vprop_aux_pack size_class arr md_as_seq;
-  ()
+//let slab_vprop_aux_unpack (#opened:_)
+//  (size_class: sc)
+//  (arr: array U8.t{A.length arr = U32.v page_size})
+//  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+//  : SteelGhost unit opened
+//  (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+//  (fun _ ->
+//    starseq
+//      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+//      #(option (Seq.seq U8.t))
+//      (slab_vprop_aux_f size_class md_as_seq arr)
+//      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+//      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+//  )
+//  (requires fun _ -> True)
+//  (ensures fun h0 _ h1 ->
+//    h0 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+//    ==
+//    h1 (starseq
+//      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+//      #(option (Seq.seq U8.t))
+//      (slab_vprop_aux_f size_class md_as_seq arr)
+//      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+//      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+//    )
+//  )
+//  =
+//  change_slprop_rel
+//    (slab_vprop_aux size_class arr md_as_seq)
+//    (starseq
+//      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+//      #(option (Seq.seq U8.t))
+//      (slab_vprop_aux_f size_class md_as_seq arr)
+//      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+//      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))))
+//    (fun x y -> x == y)
+//    (fun _ -> ())
+//
+//let slab_vprop_aux_pack (#opened:_)
+//  (size_class: sc)
+//  (arr: array U8.t{A.length arr = U32.v page_size})
+//  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+//  : SteelGhost unit opened
+//  (starseq
+//    #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+//    #(option (Seq.seq U8.t))
+//    (slab_vprop_aux_f size_class md_as_seq arr)
+//    (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+//    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))))
+//  (fun _ ->
+//    slab_vprop_aux size_class arr (G.reveal md_as_seq)
+//  )
+//  (requires fun _ -> True)
+//  (ensures fun h0 _ h1 ->
+//    h1 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+//    ==
+//    h0 (starseq
+//      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+//      #(option (Seq.seq U8.t))
+//      (slab_vprop_aux_f size_class md_as_seq arr)
+//      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+//      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+//    )
+//  )
+//  =
+//  change_slprop_rel
+//    (starseq
+//      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+//      #(option (Seq.seq U8.t))
+//      (slab_vprop_aux_f size_class md_as_seq arr)
+//      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+//      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))))
+//    (slab_vprop_aux size_class arr md_as_seq)
+//    (fun x y -> x == y)
+//    (fun _ -> ())
+//
+//let slab_vprop_aux_idem (#opened:_)
+//  (size_class: sc)
+//  (arr: array U8.t{A.length arr = U32.v page_size})
+//  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+//  : SteelGhost unit opened
+//  (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+//  (fun _ -> slab_vprop_aux size_class arr (G.reveal md_as_seq))
+//  (requires fun _ -> True)
+//  (ensures fun h0 _ h1 ->
+//    h1 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+//    ==
+//    h0 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+//  )
+//  =
+//  slab_vprop_aux_unpack size_class arr md_as_seq;
+//  slab_vprop_aux_pack size_class arr md_as_seq
 
 //unfold
 //[@@__steel_reduce__]
@@ -249,98 +207,16 @@ let slab_vprop
   =
   A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq)
 
-//#push-options "--z3rlimit 30"
-//let elim_intro_vdep_test
-//  (size_class: sc)
-//  (md: slab_metadata)
-//  (arr: array U8.t{A.length arr = U32.v page_size})
-//  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-//  : Steel unit
-//  //: Steel (array U8.t)
-//  (slab_vprop size_class arr md)
-//  (fun r -> slab_vprop size_class arr md)
-//  //(fun r -> A.varray r `star` slab_vprop size_class arr md)
-//  (requires fun h0 -> True)
-//    //let bm0 = Bitmap4.array_to_bv2 (A.asel md h0) in
-//    //let idx = Bitmap5.f #4 (U32.v pos) in
-//    //Seq.index bm0 idx = false)
-//  (ensures fun h0 _ h1 -> True)
-//    //h1 (slab_vprop size_class arr md)
-//    //==
-//    //h0 (slab_vprop size_class arr md)
-//  //)
-//  =
-//  assert (t_of (A.varray md) == Seq.lseq U64.t 4);
-//  //let md_as_seq : G.erased (normal (t_of (A.varray md))) = elim_vdep
-//  //let md_as_seq : G.erased (Seq.lseq U64.t 4) = elim_vdep
-//  let md_as_seq = elim_vdep
-//    (A.varray md)
-//    (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x)
-//  in
-//  let md_as_seq2 = G.hide ((G.reveal md_as_seq) <: Seq.lseq U64.t 4) in
-//  change_slprop_rel
-//    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-//    (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
-//    (fun x y -> x == y)
-//    (fun _ -> ());
-//  intro_vdep
-//    (A.varray md)
-//    (slab_vprop_aux size_class arr md_as_seq2)
-//    (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
-//  return ()
-////#pop-options
-
-
-
-//works
-let slab_vprop1
-  (md: slab_metadata)
-  =
-  reveal_emp ();
-  assume (normal (t_of emp) == unit);
-  emp `vdep` (fun _ -> emp)
-
-//works
-let slab_vprop2
-  (md: slab_metadata)
-  =
-  A.varray md `vdep` (fun (x: Seq.seq U64.t) -> emp)
-
-let slab_vprop3
-  (md: slab_metadata)
-  =
-  A.varray md `vdep` (fun (x: Seq.lseq U64.t 4) -> emp)
-
-let slab_vprop4_aux
-  = fun (x: Seq.lseq U64.t 4) -> emp
-
-let slab_vprop4
-  (md: array U64.t{A.length md = 4})
-  =
-  A.varray md `vdep`
-    (fun (x: Seq.lseq U64.t 4) -> slab_vprop4_aux x)
-
-let slab_vprop_test
-  (md: slab_metadata)
-  = slab_vprop4 md
-
 #push-options "--print_implicits"
-
-let t (md: array U64.t)
-  : Lemma
-  (requires A.length md = 4)
-  (ensures
-    //normal (t_of (A.varray md)) == Seq.lseq U64.t 4
-    t_of (A.varray md) == Seq.lseq U64.t 4
-  )
-  = ()
 
 noextract
 let a2bv = Bitmap4.array_to_bv2 #4
+//noextract
+//let f = Bitmap5.f #4
 
-let elim_intro_vdep_test_aux2_lemma
+let starseq_upd_aux_lemma1_aux
   (size_class: sc)
-  (md: array U64.t{A.length md = 4})
+  (md: slab_metadata)
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -371,11 +247,12 @@ let elim_intro_vdep_test_aux2_lemma
   //Bitmap4.get_lemma md_as_seq1 k;
   //Bitmap4.get_lemma md_as_seq2 k;
   //assert (Bitmap4.get md_as_seq1 k == Bitmap4.get md_as_seq2 k);
+  //TODO: FIXME
   admit ()
 
-let elim_intro_vdep_test_aux2_lemma2
+let starseq_upd_aux_lemma1
   (size_class: sc)
-  (md: array U64.t{A.length md = 4})
+  (md: slab_metadata)
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -401,13 +278,13 @@ let elim_intro_vdep_test_aux2_lemma2
   )
   =
   Classical.forall_intro (Classical.move_requires (
-    elim_intro_vdep_test_aux2_lemma
+    starseq_upd_aux_lemma1_aux
       size_class md md_as_seq1 md_as_seq2 arr pos
   ))
 
-let elim_intro_vdep_test_aux2_lemma3
+let starseq_upd_aux_lemma2
   (size_class: sc)
-  (md: array U64.t{A.length md = 4})
+  (md: slab_metadata)
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -427,30 +304,13 @@ let elim_intro_vdep_test_aux2_lemma3
     ==
     none_as_emp #(Seq.seq U8.t)
   )
-  = admit ()
+  =
+  //TODO: FIXME
+  admit ()
 
-let elim_intro_vdep_test_aux2_lemma4
+let apply_starseq_upd (#opened:_)
   (size_class: sc)
-  (md: array U64.t{A.length md = 4})
-  (md_as_seq1: G.erased (Seq.lseq U64.t 4))
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-  : Lemma
-  (requires True)
-  (ensures (
-    slot_vprop_lemma size_class arr pos;
-    ((slab_vprop_aux_f size_class md_as_seq1 arr)
-      (Seq.index
-        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-        (U32.v pos)))
-    ==
-    some_as_vp #(Seq.seq U8.t) (slot_vprop size_class arr pos)
-  ))
-  = admit ()
-
-let elim_intro_vdep_test_aux3 (#opened:_)
-  (size_class: sc)
-  (md: array U64.t{A.length md = 4})
+  (md: slab_metadata)
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -514,9 +374,9 @@ let elim_intro_vdep_test_aux3 (#opened:_)
       h1 in
     v2 == Seq.upd v1 (U32.v pos) None)
   =
-  elim_intro_vdep_test_aux2_lemma2
+  starseq_upd_aux_lemma1
     size_class md md_as_seq1 md_as_seq2 arr pos;
-  elim_intro_vdep_test_aux2_lemma3
+  starseq_upd_aux_lemma2
     size_class md md_as_seq1 md_as_seq2 arr pos;
   starseq_upd3
     #_
@@ -531,9 +391,9 @@ let elim_intro_vdep_test_aux3 (#opened:_)
     (U32.v pos)
 
 noextract inline_for_extraction
-let rewriting_f1_seq_index_s_n_as_returned_value
+let get_slot_as_returned_value
   (size_class: sc)
-  (md: array U64.t{A.length md = 4})
+  (md: slab_metadata)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
@@ -558,11 +418,10 @@ let rewriting_f1_seq_index_s_n_as_returned_value
     (fun _ -> admit ());
   return r
 
-//#push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 noextract inline_for_extraction
-let elim_intro_vdep_test_aux
+let allocate_slot_aux
   (size_class: sc)
-  (md: array U64.t{A.length md = 4})
+  (md: slab_metadata)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
@@ -588,7 +447,7 @@ let elim_intro_vdep_test_aux
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
   )
   (requires fun h0 ->
-    let bm0 = Bitmap4.array_to_bv2 (A.asel md h0) in
+    let bm0 = a2bv (A.asel md h0) in
     let idx = Bitmap5.f #4 (U32.v pos) in
     A.asel md h0 == G.reveal md_as_seq /\
     Seq.index bm0 idx = false
@@ -624,47 +483,125 @@ let elim_intro_vdep_test_aux
       h1 in
     let v1 = A.asel md h0 in
     let v2 = A.asel md h1 in
-    //let bm0 = Bitmap4.array_to_bv2 (A.asel md h0) in
-    //let bm1 = Bitmap4.array_to_bv2 (A.asel md h1) in
     //let idx = Bitmap5.f #4 (U32.v pos) in
     v2 == Bitmap4.set v1 pos /\
     blob2 == Seq.upd blob1 (U32.v pos) None)
   =
-  assert_norm (4 < FStar.Int.max_int U16.n);
+  assert_norm (4 < FI.max_int U16.n);
   Bitmap5.bm_set #4 md pos;
-  elim_intro_vdep_test_aux3
+  apply_starseq_upd
     size_class
     md
     md_as_seq
     (Bitmap4.set md_as_seq pos)
     arr
     pos;
-  let r = rewriting_f1_seq_index_s_n_as_returned_value
+  let r = get_slot_as_returned_value
     size_class md md_as_seq arr pos in
   return r
 
-//#push-options "--z3rlimit 30"
-let elim_intro_vdep_test
+//TODO: FIXME @SizeT lib
+//assert (US.fits 256): impossible?
+
+#push-options "--z3rlimit 30"
+inline_for_extraction noextract
+let get_free_slot_aux
+  (size_class: sc)
+  (bitmap: slab_metadata)
+  (i: U32.t)
+  : Steel U32.t
+  (A.varray bitmap)
+  (fun _ -> A.varray bitmap)
+  (requires fun h0 ->
+    U32.v i < U32.v (nb_slots size_class) / 64 /\
+    U64.v (Seq.index (A.asel bitmap h0) (U32.v i)) <> U64.v max64)
+  (ensures fun h0 r h1 ->
+    A.asel bitmap h1 == A.asel bitmap h0 /\
+    U32.v r < U32.v (nb_slots size_class) /\
+    (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
+    let idx = Bitmap5.f #4 (U32.v r) in
+    Seq.index bm idx = false)
+  )
+  =
+  let h0 = get () in
+  assert (U32.v i <= 3);
+  assert_norm (3 <= FI.max_int U16.n);
+  let i2 = STU.small_uint32_to_sizet i in
+  let x = A.index bitmap i2 in
+  let r = ffs64 x in
+  let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
+  let idx1 = G.hide ((U32.v i) * 64) in
+  let idx2 = G.hide ((U32.v i + 1) * 64) in
+  assert (x == Seq.index (A.asel bitmap h0) (U32.v i));
+  assert (FU.nth (U64.v x) (U64.n - 1 - U32.v r) = false);
+  array_to_bv_slice (A.asel bitmap h0) (U32.v i);
+  assert (FU.to_vec (U64.v x) == Seq.slice bm ((U32.v i)*64) ((U32.v i + 1)*64));
+  Seq.lemma_index_slice bm ((U32.v i)*64) ((U32.v i + 1)*64) (U32.v r);
+  let r' = U32.mul i 64ul in
+  let r'' = U32.add r r' in
+  r''
+#pop-options
+
+let get_free_slot (size_class: sc) (bitmap: slab_metadata)
+  : Steel U32.t
+  (A.varray bitmap)
+  (fun _ -> A.varray bitmap)
+  (requires fun h0 ->
+    let s = A.asel bitmap h0 in
+    has_free_slot size_class s
+  )
+  (ensures fun h0 r h1 ->
+    A.asel bitmap h1 == A.asel bitmap h0 /\
+    U32.v r < U32.v (nb_slots size_class) /\
+    (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
+    let idx = Bitmap5.f #4 (U32.v r) in
+    Seq.index bm idx = false)
+  )
+  =
+  let bound = U32.div (nb_slots size_class) (U32.uint_to_t U64.n) in
+  assert (U32.v bound == U32.v (nb_slots size_class) / 64);
+  let x1 = A.index bitmap 0sz in
+  if (U64.eq x1 max64 && U32.gt bound 1ul) then (
+    let x2 = A.index bitmap 1sz in
+    if (U64.eq x2 max64 && U32.gt bound 2ul) then (
+      let x3 = A.index bitmap 2sz in
+      if (U64.eq x3 max64 && U32.gt bound 3ul) then (
+        get_free_slot_aux size_class bitmap 3ul
+      ) else (
+        get_free_slot_aux size_class bitmap 2ul
+      )
+    ) else (
+      get_free_slot_aux size_class bitmap 1ul
+    )
+  ) else (
+    get_free_slot_aux size_class bitmap 0ul
+  )
+
+#push-options "--z3rlimit 30"
+let allocate_slot
   (size_class: sc)
   (md: slab_metadata)
   (arr: array U8.t{A.length arr = U32.v page_size})
-  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-  //: Steel unit
   : Steel (array U8.t)
   (slab_vprop size_class arr md)
-  //(fun r -> slab_vprop size_class arr md)
   (fun r -> A.varray r `star` slab_vprop size_class arr md)
   (requires fun h0 ->
-    let blob0 : (t_of (slab_vprop size_class arr md)) = h0 (slab_vprop size_class arr md) in
+    let blob0 : (t_of (slab_vprop size_class arr md))
+      = h0 (slab_vprop size_class arr md) in
     let v0 : Seq.lseq U64.t 4 = dfst blob0 in
-    let bm0 = Bitmap4.array_to_bv2 v0 in
-    let idx = Bitmap5.f #4 (U32.v pos) in
-    Seq.index bm0 idx = false)
-  (ensures fun h0 _ h1 -> True)
-    //h1 (slab_vprop size_class arr md)
-    //==
-    //h0 (slab_vprop size_class arr md)
-  //)
+    has_free_slot size_class v0)
+  (ensures fun h0 _ h1 ->
+    let blob0 : (t_of (slab_vprop size_class arr md))
+      = h0 (slab_vprop size_class arr md) in
+    let blob1 : (t_of (slab_vprop size_class arr md))
+      = h1 (slab_vprop size_class arr md) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
+    True)
+    //TODO: is it worth having such a precise spec?
+    //requires having pos as ghost in returned value
+    //considering the case of multiple consecutive allocations
+    //probably for testing slab filling
   =
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let md_as_seq = elim_vdep
@@ -677,7 +614,8 @@ let elim_intro_vdep_test
     (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
     (fun x y -> x == y)
     (fun _ -> ());
-  let r = elim_intro_vdep_test_aux
+  let pos = get_free_slot size_class md in
+  let r = allocate_slot_aux
     size_class
     md
     md_as_seq2
@@ -688,4 +626,4 @@ let elim_intro_vdep_test
     (slab_vprop_aux size_class arr (Bitmap4.set md_as_seq2 pos))
     (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
   return r
-//#pop-options
+#pop-options

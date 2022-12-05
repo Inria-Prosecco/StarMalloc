@@ -10,20 +10,11 @@ open Steel.Effect
 open Steel.Reference
 module A = Steel.Array
 
-
-
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
 
 // 1) ptrdiff
 // 2) ffs64/ffz64
-val ffs64 (x: U64.t)
-  : Pure US.t
-  (requires U64.v x > 0)
-  (ensures fun r ->
-    US.v r < 64 /\
-    FU.nth (U64.v x) (U64.n - US.v r - 1) = false
-  )
 
 unfold let same_base_array (#a: Type) (arr1 arr2: array a)
   =
@@ -64,6 +55,30 @@ let nb_slots_correct
   (requires U32.v pos < U32.v (nb_slots size_class))
   (ensures U32.v (U32.mul pos size_class) <= U32.v page_size)
   = ()
+
+noextract inline_for_extraction
+let max64 : U64.t = U64.uint_to_t (FStar.Int.max_int U64.n)
+
+noextract
+let has_free_slot
+  (size_class: sc)
+  (s: Seq.lseq U64.t 4)
+  : bool
+  =
+  let max = U64.v max64 in
+  let bound = U32.v (nb_slots size_class) / 64 in
+  (U64.v (Seq.index s 0) <> max) ||
+  (bound > 1 && (U64.v (Seq.index s 1) <> max)) ||
+  (bound > 2 && (U64.v (Seq.index s 2) <> max)) ||
+  (bound > 3 && (U64.v (Seq.index s 3) <> max))
+
+val ffs64 (x: U64.t)
+  : Pure U32.t
+  (requires U64.v x <> U64.v max64)
+  (ensures fun r ->
+    U32.v r < 64 /\
+    FU.nth (U64.v x) (U64.n - U32.v r - 1) = false
+  )
 
 open FStar.Mul
 let lemma_div (x y z: nat)
