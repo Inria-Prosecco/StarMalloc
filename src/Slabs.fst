@@ -23,8 +23,6 @@ module SL = Selectors.LList
 
 open Utils2
 open Slots
-//open SteelOptUtils
-//open SteelStarSeqUtils
 
 //let slab_region_len : U32.t = normalize_term (U32.mul page_size slab_max_number)
 //unfold let slab_region
@@ -49,27 +47,6 @@ open Slots
 #push-options "--print_implicits --print_universes"
 
 #set-options "--ide_id_info_off"
-
-noextract
-let is_empty
-  (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : prop
-  =
-  let max = FStar.Int.max_int U64.n in
-  let bound = U32.v (nb_slots size_class) / 64 in
-  (U64.v (Seq.index s 0) = 0) /\
-  (bound > 1 && (U64.v (Seq.index s 1) = 0)) /\
-  (bound > 2 && (U64.v (Seq.index s 2) = 0)) /\
-  (bound > 3 && (U64.v (Seq.index s 3) = 0))
-
-noextract
-let is_partial
-  (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : prop
-  =
-  ~ (is_empty size_class s) /\ has_free_slot size_class s
 
 assume val allocate_slot_refined
   (size_class: sc)
@@ -138,8 +115,8 @@ let p_partial (size_class: sc)
 // TODO: remove assume with pure predicates inside p
 //   this will yield two different versions of p
 
-#push-options "--compat_pre_typed_indexed_effects"
 #push-options "--z3rlimit 30"
+#push-options "--compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
 let allocate_slab_aux_1
   (sc: sc)
@@ -184,7 +161,6 @@ let allocate_slab_aux_1
     ((p_partial sc) (SL.get_data n_empty))
     (fun x y -> x == y)
     (fun _ -> admit ());
-
   let n_partial = SL.mk_cell partial_slabs (SL.get_data n_empty) in
   write empty_slabs n_partial;
   SL.pack_list (p_partial sc)
@@ -196,7 +172,9 @@ let allocate_slab_aux_1
   write empty_slabs_ptr (SL.get_next n_empty);
   SL.pack_ind (p_empty sc) empty_slabs_ptr (SL.get_next n_empty);
   return r
+#pop-options
 
+#push-options "--compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
 let allocate_slab_aux_2
   (sc: sc)
@@ -248,6 +226,8 @@ let allocate_slab_aux_2
   SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
   SL.pack_ind (p_empty sc) empty_slabs_ptr empty_slabs;
   return r
+#pop-options
+#pop-options
 
 let allocate_slab
   (sc: sc)

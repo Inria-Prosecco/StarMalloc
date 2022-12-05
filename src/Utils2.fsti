@@ -80,6 +80,27 @@ val ffs64 (x: U64.t)
     FU.nth (U64.v x) (U64.n - U32.v r - 1) = false
   )
 
+noextract
+let is_empty
+  (size_class: sc)
+  (s: Seq.lseq U64.t 4)
+  : prop
+  =
+  let max = FStar.Int.max_int U64.n in
+  let bound = U32.v (nb_slots size_class) / 64 in
+  (U64.v (Seq.index s 0) = 0) /\
+  (bound > 1 && (U64.v (Seq.index s 1) = 0)) /\
+  (bound > 2 && (U64.v (Seq.index s 2) = 0)) /\
+  (bound > 3 && (U64.v (Seq.index s 3) = 0))
+
+noextract
+let is_partial
+  (size_class: sc)
+  (s: Seq.lseq U64.t 4)
+  : prop
+  =
+  ~ (is_empty size_class s) /\ has_free_slot size_class s
+
 open FStar.Mul
 let lemma_div (x y z: nat)
   : Lemma
