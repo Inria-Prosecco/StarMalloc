@@ -227,28 +227,67 @@ let allocate_slab_aux_2
   SL.pack_ind (p_empty sc) empty_slabs_ptr empty_slabs;
   return r
 #pop-options
-#pop-options
 
+
+//assume val cons_imp_not_null (#opened:SM.inames) (#a:Type0) (p: a -> vprop) (ptr:SL.t a)
+//  : SteelGhost unit opened
+//  (SL.llist p ptr) (fun _ -> SL.llist p ptr)
+//  (requires fun h -> True)
+//  (ensures fun h0 _ h1 ->
+//    SL.v_llist p ptr h0 == SL.v_llist p ptr h1 /\
+//    Cons? (SL.v_llist p ptr h0) <==> ptr =!= SL.null_t)
+
+//let impl_lemma (p1 p2: bool) (q1 q2: prop)
+//  : Lemma
+//  (requires
+//    (p1 \/ p2) /\
+//    (p1 ==> q1) /\
+//    (p2 ==> q2)
+//  )
+//  (ensures
+//    q1 \/ q2
+//  )
+//  = ()
+
+#push-options "--z3rlimit 50"
 let allocate_slab
   (sc: sc)
   (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  (partial_slabs empty_slabs: SL.t blob)
   : Steel (array U8.t)
-  (vptr partial_slabs_ptr `star`
-  SL.llist (p_partial sc) partial_slabs `star`
-  vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) empty_slabs)
+  (SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
+  SL.ind_llist (p_empty sc) empty_slabs_ptr)
   (fun r ->
   A.varray r `star`
   SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
   SL.ind_llist (p_empty sc) empty_slabs_ptr)
   (requires fun h0 ->
-    sel partial_slabs_ptr h0 == partial_slabs /\
-    sel empty_slabs_ptr h0 == empty_slabs /\
-    (not (SL.is_null_t partial_slabs) \/
-    not (SL.is_null_t empty_slabs)))
+    Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
+    Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0))
   (ensures fun _ _ _ -> True)
   =
+  //let h0 = get () in
+  let partial_slabs
+    = SL.unpack_ind (p_partial sc) partial_slabs_ptr in
+  let empty_slabs
+    = SL.unpack_ind (p_empty sc) empty_slabs_ptr in
+  //let h1 = get () in
+  //assert (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0
+  //  == SL.v_llist (p_partial sc) partial_slabs h1);
+  //assert (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0
+  //  == SL.v_llist (p_empty sc) empty_slabs h1);
+  //assert (
+  //  Cons? (SL.v_llist (p_partial sc) partial_slabs h1) \/
+  //  Cons? (SL.v_llist (p_empty sc) empty_slabs h1));
+  //cons_imp_not_null (p_empty sc) empty_slabs;
+  //cons_imp_not_null (p_partial sc) partial_slabs;
+  //impl_lemma
+  //  (Cons? (SL.v_llist (p_partial sc) partial_slabs h1))
+  //  (Cons? (SL.v_llist (p_empty sc) empty_slabs h1))
+  //  (~ (SL.is_null_t partial_slabs) /\ True)
+  //  (~ (SL.is_null_t empty_slabs) /\ True);
+  assume (
+    not (SL.is_null_t partial_slabs) \/
+    not (SL.is_null_t empty_slabs));
   if (SL.is_null_t partial_slabs) then (
     let r = allocate_slab_aux_1 sc
       partial_slabs_ptr empty_slabs_ptr
