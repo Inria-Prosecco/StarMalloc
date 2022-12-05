@@ -305,38 +305,68 @@ let pack_sc (#opened:_)
     (fun m -> pack_sc_lemma r (G.reveal b) m);
   ()
 
-let temp (r1 r2: ref size_class_struct)
+let temp (r: ref size_class_struct)
   : Steel U32.t
-  (size_class_full r1)
-  (fun _ -> size_class_full r1)
+  (size_class_full r)
+  (fun _ -> size_class_full r)
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
-    v_sc_full r1 h0 == v_sc_full r1 h1
+    v_sc_full r h0 == v_sc_full r h1
   )
   =
-  let scs = unpack_sc r1 in
-  pack_sc r1 scs;
+  let scs = unpack_sc r in
+  pack_sc r scs;
+  return 0ul
+
+let size_class_vprop (r: ref size_class_struct)
+  =
+  size_class_full r
+  `vrefine`
+  (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v)
+
+let temp2 (r: ref size_class_struct)
+  : Steel U32.t
+  (size_class_vprop r)
+  (fun _ -> size_class_vprop r)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    h0 (size_class_vprop r)
+    ==
+    h0 (size_class_vprop r)
+  )
+  =
+  elim_vrefine
+    (size_class_full r)
+    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
+  let scs = unpack_sc r in
+  pack_sc r scs;
+  intro_vrefine
+    (size_class_full r)
+    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
   return 0ul
 
 let allocate_size_class (r: ref size_class_struct)
   (scs: size_class_struct)
   : Steel (array U8.t)
-  //(size_class_full r)
-  (vptr r `star`
-  SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-  SL.ind_llist (p_empty scs.size) scs.empty_slabs)
+  (size_class_vprop r)
   (fun result ->
     A.varray result `star`
-    size_class_full r)
-  (requires fun h0 ->
-    sel r h0 == scs /\
-    (Cons? (SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0) \/
-    Cons? (SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0)))
+    size_class_vprop r)
+  (requires fun h0 -> True)
   (ensures fun h0 _ h1 -> True)
   =
-  //let scs = unpack_sc r in
+  elim_vrefine
+    (size_class_full r)
+    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
+  let scs = unpack_sc r in
   let result = allocate_slab scs.size scs.partial_slabs scs.empty_slabs in
   pack_sc r scs;
+  let h0 = get () in
+  let scs_v = G.hide (v_sc_full r h0) in
+  assume (Cons? scs_v.partial_slabs_v \/ Cons? scs_v.empty_slabs_v);
+  intro_vrefine
+    (size_class_full r)
+    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
   return result
 
 (*)
