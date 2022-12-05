@@ -1,11 +1,10 @@
 module SizeClass
 
-
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module U8 = FStar.UInt8
 
-open FStar.Ghost
+module G =  FStar.Ghost
 
 module SL = Selectors.LList
 
@@ -17,71 +16,160 @@ open Steel.Reference
 module SR = Steel.Reference
 module A = Steel.Array
 
-(*)
 open Utils2
-open SlabsUtils
+open Slabs
 
-#push-options "--ide_id_info_off"
+//TODO: use ptrdiff
+//assume val f (md: slab_metadata) : arr:array U8.t{A.length arr = U32.v page_size}
 
-noextract
-let is_empty
-  (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : prop
+(*)
+(*)
+// Given a size, return a size_class
+// TODO: improve max_sc bound
+// (requires an improved Steel while loop)
+let select_size_class (size: U32.t)
+  : Steel sc
+  emp (fun _ -> emp)
+  (requires fun _ -> U32.v size <= max_sc)
+  (ensures fun _ size_class _ -> U32.lte size size_class)
   =
-  let max = FStar.Int.max_int U64.n in
-  let bound = U32.v (nb_slots size_class) / 64 in
-  (U64.v (Seq.index s 0) = 0) /\
-  (bound > 1 && (U64.v (Seq.index s 1) = 0)) /\
-  (bound > 2 && (U64.v (Seq.index s 2) = 0)) /\
-  (bound > 3 && (U64.v (Seq.index s 3) = 0))
+  if U32.lte size 16ul then (
+    return 16ul
+  ) else if U32.lte size 32ul then (
+    return 32ul
+  ) else (
+    return 64ul
+  )
 
-// TODO: bad constants
-noextract
-let has_free_slot
-  (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : bool
+let select_size_class2 (size: U32.t)
+  (sc16 sc32 sc64: ref size_class_struct)
+  : Steel (ref size_class_struct & G.erased U32.t)
+  (size_class_full sc16 `star` size_class_full sc32 `star` size_class_full sc64)
+  (fun _ -> size_class_full sc16 `star` size_class_full sc32 `star` size_class_full sc64)
+  (requires fun h0 ->
+    (v_sc_full sc16 h0).scs_v.size == 16ul /\
+    (v_sc_full sc32 h0).scs_v.size == 32ul /\
+    (v_sc_full sc64 h0).scs_v.size == 64ul /\
+    U32.v size <= max_sc)
+  (ensures fun h0 r h1 ->
+    U32.lte size (snd r))
   =
-  let max = FStar.Int.max_int U64.n in
-  let bound = U32.v (nb_slots size_class) / 64 in
-  (U64.v (Seq.index s 0) < max) ||
-  (bound > 1 && (U64.v (Seq.index s 1) <> 0)) ||
-  (bound > 2 && (U64.v (Seq.index s 2) <> 0)) ||
-  (bound > 3 && (U64.v (Seq.index s 3) <> 0))
 
-noextract
-let has_nonfree_slot
-  (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : bool
+  if U32.lte size 16ul then (
+    let sc_size = G.hide 16ul in
+    return (sc16, sc_size)
+  ) else if U32.lte size 32ul then (
+    let sc_size = G.hide 32ul in
+    return (sc32, sc_size)
+  ) else (
+    let sc_size = G.hide 64ul in
+    return (sc64, sc_size)
+  )
+
+let size_classes : list sc = [16ul ; 32ul ; 64ul]
+
+let scl_to_vprop (scl: list (ref size_class_struct))
+  : vprop
+  = starl (L.map (fun sc -> size_class_full sc) scl)
+
+let f ()
   =
-  let bound = U32.v (nb_slots size_class) / 64 in
-  (U64.v (Seq.index s 0) > 0) ||
-  (bound > 1 && (U64.v (Seq.index s 1) > 0)) ||
-  (bound > 2 && (U64.v (Seq.index s 2) > 0)) ||
-  (bound > 3 && (U64.v (Seq.index s 3) > 0))
+  assert (L.memP 16ul size_classes);
+  assert_norm (L.memP 32ul size_classes);
+  assert_norm (L.memP 64ul size_classes)
 
-assume val f (md: slab_metadata) : arr:array U8.t{A.length arr = U32.v page_size}
 
-[@@ __reduce__]
-//unfold
-let p (size_class: sc)
+(*)
+let rec select_size_class3
+  (scl: list (ref size_class_struct))
+  (size: U32.t)
+  : Steel (ref size_class_struct)
+  (scl_to_vprop scl)
+  (fun r ->
+    size_class_full r `star`
+    scl_to_vprop (L.filter (fun r2 -> r2 =!= r) scl)
+  )
+  (requires fun h0 -> Cons? scl)
+  (ensures fun h0 r h1 ->
+    not (is_null r)
+  )
   =
-  fun (md: slab_metadata)
-  ->
-  (A.varray md `star` slab_vprop size_class (f md) md)
-//[@@ __reduce__; __steel_reduce__]
-//[@@ __steel_reduce__]
-//unfold
+  let r = L.hd scl in
 
-let p_empty (size_class: sc)
+
+
+
+  admit ();
+  return null
+
+let a = 42
+(*)
+
+  (fun r ->
+    size_class_full r `star`
+    SL.ind_llist (fun sc -> size_class_full sc) size_classes)
+  (requires fun h0 ->
+    Cons? (SL.v_ind_llist (fun sc -> size_class_full sc) size_classes h0))
+  (ensures fun h0 r h1 ->
+
+  )
+
+
+
+  (size_class_full sc16 `star` size_class_full sc32 `star` size_class_full sc64)
+  (fun _ -> size_class_full sc16 `star` size_class_full sc32 `star` size_class_full sc64)
+  (requires fun h0 ->
+    (v_sc_full sc16 h0).scs_v.size == 16ul /\
+    (v_sc_full sc32 h0).scs_v.size == 32ul /\
+    (v_sc_full sc64 h0).scs_v.size == 64ul /\
+    U32.v size <= max_sc)
+  (ensures fun h0 r h1 ->
+    U32.lte size (snd r))
   =
-  fun (md: slab_metadata)
-  ->
-  ((A.varray md `vrefine` (fun s -> is_empty size_class s))
-  `star`
-  slab_vprop size_class (f md) md)
+
+  if U32.lte size 16ul then (
+    let sc_size = G.hide 16ul in
+    return (sc16, sc_size)
+  ) else if U32.lte size 32ul then (
+    let sc_size = G.hide 32ul in
+    return (sc32, sc_size)
+  ) else (
+    let sc_size = G.hide 64ul in
+    return (sc64, sc_size)
+  )
+
+
+
+(*)
+//noextract
+//let size_classes : list nzn = [
+//  //(* 0 *) 0;
+//  (* 16 *) 16; 32; 48; 64; 80; 96; 112; 128;
+//  (* 32 *) 160; 192; 224; 256;
+//  (* 64 *) 320; 384; 448; 512;
+//]
+//
+//
+//noextract
+//let size_class_slots : list nzn =
+//  L.map nb_of_slots size_classes
+//
+//let f (_:unit) =
+//  let v = L.nth size_class_slots 0 in
+//  assert(Some?.v v == 256);
+//  ()
+
+let page_size = 4096ul
+
+let nzn = x:U32.t{U32.v x > 0 /\ U32.v x <= U32.v page_size}
+let slab = slab:array U8.t{A.length slab == U32.v page_size}
+
+let nb_slots (x: nzn) : nzn = U32.div page_size x
+
+let slab_metadata (size_class: nzn)
+  = Seq.lseq bool (U32.v (nb_slots size_class))
+
+
 
 noeq
 type size_class_struct = {
