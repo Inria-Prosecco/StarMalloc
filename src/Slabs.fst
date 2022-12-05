@@ -197,53 +197,71 @@ let allocate_slab_aux_1
   SL.pack_ind (p_empty sc) empty_slabs_ptr (SL.get_next n_empty);
   return r
 
-(*)
 inline_for_extraction noextract
 let allocate_slab_aux_2
   (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t slab_metadata))
-  (partial_slabs empty_slabs: SL.t slab_metadata)
+  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
+  (partial_slabs empty_slabs: SL.t blob)
   : Steel (array U8.t)
-  (vptr partial_slabs_ptr `star`
-  SL.llist (p sc) partial_slabs `star`
+  (
   vptr empty_slabs_ptr `star`
-  SL.llist (p sc) empty_slabs)
-  (fun r -> SL.ind_llist (p sc) partial_slabs_ptr `star`
-  SL.ind_llist (p sc) empty_slabs_ptr)
+  SL.llist (p_empty sc) empty_slabs `star`
+  vptr partial_slabs_ptr `star`
+  SL.llist (p_partial sc) partial_slabs)
+  (fun r ->
+  A.varray r `star`
+  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+  SL.ind_llist (p_partial sc) partial_slabs_ptr)
   (requires fun h0 ->
     sel partial_slabs_ptr h0 == partial_slabs /\
     sel empty_slabs_ptr h0 == empty_slabs /\
     not (SL.is_null_t partial_slabs))
   (ensures fun _ _ _ -> True)
   =
-  assert (not (SL.is_null_t partial_slabs));
-  let n_partial = SL.unpack_list (p sc) partial_slabs in
-  let h = get () in
-  let md = SL.get_data n_partial in
-  assume (has_free_slot sc (A.asel md h));
-  let r = allocate_slot_kiss sc
-    (SL.get_data n_partial)
-    (f (SL.get_data n_partial)) in
-  SL.pack_list (p sc)
+  let n_partial = SL.unpack_list (p_partial sc) partial_slabs in
+  let b = SL.get_data n_partial in
+  change_slprop_rel
+    ((p_partial sc) (SL.get_data n_partial))
+    (slab_vprop sc (snd b) (fst b)
+    `vrefine`
+    (fun (|s,_|) -> is_partial sc s))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  elim_vrefine
+    (slab_vprop sc (snd b) (fst b))
+    (fun (|s,_|) -> is_partial sc s);
+  let r = allocate_slot_refined sc (fst b) (snd b) in
+  intro_vrefine
+    (slab_vprop sc (snd b) (fst b))
+    (fun (|s,_|) -> is_partial sc s);
+  change_slprop_rel
+    (slab_vprop sc (snd b) (fst b)
+    `vrefine`
+    (fun (|s,_|) -> is_partial sc s))
+    ((p_partial sc) (SL.get_data n_partial))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  SL.pack_list (p_partial sc)
     partial_slabs
     (SL.get_next n_partial)
     (SL.get_data n_partial);
-  //return (snd r, (partial_slabs, empty_slabs))
-  SL.pack_ind (p sc) partial_slabs_ptr partial_slabs;
-  SL.pack_ind (p sc) empty_slabs_ptr empty_slabs;
-  return (snd r)
+  SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
+  SL.pack_ind (p_empty sc) empty_slabs_ptr empty_slabs;
+  return r
 
 let allocate_slab
   (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t slab_metadata))
-  (partial_slabs empty_slabs: SL.t slab_metadata)
+  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
+  (partial_slabs empty_slabs: SL.t blob)
   : Steel (array U8.t)
   (vptr partial_slabs_ptr `star`
-  SL.llist (p sc) partial_slabs `star`
+  SL.llist (p_partial sc) partial_slabs `star`
   vptr empty_slabs_ptr `star`
-  SL.llist (p sc) empty_slabs)
-  (fun r -> SL.ind_llist (p sc) partial_slabs_ptr `star`
-  SL.ind_llist (p sc) empty_slabs_ptr)
+  SL.llist (p_empty sc) empty_slabs)
+  (fun r ->
+  A.varray r `star`
+  SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
+  SL.ind_llist (p_empty sc) empty_slabs_ptr)
   (requires fun h0 ->
     sel partial_slabs_ptr h0 == partial_slabs /\
     sel empty_slabs_ptr h0 == empty_slabs /\
@@ -263,6 +281,7 @@ let allocate_slab
     return r
   )
 
+(*)
 // Given a size, return a size_class
 // TODO: improve max_sc bound
 // (requires an improved Steel while loop)
