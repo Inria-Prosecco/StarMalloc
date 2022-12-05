@@ -1148,6 +1148,69 @@ let starseq_upd (#opened:_) (#a #b: Type0)
     (Seq.slice s2 (n+1) (Seq.length s2));
   ()
 
+#push-options "--print_implicits"
+let starseq_upd2_lemma (#a #b: Type0)
+  (f1 f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
+  (s1 s2: Seq.seq a)
+  (n: nat{n < Seq.length s1})
+  (m: SM.mem)
+  : Lemma
+  (requires
+    Seq.length s1 = Seq.length s2 /\
+    f2 (Seq.index s2 n) == none_as_emp #b /\
+    SM.interp (hp_of (
+      (f1 (Seq.index s1 n) `star`
+      (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
+      starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2))))
+    )) m)
+  (ensures
+    SM.interp (hp_of (
+      (f1 (Seq.index s1 n) `star`
+      ((f2 (Seq.index s2 n)) `star`
+      (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
+      starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2)))))
+    )) m
+  )
+  =
+  cm_identity (f1 (Seq.index s1 n));
+  equiv_sym
+    (emp `star` f1 (Seq.index s1 n))
+    (f1 (Seq.index s1 n));
+  star_commutative emp (f1 (Seq.index s1 n));
+  equiv_trans
+    (f1 (Seq.index s1 n))
+    (emp `star` f1 (Seq.index s1 n))
+    (f1 (Seq.index s1 n) `star` emp);
+  assume (equiv emp (f2 (Seq.index s2 n)));
+  equiv_refl (f1 (Seq.index s1 n));
+  star_congruence
+    (f1 (Seq.index s1 n)) emp
+    (f1 (Seq.index s1 n)) (f2 (Seq.index s2 n));
+  equiv_trans
+    (f1 (Seq.index s1 n))
+    (f1 (Seq.index s1 n) `star` emp)
+    (f1 (Seq.index s1 n) `star` f2 (Seq.index s2 n));
+  let p_aux =
+    (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
+    starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s1))) in
+  equiv_refl p_aux;
+  star_congruence
+    (f1 (Seq.index s1 n)) p_aux
+    (f1 (Seq.index s1 n) `star` f2 (Seq.index s2 n)) p_aux;
+  star_associative
+    (f1 (Seq.index s1 n))
+    (f2 (Seq.index s2 n))
+    p_aux;
+  equiv_trans
+    (f1 (Seq.index s1 n) `star` p_aux)
+    (f1 (Seq.index s1 n) `star` f2 (Seq.index s2 n) `star` p_aux)
+    (f1 (Seq.index s1 n) `star` (f2 (Seq.index s2 n) `star` p_aux));
+  reveal_equiv
+    (f1 (Seq.index s1 n) `star` p_aux)
+    (f1 (Seq.index s1 n) `star` (f2 (Seq.index s2 n) `star` p_aux))
+
 let starseq_upd2 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
@@ -1198,10 +1261,9 @@ let starseq_upd2 (#opened:_) (#a #b: Type0)
       b1 == b2 /\
       c1 == c2
     )
-    (fun _ -> admit ());
+    (fun m -> starseq_upd2_lemma #a #b f1 f2 f1_lemma f2_lemma s1 s2 n m);
   ()
 
-#push-options "--print_implicits"
 let starseq_upd3 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
@@ -1231,47 +1293,6 @@ let starseq_upd3 (#opened:_) (#a #b: Type0)
   starseq_upd2 #_ #a #b f1 f2 f1_lemma f2_lemma s1 s2 n;
   starseq_pack_s #_ #a #(option b) f2 f2_lemma s2 n;
   admit ()
-
-
-(*)
-  equiv_sym
-    (emp `star` f1 (Seq.index s1 n))
-    (f1 (Seq.index s1 n));
-  star_commutative emp (f1 (Seq.index s1 n));
-  equiv_trans
-    (f1 (Seq.index s1 n))
-    (emp `star` f1 (Seq.index s1 n))
-    (f1 (Seq.index s1 n) `star` emp);
-  equiv_refl (f1 (Seq.index s1 n));
-  //equiv_refl emp;
-  assume (equiv emp (f2 (Seq.index s2 n)));
-  star_congruence
-    (f1 (Seq.index s1 n)) emp
-    (f1 (Seq.index s1 n)) (f2 (Seq.index s2 n));
-  equiv_trans
-    (f1 (Seq.index s1 n))
-    (f1 (Seq.index s1 n) `star` emp)
-    (f1 (Seq.index s1 n) `star` f2 (Seq.index s2 n));
-  equiv_refl
-    (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
-    starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s1)));
-  star_congruence
-    (f1 (Seq.index s1 n))
-    (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
-    starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s1)))
-    (f1 (Seq.index s1 n) `star` f2 (Seq.index s2 n))
-    (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
-    starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s1)));
-  star_associative
-    (f1 (Seq.index s1 n))
-    (f2 (Seq.index s2 n))
-    (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
-    starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s1)));
-  return ()
-
-
-
-
 
 // TODO
 // [ok] starseq_unpack (pure equiv)
