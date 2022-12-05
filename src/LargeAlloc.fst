@@ -1,4 +1,4 @@
-module Main
+module LargeAlloc
 
 open FStar.Ghost
 open Steel.Effect.Atomic
@@ -88,7 +88,7 @@ let find = Map.M.find
 
 //assume val metadata_ptr: t a
 
-let malloc (metadata: t a) (size: size_t)
+let large_malloc (metadata: t a) (size: size_t)
   : Steel (t a & ptr_t)
   (linked_tree metadata)
   (fun r -> linked_tree (fst r) `star` A.varray (snd r))
@@ -109,7 +109,8 @@ let malloc (metadata: t a) (size: size_t)
   let metadata' = insert false cmp metadata (ptr, size) in
   return (metadata', ptr)
 
-let free (metadata: t a) (ptr: ptr_t)
+//TODO: fix me, buffer to be freed is manipulated in a SL-sound way
+let large_free (metadata: t a) (ptr: ptr_t)
   : Steel (t a)
   (linked_tree metadata)
   (fun r -> linked_tree r)

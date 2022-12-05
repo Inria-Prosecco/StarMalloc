@@ -1,4 +1,4 @@
-#include "Main.h"
+#include "LargeAlloc.h"
 #include <stdint.h>
 #include <pthread.h>
 #include "config.h"
@@ -15,7 +15,7 @@
 uint64_t _size() {
   lock();
   void* ptr = get_metadata();
-  uint64_t r = Main__size(ptr);
+  uint64_t r = LargeAlloc__size(ptr);
   unlock();
   return r;
 }
@@ -24,18 +24,19 @@ void* malloc (size_t size) {
   void* allocated_block = NULL;
   lock();
 #if BASIC
-  allocated_block = Main_mmap(size, 3l);
+  allocated_block = LargeAlloc_mmap(size, 3l);
 #else
   void* ptr = NULL;
   ptr = get_metadata();
-  K____Impl_Core_node__Aux_a__Aux_ptr_t r = Main_malloc(ptr, size);
+
+  K____Impl_Core_node__Aux_a__Prims_dtuple2___uint8_t____ r = LargeAlloc_large_malloc(ptr, size);
   ptr = r.fst;
   set_metadata(ptr);
   allocated_block = (void*) r.snd;
 #endif
   unlock();
   return allocated_block;
-  //ptr = Main_mmap(size, 3l);
+  //ptr = LargeAlloc_mmap(size, 3l);
   //return ptr;
 }
 
@@ -44,7 +45,7 @@ void free (void* ptr_to_block) {
 #if BASIC
 #else
   void* ptr = get_metadata();
-  ptr = (void*) Main_free(ptr, (uint64_t) ptr_to_block);
+  ptr = (void*) LargeAlloc_large_free(ptr, (uint64_t) ptr_to_block);
   set_metadata(ptr);
 #endif
   unlock();

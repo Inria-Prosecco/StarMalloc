@@ -87,7 +87,7 @@ dist/Impl_Trees_M.h \
 dist/Impl_Trees_Rotate3_M.h \
 dist/Impl_Trees_Rotate2_M.h \
 dist/Impl_Trees_Rotate_M.h \
-dist/Main.h \
+dist/LargeAlloc.h \
 dist/Mman.h \
 dist/Map_M.c \
 dist/Impl_AVL_M.c \
@@ -97,7 +97,7 @@ dist/Impl_Trees_M.c \
 dist/Impl_Trees_Rotate3_M.c \
 dist/Impl_Trees_Rotate2_M.c \
 dist/Impl_Trees_Rotate_M.c \
-dist/Main.c \
+dist/LargeAlloc.c \
 src/lib-alloc0.c
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)

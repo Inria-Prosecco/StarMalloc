@@ -59,12 +59,12 @@ void init1() {
     status1 += 1UL;
   }
   if (! init_arena[thread_arena]) {
-    metadatas1[thread_arena] = Main_mmap(allocated_size, 3l);
-    metadatas2[thread_arena] = Main_mmap(allocated_size, 3l);
+    metadatas1[thread_arena] = LargeAlloc_mmap(allocated_size, 3l);
+    metadatas2[thread_arena] = LargeAlloc_mmap(allocated_size, 3l);
     metadatas1[thread_arena][0];
     metadatas2[thread_arena][0];
     pthread_mutex_init(&mutexes[thread_arena], NULL);
-    metadata_ptrs[thread_arena] = Main_create_leaf();
+    metadata_ptrs[thread_arena] = LargeAlloc_create_leaf();
     init_arena[thread_arena] += 1UL;
   }
   pthread_mutex_unlock(&init_mutex1);
@@ -82,7 +82,7 @@ void malloc_check1() {
   uint64_t pos = metadatas_pos1[thread_arena];
   if (pos + uint64_size >= allocated_size) {
     //puts("Mmap again 1.");
-    metadatas1[thread_arena] = Main_mmap(allocated_size, 3l);
+    metadatas1[thread_arena] = LargeAlloc_mmap(allocated_size, 3l);
     metadatas_pos1[thread_arena] = 0UL;
   }
 }
@@ -91,7 +91,7 @@ void malloc_check2() {
   uint64_t pos = metadatas_pos2[thread_arena];
   if (pos + metadata_node_size >= allocated_size) {
     //puts("Mmap again 2.");
-    metadatas2[thread_arena] = Main_mmap(allocated_size, 3l);
+    metadatas2[thread_arena] = LargeAlloc_mmap(allocated_size, 3l);
     metadatas_pos2[thread_arena] = 0UL;
   }
 }
@@ -125,6 +125,6 @@ void set_metadata(Impl_Core_node__Aux_a* metadata) {
   metadata_ptrs[thread_arena] = metadata;
 }
 
-uint64_t Main_ptr_to_u64(uint8_t* ptr) {
+uint64_t LargeAlloc_ptr_to_u64(uint8_t* ptr) {
   return (uint64_t) ptr;
 }

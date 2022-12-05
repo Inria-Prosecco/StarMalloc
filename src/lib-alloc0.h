@@ -1,7 +1,7 @@
 #ifndef LIB_ALLOC0_H
 #define LIB_ALLOC0_H
 
-#include "Main.h"
+#include "LargeAlloc.h"
 
 void lock();
 void unlock();
