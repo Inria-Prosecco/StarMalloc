@@ -134,7 +134,9 @@ let size_class_full' (r: ref size_class_struct) : vprop'
     t = blob2;
     sel = size_class_sel r;
   }
+//TODO: FIXME: extracts despite noextract qualifier
 unfold
+noextract
 let size_class_full (r: ref size_class_struct) = VUnit (size_class_full' r)
 
 [@@ __steel_reduce__]
