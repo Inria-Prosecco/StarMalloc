@@ -1,4 +1,4 @@
-module BugSteelCompatIndexedEffectsExtractInfo
+module BugSteelCompatExtractInfo
 
 module G = FStar.Ghost
 module Mem = Steel.Memory

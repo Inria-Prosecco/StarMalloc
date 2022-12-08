@@ -1,4 +1,4 @@
-module BugSteelCompatIndexedEffectsRefine
+module BugSteelCompatRefine
 
 open Steel.Effect.Atomic
 open Steel.Effect
