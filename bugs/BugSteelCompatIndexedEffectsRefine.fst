@@ -1,4 +1,4 @@
-module BugSteelCompatIndexedEffects
+module BugSteelCompatIndexedEffectsRefine
 
 open Steel.Effect.Atomic
 open Steel.Effect
@@ -29,6 +29,7 @@ let mini_test
     (fun (|a,b|) -> True)
 #pop-options
 
+// regression
 [@@ expect_failure]
 let mini_test2
   (r: SR.ref nat)
