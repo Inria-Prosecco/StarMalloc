@@ -220,33 +220,7 @@ let p_empty_pack (#opened:_)
 #pop-options
 #pop-options
 
-//#push-options "--compat_pre_typed_indexed_effects"
-//let allocate_slab_bug
-//  (sc: sc)
-//  (b: blob)
-//  : Steel unit
-//  ((slab_vprop sc (snd b) (fst b)
-//    `vrefine`
-//    (fun (|s,_|) -> is_empty sc s)))
-//  (fun _ -> (slab_vprop sc (snd b) (fst b)
-//    `vrefine`
-//    (fun (|s,_|) -> is_empty sc s)))
-//  (requires fun h0 -> True)
-//  (ensures fun _ _ _ -> True)
-//  =
-//  elim_vrefine
-//    (slab_vprop sc (snd b) (fst b))
-//    (fun (|s,_|) -> is_empty sc s);
-//  intro_vrefine
-//    (slab_vprop sc (snd b) (fst b))
-//    (fun (|s,_|) -> is_empty sc s);
-//  return ()
-//#pop-options
-
-// Given a size class, return a free slot and update metadata
-
 #push-options "--z3rlimit 30"
-#push-options "--compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
 let allocate_slab_aux_1
   (sc: sc)
@@ -288,9 +262,7 @@ let allocate_slab_aux_1
   write empty_slabs_ptr (SL.get_next n_empty);
   SL.pack_ind (p_empty sc) empty_slabs_ptr (SL.get_next n_empty);
   return r
-#pop-options
 
-#push-options "--compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
 let allocate_slab_aux_2
   (sc: sc)
@@ -333,7 +305,7 @@ let allocate_slab_aux_2
 #push-options "--compat_pre_typed_indexed_effects"
 assume val alloc_metadata
   (size_class: sc)
-  : Steel (slab_metadata & (arr:array U8.t{A.length arr = U32.v page_size}))
+  : Steel blob
   emp
   (fun r ->
     slab_vprop size_class (snd r) (fst r))
@@ -350,7 +322,6 @@ assume val alloc_metadata
 #pop-options
 
 #push-options "--z3rlimit 50"
-#push-options "--compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
 let allocate_slab_aux_3
   (sc: sc)
@@ -387,7 +358,6 @@ let allocate_slab_aux_3
   //TODO: FIXME
   assume (not (SL.is_null_t n_empty_slabs));
   return n_empty_slabs
-#pop-options
 #pop-options
 
 #push-options "--z3rlimit 30"
