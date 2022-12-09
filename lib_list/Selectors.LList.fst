@@ -176,6 +176,35 @@ let cons_is_not_null #opened #a p ptr =
   let l = hide (v_llist p ptr h) in
   extract_info (llist p ptr) l (ptr =!= null_t) (lemma_cons_not_null p ptr l)
 
+let lemma_cons_imp_not_null (#a:Type)
+  (p : a -> vprop)
+  (ptr:t a)
+  (l:list a)
+  (m:mem)
+  : Lemma
+  (requires
+    interp (hp_of (llist p ptr)) m /\
+    llist_sel p ptr m == l)
+  (ensures
+    Cons? l = not (is_null_t ptr)
+  )
+  =
+  let l' = id_elim_exists (llist_sl' p ptr) m in
+  assert (interp (llist_sl' p ptr l') m);
+  llist_sel_interp p ptr l' m;
+  match reveal l' with
+  | [] -> Mem.pure_interp (ptr == null_t) m
+  | hd::_ -> pts_to_not_null ptr full_perm hd m
+
+let cons_imp_not_null #opened #a p ptr =
+  let h = get () in
+  let l = hide (v_llist p ptr h) in
+  //TODO: FIXME prop/bool cast issue
+  admit ();
+  extract_info (llist p ptr) l
+    (Cons? l = not (is_null_t ptr))
+    (lemma_cons_imp_not_null p ptr l)
+
 let intro_cons_lemma_aux (#a:Type0) (p : a -> vprop) (ptr1 ptr2:t a)
   (x: cell a) (l:list (cell a)) (m:mem) : Lemma
   (requires

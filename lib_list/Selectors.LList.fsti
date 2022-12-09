@@ -83,10 +83,17 @@ val cons_is_not_null (#opened:inames) (#a:Type0) (p: a -> vprop) (ptr:t a)
     v_llist p ptr h0 == v_llist p ptr h1 /\
     ptr =!= null_t)
 
+val cons_imp_not_null (#opened:inames) (#a:Type0) (p: a -> vprop) (ptr:t a)
+  : SteelGhost unit opened
+  (llist p ptr) (fun _ -> llist p ptr)
+  (requires fun h -> True)
+  (ensures fun h0 _ h1 ->
+    v_llist p ptr h0 == v_llist p ptr h1 /\
+    Cons? (v_llist p ptr h0) = not (is_null_t ptr))
+
 // val null_is_nil
 // val nil_is_null
 // val not_null_is_cons
-
 
 val pack_list (#opened:inames) (#a:Type0)
   (p: a -> vprop)

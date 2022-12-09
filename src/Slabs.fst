@@ -330,15 +330,6 @@ let allocate_slab_aux_2
   return r
 #pop-options
 
-
-assume val cons_imp_not_null (#opened:SM.inames) (#a:Type0) (p: a -> vprop) (ptr:SL.t a)
-  : SteelGhost unit opened
-  (SL.llist p ptr) (fun _ -> SL.llist p ptr)
-  (requires fun h -> True)
-  (ensures fun h0 _ h1 ->
-    SL.v_llist p ptr h0 == SL.v_llist p ptr h1 /\
-    Cons? (SL.v_llist p ptr h0) = not (SL.is_null_t ptr))
-
 #push-options "--compat_pre_typed_indexed_effects"
 assume val alloc_metadata
   (size_class: sc)
@@ -426,8 +417,8 @@ let allocate_slab_aux_0
     = SL.unpack_ind (p_partial sc) partial_slabs_ptr in
   let empty_slabs
     = SL.unpack_ind (p_empty sc) empty_slabs_ptr in
-  cons_imp_not_null (p_partial sc) partial_slabs;
-  cons_imp_not_null (p_empty sc) empty_slabs;
+  SL.cons_imp_not_null (p_partial sc) partial_slabs;
+  SL.cons_imp_not_null (p_empty sc) empty_slabs;
   return (partial_slabs, empty_slabs)
 #pop-options
 
@@ -458,12 +449,12 @@ let allocate_slab
   //let h1 = get () in
   //assert (sel partial_slabs_ptr h1 == partial_slabs);
   //assert (sel empty_slabs_ptr h1 == empty_slabs);
-  cons_imp_not_null (p_partial sc) partial_slabs;
-  cons_imp_not_null (p_empty sc) empty_slabs;
-  //assert (
-  //  not (SL.is_null_t partial_slabs) \/
-  //  not (SL.is_null_t empty_slabs) \/
-  //  pred);
+  SL.cons_imp_not_null (p_partial sc) partial_slabs;
+  SL.cons_imp_not_null (p_empty sc) empty_slabs;
+  assert (
+    not (SL.is_null_t partial_slabs) \/
+    not (SL.is_null_t empty_slabs) \/
+    pred);
   if (not (SL.is_null_t partial_slabs)) then (
     let r = allocate_slab_aux_2 sc
       partial_slabs_ptr empty_slabs_ptr
