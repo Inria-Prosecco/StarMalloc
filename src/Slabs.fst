@@ -33,11 +33,11 @@ open Slots
 //  = r:array U8.t{A.length r = U32.v slab_md_region_len}
 
 //// C binding, no top-level Steel initialization
-//assume val get_slab_region (_:unit)
+//val get_slab_region (_:unit)
 //  : slab_region
 //
 //// C binding, no top-level Steel initialization
-//assume val get_slab_md_region (_:unit)
+//val get_slab_md_region (_:unit)
 //  : slab_md_region
 
 ////TODO
@@ -87,6 +87,139 @@ let p_partial (size_class: sc)
     `vrefine`
     (fun (|s,_|) -> is_partial size_class s)
 
+#push-options "--compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 30"
+let p_empty_unpack (#opened:_)
+  (sc: sc)
+  (b1: blob)
+  (b2: blob)
+  : SteelGhost unit opened
+  ((p_empty sc) b1)
+  (fun _ -> slab_vprop sc (snd b2) (fst b2))
+  (requires fun _ -> b1 == b2)
+  (ensures fun h0 _ h1 ->
+    let blob1
+      : t_of (slab_vprop sc (snd b2) (fst b2))
+      = h1 (slab_vprop sc (snd b2) (fst b2)) in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
+    b1 == b2 /\
+    is_empty sc v1 /\
+    h0 ((p_empty sc) b1)
+    ==
+    h1 (slab_vprop sc (snd b2) (fst b2))
+  )
+  =
+  change_slprop_rel
+    ((p_empty sc) b1)
+    (slab_vprop sc (snd b2) (fst b2)
+    `vrefine`
+    (fun (|s,_|) -> is_empty sc s))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  elim_vrefine
+    (slab_vprop sc (snd b2) (fst b2))
+    (fun (|s,_|) -> is_empty sc s)
+
+let p_partial_unpack (#opened:_)
+  (sc: sc)
+  (b1: blob)
+  (b2: blob)
+  : SteelGhost unit opened
+  ((p_partial sc) b1)
+  (fun _ -> slab_vprop sc (snd b2) (fst b2))
+  (requires fun _ -> b1 == b2)
+  (ensures fun h0 _ h1 ->
+    let blob1
+      : t_of (slab_vprop sc (snd b2) (fst b2))
+      = h1 (slab_vprop sc (snd b2) (fst b2)) in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
+    b1 == b2 /\
+    is_partial sc v1 /\
+    h0 ((p_partial sc) b1)
+    ==
+    h1 (slab_vprop sc (snd b2) (fst b2))
+  )
+  =
+  change_slprop_rel
+    ((p_partial sc) b1)
+    (slab_vprop sc (snd b2) (fst b2)
+    `vrefine`
+    (fun (|s,_|) -> is_partial sc s))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  elim_vrefine
+    (slab_vprop sc (snd b2) (fst b2))
+    (fun (|s,_|) -> is_partial sc s)
+
+let p_partial_pack (#opened:_)
+  (sc: sc)
+  (b1: blob)
+  (b2: blob)
+  : SteelGhost unit opened
+  (slab_vprop sc (snd b1) (fst b1))
+  (fun _ -> (p_partial sc) b2)
+  (requires fun h0 ->
+    let blob0
+      : t_of (slab_vprop sc (snd b1) (fst b1))
+      = h0 (slab_vprop sc (snd b1) (fst b1)) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    is_partial sc v0 /\
+    b1 == b2
+  )
+  (ensures fun h0 _ h1 ->
+    b1 == b2 /\
+    h1 ((p_partial sc) b2)
+    ==
+    h0 (slab_vprop sc (snd b1) (fst b1))
+  )
+  =
+  intro_vrefine
+    (slab_vprop sc (snd b1) (fst b1))
+    (fun (|s,_|) -> is_partial sc s);
+  change_slprop_rel
+    (slab_vprop sc (snd b1) (fst b1)
+    `vrefine`
+    (fun (|s,_|) -> is_partial sc s))
+    ((p_partial sc) b2)
+    (fun x y -> x == y)
+    (fun _ -> ())
+
+let p_empty_pack (#opened:_)
+  (sc: sc)
+  (b1: blob)
+  (b2: blob)
+  : SteelGhost unit opened
+  (slab_vprop sc (snd b1) (fst b1))
+  (fun _ -> (p_empty sc) b2)
+  (requires fun h0 ->
+    let blob0
+      : t_of (slab_vprop sc (snd b1) (fst b1))
+      = h0 (slab_vprop sc (snd b1) (fst b1)) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    is_empty sc v0 /\
+    b1 == b2
+  )
+  (ensures fun h0 _ h1 ->
+    b1 == b2 /\
+    h1 ((p_empty sc) b2)
+    ==
+    h0 (slab_vprop sc (snd b1) (fst b1))
+  )
+  =
+  intro_vrefine
+    (slab_vprop sc (snd b1) (fst b1))
+    (fun (|s,_|) -> is_empty sc s);
+  change_slprop_rel
+    (slab_vprop sc (snd b1) (fst b1)
+    `vrefine`
+    (fun (|s,_|) -> is_empty sc s))
+    ((p_empty sc) b2)
+    (fun x y -> x == y)
+    (fun _ -> ())
+
+#pop-options
+#pop-options
+
 //#push-options "--compat_pre_typed_indexed_effects"
 //let allocate_slab_bug
 //  (sc: sc)
@@ -111,9 +244,6 @@ let p_partial (size_class: sc)
 //#pop-options
 
 // Given a size class, return a free slot and update metadata
-// TODO: refine spec
-// TODO: remove assume with pure predicates inside p
-//   this will yield two different versions of p
 
 #push-options "--z3rlimit 30"
 #push-options "--compat_pre_typed_indexed_effects"
@@ -140,27 +270,13 @@ let allocate_slab_aux_1
   =
   let n_empty = SL.unpack_list (p_empty sc) empty_slabs in
   let b = SL.get_data n_empty in
-  change_slprop_rel
-    ((p_empty sc) (SL.get_data n_empty))
-    (slab_vprop sc (snd b) (fst b)
-    `vrefine`
-    (fun (|s,_|) -> is_empty sc s))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  elim_vrefine
-    (slab_vprop sc (snd b) (fst b))
-    (fun (|s,_|) -> is_empty sc s);
+  p_empty_unpack sc
+    (SL.get_data n_empty)
+    b;
   let r = allocate_slot_refined sc (fst b) (snd b) in
-  intro_vrefine
-    (slab_vprop sc (snd b) (fst b))
-    (fun (|s,_|) -> is_partial sc s);
-  change_slprop_rel
-    (slab_vprop sc (snd b) (fst b)
-    `vrefine`
-    (fun (|s,_|) -> is_partial sc s))
-    ((p_partial sc) (SL.get_data n_empty))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+  p_partial_pack sc
+    b
+    (SL.get_data n_empty);
   let n_partial = SL.mk_cell partial_slabs (SL.get_data n_empty) in
   write empty_slabs n_partial;
   SL.pack_list (p_partial sc)
@@ -198,27 +314,13 @@ let allocate_slab_aux_2
   =
   let n_partial = SL.unpack_list (p_partial sc) partial_slabs in
   let b = SL.get_data n_partial in
-  change_slprop_rel
-    ((p_partial sc) (SL.get_data n_partial))
-    (slab_vprop sc (snd b) (fst b)
-    `vrefine`
-    (fun (|s,_|) -> is_partial sc s))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  elim_vrefine
-    (slab_vprop sc (snd b) (fst b))
-    (fun (|s,_|) -> is_partial sc s);
+  p_partial_unpack sc
+    (SL.get_data n_partial)
+    b;
   let r = allocate_slot_refined sc (fst b) (snd b) in
-  intro_vrefine
-    (slab_vprop sc (snd b) (fst b))
-    (fun (|s,_|) -> is_partial sc s);
-  change_slprop_rel
-    (slab_vprop sc (snd b) (fst b)
-    `vrefine`
-    (fun (|s,_|) -> is_partial sc s))
-    ((p_partial sc) (SL.get_data n_partial))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+  p_partial_pack sc
+    b
+    (SL.get_data n_partial);
   SL.pack_list (p_partial sc)
     partial_slabs
     (SL.get_next n_partial)
@@ -280,16 +382,9 @@ let allocate_slab_aux_3
     not (SL.is_null_t r))
   =
   let r = alloc_metadata sc in
-  intro_vrefine
-    (slab_vprop sc (snd r) (fst r))
-    (fun (|s,_|) -> is_empty sc s);
-  change_slprop_rel
-    (slab_vprop sc (snd r) (fst r)
-    `vrefine`
-    (fun (|s,_|) -> is_empty sc s))
-    ((p_empty sc) r)
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+  p_empty_pack sc
+    r
+    r;
   let n_empty = SL.mk_cell empty_slabs r in
   //// will yield to reentrance thus segfault
   let n_empty_slabs = malloc n_empty in
@@ -298,6 +393,7 @@ let allocate_slab_aux_3
     empty_slabs
     r;
   write empty_slabs_ptr n_empty_slabs;
+  //TODO: FIXME
   assume (not (SL.is_null_t n_empty_slabs));
   return n_empty_slabs
 #pop-options
