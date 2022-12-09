@@ -249,6 +249,71 @@ let allocate_slab_aux_2
 //  )
 //  = ()
 
+#push-options "--compat_pre_typed_indexed_effects"
+assume val alloc_metadata
+  (size_class: sc)
+  : Steel (slab_metadata & (arr:array U8.t{A.length arr = U32.v page_size}))
+  emp
+  (fun r ->
+    slab_vprop size_class (snd r) (fst r))
+    //`vrefine`
+    //(fun (|s,_|) -> is_empty size_class s))
+  (requires fun h0 -> True)
+  (ensures fun h0 r h1->
+    let blob1
+      : t_of (slab_vprop size_class (snd r) (fst r))
+      = h1 (slab_vprop size_class (snd r) (fst r)) in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
+    is_empty size_class v1 /\
+    has_free_slot size_class v1)
+#pop-options
+
+#push-options "--z3rlimit 50"
+#push-options "--compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
+let allocate_slab_aux_3
+  (sc: sc)
+  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
+  (partial_slabs empty_slabs: SL.t blob)
+  : Steel (SL.t blob)
+  (vptr empty_slabs_ptr `star`
+  SL.llist (p_empty sc) empty_slabs `star`
+  vptr partial_slabs_ptr `star`
+  SL.llist (p_partial sc) partial_slabs)
+  (fun r ->
+  vptr empty_slabs_ptr `star`
+  SL.llist (p_empty sc) r `star`
+  vptr partial_slabs_ptr `star`
+  SL.llist (p_partial sc) partial_slabs)
+  (requires fun h0 -> True)
+  (ensures fun _ r h1 ->
+    sel empty_slabs_ptr h1 == r)
+  =
+  let r = alloc_metadata sc in
+  intro_vrefine
+    (slab_vprop sc (snd r) (fst r))
+    (fun (|s,_|) -> is_empty sc s);
+  change_slprop_rel
+    (slab_vprop sc (snd r) (fst r)
+    `vrefine`
+    (fun (|s,_|) -> is_empty sc s))
+    ((p_empty sc) r)
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  let n_empty = SL.mk_cell empty_slabs r in
+  //// will yield to reentrance thus segfault
+  let n_empty_slabs = malloc n_empty in
+  SL.pack_list (p_empty sc)
+    n_empty_slabs
+    empty_slabs
+    r;
+  write empty_slabs_ptr n_empty_slabs;
+  return n_empty_slabs
+#pop-options
+#pop-options
+
+
+
 #push-options "--z3rlimit 50"
 let allocate_slab
   (sc: sc)
@@ -261,8 +326,13 @@ let allocate_slab
   SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
   SL.ind_llist (p_empty sc) empty_slabs_ptr)
   (requires fun h0 ->
+    //not (SL.is_null_t (sel empty_slabs_ptr h0)) \/
+    //not (SL.is_null_t (sel partial_slabs_ptr h0)) \/
     Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
-    Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0))
+    Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0) \/
+    // third case
+    True
+  )
   (ensures fun _ _ _ -> True)
   =
   //let h0 = get () in
@@ -288,15 +358,25 @@ let allocate_slab
   assume (
     not (SL.is_null_t partial_slabs) \/
     not (SL.is_null_t empty_slabs));
-  if (SL.is_null_t partial_slabs) then (
+  if (not (SL.is_null_t partial_slabs)) then (
+    let r = allocate_slab_aux_2 sc
+      partial_slabs_ptr empty_slabs_ptr
+      partial_slabs empty_slabs in
+    return r
+  ) else if (not (SL.is_null_t empty_slabs)) then (
+  //) else (
     let r = allocate_slab_aux_1 sc
       partial_slabs_ptr empty_slabs_ptr
       partial_slabs empty_slabs in
     return r
   ) else (
-    let r = allocate_slab_aux_2 sc
+    // h_malloc alloc_metadata equivalent
+    let n_empty_slabs = allocate_slab_aux_3 sc
       partial_slabs_ptr empty_slabs_ptr
       partial_slabs empty_slabs in
+    let r = allocate_slab_aux_1 sc
+      partial_slabs_ptr empty_slabs_ptr
+      partial_slabs n_empty_slabs in
     return r
   )
-
+#pop-options
