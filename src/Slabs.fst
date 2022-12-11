@@ -302,95 +302,110 @@ let allocate_slab_aux_2
   return r
 #pop-options
 
-#push-options "--compat_pre_typed_indexed_effects"
+//TODO:
+//to be improved
+//val alloc_metadata_v2
+//  (size_class: sc)
+//  : Steel (SL.t blob)
+//  emp
+//  (fun r ->
+//    vptr r `vdep` (fun n -> p_empty size_class (SL.get_data n)))
+//  (requires fun h0 -> True)
+//  (ensures fun _ r h1 ->
+//    not (SL.is_null_t r) /\
+//    SL.is_null_t (SL.get_next (sel r h1)))
+
 assume val alloc_metadata
   (size_class: sc)
-  : Steel blob
+  : Steel (SL.t blob)
   emp
   (fun r ->
-    slab_vprop size_class (snd r) (fst r))
-    //`vrefine`
-    //(fun (|s,_|) -> is_empty size_class s))
+    SL.llist (p_empty size_class) r)
   (requires fun h0 -> True)
-  (ensures fun h0 r h1->
-    let blob1
-      : t_of (slab_vprop size_class (snd r) (fst r))
-      = h1 (slab_vprop size_class (snd r) (fst r)) in
-    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
-    is_empty size_class v1 /\
-    has_free_slot size_class v1)
-#pop-options
+  (ensures fun _ r h1 ->
+    L.length (SL.v_llist (p_empty size_class) r h1) = 1)
 
-#push-options "--z3rlimit 50"
+assume val unpack_list_singleton (#a: Type0)
+  (p: a -> vprop)
+  (ptr: SL.t a)
+  : Steel (SL.cell a)
+  (SL.llist p ptr)
+  (fun n -> vptr ptr `star` p (SL.get_data n))
+  (requires fun h0 ->
+    L.length (SL.v_llist p ptr h0) = 1)
+  (ensures fun h0 n h1 ->
+    SL.v_llist p ptr h0 ==
+      (SL.get_data (sel ptr h1)) :: [] /\
+    sel ptr h1 == n)
+
+#push-options "--z3rlimit 30"
 inline_for_extraction noextract
 let allocate_slab_aux_3
   (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  (partial_slabs empty_slabs: SL.t blob)
+  (empty_slabs_ptr: ref (SL.t blob))
+  (empty_slabs: SL.t blob)
   : Steel (SL.t blob)
   (vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) empty_slabs `star`
-  vptr partial_slabs_ptr `star`
-  SL.llist (p_partial sc) partial_slabs)
+  SL.llist (p_empty sc) empty_slabs)
+  //`star`
+  //vptr partial_slabs_ptr `star`
+  //SL.llist (p_partial sc) partial_slabs)
   (fun r ->
   vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) r `star`
-  vptr partial_slabs_ptr `star`
-  SL.llist (p_partial sc) partial_slabs)
+  SL.llist (p_empty sc) r)
+  //`star`
+  //vptr partial_slabs_ptr `star`
+  //SL.llist (p_partial sc) partial_slabs)
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
     sel empty_slabs_ptr h1 == r /\
-    sel partial_slabs_ptr h1 == sel partial_slabs_ptr h0 /\
+    //sel partial_slabs_ptr h1 == sel partial_slabs_ptr h0 /\
     not (SL.is_null_t r))
   =
   let r = alloc_metadata sc in
-  p_empty_pack sc
-    r
-    r;
-  let n_empty = SL.mk_cell empty_slabs r in
-  //// will yield to reentrance thus segfault
-  let n_empty_slabs = malloc n_empty in
+  let n_empty = unpack_list_singleton (p_empty sc) r in
+  let n_empty_2 = SL.mk_cell empty_slabs (SL.get_data n_empty) in
+  write r n_empty_2;
   SL.pack_list (p_empty sc)
-    n_empty_slabs
+    r
     empty_slabs
-    r;
-  write empty_slabs_ptr n_empty_slabs;
-  //TODO: FIXME
-  assume (not (SL.is_null_t n_empty_slabs));
-  return n_empty_slabs
+    (SL.get_data n_empty);
+  SL.cons_is_not_null (p_empty sc) r;
+  write empty_slabs_ptr r;
+  return r
 #pop-options
 
-#push-options "--z3rlimit 30"
-let allocate_slab_aux_0
-  (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  : Steel (SL.t blob & SL.t blob)
-  (SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
-  SL.ind_llist (p_empty sc) empty_slabs_ptr)
-  (fun r ->
-  vptr empty_slabs_ptr `star`
-  SL.llist (p_partial sc) (fst r) `star`
-  vptr partial_slabs_ptr `star`
-  SL.llist (p_empty sc) (snd r))
-  (requires fun h0 -> True)
-  (ensures fun h0 r h1 ->
-    Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0)
-    =
-    not (SL.is_null_t (fst r))
-    /\
-    Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0)
-    =
-    not (SL.is_null_t (snd r))
-  )
-  =
-  let partial_slabs
-    = SL.unpack_ind (p_partial sc) partial_slabs_ptr in
-  let empty_slabs
-    = SL.unpack_ind (p_empty sc) empty_slabs_ptr in
-  SL.cons_imp_not_null (p_partial sc) partial_slabs;
-  SL.cons_imp_not_null (p_empty sc) empty_slabs;
-  return (partial_slabs, empty_slabs)
-#pop-options
+//#push-options "--z3rlimit 30"
+//let allocate_slab_aux_0
+//  (sc: sc)
+//  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
+//  : Steel (SL.t blob & SL.t blob)
+//  (SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
+//  SL.ind_llist (p_empty sc) empty_slabs_ptr)
+//  (fun r ->
+//  vptr empty_slabs_ptr `star`
+//  SL.llist (p_partial sc) (fst r) `star`
+//  vptr partial_slabs_ptr `star`
+//  SL.llist (p_empty sc) (snd r))
+//  (requires fun h0 -> True)
+//  (ensures fun h0 r h1 ->
+//    Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0)
+//    =
+//    not (SL.is_null_t (fst r))
+//    /\
+//    Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0)
+//    =
+//    not (SL.is_null_t (snd r))
+//  )
+//  =
+//  let partial_slabs
+//    = SL.unpack_ind (p_partial sc) partial_slabs_ptr in
+//  let empty_slabs
+//    = SL.unpack_ind (p_empty sc) empty_slabs_ptr in
+//  SL.cons_imp_not_null (p_partial sc) partial_slabs;
+//  SL.cons_imp_not_null (p_empty sc) empty_slabs;
+//  return (partial_slabs, empty_slabs)
+//#pop-options
 
 #push-options "--z3rlimit 50"
 let allocate_slab
@@ -438,8 +453,7 @@ let allocate_slab
   ) else (
     // h_malloc alloc_metadata equivalent
     let n_empty_slabs = allocate_slab_aux_3 sc
-      partial_slabs_ptr empty_slabs_ptr
-      partial_slabs empty_slabs in
+      empty_slabs_ptr empty_slabs in
     let r = allocate_slab_aux_1 sc
       partial_slabs_ptr empty_slabs_ptr
       partial_slabs n_empty_slabs in
