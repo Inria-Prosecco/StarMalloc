@@ -88,6 +88,11 @@ dist/Impl_Trees_Rotate3_M.h \
 dist/Impl_Trees_Rotate2_M.h \
 dist/Impl_Trees_Rotate_M.h \
 dist/LargeAlloc.h \
+dist/SmallAlloc.h \
+dist/Slabs.h \
+dist/Slots.h \
+dist/Bitmap5.h \
+dist/Utils2.h \
 dist/Mman.h \
 dist/Map_M.c \
 dist/Impl_AVL_M.c \
@@ -98,7 +103,15 @@ dist/Impl_Trees_Rotate3_M.c \
 dist/Impl_Trees_Rotate2_M.c \
 dist/Impl_Trees_Rotate_M.c \
 dist/LargeAlloc.c \
-src/lib-alloc0.c
+dist/SmallAlloc.c \
+dist/Slabs.c \
+dist/Slots.c \
+dist/Bitmap5.c \
+dist/Utils2.c \
+src/ffs.c \
+src/lib-alloc0.c \
+src/slab-alloc.c \
+src/slab-alloc.h
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)
 test-tree: verify extract
@@ -124,6 +137,28 @@ bench/test-alloc.c \
 src/lib-alloc.c
 	./bench/a.out
 
+test-slab: verify extract
+	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+-o bench/a.out \
+$(FILES) \
+bench/test-slab.c \
+src/lib-alloc.c
+	./bench/a.out
+
+test-slab0: verify extract
+	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+-o bench/a.out \
+$(FILES) \
+src/lib-alloc.c
+	./bench/a.out
+
+
+
+# test the allocator with a static binary
 test-alloc0bis: verify extract
 	gcc -O0 -pg -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \

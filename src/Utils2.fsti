@@ -56,8 +56,10 @@ let nb_slots_correct
   (ensures U32.v (U32.mul pos size_class) <= U32.v page_size)
   = ()
 
+noextract
+let max64_nat : nat = FStar.Int.max_int U64.n
 noextract inline_for_extraction
-let max64 : U64.t = U64.uint_to_t (FStar.Int.max_int U64.n)
+let max64 : U64.t = U64.lognot 0UL
 
 noextract
 let has_free_slot

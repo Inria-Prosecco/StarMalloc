@@ -12,7 +12,7 @@ inline_for_extraction noextract
 let u64_bool_of_uint (x: U64.t)
   : bool
   =
-  if U64.eq x U64.one
+  if U64.eq x 1UL
   then true
   else false
 

@@ -19,6 +19,7 @@ module A = Steel.Array
 open Utils2
 open Slabs
 
+(*)
 //TODO: use ptrdiff
 //assume val f (md: slab_metadata) : arr:array U8.t{A.length arr = U32.v page_size}
 
@@ -32,9 +33,9 @@ type size_class_struct = {
   size: sc;
   partial_slabs: ref (SL.t blob);
   empty_slabs: ref (SL.t blob);
+  metadata_allocated: U32.t;
   region_start: array (arr:array U8.t{A.length arr = U32.v page_size});
   lock: ref bool;
-  metadata_allocated: U32.t;
 }
 
 noeq
@@ -42,6 +43,7 @@ type blob2 = {
   scs_v: size_class_struct;
   partial_slabs_v: list blob;
   empty_slabs_v: list blob;
+  md_counter_v: nat;
 }
 
 let size_class_sl'
@@ -94,6 +96,7 @@ let size_class_sel_full'
       scs_v = G.reveal scs;
       partial_slabs_v = partial_slabs_v;
       empty_slabs_v = empty_slabs_v;
+      md_counter_v = U32.v scs.metadata_allocated;
     } in
     b
 
@@ -284,6 +287,7 @@ let pack_sc (#opened:_)
     b.empty_slabs_v == SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0
   )
   =
+  admit ();
   let h0 = get () in
   assert (scs == sel r h0);
   let partial_slabs_v : list blob =
@@ -296,6 +300,7 @@ let pack_sc (#opened:_)
     scs_v = scs;
     partial_slabs_v = G.reveal partial_slabs_v;
     empty_slabs_v = G.reveal empty_slabs_v;
+    md_counter_v = 0;
   }) in
   change_slprop
     (vptr r `star`
@@ -320,11 +325,19 @@ let temp (r: ref size_class_struct)
   pack_sc r scs;
   return 0ul
 
+let metadata_max = 131072
+
+let size_class_refinement (b2: blob2)
+  =
+  Cons? b2.partial_slabs_v \/
+  Cons? b2.empty_slabs_v \/
+  b2.md_counter_v < metadata_max
+
 let size_class_vprop (r: ref size_class_struct)
   =
   size_class_full r
   `vrefine`
-  (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v)
+  (fun b2 -> size_class_refinement b2)
 
 let temp2 (r: ref size_class_struct)
   : Steel U32.t
@@ -339,12 +352,12 @@ let temp2 (r: ref size_class_struct)
   =
   elim_vrefine
     (size_class_full r)
-    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
+    (fun b2 -> size_class_refinement b2);
   let scs = unpack_sc r in
   pack_sc r scs;
   intro_vrefine
     (size_class_full r)
-    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
+    (fun b2 -> size_class_refinement b2);
   return 0ul
 
 let allocate_size_class (r: ref size_class_struct)
@@ -359,6 +372,7 @@ let allocate_size_class (r: ref size_class_struct)
   =
   elim_vrefine
     (size_class_full r)
+    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
     (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
   let scs = unpack_sc r in
   let result = allocate_slab scs.size scs.partial_slabs scs.empty_slabs in

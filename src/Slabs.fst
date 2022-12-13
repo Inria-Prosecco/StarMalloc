@@ -48,7 +48,7 @@ open Slots
 
 #set-options "--ide_id_info_off"
 
-assume val allocate_slot_refined
+let allocate_slot_refined
   (size_class: sc)
   (md: slab_metadata)
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -65,6 +65,9 @@ assume val allocate_slot_refined
       = h1 (slab_vprop size_class arr md) in
     let v1 : Seq.lseq U64.t 4 = dfst blob1 in
     is_partial size_class v1)
+  =
+  admit ();
+  allocate_slot size_class md arr
 
 unfold
 let blob
@@ -325,7 +328,7 @@ assume val alloc_metadata
   (ensures fun _ r h1 ->
     L.length (SL.v_llist (p_empty size_class) r h1) = 1)
 
-assume val unpack_list_singleton (#a: Type0)
+let unpack_list_singleton (#a: Type0)
   (p: a -> vprop)
   (ptr: SL.t a)
   : Steel (SL.cell a)
@@ -337,6 +340,12 @@ assume val unpack_list_singleton (#a: Type0)
     SL.v_llist p ptr h0 ==
       (SL.get_data (sel ptr h1)) :: [] /\
     sel ptr h1 == n)
+  =
+  SL.cons_is_not_null p ptr;
+  let n = SL.unpack_list p ptr in
+  //TODO: FIXME (add AVL-like helper)
+  drop (SL.llist p (SL.get_next n));
+  return n
 
 #push-options "--z3rlimit 30"
 inline_for_extraction noextract
@@ -411,7 +420,7 @@ let allocate_slab_aux_3
 let allocate_slab
   (sc: sc)
   (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  (pred: prop)
+  (pred: G.erased prop)
   : Steel (array U8.t)
   (SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
   SL.ind_llist (p_empty sc) empty_slabs_ptr)
