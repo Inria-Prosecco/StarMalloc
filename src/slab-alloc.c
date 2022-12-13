@@ -32,6 +32,7 @@ void init() {
     md_region_start = LargeAlloc_mmap(max_slabs * sizeof(Slabs_blob), 3l);
     partial_slabs_ptr = &partial_slabs;
     empty_slabs_ptr = &empty_slabs;
+    init_status = 1UL;
   }
   //pthread_mutex_unlock(&init_mutex);
 }
@@ -68,10 +69,4 @@ void* slab_malloc (size_t size) {
   //uint64_t x = 18 / 0;
   slab_unlock();
   return r;
-}
-
-int main(){
-  uint8_t* ptr = slab_malloc(16);
-  ptr[2] = 7ul;
-  return ptr[2];
 }

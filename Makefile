@@ -147,17 +147,6 @@ bench/test-slab.c \
 src/lib-alloc.c
 	./bench/a.out
 
-test-slab0: verify extract
-	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
-	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
--o bench/a.out \
-$(FILES) \
-src/lib-alloc.c
-	./bench/a.out
-
-
-
 # test the allocator with a static binary
 test-alloc0bis: verify extract
 	gcc -O0 -pg -DKRML_VERIFIED_UINT128 \
