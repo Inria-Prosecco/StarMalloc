@@ -7,15 +7,23 @@ module SM = Steel.Memory
 
 let none_as_emp
   (#a: Type0)
-  : Pure vprop
-  (requires True)
-  (ensures fun r -> t_of r == option a)
+  : Tot vprop
   =
   VUnit ({
     hp = SM.emp;
     t = option a;
     sel = fun _ -> None
   })
+
+let none_as_emp_equiv (#a: Type0)
+  : Lemma
+  (equiv emp (none_as_emp #a))
+  =
+  reveal_emp ();
+  assert (hp_of emp == SM.emp);
+  assert_norm (hp_of (none_as_emp #a) == SM.emp);
+  SM.reveal_equiv (hp_of emp) (hp_of (none_as_emp #a));
+  reveal_equiv emp (none_as_emp #a)
 
 let some_as_vp
   (#a: Type0)
@@ -29,7 +37,6 @@ let some_as_vp
     t = option a;
     sel = fun h -> Some (sel_of vp h)
   })
-
 
 let c2
  (#a: Type0)
