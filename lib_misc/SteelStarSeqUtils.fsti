@@ -127,6 +127,7 @@ let v_starseq_len (#a #b: Type)
   : Lemma
   (Seq.length (v_starseq #a #b #p f f_lemma s h) = Seq.length s)
   =
+  //TODO FIXME @Aymeric: apply starseq_sel_len
   admit ()
 
 val starseq_unpack_s (#opened:_) (#a #b: Type0)

@@ -1126,7 +1126,6 @@ let starseq_upd (#opened:_) (#a #b: Type0)
     (forall (k:nat{k <> n /\ k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
   (ensures fun h0 _ h1 ->
-    f1_lemma (Seq.index s1 n);
     v_starseq #a #b f2 f2_lemma (Seq.slice s2 0 n) h1
     ==
     v_starseq #a #b f1 f1_lemma (Seq.slice s1 0 n) h0
@@ -1145,8 +1144,7 @@ let starseq_upd (#opened:_) (#a #b: Type0)
     (Seq.slice s2 0 n);
   starseq_weakening #_ #a #b f1 f2 f1_lemma f2_lemma
     (Seq.slice s1 (n+1) (Seq.length s1))
-    (Seq.slice s2 (n+1) (Seq.length s2));
-  ()
+    (Seq.slice s2 (n+1) (Seq.length s2))
 
 #push-options "--print_implicits"
 let starseq_upd2_lemma (#a #b: Type0)
@@ -1171,7 +1169,8 @@ let starseq_upd2_lemma (#a #b: Type0)
       ((f2 (Seq.index s2 n)) `star`
       (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
       starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2)))))
-    )) m
+    )) m /\
+    sel_of (none_as_emp #b) m == None
   )
   =
   cm_identity (f1 (Seq.index s1 n));
@@ -1183,7 +1182,8 @@ let starseq_upd2_lemma (#a #b: Type0)
     (f1 (Seq.index s1 n))
     (emp `star` f1 (Seq.index s1 n))
     (f1 (Seq.index s1 n) `star` emp);
-  assume (equiv emp (f2 (Seq.index s2 n)));
+  none_as_emp_equiv #b;
+  assert (equiv emp (f2 (Seq.index s2 n)));
   equiv_refl (f1 (Seq.index s1 n));
   star_congruence
     (f1 (Seq.index s1 n)) emp
@@ -1224,7 +1224,7 @@ let starseq_upd2 (#opened:_) (#a #b: Type0)
   starseq #a #(option b) f1 f1_lemma (Seq.slice s1 (n+1) (Seq.length s1))))
   (fun _ ->
   f1 (Seq.index s1 n) `star`
-  ((f2 (Seq.index s2 n)) `star`
+  (f2 (Seq.index s2 n) `star`
   (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
   starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2)))))
   (requires fun _ ->
@@ -1233,7 +1233,6 @@ let starseq_upd2 (#opened:_) (#a #b: Type0)
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
     f2 (Seq.index s2 n) == none_as_emp #b)
   (ensures fun h0 _ h1 ->
-    f1_lemma (Seq.index s1 n);
     v_starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) h1
     ==
     v_starseq #a #(option b) f1 f1_lemma (Seq.slice s1 0 n) h0
@@ -1250,8 +1249,8 @@ let starseq_upd2 (#opened:_) (#a #b: Type0)
   starseq_upd #_ #a #(option b) f1 f2 f1_lemma f2_lemma s1 s2 n;
   change_slprop_rel
     (f1 (Seq.index s1 n) `star`
-    (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
-    starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2))))
+     (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
+     starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2))))
     (f1 (Seq.index s1 n) `star`
      ((f2 (Seq.index s2 n)) `star`
      (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
@@ -1292,6 +1291,7 @@ let starseq_upd3 (#opened:_) (#a #b: Type0)
   starseq_unpack_s #_ #a #(option b) f1 f1_lemma s1 n;
   starseq_upd2 #_ #a #b f1 f2 f1_lemma f2_lemma s1 s2 n;
   starseq_pack_s #_ #a #(option b) f2 f2_lemma s2 n;
+  //TODO: FIXME @Aymeric?
   admit ()
 
 // TODO
