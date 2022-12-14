@@ -19,7 +19,6 @@ module A = Steel.Array
 open Utils2
 open Slabs
 
-(*)
 //TODO: use ptrdiff
 //assume val f (md: slab_metadata) : arr:array U8.t{A.length arr = U32.v page_size}
 
@@ -244,7 +243,8 @@ let pack_sc_lemma
     ) m /\
     sel_of (vptr r) m == b.scs_v /\
     SL.ind_llist_sel (p_partial b.scs_v.size) b.scs_v.partial_slabs m == b.partial_slabs_v /\
-    SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.empty_slabs m == b.empty_slabs_v
+    SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.empty_slabs m == b.empty_slabs_v /\
+    b.md_counter_v == U32.v b.scs_v.metadata_allocated
   )
   (ensures
     Mem.interp (size_class_sl r) m /\
@@ -284,10 +284,10 @@ let pack_sc (#opened:_)
     b.scs_v == sel r h0 /\
     b.scs_v == scs /\
     b.partial_slabs_v == SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0 /\
-    b.empty_slabs_v == SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0
+    b.empty_slabs_v == SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0 /\
+    b.md_counter_v == U32.v b.scs_v.metadata_allocated
   )
   =
-  admit ();
   let h0 = get () in
   assert (scs == sel r h0);
   let partial_slabs_v : list blob =
@@ -300,7 +300,7 @@ let pack_sc (#opened:_)
     scs_v = scs;
     partial_slabs_v = G.reveal partial_slabs_v;
     empty_slabs_v = G.reveal empty_slabs_v;
-    md_counter_v = 0;
+    md_counter_v = U32.v scs.metadata_allocated;
   }) in
   change_slprop
     (vptr r `star`
@@ -372,17 +372,16 @@ let allocate_size_class (r: ref size_class_struct)
   =
   elim_vrefine
     (size_class_full r)
-    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
-    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
+    (fun b2 -> size_class_refinement b2);
   let scs = unpack_sc r in
-  let result = allocate_slab scs.size scs.partial_slabs scs.empty_slabs in
+  let result = allocate_slab scs.size scs.partial_slabs scs.empty_slabs True in
   pack_sc r scs;
   let h0 = get () in
   let scs_v = G.hide (v_sc_full r h0) in
-  assume (Cons? scs_v.partial_slabs_v \/ Cons? scs_v.empty_slabs_v);
+  assume (size_class_refinement scs_v);
   intro_vrefine
     (size_class_full r)
-    (fun b2 -> Cons? b2.partial_slabs_v \/ Cons? b2.empty_slabs_v);
+    (fun b2 -> size_class_refinement b2);
   return result
 
 (*)
