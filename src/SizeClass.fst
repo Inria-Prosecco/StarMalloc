@@ -331,7 +331,6 @@ let pack_sc_lemma
     p1 `Mem.star` p2 `Mem.star` p3 `Mem.star`
     p4 `Mem.star` p5 `Mem.star` p6 in
   assert (Mem.interp sl m);
-  admit ();
 
   let m12345, m6 = Mem.id_elim_star
     (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
@@ -348,28 +347,28 @@ let pack_sc_lemma
   let m1, m2 = Mem.id_elim_star p1 p2 m12 in
   // #1
   ptr_sel_interp r m1;
+  let p1' = pts_to_sl r full_perm b.scs_v in
   // #2-#6: empty
   Mem.intro_star
-    (SR.ptr r) p2 m1 m2;
+    p1' p2 m1 m2;
   Mem.intro_star
-    (SR.ptr r `Mem.star` p2)
+    (p1' `Mem.star` p2)
     p3 m12 m3;
   Mem.intro_star
-    (SR.ptr r `Mem.star` p2 `Mem.star` p3)
+    (p1' `Mem.star` p2 `Mem.star` p3)
     p4 m123 m4;
   Mem.intro_star
-    (SR.ptr r `Mem.star` p2 `Mem.star` p3 `Mem.star` p4)
+    (p1' `Mem.star` p2 `Mem.star` p3 `Mem.star` p4)
     p5 m1234 m5;
   Mem.intro_star
-    (SR.ptr r `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
+    (p1' `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
     p6 m12345 m6;
   Mem.intro_h_exists b.scs_v (size_class_sl' r) m;
   size_class_sl'_witinv r
 
 //TODO: FIXME: BLOCKER
 //#push-options "--lax"
-//#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
-#push-options "--z3rlimit 50"
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let pack_sc (#opened:_)
   (r: ref size_class_struct)
   (scs: size_class_struct)
@@ -396,57 +395,60 @@ let pack_sc (#opened:_)
   =
   let h0 = get () in
   assert (scs == sel r h0);
-  let partial_slabs_v : list blob
-    = G.hide (SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0) in
-  let empty_slabs_v : list blob
-    = G.hide (SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0) in
-  let slab_region_v : Seq.seq U8.t
-    = G.hide (A.asel scs.slab_region h0) in
-  let md_bm_region_v : Seq.seq U64.t
-    = G.hide (A.asel scs.md_bm_region h0) in
-  let md_region_v : Seq.seq blob
-    = G.hide (A.asel scs.md_region h0) in
-  //let m : G.erased ((size_class_struct * list blob) * list blob) =
-    //G.hide ((scs, G.reveal partial_slabs_v), G.reveal empty_slabs_v) in
-  let b : blob2 = G.hide ({
-    scs_v = scs;
-    partial_slabs_v = G.reveal partial_slabs_v;
-    empty_slabs_v = G.reveal empty_slabs_v;
-    md_counter_v = U32.v scs.metadata_allocated;
-    slab_region_v = G.reveal slab_region_v;
-    md_bm_region_v = G.reveal md_bm_region_v;
-    md_region_v = G.reveal md_region_v;
-  }) in
-  change_slprop_rel
-    (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-    SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
-    A.varray scs.slab_region `star`
-    A.varray scs.md_bm_region `star`
-    A.varray scs.md_region)
-    (SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
-    SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
-    A.varray b.scs_v.slab_region `star`
-    A.varray b.scs_v.md_bm_region `star`
-    A.varray b.scs_v.md_region)
-    (fun x y -> x == y)
-    (fun _ -> ());
-  change_slprop
-    (vptr r `star`
-    SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
-    SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
-    A.varray b.scs_v.slab_region `star`
-    A.varray b.scs_v.md_bm_region `star`
-    A.varray b.scs_v.md_region)
-    (size_class_full r)
-    (((((b.scs_v,
-      b.partial_slabs_v),
-      b.empty_slabs_v),
-      b.slab_region_v),
-      b.md_bm_region_v),
-      b.md_region_v)
-    b
-    (fun m -> pack_sc_lemma r (G.reveal b) m);
-  ()
+  //let partial_slabs_v : list blob
+  //  = G.hide (SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0) in
+  //let empty_slabs_v : list blob
+  //  = G.hide (SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0) in
+  //let slab_region_v : Seq.seq U8.t
+  //  = G.hide (A.asel scs.slab_region h0) in
+  //let md_bm_region_v : Seq.seq U64.t
+  //  = G.hide (A.asel scs.md_bm_region h0) in
+  //let md_region_v : Seq.seq blob
+  //  = G.hide (A.asel scs.md_region h0) in
+  ////let m : G.erased ((size_class_struct * list blob) * list blob) =
+  //  //G.hide ((scs, G.reveal partial_slabs_v), G.reveal empty_slabs_v) in
+  //let b : blob2 = G.hide ({
+  //  scs_v = scs;
+  //  partial_slabs_v = G.reveal partial_slabs_v;
+  //  empty_slabs_v = G.reveal empty_slabs_v;
+  //  md_counter_v = U32.v scs.metadata_allocated;
+  //  slab_region_v = G.reveal slab_region_v;
+  //  md_bm_region_v = G.reveal md_bm_region_v;
+  //  md_region_v = G.reveal md_region_v;
+  //}) in
+  //change_slprop_rel
+  //  (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
+  //  SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
+  //  A.varray scs.slab_region `star`
+  //  A.varray scs.md_bm_region `star`
+  //  A.varray scs.md_region)
+  //  (SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
+  //  SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
+  //  A.varray b.scs_v.slab_region `star`
+  //  A.varray b.scs_v.md_bm_region `star`
+  //  A.varray b.scs_v.md_region)
+  //  (fun x y -> x == y)
+  //  (fun _ -> ());
+  //change_slprop
+  //  (vptr r `star`
+  //  SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
+  //  SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
+  //  A.varray b.scs_v.slab_region `star`
+  //  A.varray b.scs_v.md_bm_region `star`
+  //  A.varray b.scs_v.md_region)
+  //  (size_class_full r)
+  //  (((((b.scs_v,
+  //    b.partial_slabs_v),
+  //    b.empty_slabs_v),
+  //    b.slab_region_v),
+  //    b.md_bm_region_v),
+  //    b.md_region_v)
+  //  b
+  //  (fun m -> admit ())
+  //  //(fun m -> pack_sc_lemma r (G.reveal b) m);
+  sladmit ();
+  admit ()
+#pop-options
 
 let temp (r: ref size_class_struct)
   : Steel U32.t
