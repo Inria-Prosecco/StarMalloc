@@ -33,8 +33,9 @@ type size_class_struct = {
   partial_slabs: ref (SL.t blob);
   empty_slabs: ref (SL.t blob);
   metadata_allocated: U32.t;
-  region_start: array (arr:array U8.t{A.length arr = U32.v page_size});
-  lock: ref bool;
+  //TODO: FIXME: null array?
+  //region_start: array (arr:array U8.t{A.length arr = U32.v page_size});
+  //lock: ref bool;
 }
 
 noeq
@@ -385,20 +386,6 @@ let allocate_size_class (r: ref size_class_struct)
   return result
 
 (*)
-let select_size_class (size: U32.t)
-  : Steel sc
-  emp (fun _ -> emp)
-  (requires fun _ -> U32.v size <= max_sc)
-  (ensures fun _ size_class _ -> U32.lte size size_class)
-  =
-  if U32.lte size 16ul then (
-    return 16ul
-  ) else if U32.lte size 32ul then (
-    return 32ul
-  ) else (
-    return 64ul
-  )
-
 let select_size_class2 (size: U32.t)
   (sc16 sc32 sc64: ref size_class_struct)
   : Steel (ref size_class_struct & G.erased U32.t)
