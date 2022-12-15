@@ -21,8 +21,8 @@ const size_t page_size = 4096UL;
 const size_t max_slabs = 1024UL;
 const size_t region_size = page_size * max_slabs;
 
-static Selectors_LList_cell__Slabs_blob** partial_slabs_ptr;
-static Selectors_LList_cell__Slabs_blob** empty_slabs_ptr;
+//static Selectors_LList_cell__Slabs_blob** partial_slabs_ptr;
+//static Selectors_LList_cell__Slabs_blob** empty_slabs_ptr;
 static Selectors_LList_cell__Slabs_blob* partial_slabs;
 static Selectors_LList_cell__Slabs_blob* empty_slabs;
 

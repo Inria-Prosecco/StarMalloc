@@ -15,6 +15,7 @@ open Steel.Effect
 open Steel.Reference
 module SR = Steel.Reference
 module A = Steel.Array
+module P = Steel.FractionalPermission
 
 open Utils2
 open Slabs
@@ -33,8 +34,10 @@ type size_class_struct = {
   partial_slabs: ref (SL.t blob);
   empty_slabs: ref (SL.t blob);
   metadata_allocated: U32.t;
-  //TODO: FIXME: null array?
-  //region_start: array (arr:array U8.t{A.length arr = U32.v page_size});
+  slab_region: array U8.t;
+  //TODO: duplicata due to karamel extraction issue
+  md_bm_region: array U64.t;
+  md_region: array blob;
   //lock: ref bool;
 }
 
@@ -44,6 +47,9 @@ type blob2 = {
   partial_slabs_v: list blob;
   empty_slabs_v: list blob;
   md_counter_v: nat;
+  slab_region_v: Seq.seq U8.t;
+  md_bm_region_v: Seq.seq U64.t;
+  md_region_v: Seq.seq blob;
 }
 
 let size_class_sl'
@@ -53,7 +59,10 @@ let size_class_sl'
   =
   pts_to_sl r full_perm scs `Mem.star`
   SL.ind_llist_sl (p_partial scs.size) (scs.partial_slabs) `Mem.star`
-  SL.ind_llist_sl (p_empty scs.size) (scs.empty_slabs)
+  SL.ind_llist_sl (p_empty scs.size) (scs.empty_slabs) `Mem.star`
+  hp_of (A.varray scs.slab_region) `Mem.star`
+  hp_of (A.varray scs.md_bm_region) `Mem.star`
+  hp_of (A.varray scs.md_region)
 
 let size_class_sl
   (r: ref size_class_struct)
@@ -72,9 +81,7 @@ let size_class_sl'_witinv (r: ref size_class_struct)
   (ensures scs1 == scs2)
   =
   pts_to_witinv r full_perm;
-  assert (scs1 == scs2);
-  pts_to_witinv (scs1.partial_slabs) full_perm;
-  pts_to_witinv (scs1.empty_slabs) full_perm
+  assert (scs1 == scs2)
   in
   Classical.forall_intro_3 (Classical.move_requires_3 aux)
 
@@ -88,15 +95,26 @@ let size_class_sel_full'
     let p1 = pts_to_sl r full_perm scs in
     let p2 = SL.ind_llist_sl (p_partial scs.size) scs.partial_slabs in
     let p3 = SL.ind_llist_sl (p_empty scs.size) scs.empty_slabs in
-    let sl = p1 `Mem.star` p2 `Mem.star` p3 in
+    let p4 = hp_of (A.varray scs.slab_region) in
+    let p5 = hp_of (A.varray scs.md_bm_region) in
+    let p6 = hp_of (A.varray scs.md_region) in
+    let sl =
+      p1 `Mem.star` p2 `Mem.star` p3 `Mem.star`
+      p4 `Mem.star` p5 `Mem.star` p6 in
     assert (Mem.interp sl h);
     let partial_slabs_v = SL.ind_llist_sel (p_partial scs.size) scs.partial_slabs h in
     let empty_slabs_v = SL.ind_llist_sel (p_empty scs.size) scs.empty_slabs h in
+    let slab_region_v = A.varrayp_sel scs.slab_region P.full_perm h in
+    let md_bm_region_v = A.varrayp_sel scs.md_bm_region P.full_perm h in
+    let md_region_v = A.varrayp_sel scs.md_region P.full_perm h in
     let b = {
       scs_v = G.reveal scs;
       partial_slabs_v = partial_slabs_v;
       empty_slabs_v = empty_slabs_v;
       md_counter_v = U32.v scs.metadata_allocated;
+      slab_region_v = slab_region_v;
+      md_bm_region_v = md_bm_region_v;
+      md_region_v = md_region_v;
     } in
     b
 
@@ -160,44 +178,74 @@ let unpack_sc_lemma
     Mem.interp (
       SR.ptr r `Mem.star`
       SL.ind_llist_sl (p_partial b.scs_v.size) b.scs_v.partial_slabs `Mem.star`
-      SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs
+      SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs `Mem.star`
+      hp_of (A.varray b.scs_v.slab_region) `Mem.star`
+      hp_of (A.varray b.scs_v.md_bm_region) `Mem.star`
+      hp_of (A.varray b.scs_v.md_region)
     ) m /\
     sel_of (vptr r) m == b.scs_v /\
     SL.ind_llist_sel (p_partial b.scs_v.size) b.scs_v.partial_slabs m == b.partial_slabs_v /\
     SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.empty_slabs m == b.empty_slabs_v /\
-    True
+    A.varrayp_sel b.scs_v.slab_region P.full_perm m == b.slab_region_v /\
+    A.varrayp_sel b.scs_v.md_bm_region P.full_perm m == b.md_bm_region_v /\
+    A.varrayp_sel b.scs_v.md_region P.full_perm m == b.md_region_v
   ))
   =
   let p1 = pts_to_sl r full_perm b.scs_v in
   let p2 = SL.ind_llist_sl (p_partial b.scs_v.size) b.scs_v.partial_slabs in
   let p3 = SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs in
-  let sl = p1 `Mem.star` p2 `Mem.star` p3 in
+  let p4 = hp_of (A.varray b.scs_v.slab_region) in
+  let p5 = hp_of (A.varray b.scs_v.md_bm_region) in
+  let p6 = hp_of (A.varray b.scs_v.md_region) in
+  let sl =
+    p1 `Mem.star` p2 `Mem.star` p3 `Mem.star`
+    p4 `Mem.star` p5 `Mem.star` p6 in
   assert (Mem.interp sl m);
 
-  let m12, m3 = Mem.id_elim_star (p1 `Mem.star` p2) p3 m in
+  let m12345, m6 = Mem.id_elim_star
+    (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
+    p6 m in
+  let m1234, m5 = Mem.id_elim_star
+    (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4)
+    p5 m12345 in
+  let m123, m4 = Mem.id_elim_star
+    (p1 `Mem.star` p2 `Mem.star` p3)
+    p4 m1234 in
+  let m12, m3 = Mem.id_elim_star
+    (p1 `Mem.star` p2)
+    p3 m123 in
   let m1, m2 = Mem.id_elim_star p1 p2 m12 in
   // #1
   intro_ptr_interp r b.scs_v m1;
   ptr_sel_interp r m1;
   pts_to_witinv r full_perm;
-  // #2
-  // #3
-  //
+  // #2-#6: empty
   Mem.intro_star
     (SR.ptr r) p2 m1 m2;
-  assert (G.reveal m12 == Mem.join m1 m2);
   Mem.intro_star
-    (SR.ptr r `Mem.star` p2) p3 m12 m3;
-  assert (m == Mem.join m12 m3);
-  ()
+    (SR.ptr r `Mem.star` p2)
+    p3 m12 m3;
+  Mem.intro_star
+    (SR.ptr r `Mem.star` p2 `Mem.star` p3)
+    p4 m123 m4;
+  Mem.intro_star
+    (SR.ptr r `Mem.star` p2 `Mem.star` p3 `Mem.star` p4)
+    p5 m1234 m5;
+  Mem.intro_star
+    (SR.ptr r `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
+    p6 m12345 m6
 
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let unpack_sc (r: ref size_class_struct)
   : Steel size_class_struct
   (size_class_full r)
   (fun scs ->
     vptr r `star`
     SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-    SL.ind_llist (p_empty scs.size) scs.empty_slabs
+    SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
+    A.varray scs.slab_region `star`
+    A.varray scs.md_bm_region `star`
+    A.varray scs.md_region
   )
   (requires fun _ -> True)
   (ensures fun h0 scs h1 ->
@@ -205,7 +253,10 @@ let unpack_sc (r: ref size_class_struct)
     sel r h1 == scs /\
     sel r h1 == b.scs_v /\
     SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h1 == b.partial_slabs_v /\
-    SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h1 == b.empty_slabs_v
+    SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h1 == b.empty_slabs_v /\
+    A.asel scs.slab_region h1 == b.slab_region_v /\
+    A.asel scs.md_bm_region h1 == b.md_bm_region_v /\
+    A.asel scs.md_region h1 == b.md_region_v
   )
   =
   let h = get () in
@@ -214,22 +265,34 @@ let unpack_sc (r: ref size_class_struct)
     (size_class_full r)
     (vptr r `star`
     SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
-    SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs)
+    SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
+    A.varray b.scs_v.slab_region `star`
+    A.varray b.scs_v.md_bm_region `star`
+    A.varray b.scs_v.md_region)
     b
-    ((b.scs_v, b.partial_slabs_v), b.empty_slabs_v)
+    (((((b.scs_v,
+      b.partial_slabs_v),
+      b.empty_slabs_v),
+      b.slab_region_v),
+      b.md_bm_region_v),
+      b.md_region_v)
     (fun m -> unpack_sc_lemma r (G.reveal b) m);
   let scs = read r in
   change_slprop_rel
-    (SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs)
-    (SL.ind_llist (p_partial scs.size) scs.partial_slabs)
-    (fun x y -> x == y)
-    (fun _ -> ());
-  change_slprop_rel
-    (SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs)
-    (SL.ind_llist (p_empty scs.size) scs.empty_slabs)
+    (SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
+    SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
+    A.varray b.scs_v.slab_region `star`
+    A.varray b.scs_v.md_bm_region `star`
+    A.varray b.scs_v.md_region)
+    (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
+    SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
+    A.varray scs.slab_region `star`
+    A.varray scs.md_bm_region `star`
+    A.varray scs.md_region)
     (fun x y -> x == y)
     (fun _ -> ());
   return scs
+#pop-options
 
 let pack_sc_lemma
   (r: ref size_class_struct)
@@ -240,12 +303,18 @@ let pack_sc_lemma
     Mem.interp (
       SR.ptr r `Mem.star`
       SL.ind_llist_sl (p_partial b.scs_v.size) b.scs_v.partial_slabs `Mem.star`
-      SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs
+      SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs `Mem.star`
+      hp_of (A.varray b.scs_v.slab_region) `Mem.star`
+      hp_of (A.varray b.scs_v.md_bm_region) `Mem.star`
+      hp_of (A.varray b.scs_v.md_region)
     ) m /\
     sel_of (vptr r) m == b.scs_v /\
     SL.ind_llist_sel (p_partial b.scs_v.size) b.scs_v.partial_slabs m == b.partial_slabs_v /\
     SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.empty_slabs m == b.empty_slabs_v /\
-    b.md_counter_v == U32.v b.scs_v.metadata_allocated
+    U32.v b.scs_v.metadata_allocated == b.md_counter_v /\
+    A.varrayp_sel b.scs_v.slab_region P.full_perm m == b.slab_region_v /\
+    A.varrayp_sel b.scs_v.md_bm_region P.full_perm m == b.md_bm_region_v /\
+    A.varrayp_sel b.scs_v.md_region P.full_perm m == b.md_region_v
   )
   (ensures
     Mem.interp (size_class_sl r) m /\
@@ -255,29 +324,60 @@ let pack_sc_lemma
   let p1 = SR.ptr r in
   let p2 = SL.ind_llist_sl (p_partial b.scs_v.size) b.scs_v.partial_slabs in
   let p3 = SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs in
-  let sl = p1 `Mem.star` p2 `Mem.star` p3 in
+  let p4 = hp_of (A.varray b.scs_v.slab_region) in
+  let p5 = hp_of (A.varray b.scs_v.md_bm_region) in
+  let p6 = hp_of (A.varray b.scs_v.md_region) in
+  let sl =
+    p1 `Mem.star` p2 `Mem.star` p3 `Mem.star`
+    p4 `Mem.star` p5 `Mem.star` p6 in
   assert (Mem.interp sl m);
+  admit ();
 
-  let m12, m3 = Mem.id_elim_star (p1 `Mem.star` p2) p3 m in
+  let m12345, m6 = Mem.id_elim_star
+    (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
+    p6 m in
+  let m1234, m5 = Mem.id_elim_star
+    (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4)
+    p5 m12345 in
+  let m123, m4 = Mem.id_elim_star
+    (p1 `Mem.star` p2 `Mem.star` p3)
+    p4 m1234 in
+  let m12, m3 = Mem.id_elim_star
+    (p1 `Mem.star` p2)
+    p3 m123 in
   let m1, m2 = Mem.id_elim_star p1 p2 m12 in
   // #1
   ptr_sel_interp r m1;
-  let p1' = pts_to_sl r full_perm b.scs_v in
-  // #2
-  // #3
-  //
-  Mem.intro_star p1' p2 m1 m2;
-  Mem.intro_star (p1' `Mem.star` p2) p3 m12 m3;
+  // #2-#6: empty
+  Mem.intro_star
+    (SR.ptr r) p2 m1 m2;
+  Mem.intro_star
+    (SR.ptr r `Mem.star` p2)
+    p3 m12 m3;
+  Mem.intro_star
+    (SR.ptr r `Mem.star` p2 `Mem.star` p3)
+    p4 m123 m4;
+  Mem.intro_star
+    (SR.ptr r `Mem.star` p2 `Mem.star` p3 `Mem.star` p4)
+    p5 m1234 m5;
+  Mem.intro_star
+    (SR.ptr r `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
+    p6 m12345 m6;
   Mem.intro_h_exists b.scs_v (size_class_sl' r) m;
   size_class_sl'_witinv r
 
-let pack_sc (#opened:_)
+//TODO: FIXME: BLOCKER
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
+assume val pack_sc (#opened:_)
   (r: ref size_class_struct)
   (scs: size_class_struct)
   : SteelGhost unit opened
   (vptr r `star`
-  SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-  SL.ind_llist (p_empty scs.size) scs.empty_slabs)
+    SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
+    SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
+    A.varray scs.slab_region `star`
+    A.varray scs.md_bm_region `star`
+    A.varray scs.md_region)
   (fun _ -> size_class_full r)
   (requires fun h0 -> sel r h0 == scs)
   (ensures fun h0 _ h1 ->
@@ -286,32 +386,39 @@ let pack_sc (#opened:_)
     b.scs_v == scs /\
     b.partial_slabs_v == SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0 /\
     b.empty_slabs_v == SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0 /\
-    b.md_counter_v == U32.v b.scs_v.metadata_allocated
+    b.md_counter_v == U32.v b.scs_v.metadata_allocated /\
+    b.slab_region_v = A.asel b.scs_v.slab_region h0 /\
+    b.md_bm_region_v = A.asel b.scs_v.md_bm_region h0 /\
+    b.md_region_v = A.asel b.scs_v.md_region h0
   )
-  =
-  let h0 = get () in
-  assert (scs == sel r h0);
-  let partial_slabs_v : list blob =
-    G.hide (SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0) in
-  let empty_slabs_v : list blob =
-    G.hide (SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0) in
-  let m : G.erased ((size_class_struct * list blob) * list blob) =
-    G.hide ((scs, G.reveal partial_slabs_v), G.reveal empty_slabs_v) in
-  let b : blob2 = G.hide ({
-    scs_v = scs;
-    partial_slabs_v = G.reveal partial_slabs_v;
-    empty_slabs_v = G.reveal empty_slabs_v;
-    md_counter_v = U32.v scs.metadata_allocated;
-  }) in
-  change_slprop
-    (vptr r `star`
-    SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-    SL.ind_llist (p_empty scs.size) scs.empty_slabs)
-    (size_class_full r)
-    m
-    b
-    (fun m -> pack_sc_lemma r (G.reveal b) m);
-  ()
+#pop-options
+
+let a = 42
+
+(*)
+  //let h0 = get () in
+  //assert (scs == sel r h0);
+  //let partial_slabs_v : list blob =
+  //  G.hide (SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0) in
+  //let empty_slabs_v : list blob =
+  //  G.hide (SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0) in
+  //let m : G.erased ((size_class_struct * list blob) * list blob) =
+  //  G.hide ((scs, G.reveal partial_slabs_v), G.reveal empty_slabs_v) in
+  //let b : blob2 = G.hide ({
+  //  scs_v = scs;
+  //  partial_slabs_v = G.reveal partial_slabs_v;
+  //  empty_slabs_v = G.reveal empty_slabs_v;
+  //  md_counter_v = U32.v scs.metadata_allocated;
+  //}) in
+  //change_slprop
+  //  (vptr r `star`
+  //  SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
+  //  SL.ind_llist (p_empty scs.size) scs.empty_slabs)
+  //  (size_class_full r)
+  //  m
+  //  b
+  //  (fun m -> pack_sc_lemma r (G.reveal b) m);
+  //()
 
 let temp (r: ref size_class_struct)
   : Steel U32.t
