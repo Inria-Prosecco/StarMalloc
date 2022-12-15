@@ -89,6 +89,7 @@ dist/Impl_Trees_Rotate2_M.h \
 dist/Impl_Trees_Rotate_M.h \
 dist/LargeAlloc.h \
 dist/SmallAlloc.h \
+dist/SizeClass.h \
 dist/Slabs.h \
 dist/Slots.h \
 dist/Bitmap5.h \
@@ -104,6 +105,7 @@ dist/Impl_Trees_Rotate2_M.c \
 dist/Impl_Trees_Rotate_M.c \
 dist/LargeAlloc.c \
 dist/SmallAlloc.c \
+dist/SizeClass.c \
 dist/Slabs.c \
 dist/Slots.c \
 dist/Bitmap5.c \

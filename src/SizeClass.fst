@@ -361,8 +361,8 @@ let temp2 (r: ref size_class_struct)
     (fun b2 -> size_class_refinement b2);
   return 0ul
 
-let allocate_size_class (r: ref size_class_struct)
-  (scs: size_class_struct)
+let allocate_size_class
+  (r: ref size_class_struct)
   : Steel (array U8.t)
   (size_class_vprop r)
   (fun result ->
