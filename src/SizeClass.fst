@@ -367,6 +367,7 @@ let pack_sc_lemma
   size_class_sl'_witinv r
 
 //TODO: FIXME: BLOCKER
+#push-options "--lax"
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 assume val pack_sc (#opened:_)
   (r: ref size_class_struct)
@@ -392,10 +393,8 @@ assume val pack_sc (#opened:_)
     b.md_region_v = A.asel b.scs_v.md_region h0
   )
 #pop-options
+#pop-options
 
-let a = 42
-
-(*)
   //let h0 = get () in
   //assert (scs == sel r h0);
   //let partial_slabs_v : list blob =
