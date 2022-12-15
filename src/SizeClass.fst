@@ -367,9 +367,10 @@ let pack_sc_lemma
   size_class_sl'_witinv r
 
 //TODO: FIXME: BLOCKER
-#push-options "--lax"
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
-assume val pack_sc (#opened:_)
+//#push-options "--lax"
+//#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
+#push-options "--z3rlimit 50"
+let pack_sc (#opened:_)
   (r: ref size_class_struct)
   (scs: size_class_struct)
   : SteelGhost unit opened
@@ -387,37 +388,65 @@ assume val pack_sc (#opened:_)
     b.scs_v == scs /\
     b.partial_slabs_v == SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0 /\
     b.empty_slabs_v == SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0 /\
-    b.md_counter_v == U32.v b.scs_v.metadata_allocated /\
-    b.slab_region_v = A.asel b.scs_v.slab_region h0 /\
-    b.md_bm_region_v = A.asel b.scs_v.md_bm_region h0 /\
-    b.md_region_v = A.asel b.scs_v.md_region h0
+    b.md_counter_v == U32.v scs.metadata_allocated /\
+    b.slab_region_v == A.asel scs.slab_region h0 /\
+    b.md_bm_region_v == A.asel scs.md_bm_region h0 /\
+    b.md_region_v == A.asel scs.md_region h0
   )
-#pop-options
-#pop-options
-
-  //let h0 = get () in
-  //assert (scs == sel r h0);
-  //let partial_slabs_v : list blob =
-  //  G.hide (SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0) in
-  //let empty_slabs_v : list blob =
-  //  G.hide (SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0) in
+  =
+  let h0 = get () in
+  assert (scs == sel r h0);
+  let partial_slabs_v : list blob
+    = G.hide (SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0) in
+  let empty_slabs_v : list blob
+    = G.hide (SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0) in
+  let slab_region_v : Seq.seq U8.t
+    = G.hide (A.asel scs.slab_region h0) in
+  let md_bm_region_v : Seq.seq U64.t
+    = G.hide (A.asel scs.md_bm_region h0) in
+  let md_region_v : Seq.seq blob
+    = G.hide (A.asel scs.md_region h0) in
   //let m : G.erased ((size_class_struct * list blob) * list blob) =
-  //  G.hide ((scs, G.reveal partial_slabs_v), G.reveal empty_slabs_v) in
-  //let b : blob2 = G.hide ({
-  //  scs_v = scs;
-  //  partial_slabs_v = G.reveal partial_slabs_v;
-  //  empty_slabs_v = G.reveal empty_slabs_v;
-  //  md_counter_v = U32.v scs.metadata_allocated;
-  //}) in
-  //change_slprop
-  //  (vptr r `star`
-  //  SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-  //  SL.ind_llist (p_empty scs.size) scs.empty_slabs)
-  //  (size_class_full r)
-  //  m
-  //  b
-  //  (fun m -> pack_sc_lemma r (G.reveal b) m);
-  //()
+    //G.hide ((scs, G.reveal partial_slabs_v), G.reveal empty_slabs_v) in
+  let b : blob2 = G.hide ({
+    scs_v = scs;
+    partial_slabs_v = G.reveal partial_slabs_v;
+    empty_slabs_v = G.reveal empty_slabs_v;
+    md_counter_v = U32.v scs.metadata_allocated;
+    slab_region_v = G.reveal slab_region_v;
+    md_bm_region_v = G.reveal md_bm_region_v;
+    md_region_v = G.reveal md_region_v;
+  }) in
+  change_slprop_rel
+    (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
+    SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
+    A.varray scs.slab_region `star`
+    A.varray scs.md_bm_region `star`
+    A.varray scs.md_region)
+    (SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
+    SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
+    A.varray b.scs_v.slab_region `star`
+    A.varray b.scs_v.md_bm_region `star`
+    A.varray b.scs_v.md_region)
+    (fun x y -> x == y)
+    (fun _ -> ());
+  change_slprop
+    (vptr r `star`
+    SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
+    SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
+    A.varray b.scs_v.slab_region `star`
+    A.varray b.scs_v.md_bm_region `star`
+    A.varray b.scs_v.md_region)
+    (size_class_full r)
+    (((((b.scs_v,
+      b.partial_slabs_v),
+      b.empty_slabs_v),
+      b.slab_region_v),
+      b.md_bm_region_v),
+      b.md_region_v)
+    b
+    (fun m -> pack_sc_lemma r (G.reveal b) m);
+  ()
 
 let temp (r: ref size_class_struct)
   : Steel U32.t
