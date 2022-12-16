@@ -33,11 +33,11 @@ type size_class_struct = {
   size: sc;
   partial_slabs: ref (SL.t blob);
   empty_slabs: ref (SL.t blob);
-  metadata_allocated: U32.t;
+  md_count: ref U32.t;
   slab_region: array U8.t;
   //TODO: duplicata due to karamel extraction issue
   md_bm_region: array U64.t;
-  md_region: array blob;
+  md_region: array (SL.cell blob);
   //lock: ref bool;
 }
 
@@ -46,10 +46,10 @@ type blob2 = {
   scs_v: size_class_struct;
   partial_slabs_v: list blob;
   empty_slabs_v: list blob;
-  md_counter_v: nat;
+  md_count_v: U32.t;
   slab_region_v: Seq.seq U8.t;
   md_bm_region_v: Seq.seq U64.t;
-  md_region_v: Seq.seq blob;
+  md_region_v: Seq.seq (SL.cell blob);
 }
 
 let size_class_sl'
@@ -62,7 +62,8 @@ let size_class_sl'
   SL.ind_llist_sl (p_empty scs.size) (scs.empty_slabs) `Mem.star`
   hp_of (A.varray scs.slab_region) `Mem.star`
   hp_of (A.varray scs.md_bm_region) `Mem.star`
-  hp_of (A.varray scs.md_region)
+  hp_of (A.varray scs.md_region) `Mem.star`
+  hp_of (vptr scs.md_count)
 
 let size_class_sl
   (r: ref size_class_struct)
@@ -98,20 +99,23 @@ let size_class_sel_full'
     let p4 = hp_of (A.varray scs.slab_region) in
     let p5 = hp_of (A.varray scs.md_bm_region) in
     let p6 = hp_of (A.varray scs.md_region) in
+    let p7 = SR.ptr scs.md_count in
     let sl =
       p1 `Mem.star` p2 `Mem.star` p3 `Mem.star`
-      p4 `Mem.star` p5 `Mem.star` p6 in
+      p4 `Mem.star` p5 `Mem.star` p6 `Mem.star`
+      p7 in
     assert (Mem.interp sl h);
     let partial_slabs_v = SL.ind_llist_sel (p_partial scs.size) scs.partial_slabs h in
     let empty_slabs_v = SL.ind_llist_sel (p_empty scs.size) scs.empty_slabs h in
     let slab_region_v = A.varrayp_sel scs.slab_region P.full_perm h in
     let md_bm_region_v = A.varrayp_sel scs.md_bm_region P.full_perm h in
     let md_region_v = A.varrayp_sel scs.md_region P.full_perm h in
+    let md_count_v = SR.ptrp_sel scs.md_count P.full_perm h in
     let b = {
       scs_v = G.reveal scs;
       partial_slabs_v = partial_slabs_v;
       empty_slabs_v = empty_slabs_v;
-      md_counter_v = U32.v scs.metadata_allocated;
+      md_count_v = md_count_v;
       slab_region_v = slab_region_v;
       md_bm_region_v = md_bm_region_v;
       md_region_v = md_region_v;
@@ -181,14 +185,16 @@ let unpack_sc_lemma
       SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs `Mem.star`
       hp_of (A.varray b.scs_v.slab_region) `Mem.star`
       hp_of (A.varray b.scs_v.md_bm_region) `Mem.star`
-      hp_of (A.varray b.scs_v.md_region)
+      hp_of (A.varray b.scs_v.md_region) `Mem.star`
+      hp_of (vptr b.scs_v.md_count)
     ) m /\
     sel_of (vptr r) m == b.scs_v /\
     SL.ind_llist_sel (p_partial b.scs_v.size) b.scs_v.partial_slabs m == b.partial_slabs_v /\
     SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.empty_slabs m == b.empty_slabs_v /\
     A.varrayp_sel b.scs_v.slab_region P.full_perm m == b.slab_region_v /\
     A.varrayp_sel b.scs_v.md_bm_region P.full_perm m == b.md_bm_region_v /\
-    A.varrayp_sel b.scs_v.md_region P.full_perm m == b.md_region_v
+    A.varrayp_sel b.scs_v.md_region P.full_perm m == b.md_region_v /\
+    sel_of (vptr b.scs_v.md_count) m == b.md_count_v
   ))
   =
   let p1 = pts_to_sl r full_perm b.scs_v in
@@ -197,14 +203,21 @@ let unpack_sc_lemma
   let p4 = hp_of (A.varray b.scs_v.slab_region) in
   let p5 = hp_of (A.varray b.scs_v.md_bm_region) in
   let p6 = hp_of (A.varray b.scs_v.md_region) in
+  let p7 = hp_of (vptr b.scs_v.md_count) in
   let sl =
     p1 `Mem.star` p2 `Mem.star` p3 `Mem.star`
-    p4 `Mem.star` p5 `Mem.star` p6 in
+    p4 `Mem.star` p5 `Mem.star` p6 `Mem.star`
+    p7 in
   assert (Mem.interp sl m);
 
+
+  let m123456, m7 = Mem.id_elim_star
+    (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star`
+    p4 `Mem.star` p5 `Mem.star` p6)
+    p7 m in
   let m12345, m6 = Mem.id_elim_star
     (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
-    p6 m in
+    p6 m123456 in
   let m1234, m5 = Mem.id_elim_star
     (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4)
     p5 m12345 in
@@ -233,7 +246,10 @@ let unpack_sc_lemma
     p5 m1234 m5;
   Mem.intro_star
     (SR.ptr r `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
-    p6 m12345 m6
+    p6 m12345 m6;
+  Mem.intro_star
+    (SR.ptr r `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5 `Mem.star` p6)
+    p7 m123456 m7
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let unpack_sc (r: ref size_class_struct)
@@ -245,7 +261,8 @@ let unpack_sc (r: ref size_class_struct)
     SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
     A.varray scs.slab_region `star`
     A.varray scs.md_bm_region `star`
-    A.varray scs.md_region
+    A.varray scs.md_region `star`
+    vptr scs.md_count
   )
   (requires fun _ -> True)
   (ensures fun h0 scs h1 ->
@@ -256,7 +273,8 @@ let unpack_sc (r: ref size_class_struct)
     SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h1 == b.empty_slabs_v /\
     A.asel scs.slab_region h1 == b.slab_region_v /\
     A.asel scs.md_bm_region h1 == b.md_bm_region_v /\
-    A.asel scs.md_region h1 == b.md_region_v
+    A.asel scs.md_region h1 == b.md_region_v /\
+    sel scs.md_count h1 == b.md_count_v
   )
   =
   let h = get () in
@@ -268,14 +286,16 @@ let unpack_sc (r: ref size_class_struct)
     SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
     A.varray b.scs_v.slab_region `star`
     A.varray b.scs_v.md_bm_region `star`
-    A.varray b.scs_v.md_region)
+    A.varray b.scs_v.md_region `star`
+    vptr b.scs_v.md_count)
     b
-    (((((b.scs_v,
+    ((((((b.scs_v,
       b.partial_slabs_v),
       b.empty_slabs_v),
       b.slab_region_v),
       b.md_bm_region_v),
-      b.md_region_v)
+      b.md_region_v),
+      b.md_count_v)
     (fun m -> unpack_sc_lemma r (G.reveal b) m);
   let scs = read r in
   change_slprop_rel
@@ -283,12 +303,14 @@ let unpack_sc (r: ref size_class_struct)
     SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
     A.varray b.scs_v.slab_region `star`
     A.varray b.scs_v.md_bm_region `star`
-    A.varray b.scs_v.md_region)
+    A.varray b.scs_v.md_region `star`
+    vptr b.scs_v.md_count)
     (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
     SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
     A.varray scs.slab_region `star`
     A.varray scs.md_bm_region `star`
-    A.varray scs.md_region)
+    A.varray scs.md_region `star`
+    vptr scs.md_count)
     (fun x y -> x == y)
     (fun _ -> ());
   return scs
@@ -306,15 +328,16 @@ let pack_sc_lemma
       SL.ind_llist_sl (p_empty b.scs_v.size) b.scs_v.empty_slabs `Mem.star`
       hp_of (A.varray b.scs_v.slab_region) `Mem.star`
       hp_of (A.varray b.scs_v.md_bm_region) `Mem.star`
-      hp_of (A.varray b.scs_v.md_region)
+      hp_of (A.varray b.scs_v.md_region) `Mem.star`
+      hp_of (vptr b.scs_v.md_count)
     ) m /\
     sel_of (vptr r) m == b.scs_v /\
     SL.ind_llist_sel (p_partial b.scs_v.size) b.scs_v.partial_slabs m == b.partial_slabs_v /\
     SL.ind_llist_sel (p_empty b.scs_v.size) b.scs_v.empty_slabs m == b.empty_slabs_v /\
-    U32.v b.scs_v.metadata_allocated == b.md_counter_v /\
     A.varrayp_sel b.scs_v.slab_region P.full_perm m == b.slab_region_v /\
     A.varrayp_sel b.scs_v.md_bm_region P.full_perm m == b.md_bm_region_v /\
-    A.varrayp_sel b.scs_v.md_region P.full_perm m == b.md_region_v
+    A.varrayp_sel b.scs_v.md_region P.full_perm m == b.md_region_v /\
+    sel_of (vptr b.scs_v.md_count) m == b.md_count_v
   )
   (ensures
     Mem.interp (size_class_sl r) m /\
@@ -327,14 +350,19 @@ let pack_sc_lemma
   let p4 = hp_of (A.varray b.scs_v.slab_region) in
   let p5 = hp_of (A.varray b.scs_v.md_bm_region) in
   let p6 = hp_of (A.varray b.scs_v.md_region) in
+  let p7 = hp_of (vptr b.scs_v.md_count) in
   let sl =
     p1 `Mem.star` p2 `Mem.star` p3 `Mem.star`
-    p4 `Mem.star` p5 `Mem.star` p6 in
+    p4 `Mem.star` p5 `Mem.star` p6 `Mem.star`
+    p7 in
   assert (Mem.interp sl m);
 
+  let m123456, m7 = Mem.id_elim_star
+    (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5 `Mem.star` p6)
+    p7 m in
   let m12345, m6 = Mem.id_elim_star
     (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
-    p6 m in
+    p6 m123456 in
   let m1234, m5 = Mem.id_elim_star
     (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4)
     p5 m12345 in
@@ -363,6 +391,9 @@ let pack_sc_lemma
   Mem.intro_star
     (p1' `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5)
     p6 m12345 m6;
+  Mem.intro_star
+    (p1' `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5 `Mem.star` p6)
+    p7 m123456 m7;
   Mem.intro_h_exists b.scs_v (size_class_sl' r) m;
   size_class_sl'_witinv r
 
@@ -378,7 +409,8 @@ let pack_sc (#opened:_)
     SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
     A.varray scs.slab_region `star`
     A.varray scs.md_bm_region `star`
-    A.varray scs.md_region)
+    A.varray scs.md_region `star`
+    vptr scs.md_count)
   (fun _ -> size_class_full r)
   (requires fun h0 -> sel r h0 == scs)
   (ensures fun h0 _ h1 ->
@@ -387,10 +419,10 @@ let pack_sc (#opened:_)
     b.scs_v == scs /\
     b.partial_slabs_v == SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0 /\
     b.empty_slabs_v == SL.v_ind_llist (p_empty scs.size) scs.empty_slabs h0 /\
-    b.md_counter_v == U32.v scs.metadata_allocated /\
     b.slab_region_v == A.asel scs.slab_region h0 /\
     b.md_bm_region_v == A.asel scs.md_bm_region h0 /\
-    b.md_region_v == A.asel scs.md_region h0
+    b.md_region_v == A.asel scs.md_region h0 /\
+    b.md_count_v == sel scs.md_count h0
   )
   =
   let h0 = get () in
@@ -463,13 +495,11 @@ let temp (r: ref size_class_struct)
   pack_sc r scs;
   return 0ul
 
-let metadata_max = 131072
-
 let size_class_refinement (b2: blob2)
   =
   Cons? b2.partial_slabs_v \/
   Cons? b2.empty_slabs_v \/
-  b2.md_counter_v < metadata_max
+  U32.v b2.md_count_v < U32.v metadata_max
 
 let size_class_vprop (r: ref size_class_struct)
   =
@@ -512,7 +542,10 @@ let allocate_size_class
     (size_class_full r)
     (fun b2 -> size_class_refinement b2);
   let scs = unpack_sc r in
-  let result = allocate_slab scs.size scs.partial_slabs scs.empty_slabs True in
+  let result = allocate_slab
+    scs.size scs.partial_slabs scs.empty_slabs
+    scs.slab_region scs.md_bm_region scs.md_region
+    scs.md_count in
   pack_sc r scs;
   let h0 = get () in
   let scs_v = G.hide (v_sc_full r h0) in

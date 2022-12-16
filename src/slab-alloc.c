@@ -9,8 +9,6 @@
 //static uint8_t* region_start = NULL;
 //static uint64_t* md_bm_region_start = NULL;
 //static Selectors_LList_cell__Slabs_blob* md_region_start = NULL;
-static size_t md_count = 0UL;
-
 
 //static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 //static pthread_mutex_t s_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -25,13 +23,14 @@ const size_t region_size = page_size * max_slabs;
 //static Selectors_LList_cell__Slabs_blob** empty_slabs_ptr;
 static Selectors_LList_cell__Slabs_blob* partial_slabs;
 static Selectors_LList_cell__Slabs_blob* empty_slabs;
+static uint32_t* md_count;
 
 
 static SizeClass_size_class_struct scs_v = {
   .size = (uint32_t)16U,
   .partial_slabs = &partial_slabs,
   .empty_slabs = &empty_slabs,
-  .metadata_allocated = (uint32_t)0U,
+  .md_count = &md_count,
   .slab_region = NULL,
   .md_bm_region = NULL,
   .md_region = NULL,
@@ -41,9 +40,9 @@ static SizeClass_size_class_struct* scs = &scs_v;
 void init() {
   //pthread_mutex_lock(&init_mutex);
   if (! init_status) {
-    scs->slab_region = LargeAlloc_mmap(max_slabs * page_size, 3l);
-    scs->md_bm_region = LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
-    scs->md_region = LargeAlloc_mmap(max_slabs * sizeof(Slabs_blob), 3l);
+    scs->slab_region = (uint8_t*) LargeAlloc_mmap(max_slabs * page_size, 3l);
+    scs->md_bm_region = (uint64_t*) LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
+    scs->md_region = (Selectors_LList_cell__Slabs_blob*) LargeAlloc_mmap(max_slabs * sizeof(Selectors_LList_cell__Slabs_blob), 3l);
     //scs.partial_slabs = &partial_slabs;
     //scs.empty_slabs = &empty_slabs;
     init_status = 1UL;
@@ -52,18 +51,28 @@ void init() {
 }
 
 Selectors_LList_cell__Slabs_blob*
-Slabs_alloc_metadata(uint32_t sc) {
-  size_t slab_offset = md_count * page_size;
-  size_t bitmap_offset = md_count * sizeof(uint64_t[4]);
-  uint8_t* slab = scs->slab_region + slab_offset;
-  uint64_t* bitmap = scs->md_bm_region + bitmap_offset;
-  Selectors_LList_cell__Slabs_blob* md = scs->md_region + md_count;
+Slabs_alloc_metadata(
+  uint32_t sc,
+  uint8_t* slab_region,
+  uint64_t* md_bm_region,
+  Selectors_LList_cell__Slabs_blob* md_region,
+  uint32_t* md_count
+) {
+  size_t slab_offset = ((size_t) *md_count) * page_size;
+  size_t bitmap_offset = ((size_t) *md_count) * sizeof(uint64_t[4]);
+  size_t md_offset = ((size_t) *md_count) * sizeof(Selectors_LList_cell__Slabs_blob);
+  uint8_t* slab = slab_region + slab_offset;
+  uint64_t* bitmap = md_bm_region + bitmap_offset;
+  Selectors_LList_cell__Slabs_blob* md = md_region + md_offset;
+
+  //Slabs_blob b = { .fst = bitmap, .snd = slab};
+  //Selectors_LList_cell__Slabs_blob md_v = { .next = NULL, .data = b};
+  //*md = md_v;
   md->data.fst = bitmap;
   md->data.snd = slab;
   //slab[2] = 1;
-  md_count += 1;
+  *md_count += 1;
   //Slabs_blob b = { .fst = &(md->data).fst, .snd = slab};
-  //Selectors_LList_cell__Slabs_blob mdv = { .next = NULL, .data = b};
   //*md = mdv;
   return md;
 }

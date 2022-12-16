@@ -318,15 +318,52 @@ let allocate_slab_aux_2
 //    not (SL.is_null_t r) /\
 //    SL.is_null_t (SL.get_next (sel r h1)))
 
+//#push-options "--z3rlimit 30"
+//let slab_array
+//  (slab_region: array U8.t)
+//  (md_count: U32.t)
+//  : Pure (array U8.t)
+//  (requires
+//    U32.v md_count < U32.v metadata_max /\
+//    A.length slab_region = U32.v page_size * U32.v metadata_max)
+//  (ensures fun r ->
+//    A.length r = U32.v page_size /\
+//    same_base_array r slab_region /\
+//    True)
+//  =
+//  let ptr = A.ptr_of slab_region in
+//  let shift = U32.mul md_count page_size in
+//  //assert (U32.v shift <= U32.v page_size);
+//  //assert_norm (U32.v shift <= FI.max_int U16.n);
+//  //assert (U32.v shift <= FI.max_int U16.n);
+//  let shift_size_t = STU.small_uint32_to_sizet shift in
+//  assert (US.v shift_size_t < A.length arr);
+//  let ptr_shifted = A.ptr_shift ptr shift_size_t in
+//  (| ptr_shifted, G.hide (U32.v size_class) |)
+//#pop-options
+
 assume val alloc_metadata
   (size_class: sc)
+  (slab_region: array U8.t)
+  (md_bm_region: array U64.t)
+  (md_region: array (SL.cell blob))
+  (md_count: ref U32.t)
   : Steel (SL.t blob)
-  emp
+  (A.varray slab_region `star`
+  A.varray md_bm_region `star`
+  A.varray md_region `star`
+  vptr md_count)
   (fun r ->
-    SL.llist (p_empty size_class) r)
-  (requires fun h0 -> True)
-  (ensures fun _ r h1 ->
-    L.length (SL.v_llist (p_empty size_class) r h1) = 1)
+    SL.llist (p_empty size_class) r `star`
+    A.varray slab_region `star`
+    A.varray md_bm_region `star`
+    A.varray md_region `star`
+    vptr md_count)
+  (requires fun h0 ->
+    U32.v (sel md_count h0) < U32.v metadata_max)
+  (ensures fun h0 r h1 ->
+    L.length (SL.v_llist (p_empty size_class) r h1) = 1 /\
+    U32.v (sel md_count h1) = U32.v (sel md_count h0) + 1)
 
 let unpack_list_singleton (#a: Type0)
   (p: a -> vprop)
@@ -353,25 +390,38 @@ let allocate_slab_aux_3
   (sc: sc)
   (empty_slabs_ptr: ref (SL.t blob))
   (empty_slabs: SL.t blob)
+  (slab_region: array U8.t)
+  (md_bm_region: array U64.t)
+  (md_region: array (SL.cell blob))
+  (md_count: ref U32.t)
   : Steel (SL.t blob)
   (vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) empty_slabs)
+  SL.llist (p_empty sc) empty_slabs `star`
+  A.varray slab_region `star`
+  A.varray md_bm_region `star`
+  A.varray md_region `star`
+  vptr md_count)
   //`star`
   //vptr partial_slabs_ptr `star`
   //SL.llist (p_partial sc) partial_slabs)
   (fun r ->
   vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) r)
+  SL.llist (p_empty sc) r `star`
+  A.varray slab_region `star`
+  A.varray md_bm_region `star`
+  A.varray md_region `star`
+  vptr md_count)
   //`star`
   //vptr partial_slabs_ptr `star`
   //SL.llist (p_partial sc) partial_slabs)
-  (requires fun h0 -> True)
+  (requires fun h0 ->
+    U32.v (sel md_count h0) < U32.v metadata_max)
   (ensures fun h0 r h1 ->
     sel empty_slabs_ptr h1 == r /\
     //sel partial_slabs_ptr h1 == sel partial_slabs_ptr h0 /\
     not (SL.is_null_t r))
   =
-  let r = alloc_metadata sc in
+  let r = alloc_metadata sc slab_region md_bm_region md_region md_count in
   let n_empty = unpack_list_singleton (p_empty sc) r in
   let n_empty_2 = SL.mk_cell empty_slabs (SL.get_data n_empty) in
   write r n_empty_2;
@@ -384,56 +434,33 @@ let allocate_slab_aux_3
   return r
 #pop-options
 
-//#push-options "--z3rlimit 30"
-//let allocate_slab_aux_0
-//  (sc: sc)
-//  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-//  : Steel (SL.t blob & SL.t blob)
-//  (SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
-//  SL.ind_llist (p_empty sc) empty_slabs_ptr)
-//  (fun r ->
-//  vptr empty_slabs_ptr `star`
-//  SL.llist (p_partial sc) (fst r) `star`
-//  vptr partial_slabs_ptr `star`
-//  SL.llist (p_empty sc) (snd r))
-//  (requires fun h0 -> True)
-//  (ensures fun h0 r h1 ->
-//    Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0)
-//    =
-//    not (SL.is_null_t (fst r))
-//    /\
-//    Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0)
-//    =
-//    not (SL.is_null_t (snd r))
-//  )
-//  =
-//  let partial_slabs
-//    = SL.unpack_ind (p_partial sc) partial_slabs_ptr in
-//  let empty_slabs
-//    = SL.unpack_ind (p_empty sc) empty_slabs_ptr in
-//  SL.cons_imp_not_null (p_partial sc) partial_slabs;
-//  SL.cons_imp_not_null (p_empty sc) empty_slabs;
-//  return (partial_slabs, empty_slabs)
-//#pop-options
-
 #push-options "--z3rlimit 50"
 let allocate_slab
   (sc: sc)
   (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  (pred: G.erased prop)
+  (slab_region: array U8.t)
+  (md_bm_region: array U64.t)
+  (md_region: array (SL.cell blob))
+  (md_count: ref U32.t)
   : Steel (array U8.t)
   (SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
-  SL.ind_llist (p_empty sc) empty_slabs_ptr)
+  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+  A.varray slab_region `star`
+  A.varray md_bm_region `star`
+  A.varray md_region `star`
+  vptr md_count)
   (fun r ->
   A.varray r `star`
   SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
-  SL.ind_llist (p_empty sc) empty_slabs_ptr)
+  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+  A.varray slab_region `star`
+  A.varray md_bm_region `star`
+  A.varray md_region `star`
+  vptr md_count)
   (requires fun h0 ->
     Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
     Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0) \/
-    // third case
-    pred
-  )
+    U32.v (sel md_count h0) < U32.v metadata_max)
   (ensures fun _ _ _ -> True)
   =
   let partial_slabs
@@ -445,10 +472,11 @@ let allocate_slab
   //assert (sel empty_slabs_ptr h1 == empty_slabs);
   SL.cons_imp_not_null (p_partial sc) partial_slabs;
   SL.cons_imp_not_null (p_empty sc) empty_slabs;
+  let h0 = get () in
   assert (
     not (SL.is_null_t partial_slabs) \/
     not (SL.is_null_t empty_slabs) \/
-    pred);
+    U32.v (sel md_count h0) < U32.v metadata_max);
   if (not (SL.is_null_t partial_slabs)) then (
     let r = allocate_slab_aux_2 sc
       partial_slabs_ptr empty_slabs_ptr
@@ -462,7 +490,8 @@ let allocate_slab
   ) else (
     // h_malloc alloc_metadata equivalent
     let n_empty_slabs = allocate_slab_aux_3 sc
-      empty_slabs_ptr empty_slabs in
+      empty_slabs_ptr empty_slabs
+      slab_region md_bm_region md_region md_count in
     let r = allocate_slab_aux_1 sc
       partial_slabs_ptr empty_slabs_ptr
       partial_slabs n_empty_slabs in

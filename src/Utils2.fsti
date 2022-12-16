@@ -24,7 +24,7 @@ unfold let slab_metadata = r:array U64.t{A.length r = 4}
 
 //TODO: should not be hardcoded
 let page_size = 4096ul
-let slab_max_number = 4096ul
+let metadata_max = 131072ul
 
 noextract
 let min_sc = 16
