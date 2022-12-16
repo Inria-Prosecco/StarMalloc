@@ -17,34 +17,63 @@ static uint64_t init_status = 0UL;
 
 const size_t page_size = 4096UL;
 const size_t max_slabs = 1024UL;
-const size_t region_size = page_size * max_slabs;
 
 //static Selectors_LList_cell__Slabs_blob** partial_slabs_ptr;
 //static Selectors_LList_cell__Slabs_blob** empty_slabs_ptr;
-static Selectors_LList_cell__Slabs_blob* partial_slabs;
-static Selectors_LList_cell__Slabs_blob* empty_slabs;
-static uint32_t* md_count;
+static Selectors_LList_cell__Slabs_blob* partial_slabs_sc16;
+static Selectors_LList_cell__Slabs_blob* partial_slabs_sc32;
+static Selectors_LList_cell__Slabs_blob* partial_slabs_sc64;
+static Selectors_LList_cell__Slabs_blob* empty_slabs_sc16;
+static Selectors_LList_cell__Slabs_blob* empty_slabs_sc32;
+static Selectors_LList_cell__Slabs_blob* empty_slabs_sc64;
+static uint32_t* md_count_sc16;
+static uint32_t* md_count_sc32;
+static uint32_t* md_count_sc64;
 
-
-static SizeClass_size_class_struct scs_v = {
+static SizeClass_size_class_struct scs16_v = {
   .size = (uint32_t)16U,
-  .partial_slabs = &partial_slabs,
-  .empty_slabs = &empty_slabs,
-  .md_count = &md_count,
+  .partial_slabs = &partial_slabs_sc16,
+  .empty_slabs = &empty_slabs_sc16,
+  .md_count = &md_count_sc16,
   .slab_region = NULL,
   .md_bm_region = NULL,
   .md_region = NULL,
 };
-static SizeClass_size_class_struct* scs = &scs_v;
+static SizeClass_size_class_struct scs32_v = {
+  .size = (uint32_t)32U,
+  .partial_slabs = &partial_slabs_sc32,
+  .empty_slabs = &empty_slabs_sc32,
+  .md_count = &md_count_sc32,
+  .slab_region = NULL,
+  .md_bm_region = NULL,
+  .md_region = NULL,
+};
+static SizeClass_size_class_struct scs64_v = {
+  .size = (uint32_t)64U,
+  .partial_slabs = &partial_slabs_sc64,
+  .empty_slabs = &empty_slabs_sc64,
+  .md_count = &md_count_sc64,
+  .slab_region = NULL,
+  .md_bm_region = NULL,
+  .md_region = NULL,
+};
+
+static SizeClass_size_class_struct* scs16 = &scs16_v;
+static SizeClass_size_class_struct* scs32 = &scs32_v;
+static SizeClass_size_class_struct* scs64 = &scs64_v;
 
 void init() {
   //pthread_mutex_lock(&init_mutex);
   if (! init_status) {
-    scs->slab_region = (uint8_t*) LargeAlloc_mmap(max_slabs * page_size, 3l);
-    scs->md_bm_region = (uint64_t*) LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
-    scs->md_region = (Selectors_LList_cell__Slabs_blob*) LargeAlloc_mmap(max_slabs * sizeof(Selectors_LList_cell__Slabs_blob), 3l);
-    //scs.partial_slabs = &partial_slabs;
-    //scs.empty_slabs = &empty_slabs;
+    scs16->slab_region = (uint8_t*) LargeAlloc_mmap(max_slabs * page_size, 3l);
+    scs16->md_bm_region = (uint64_t*) LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
+    scs16->md_region = (Selectors_LList_cell__Slabs_blob*) LargeAlloc_mmap(max_slabs * sizeof(Selectors_LList_cell__Slabs_blob), 3l);
+    scs32->slab_region = (uint8_t*) LargeAlloc_mmap(max_slabs * page_size, 3l);
+    scs32->md_bm_region = (uint64_t*) LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
+    scs32->md_region = (Selectors_LList_cell__Slabs_blob*) LargeAlloc_mmap(max_slabs * sizeof(Selectors_LList_cell__Slabs_blob), 3l);
+    scs64->slab_region = (uint8_t*) LargeAlloc_mmap(max_slabs * page_size, 3l);
+    scs64->md_bm_region = (uint64_t*) LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
+    scs64->md_region = (Selectors_LList_cell__Slabs_blob*) LargeAlloc_mmap(max_slabs * sizeof(Selectors_LList_cell__Slabs_blob), 3l);
     init_status = 1UL;
   }
   //pthread_mutex_unlock(&init_mutex);
@@ -88,10 +117,15 @@ void slab_unlock() {
 
 void* slab_malloc (size_t size) {
   slab_lock();
-  //uint8_t* r = SmallAlloc_small_alloc(16ul, partial_slabs_ptr, empty_slabs_ptr);
-  uint8_t* r = SizeClass_allocate_size_class(scs);
-  //r[2] = 1;
-  //uint64_t x = 18 / 0;
-  slab_unlock();
-  return r;
+  //slab_unlock();
+  if (size <= 16UL) {
+    uint8_t* r = SizeClass_allocate_size_class(scs16);
+    return r;
+  } else if (size <= 32UL) {
+    uint8_t* r = SizeClass_allocate_size_class(scs32);
+    return r;
+  } else {
+    uint8_t* r = SizeClass_allocate_size_class(scs64);
+    return r;
+  }
 }
