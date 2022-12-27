@@ -59,7 +59,7 @@ let slot_vprop_lemma
   : Lemma
   (t_of (slot_vprop size_class arr pos) == Seq.seq U8.t)
   =
-  //TODO: FIXME
+  //TODO: FIXME @Aymeric?
   admit ()
 
 let slab_vprop_aux_f
@@ -71,7 +71,6 @@ let slab_vprop_aux_f
   =
   let vp = slot_vprop size_class arr i in
   slot_vprop_lemma size_class arr i;
-  assert_norm (VUnit? vp);
   c2 #(Seq.seq U8.t) (Bitmap4.get md_as_seq i) vp
 
 let slab_vprop_aux_f_lemma
@@ -87,7 +86,6 @@ let slab_vprop_aux_f_lemma
   fun i ->
   let vp = slot_vprop size_class arr i in
   slot_vprop_lemma size_class arr i;
-  assert_norm (VUnit? vp);
   c2_t #(Seq.seq U8.t) (Bitmap4.get md_as_seq i) vp
 
 let slab_vprop_aux
