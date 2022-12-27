@@ -217,12 +217,14 @@ let starl_seq_sel' (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
-  : selector' (Seq.seq (G.erased b)) (hp_of (starl_seq (Seq.map_seq f s)))
+  : selector' (Seq.lseq (G.erased b) (Seq.length s)) (hp_of (starl_seq (Seq.map_seq f s)))
   =
   Seq.map_seq_len f s;
   fun (h:hmem (starl_seq (Seq.map_seq f s))) ->
     let f' = starl_seq_sel_aux #a #b f f_lemma s h in
     let s' = SeqUtils.init_nat (Seq.length s) in
+    Seq.map_seq_len f' s';
+    SeqUtils.init_nat_len (Seq.length s);
     Seq.map_seq f' s'
 
 let starl_seq_sel_depends_only_on_aux (#a #b: Type0)
@@ -370,7 +372,7 @@ let starl_seq_sel (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
-  : selector (Seq.seq (G.erased b)) (hp_of (starl_seq (Seq.map_seq f s)))
+  : selector (Seq.lseq (G.erased b) (Seq.length s)) (hp_of (starl_seq (Seq.map_seq f s)))
   =
   Seq.map_seq_len f s;
   Classical.forall_intro_2 (starl_seq_sel_depends_only_on #a #b f f_lemma s);
@@ -527,12 +529,7 @@ let starseq_sel_len (#a #b: Type0)
     Seq.length (starl_seq_sel #a #b f f_lemma s m) = Seq.length s
   )
   =
-  Seq.map_seq_len f s;
-  let f' = starl_seq_sel_aux #a #b f f_lemma s m in
-  let s' = SeqUtils.init_nat (Seq.length s) in
-  SeqUtils.init_nat_len (Seq.length s);
-  assert (Seq.length s' = Seq.length s);
-  Seq.map_seq_len f' s'
+  ()
 
 let starseq_imp_index (#a #b: Type0)
   (f: a -> vprop)
@@ -938,6 +935,7 @@ let starseq_pack_lemma (#a #b: Type0)
   assume (v_0 == G.reveal (Seq.index v n));
   assume (v_1 == Seq.slice v 0 n);
   assume (v_2 == Seq.slice v (n+1) (Seq.length s))
+#pop-options
 
 let starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -1016,6 +1014,7 @@ let starseq_pack_s (#opened:_) (#a #b: Type0)
     )
     (fun m -> starseq_pack_lemma #a #b f f_lemma s n m);
   ()
+
 #push-options "--z3rlimit 20"
 let starseq_idem (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -1144,6 +1143,7 @@ let starseq_weakening (#opened:_) (#a #b: Type0)
     (forall (k:nat{k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
   (ensures fun h0 _ h1 ->
+    Seq.length s1 = Seq.length s2 /\
     v_starseq #a #b f1 f1_lemma s1 h0
     ==
     v_starseq #a #b f2 f2_lemma s2 h1

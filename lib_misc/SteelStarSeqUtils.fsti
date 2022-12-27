@@ -75,7 +75,7 @@ val starl_seq_sel (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
-  : selector (Seq.seq (G.erased b)) (hp_of (starl_seq (Seq.map_seq f s)))
+  : selector (Seq.lseq (G.erased b) (Seq.length s)) (hp_of (starl_seq (Seq.map_seq f s)))
 
 [@@ __steel_reduce__]
 let starseq' (#a #b: Type)
@@ -85,7 +85,7 @@ let starseq' (#a #b: Type)
   : vprop'
   = {
     hp = hp_of (starl_seq (Seq.map_seq f s));
-    t = Seq.seq (G.erased b);
+    t = Seq.lseq (G.erased b) (Seq.length s);
     sel = starl_seq_sel f f_lemma s;
   }
 unfold
@@ -95,19 +95,6 @@ let starseq (#a #b: Type)
   (s: Seq.seq a)
   = VUnit (starseq' #a #b f f_lemma s)
 
-val starseq_sel_len (#a #b: Type0)
-  (f: a -> vprop)
-  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
-  (s: Seq.seq a)
-  (m: SM.mem)
-  : Lemma
-  (requires
-    SM.interp (hp_of (starseq #a #b f f_lemma s)) m
-  )
-  (ensures
-    Seq.length (starl_seq_sel #a #b f f_lemma s m) = Seq.length s
-  )
-
 [@@ __steel_reduce__]
 let v_starseq (#a #b: Type)
   (#p: vprop)
@@ -115,7 +102,7 @@ let v_starseq (#a #b: Type)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   (h: rmem p{FStar.Tactics.with_tactic selector_tactic (can_be_split p (starseq #a #b f f_lemma s) /\ True)})
-  : GTot (Seq.seq (G.erased b))
+  : GTot (Seq.lseq (G.erased b) (Seq.length s))
   = h (starseq #a #b f f_lemma s)
 
 let v_starseq_len (#a #b: Type)
@@ -125,10 +112,9 @@ let v_starseq_len (#a #b: Type)
   (s: Seq.seq a)
   (h: rmem p{FStar.Tactics.with_tactic selector_tactic (can_be_split p (starseq #a #b f f_lemma s) /\ True)})
   : Lemma
-  (Seq.length (v_starseq #a #b #p f f_lemma s h) = Seq.length s)
+  (Seq.length (v_starseq #a #b f f_lemma s h) = Seq.length s)
   =
-  //TODO FIXME @Aymeric: apply starseq_sel_len
-  admit ()
+  ()
 
 val starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -191,6 +177,7 @@ val starseq_weakening (#opened:_) (#a #b: Type0)
     (forall (k:nat{k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
   (ensures fun h0 _ h1 ->
+    Seq.length s1 = Seq.length s2 /\
     v_starseq #a #b f1 f1_lemma s1 h0
     ==
     v_starseq #a #b f2 f2_lemma s2 h1
@@ -216,7 +203,6 @@ val starseq_upd (#opened:_) (#a #b: Type0)
     (forall (k:nat{k <> n /\ k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
   (ensures fun h0 _ h1 ->
-    f1_lemma (Seq.index s1 n);
     v_starseq #a #b f2 f2_lemma (Seq.slice s2 0 n) h1
     ==
     v_starseq #a #b f1 f1_lemma (Seq.slice s1 0 n) h0
@@ -252,7 +238,6 @@ val starseq_upd2 (#opened:_) (#a #b: Type0)
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
     f2 (Seq.index s2 n) == none_as_emp #b)
   (ensures fun h0 _ h1 ->
-    f1_lemma (Seq.index s1 n);
     v_starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) h1
     ==
     v_starseq #a #(option b) f1 f1_lemma (Seq.slice s1 0 n) h0
