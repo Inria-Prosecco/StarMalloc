@@ -1305,7 +1305,7 @@ let starseq_upd2 (#opened:_) (#a #b: Type0)
      (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
      starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2))))
     (f1 (Seq.index s1 n) `star`
-     ((f2 (Seq.index s2 n)) `star`
+     (f2 (Seq.index s2 n) `star`
      (starseq #a #(option b) f2 f2_lemma (Seq.slice s2 0 n) `star`
      starseq #a #(option b) f2 f2_lemma (Seq.slice s2 (n+1) (Seq.length s2)))))
     (fun (a1, (b1, c1)) (a2, (_, (b2, c2))) ->
@@ -1316,6 +1316,7 @@ let starseq_upd2 (#opened:_) (#a #b: Type0)
     (fun m -> starseq_upd2_lemma #a #b f1 f2 f1_lemma f2_lemma s1 s2 n m);
   ()
 
+#push-options "--z3rlimit 30"
 let starseq_upd3 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
@@ -1341,11 +1342,30 @@ let starseq_upd3 (#opened:_) (#a #b: Type0)
     v1 == Seq.upd v0 n None
   )
   =
+  let h0 = get () in
+  let vs0 = v_starseq #a #(option b) f1 f1_lemma s1 h0 in
   starseq_unpack_s #_ #a #(option b) f1 f1_lemma s1 n;
   starseq_upd2 #_ #a #b f1 f2 f1_lemma f2_lemma s1 s2 n;
+  let v1 = gget (f2 (Seq.index s2 n)) in
   starseq_pack_s #_ #a #(option b) f2 f2_lemma s2 n;
-  //TODO: FIXME @Aymeric?
-  admit ()
+  let h2 = get () in
+  let vs2 = v_starseq #a #(option b) f2 f2_lemma s2 h2 in
+  let v2 = Seq.index vs2 n in
+  assert (v2 == v1);
+  assert (None? v2);
+  let vs3 = Seq.upd vs0 n None in
+  assert (Seq.length vs2 = Seq.length vs3);
+  assert (Seq.slice vs2 0 n == Seq.slice vs3 0 n);
+  assert (Seq.slice vs2 (n+1) (Seq.length s1) == Seq.slice vs3 (n+1) (Seq.length s1));
+  Classical.forall_intro (Classical.move_requires (
+    SeqUtils.lemma_slice_index vs2 vs3 0 n));
+  Classical.forall_intro (Classical.move_requires (
+    SeqUtils.lemma_slice_index vs2 vs3 (n+1) (Seq.length s1)));
+  assert (forall (x:nat{x < Seq.length s1}).
+    Seq.index vs2 x == Seq.index vs3 x);
+  Seq.lemma_eq_intro vs2 vs3;
+  ()
+#pop-options
 
 // TODO
 // [ok] starseq_unpack (pure equiv)

@@ -56,15 +56,15 @@ let c2_t
  (t_of (c2 #a b vp) == option a)
  = ()
 
-let c2_lemma
-  (#a: Type0)
-  (b: bool)
-  (vp: vprop{t_of vp == a /\ VUnit? vp})
-  (h: hmem (c2 #a b vp))
-  : Lemma
-  (
-    c2_t #a b vp;
-    (b ==> Some? (sel_of (c2 #a b vp) h <: option a)) /\
-    (not b ==> None? (sel_of (c2 #a b vp) h <: option a))
-  )
-  = ()
+//let c2_sel_lemma
+//  (#a: Type0)
+//  (b: bool)
+//  (vp: vprop{t_of vp == a /\ VUnit? vp})
+//  (m: SM.mem)
+//  : Lemma
+//  (requires SM.interp (hp_of (c2 #a b vp)) m)
+//  (ensures
+//    (b ==> Some? (sel_of (c2 #a b vp) m <: option a)) /\
+//    (not b ==> None? (sel_of (c2 #a b vp) m <: option a))
+//  )
+//  = ()
