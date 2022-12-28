@@ -825,14 +825,13 @@ let starseq_unpack_lemma (#a #b: Type0)
     starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) in
   starseq_unpack #a #b f f_lemma s n;
   reveal_equiv p1 p2;
-  starseq_sel_len #a #b f f_lemma s m;
   starseq_sel_index #a #b f f_lemma s n m;
   starseq_sel_slice_1 #a #b f f_lemma s n m;
   starseq_sel_slice_2 #a #b f f_lemma s n m
 
 #push-options "--fuel 2 --ifuel 1 --z3rlimit 100"
-
 let elim_lseq (#a:Type) (#l:nat) (s:Seq.lseq a l) : Lemma (Seq.length s == l) = ()
+#pop-options
 
 let starseq_pack_lemma (#a #b: Type0)
   (f: a -> vprop)
@@ -841,21 +840,12 @@ let starseq_pack_lemma (#a #b: Type0)
   (n: nat{n < Seq.length s})
   (m: SM.mem)
   : Lemma
-  (requires (
+  (requires
     SM.interp (hp_of (
       f (Seq.index s n) `star`
       (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
       starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)))
-    )) m /\
-    True
-    //Seq.length v == Seq.length s /\
-    //sel_of (f (Seq.index s n)) m
-    //  == G.reveal (Seq.index v n) /\
-    //sel_of (starseq #a #b f f_lemma (Seq.slice s 0 n)) m
-    //  == Seq.slice v 0 n /\
-    //sel_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) m
-    //  == Seq.slice v (n+1) (Seq.length s)
-  ))
+    )) m)
   (ensures (
     f_lemma (Seq.index s n);
     SM.interp (hp_of (f (Seq.index s n))) m /\
@@ -869,73 +859,24 @@ let starseq_pack_lemma (#a #b: Type0)
     Seq.length v == Seq.length s /\
     v_0 == G.reveal (Seq.index v n) /\
     v_1 == Seq.slice v 0 n /\
-    v_2 == Seq.slice v (n+1) (Seq.length s) /\
-
-
-    True
-    //sel_of (starseq #a #b f f_lemma s) m == v
+    v_2 == Seq.slice v (n+1) (Seq.length s)
   ))))
   =
-  f_lemma (Seq.index s n);
+  let p1 = starseq #a #b f f_lemma s in
+  let p2 =
+    f (Seq.index s n) `star`
+    (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
+    starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) in
+  starseq_pack #a #b f f_lemma s n;
+  reveal_equiv p2 p1;
+  let v = sel_of (starseq #a #b f f_lemma s) m in
   let v_0 = sel_of (f (Seq.index s n)) m in
   let v_1 = sel_of (starseq #a #b f f_lemma (Seq.slice s 0 n)) m in
   let v_2 = sel_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) m in
-  let s' = Seq.map_seq f s in
-  Seq.map_seq_len f s;
-
-  let aux () : Lemma (SM.interp (hp_of (starseq #a #b f f_lemma s)) m)
-    =
-      let s_st = Seq.slice s 0 n in
-      let s_f = Seq.slice s (n+1) (Seq.length s) in
-      let s'_st = Seq.slice s' 0 n in
-      let s'_f = Seq.slice s' (n+1) (Seq.length s') in
-
-      assert (hp_of (starseq #a #b f f_lemma s) == hp_of (starl_seq s'));
-
-      Classical.forall_intro (Seq.map_seq_index f s);
-      assert (f (Seq.index s n) == Seq.index s' n);
-      let s_aux = s_st `Seq.append` (Seq.create 1 (Seq.index s n) `Seq.append` s_f) in
-      Seq.map_seq_append f s_st (Seq.create 1 (Seq.index s n) `Seq.append` s_f);
-      let s_aux' = (s_st `Seq.append` Seq.create 1 (Seq.index s n)) `Seq.append` s_f in
-      Seq.map_seq_append f (s_st `Seq.append` Seq.create 1 (Seq.index s n)) s_f;
-      assert (s_aux `Seq.equal` s);
-      assert (s_aux' `Seq.equal` s);
-
-      assert (s' ==
-        Seq.map_seq f s_st `Seq.append`
-        Seq.map_seq f (Seq.create 1 (Seq.index s n) `Seq.append` s_f));
-      Seq.map_seq_len f s_st;
-      Seq.map_seq_len f s_f;
-      assert (Seq.map_seq f s_st `Seq.equal` Seq.slice s' 0 n);
-      assert (Seq.map_seq f s_f `Seq.equal` s'_f);
-
-      let p1 = Seq.index s' n `star`
-          (starl_seq s'_st `star`
-           starl_seq s'_f) in
-      let p2 = starl_seq s' in
-      assert (SM.interp (hp_of p1) m);
-
-      starl_seq_unpack s' n;
-      reveal_equiv p2 p1;
-      assert (SM.interp (hp_of p2) m)
-
-  in
-  aux ();
-
-  let v = sel_of (starseq #a #b f f_lemma s) m in
-  let f' = starl_seq_sel_aux #a #b f f_lemma s m in
-  let s0 : Seq.lseq _ (Seq.length s) = SeqUtils.init_nat (Seq.length s) in
-  // Unclear why this needs to be done explicitly
-  elim_lseq s0;
-  assert (v == Seq.map_seq f' s0);
-  Seq.map_seq_len f' s0;
-  assert (Seq.length v == Seq.length s);
-
-  // FIXME
-  assume (v_0 == G.reveal (Seq.index v n));
-  assume (v_1 == Seq.slice v 0 n);
-  assume (v_2 == Seq.slice v (n+1) (Seq.length s))
-#pop-options
+  f_lemma (Seq.index s n);
+  starseq_sel_index #a #b f f_lemma s n m;
+  starseq_sel_slice_1 #a #b f f_lemma s n m;
+  starseq_sel_slice_2 #a #b f f_lemma s n m
 
 let starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -973,8 +914,7 @@ let starseq_unpack_s (#opened:_) (#a #b: Type0)
       y == Seq.slice v 0 n /\
       z == Seq.slice v (n+1) (Seq.length s))
     )
-    (fun m -> starseq_unpack_lemma #a #b f f_lemma s n m);
-  ()
+    (fun m -> starseq_unpack_lemma #a #b f f_lemma s n m)
 
 let starseq_pack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -1012,8 +952,7 @@ let starseq_pack_s (#opened:_) (#a #b: Type0)
       y == Seq.slice v 0 n /\
       z == Seq.slice v (n+1) (Seq.length s))
     )
-    (fun m -> starseq_pack_lemma #a #b f f_lemma s n m);
-  ()
+    (fun m -> starseq_pack_lemma #a #b f f_lemma s n m)
 
 #push-options "--z3rlimit 20"
 let starseq_idem (#opened:_) (#a #b: Type0)
@@ -1047,8 +986,7 @@ let starseq_idem (#opened:_) (#a #b: Type0)
     SeqUtils.lemma_slice_index v0 v1 (n+1) (Seq.length s)));
   assert (forall (x:nat{x < Seq.length s}).
     Seq.index v0 x == Seq.index v1 x);
-  Seq.lemma_eq_intro v0 v1;
-  ()
+  Seq.lemma_eq_intro v0 v1
 #pop-options
 
 let starseq_weakening_lemma_aux (#a #b: Type0)
@@ -1066,14 +1004,11 @@ let starseq_weakening_lemma_aux (#a #b: Type0)
     `equiv`
     starseq #a #b f2 f2_lemma s2)
   =
-  //IMPROVE: use SeqUtils.map_seq_weakening
-  let s1' = Seq.map_seq f1 s1 in
-  let s2' = Seq.map_seq f2 s2 in
-  Seq.map_seq_len f1 s1;
-  Seq.map_seq_len f2 s2;
-  Classical.forall_intro (Seq.map_seq_index f1 s1);
-  Classical.forall_intro (Seq.map_seq_index f2 s2);
-  Seq.lemma_eq_intro s1' s2';
+  SeqUtils.map_seq_weakening
+    #_ #_
+    #(fun _ -> true)
+    #(fun _ -> true)
+    f1 f2 s1 s2;
   let p1 = starseq #a #b f1 f1_lemma s1 in
   let p2 = starseq #a #b f2 f2_lemma s2 in
   reveal_equiv p1 p2
