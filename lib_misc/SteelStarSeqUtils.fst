@@ -829,10 +829,6 @@ let starseq_unpack_lemma (#a #b: Type0)
   starseq_sel_slice_1 #a #b f f_lemma s n m;
   starseq_sel_slice_2 #a #b f f_lemma s n m
 
-#push-options "--fuel 2 --ifuel 1 --z3rlimit 100"
-let elim_lseq (#a:Type) (#l:nat) (s:Seq.lseq a l) : Lemma (Seq.length s == l) = ()
-#pop-options
-
 let starseq_pack_lemma (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
@@ -1302,13 +1298,12 @@ let starseq_upd3 (#opened:_) (#a #b: Type0)
   ()
 #pop-options
 
-// TODO
 // [ok] starseq_unpack (pure equiv)
 //   [ok] aux lemma
 // [ok] starseq_pack (pure equiv, equiv_sym of starseq_unpack)
 // [ok] starseq_unpack_lemma (pure on SM.mem)
 //   [ok] aux lemma
-// [sk] starseq_pack_lemma (pure on SM.mem)
+// [ok] starseq_pack_lemma (pure on SM.mem)
 // [ok] starseq_unpack (Steel)
 // [ok] starseq_pack (Steel)
 // [ok] starseq_idem (Steel)
