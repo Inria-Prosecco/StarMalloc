@@ -82,6 +82,7 @@ let array_to_bv_lemma
   )
   = array_to_bv_aux_lemma #n s n i
 
+//TODO: remove in favor of SeqUtils
 noextract
 let init_nat (len: nat)
   : Seq.lseq (k:nat{k < len}) len
@@ -124,6 +125,21 @@ let array_to_bv2_lemma
   );
   Classical.forall_intro (Seq.map_seq_index f s0);
   Seq.lemma_eq_intro (array_to_bv2 s) (array_to_bv s)
+
+let array_to_bv2_index
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: nat{i < n*U64.n})
+  : Lemma
+  (Seq.index (array_to_bv2 s) i
+  == nth (U64.v (Seq.index s (i/U64.n))) (i%U64.n))
+  =
+  let f = fun (i:nat{i < U64.n*n})
+       -> nth (U64.v (Seq.index s (i/U64.n))) (i%U64.n) in
+  let s0 = init_nat (U64.n * n) in
+  Seq.map_seq_len f s0;
+  init_nat_index (U64.n * n) i;
+  Seq.map_seq_index f s0 i
 
 noextract
 let get

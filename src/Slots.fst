@@ -71,7 +71,7 @@ let slab_vprop_aux_f
   =
   let vp = slot_vprop size_class arr i in
   slot_vprop_lemma size_class arr i;
-  c2 #(Seq.seq U8.t) (Bitmap4.get md_as_seq i) vp
+  c2 #(Seq.seq U8.t) (not (Bitmap4.get md_as_seq i)) vp
 
 let slab_vprop_aux_f_lemma
   (size_class: sc)
@@ -119,6 +119,35 @@ let a2bv = Bitmap4.array_to_bv2 #4
 //noextract
 //let f = Bitmap5.f #4
 
+//TODO: move to Bitmap5/BitmapUtils
+let f_invol (#n: nat)
+  (k:nat{k < n * U64.n})
+  : Lemma
+  (Bitmap5.f #n (Bitmap5.f #n k) == k)
+  =
+  ()
+
+//TODO: move to Bitmap5/BitmapUtils
+let equiv_get_a2bv_index
+  (size_class: sc)
+  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+  (k:nat{k < U32.v (nb_slots size_class)})
+  : Lemma
+  (Bitmap4.get md_as_seq (U32.uint_to_t k)
+  == Seq.index (a2bv md_as_seq) (Bitmap5.f #4 k))
+  =
+  let k' = U32.uint_to_t k in
+  let bm = a2bv md_as_seq in
+  let k_index = Bitmap5.f #4 k in
+  let v1 = Bitmap4.get md_as_seq k' in
+  let v2 = Seq.index bm k_index in
+  Bitmap4.get_lemma md_as_seq k';
+  assert (v1 == FU.nth (U64.v (Seq.index md_as_seq (k/U64.n))) (U64.n - (k%U64.n) - 1));
+  Bitmap4.array_to_bv2_index md_as_seq k_index;
+  f_invol #4 k;
+  assert (Bitmap5.f #4 k_index == k);
+  ()
+
 let starseq_upd_aux_lemma1_aux
   (size_class: sc)
   (md: slab_metadata)
@@ -135,25 +164,29 @@ let starseq_upd_aux_lemma1_aux
     bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) true
   ))
   (ensures
-    ((slab_vprop_aux_f size_class md_as_seq2 arr)
+    (slab_vprop_aux_f size_class md_as_seq2 arr)
       (Seq.index
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-        k))
+        k)
     ==
-    ((slab_vprop_aux_f size_class md_as_seq1 arr)
+    (slab_vprop_aux_f size_class md_as_seq1 arr)
       (Seq.index
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-        k))
+        k)
   )
   =
-  //assert (U32.v (nb_slots size_class) <= 4 * U64.n);
-  //let k : k2:U32.t{U32.v k2 < 4 * U64.n}
-  //  = (U32.uint_to_t k) <: (k2:U32.t{U32.v k2 < 4 * U64.n}) in
-  //Bitmap4.get_lemma md_as_seq1 k;
-  //Bitmap4.get_lemma md_as_seq2 k;
-  //assert (Bitmap4.get md_as_seq1 k == Bitmap4.get md_as_seq2 k);
-  //TODO: FIXME
-  admit ()
+  let bm1 = a2bv (G.reveal md_as_seq1) in
+  let bm2 = a2bv (G.reveal md_as_seq2) in
+  let k_index = Bitmap5.f #4 k in
+  Seq.lemma_index_upd2 bm1 (Bitmap5.f #4 (U32.v pos)) true k_index;
+  assert (Seq.index bm1 k_index = Seq.index bm2 k_index);
+  equiv_get_a2bv_index size_class md_as_seq1 k;
+  equiv_get_a2bv_index size_class md_as_seq2 k;
+  assert (Bitmap4.get md_as_seq1 (U32.uint_to_t k) == Seq.index bm1 k_index);
+  assert (Bitmap4.get md_as_seq2 (U32.uint_to_t k) == Seq.index bm2 k_index);
+  assert (Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false);
+  SeqUtils.init_u32_refined_index (U32.v (nb_slots size_class)) k;
+  assert (Seq.index (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) k = U32.uint_to_t k)
 
 let starseq_upd_aux_lemma1
   (size_class: sc)
@@ -210,8 +243,16 @@ let starseq_upd_aux_lemma2
     none_as_emp #(Seq.seq U8.t)
   )
   =
-  //TODO: FIXME
-  admit ()
+  let bm2 = a2bv (G.reveal md_as_seq2) in
+  SeqUtils.init_u32_refined_index (U32.v (nb_slots size_class)) (U32.v pos);
+  assert (Seq.index (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) (U32.v pos) = pos);
+  let k_index = Bitmap5.f #4 (U32.v pos) in
+  assert (Seq.index bm2 k_index = true);
+  equiv_get_a2bv_index size_class md_as_seq2 (U32.v pos);
+  assert (Bitmap4.get md_as_seq2 pos = Seq.index bm2 k_index);
+  assert (Bitmap4.get md_as_seq2 pos = true);
+  // secret ingredient, typing issue leading to normalization issue
+  slot_vprop_lemma size_class arr pos
 
 let apply_starseq_upd (#opened:_)
   (size_class: sc)
