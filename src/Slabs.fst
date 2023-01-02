@@ -341,29 +341,246 @@ let allocate_slab_aux_2
 //  let ptr_shifted = A.ptr_shift ptr shift_size_t in
 //  (| ptr_shifted, G.hide (U32.v size_class) |)
 //#pop-options
+open FStar.Mul
 
-assume val alloc_metadata
+let u32_to_sz (x:U32.t) : Pure US.t
+  (requires True)
+  (ensures fun y -> US.v y == U32.v x)
+  =
+  assume (US.fits_u32);
+  US.uint32_to_sizet x
+
+let slab_array
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : Pure (array U8.t)
+  (requires
+    A.length slab_region = U32.v metadata_max * U32.v page_size /\
+    U32.v md_count < U32.v metadata_max)
+  (ensures fun r ->
+    A.length r = U32.v page_size /\
+    same_base_array r slab_region /\
+    True
+  )
+  =
+  let ptr = A.ptr_of slab_region in
+  let shift = U32.mul md_count page_size in
+  let shift_size_t = u32_to_sz shift in
+  let ptr_shifted = A.ptr_shift ptr shift_size_t in
+  (|ptr_shifted, G.hide (U32.v page_size)|)
+
+let slab_region_mon_split
+  (#opened:_)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : SteelGhostT unit opened
+  (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))))
+  (fun _ ->
+    A.varray (slab_array slab_region md_count) `star`
+    A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size)))
+  )
+  =
+  A.ghost_split
+    (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size)))
+    (u32_to_sz page_size);
+  rewrite_slprop
+    (A.varray (A.split_l (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)))
+    (A.varray (slab_array slab_region md_count))
+    (fun _ -> ());
+  let x1 = A.split_r (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size) in
+  let x2 = A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size)) in
+  A.ptr_base_offset_inj (A.ptr_of x1) (A.ptr_of x2);
+  assert (A.length x1 = A.length x2);
+  assert (x1 == x2);
+  rewrite_slprop
+    (A.varray (A.split_r (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)))
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))))
+    (fun _ -> ())
+
+let md_bm_array
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : Pure (array U64.t)
+  (requires
+    A.length md_bm_region = U32.v metadata_max * 4 /\
+    U32.v md_count < U32.v metadata_max)
+  (ensures fun r ->
+    A.length r = 4 /\
+    same_base_array r md_bm_region /\
+    True
+  )
+  =
+  let ptr = A.ptr_of md_bm_region in
+  let shift = U32.mul md_count 4ul in
+  let shift_size_t = u32_to_sz shift in
+  let ptr_shifted = A.ptr_shift ptr shift_size_t in
+  (|ptr_shifted, G.hide 4|)
+
+let md_bm_region_mon_split
+  (#opened:_)
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : SteelGhostT unit opened
+  (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))))
+  (fun _ ->
+    A.varray (md_bm_array md_bm_region md_count) `star`
+    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul)))
+  )
+  =
+  sladmit ()
+
+let md_array
+  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : Pure (array (SL.cell blob))
+  (requires
+    A.length md_region = U32.v metadata_max /\
+    U32.v md_count < U32.v metadata_max)
+  (ensures fun r ->
+    A.length r = 1 /\
+    same_base_array r md_region /\
+    True
+  )
+  =
+  let ptr = A.ptr_of md_region in
+  let shift_size_t = u32_to_sz md_count in
+  let ptr_shifted = A.ptr_shift ptr shift_size_t in
+  (|ptr_shifted, G.hide 1|)
+
+let md_region_mon_split
+  (#opened:_)
+  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : SteelGhostT unit opened
+  (A.varray (A.split_r md_region (u32_to_sz md_count)))
+  (fun _ ->
+    A.varray (md_array md_region md_count) `star`
+    A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul)))
+  )
+  =
+  sladmit ()
+
+let intro_slab_vprop
+  (#opened: _)
   (size_class: sc)
-  (slab_region: array U8.t)
-  (md_bm_region: array U64.t)
-  (md_region: array (SL.cell blob))
-  (md_count: ref U32.t)
+  (b: blob)
+  : SteelGhostT unit opened
+  (A.varray (snd b) `star` A.varray (fst b))
+  (fun _ -> slab_vprop size_class (snd b) (fst b))
+  =
+  sladmit ()
+
+#push-options "--z3rlimit 30"
+let alloc_metadata_aux
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  //: Steel (SL.t blob)
+  : Steel blob
+  (
+    A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) `star`
+    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) `star`
+    A.varray (A.split_r md_region (u32_to_sz md_count))
+  )
+  //TODO: add a refinement over a md_count ref, discussion with Aymeric
+  ////`star` vptr md_count)
+  (fun r ->
+    //TODO: these 2 varrays will be packed into slab_vprop, then into the p_empty part of SL.llist
+    A.varray (snd r) `star`
+    A.varray (fst r) `star`
+    //TODO: this varray will be somehow casted into the ref that corresponds to the SL.t type
+    A.varray (md_array md_region md_count) `star`
+    A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))) `star`
+    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))) `star`
+    A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul)))
+  )
+  (requires fun h0 -> True)
+  (ensures fun h0 r h1 -> True)
+  =
+  slab_region_mon_split slab_region md_count;
+  md_bm_region_mon_split md_bm_region md_count;
+  md_region_mon_split md_region md_count;
+  let md_bm = md_bm_array md_bm_region md_count in
+  let slab = slab_array slab_region md_count in
+  let b : blob = (md_bm, slab) in
+  change_slprop_rel
+    (A.varray (slab_array slab_region md_count) `star`
+    A.varray (md_bm_array md_bm_region md_count))
+    (A.varray (snd b) `star` A.varray (fst b))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  return b
+#pop-options
+
+assume val singleton_array_to_ref
+  (#a: Type0)
+  (arr: array a)
+  : Steel (ref a)
+  (A.varray arr)
+  (fun r -> vptr r)
+  (requires fun _ -> A.length arr = 1)
+  (ensures fun h0 r h1 ->
+    Seq.length (A.asel arr h0) = 1 /\
+    Seq.index (A.asel arr h0) 0 == sel r h1
+  )
+
+assume val intro_singleton_llist_no_alloc
+  (#a: Type)
+  (p: a -> vprop)
+  (r: SL.t a)
+  (v: a)
+  : Steel (SL.t a)
+  (vptr r `star` p v)
+  (fun r' -> SL.llist p r')
+  (requires fun h0 -> True)
+  (ensures fun h0 r' h1 ->
+    SL.v_llist p r' h1 == [SL.get_data (sel r h0)]
+  )
+
+#push-options "--z3rlimit 30"
+let alloc_metadata
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
   : Steel (SL.t blob)
-  (A.varray slab_region `star`
-  A.varray md_bm_region `star`
-  A.varray md_region `star`
-  vptr md_count)
+  (
+    A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) `star`
+    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) `star`
+    A.varray (A.split_r md_region (u32_to_sz md_count))
+  )
+  //TODO: add a refinement over a md_count ref, discussion with Aymeric
+  ////`star` vptr md_count)
   (fun r ->
     SL.llist (p_empty size_class) r `star`
-    A.varray slab_region `star`
-    A.varray md_bm_region `star`
-    A.varray md_region `star`
-    vptr md_count)
-  (requires fun h0 ->
-    U32.v (sel md_count h0) < U32.v metadata_max)
+    A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))) `star`
+    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))) `star`
+    A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul)))
+  )
+  (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
-    L.length (SL.v_llist (p_empty size_class) r h1) = 1 /\
-    U32.v (sel md_count h1) = U32.v (sel md_count h0) + 1)
+    L.length (SL.v_llist (p_empty size_class) r h1) = 1
+  )
+  =
+  let b : blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
+  //let h = get () in
+  //assume (is_empty size_class (A.asel (fst b) h));
+  intro_slab_vprop size_class b;
+  change_slprop_rel
+    (slab_vprop size_class (snd b) (fst b))
+    (p_empty size_class b)
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  //p_empty_pack size_class b b;
+  let r = singleton_array_to_ref (md_array md_region md_count) in
+  let b_cell = SL.mk_cell null b in
+  write r b_cell;
+  let r = intro_singleton_llist_no_alloc (p_empty size_class) r b in
+  return r
+#pop-options
 
 let unpack_list_singleton (#a: Type0)
   (p: a -> vprop)
@@ -421,7 +638,8 @@ let allocate_slab_aux_3
     //sel partial_slabs_ptr h1 == sel partial_slabs_ptr h0 /\
     not (SL.is_null_t r))
   =
-  let r = alloc_metadata sc slab_region md_bm_region md_region md_count in
+  let md_count_v = read md_count in
+  let r = alloc_metadata md_count_v sc slab_region md_bm_region md_region in
   let n_empty = unpack_list_singleton (p_empty sc) r in
   let n_empty_2 = SL.mk_cell empty_slabs (SL.get_data n_empty) in
   write r n_empty_2;
