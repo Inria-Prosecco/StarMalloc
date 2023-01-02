@@ -343,9 +343,12 @@ let allocate_slab_aux_2
 //#pop-options
 open FStar.Mul
 
-let u32_to_sz (x:U32.t) : Pure US.t
-  (requires True)
-  (ensures fun y -> US.v y == U32.v x)
+let u32_to_sz
+  (x:U32.t)
+  : Tot (y:US.t{US.v y == U32.v x})
+  //: Pure US.t
+  //(requires True)
+  //(ensures fun y -> US.v y == U32.v x)
   =
   assume (US.fits_u32);
   US.uint32_to_sizet x
@@ -540,7 +543,7 @@ assume val intro_singleton_llist_no_alloc
   )
 
 #push-options "--z3rlimit 30"
-let alloc_metadata
+let alloc_metadata_aux2
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -581,6 +584,130 @@ let alloc_metadata
   let r = intro_singleton_llist_no_alloc (p_empty size_class) r b in
   return r
 #pop-options
+
+#push-options "--z3rlimit 50"
+let alloc_metadata
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_count: ref (x:U32.t{U32.v x <= U32.v metadata_max}))
+  //(md_count: ref U32.t)
+  : SteelT unit
+  //: Steel (SL.t blob)
+  (
+    vptr md_count `vdep` (fun (md_count_v:U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+    //vptr md_count `vdep` (fun (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max}) ->
+      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v))
+    )
+  )
+  //TODO: add a refinement over a md_count ref, discussion with Aymeric
+  ////`star` vptr md_count)
+  (fun r ->
+    //SL.llist (p_empty size_class) r `star`
+    //emp
+    //vptr md_count `vdep` (fun md_count_v ->
+    vptr md_count `vdep` (fun (md_count_v:U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v))
+    )
+  )
+  //(requires fun h0 ->
+  //  let md_count_v
+  //    : U32.t
+  //    = dfst (h0
+  //    (vptr md_count `vdep`
+  //    (fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+  //      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+  //      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+  //      A.varray (A.split_r md_region (u32_to_sz md_count_v))
+  //    )))
+  //  in
+  //  U32.v md_count_v < U32.v metadata_max
+  //)
+  //(ensures fun h0 r h1 ->
+  //  let md_count_v
+  //    : U32.t
+  //    = dfst (h1
+  //    (vptr md_count `vdep`
+  //    (fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+  //      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+  //      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+  //      A.varray (A.split_r md_region (u32_to_sz md_count_v))
+  //    )))
+  //  in
+  //  U32.v md_count_v <= U32.v metadata_max)
+
+
+  //  let md_count_v0
+  //    : U32.t
+  //    = dfst (h0
+  //    (vptr md_count `vdep`
+  //    (fun md_count_v ->
+  //      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+  //      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+  //      A.varray (A.split_r md_region (u32_to_sz md_count_v))
+  //    ))) in
+  //  let md_count_v1
+  //    : U32.t
+  //    = dfst (h1
+  //    (vptr md_count `vdep`
+  //    (fun md_count_v ->
+  //      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+  //      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+  //      A.varray (A.split_r md_region (u32_to_sz md_count_v))
+  //    ))) in
+  //  md_count_v0 = md_count_v1
+
+
+
+  ////  //sel md_count h1 = sel md_count h0
+  ////  //L.length (SL.v_llist (p_empty size_class) r h1) = 1
+  //)
+  =
+  let md_count_v = elim_vdep
+    (vptr md_count)
+    //(fun md_count_v ->
+    (fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v))) in
+
+  let h0 = get () in
+  assume (U32.v (sel md_count h0) < U32.v metadata_max);
+  let md_count_v2 = read md_count in
+  assert (U32.v md_count_v2 = U32.v (sel md_count h0));
+  assert (U32.v md_count_v2 < U32.v metadata_max);
+  //assume (U32.v md_count_v2 < U32.v metadata_max);
+  //sladmit ();
+  //let r : SL.t blob = alloc_metadata_aux2 md_count_v size_class slab_region md_bm_region md_region in
+  write md_count (U32.add md_count_v2 1ul);
+  let h = get () in
+  assume (U32.v (sel md_count h) <= U32.v metadata_max);
+  let md_count_v2 : v:U32.t{U32.v v <= U32.v metadata_max} = read md_count in
+  intro_vdep
+    (vptr md_count)
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v2 page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v2 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v2)))
+    //(A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count_v2 1ul) page_size))) `star`
+    //  A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count_v2 1ul) 4ul))) `star`
+    //  A.varray (A.split_r md_region (u32_to_sz (U32.add md_count_v2 1ul))))
+    //(fun md_count_v ->
+    (fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v)));
+  //return r
+  return ()
+#pop-options
+
+
+
+
 
 let unpack_list_singleton (#a: Type0)
   (p: a -> vprop)
