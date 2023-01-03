@@ -542,6 +542,160 @@ assume val intro_singleton_llist_no_alloc
     SL.v_llist p r' h1 == [SL.get_data (sel r h0)]
   )
 
+//[@@__steel_reduce__]
+//let f
+//  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+//  //(md_count_v:U32.t{U32.v md_count_v <= U32.v metadata_max})
+//  (md_count_v: U32.t)
+//  : Pure vprop
+//  (requires U32.v md_count_v <= U32.v metadata_max)
+//  (ensures fun _ -> True)
+//  =
+//  A.varray (A.split_r md_region (u32_to_sz md_count_v))
+//  //(md_count: ref (x:U32.t{U32.v x <= U32.v metadata_max}))
+
+assume val f
+  (p: U32.t -> prop)
+  (v: U32.t)
+  : Pure vprop
+  (requires p v)
+  (ensures fun _ -> True)
+
+//let test_lemma
+//  (md_count: ref U32.t)
+//  (p: U32.t -> prop)
+assume val elim_vdep2 (#opened:SM.inames)
+  (v: vprop)
+  (p: normal (t_of v) -> Tot prop)
+  (f: normal (t_of (vrefine v p)) -> Tot vprop)
+: SteelGhostT (Ghost.erased (normal (t_of (vrefine v p)))) opened
+  (vdep (vrefine v p) f)
+  (fun res -> v `star` f (Ghost.reveal res))
+  //(requires (fun _ -> True))
+  //(ensures (fun h res h' ->
+  //    let fs = h' v in
+  //    let sn : t_of (p (Ghost.reveal res)) = h' (p (Ghost.reveal res)) in
+  //    let x2 = h (vdep v p) in
+  //    Ghost.reveal res == fs /\
+  //    dfst x2 == fs /\
+  //    dsnd x2 == sn
+  //))
+
+#push-options "--z3rlimit 50 --print_implicits --query_stats"
+let test
+  (md_count: ref U32.t)
+  (p: U32.t -> prop)
+  //(f: (v:U32.t{p v}) -> vprop)
+  : SteelT unit
+  //: Steel (SL.t blob)
+  (
+    (vptr md_count `vrefine` p
+      //(fun v -> p v)
+    )
+    `vdep` (f p)//(fun v -> f p v)
+  )
+  (fun r ->
+    (vptr md_count `vrefine` p
+      //(fun v -> p v)
+    )
+    `vdep` (f p)//fun v -> f p v)
+  )
+  =
+  let v_g : G.erased (v:U32.t{p v}) = elim_vdep2
+    (vptr md_count `vrefine` p)
+    (f p) in
+  //slassert (vptr md_count `star` f p v_g);
+  //let v_g2 = G.hide ((G.reveal v_g) <: (v:U32.t{p v})) in
+  //assume (p (G.reveal v_g));
+  //change_slprop_rel
+  //  (f p v_g)
+  //  (f p v_g2)
+  //  (fun x y -> x == y)
+  //  (fun _ -> admit ());
+  //intro_vdep
+  //  (vptr md_count `vrefine` (fun v -> p v))
+  //  (f p v_g)
+  //  (fun v -> f p v);
+  sladmit ();
+  return ()
+
+let a = 42
+
+(*)
+    //(vptr md_count `vrefine`
+    //  (fun v -> U32.v v <= U32.v metadata_max)
+    //) `vdep` (fun v -> f md_region v))
+    //SL.llist (p_empty size_class) r `star`
+    //emp
+    //vptr md_count `vdep` (fun md_count_v ->
+    //vptr md_count `vdep` (fun (md_count_v:U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+    //  A.varray (A.split_r md_region (u32_to_sz md_count_v))
+    //)
+  //)
+  //(requires fun h0 ->
+  //  let md_count_v
+  //    : U32.t
+  //    = dfst (h0
+  //    (vptr md_count `vdep` (fun v -> f md_region v)))
+  //    //(vptr md_count `vdep`
+  //    //(fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+  //    //  A.varray (A.split_r md_region (u32_to_sz md_count_v))
+  //    //)))
+  //  in
+  //  U32.v md_count_v < U32.v metadata_max
+  //)
+  //(ensures fun h0 r h1 -> True)
+  =
+  //let x0 = gget (vptr md_count `vdep`
+  //  (fun (md_count_v:U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+  //    A.varray (A.split_r md_region (u32_to_sz md_count_v)))) in
+  //let x0 = gget (vptr md_count `vdep` (fun v -> f md_region v)) in
+  //sladmit ();
+  //let v0 = G.hide (dfst x0) in
+  //assert (U32.v (G.reveal v0) < U32.v metadata_max);
+  //let v1 : G.erased U32.t = elim_vdep
+  //  (vptr md_count)
+  //  (fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+  //    A.varray (A.split_r md_region (u32_to_sz md_count_v))) in
+  ////assert (G.reveal v1 == G.reveal v0);
+  //assert (U32.v (G.reveal v1) < U32.v metadata_max);
+  //let v2 : U32.t = read md_count in
+  //assert (v2 == G.reveal v1);
+  //assert (U32.v v2 < U32.v metadata_max);
+  //let md_count_v2 : v:U32.t{U32.v v <= U32.v metadata_max} = read md_count in
+  ////assert (U32.v md_count_v2 = U32.v (sel md_count h0));
+  ////assert (U32.v md_count_v2 < U32.v metadata_max);
+  ////assume (U32.v md_count_v2 < U32.v metadata_max);
+  ////sladmit ();
+  ////let r : SL.t blob = alloc_metadata_aux2 md_count_v size_class slab_region md_bm_region md_region in
+  //write md_count (U32.add md_count_v2 1ul);
+  //let h = get () in
+  //assume (U32.v (sel md_count h) <= U32.v metadata_max);
+  //let md_count_v2 : v:U32.t{U32.v v <= U32.v metadata_max} = read md_count in
+  //sladmit ();
+  return ()
+
+
+let  a = 42
+  //change_slprop_rel
+  //  (A.varray (A.split_r md_region (u32_to_sz md_count_v)))
+  //  (A.varray (A.split_r md_region (u32_to_sz md_count_v2)))
+  //  (fun x y -> x == y)
+  //  (fun _ -> admit ());
+  //intro_vdep
+  //  (vptr md_count)
+  //  (A.varray (A.split_r md_region (u32_to_sz md_count_v2)))
+  //  //  A.varray (A.split_r md_region (u32_to_sz (U32.add md_count_v2 1ul))))
+  //  //(fun md_count_v ->
+  //  (fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+  //    A.varray (A.split_r md_region (u32_to_sz md_count_v)));
+  //return r
+  return ()
+#pop-options
+
+
+
+
 #push-options "--z3rlimit 30"
 let alloc_metadata_aux2
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -585,15 +739,15 @@ let alloc_metadata_aux2
   return r
 #pop-options
 
-#push-options "--z3rlimit 50"
+#push-options "--z3rlimit 100"
 let alloc_metadata
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
-  (md_count: ref (x:U32.t{U32.v x <= U32.v metadata_max}))
-  //(md_count: ref U32.t)
-  : SteelT unit
+  //(md_count: ref (x:U32.t{U32.v x <= U32.v metadata_max}))
+  (md_count: ref U32.t)
+  : Steel unit
   //: Steel (SL.t blob)
   (
     vptr md_count `vdep` (fun (md_count_v:U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
@@ -615,19 +769,20 @@ let alloc_metadata
       A.varray (A.split_r md_region (u32_to_sz md_count_v))
     )
   )
-  //(requires fun h0 ->
-  //  let md_count_v
-  //    : U32.t
-  //    = dfst (h0
-  //    (vptr md_count `vdep`
-  //    (fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
-  //      A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
-  //      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
-  //      A.varray (A.split_r md_region (u32_to_sz md_count_v))
-  //    )))
-  //  in
-  //  U32.v md_count_v < U32.v metadata_max
-  //)
+  (requires fun h0 ->
+    let md_count_v
+      : U32.t
+      = dfst (h0
+      (vptr md_count `vdep`
+      (fun (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max}) ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz md_count_v))
+      )))
+    in
+    U32.v md_count_v < U32.v metadata_max
+  )
+  (ensures fun h0 r h1 -> True)
   //(ensures fun h0 r h1 ->
   //  let md_count_v
   //    : U32.t
@@ -668,6 +823,7 @@ let alloc_metadata
   ////  //L.length (SL.v_llist (p_empty size_class) r h1) = 1
   //)
   =
+  admit ();
   let md_count_v = elim_vdep
     (vptr md_count)
     //(fun md_count_v ->
@@ -678,9 +834,10 @@ let alloc_metadata
 
   let h0 = get () in
   assume (U32.v (sel md_count h0) < U32.v metadata_max);
-  let md_count_v2 = read md_count in
-  assert (U32.v md_count_v2 = U32.v (sel md_count h0));
-  assert (U32.v md_count_v2 < U32.v metadata_max);
+  //let md_count_v2 = read md_count in
+  let md_count_v2 : v:U32.t{U32.v v <= U32.v metadata_max} = read md_count in
+  //assert (U32.v md_count_v2 = U32.v (sel md_count h0));
+  //assert (U32.v md_count_v2 < U32.v metadata_max);
   //assume (U32.v md_count_v2 < U32.v metadata_max);
   //sladmit ();
   //let r : SL.t blob = alloc_metadata_aux2 md_count_v size_class slab_region md_bm_region md_region in
@@ -688,6 +845,15 @@ let alloc_metadata
   let h = get () in
   assume (U32.v (sel md_count h) <= U32.v metadata_max);
   let md_count_v2 : v:U32.t{U32.v v <= U32.v metadata_max} = read md_count in
+  change_slprop_rel
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v)))
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v2 page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v2 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v2)))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
   intro_vdep
     (vptr md_count)
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v2 page_size))) `star`
