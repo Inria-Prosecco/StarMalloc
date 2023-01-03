@@ -588,6 +588,80 @@ let alloc_metadata_aux2
   return (r, G.hide (U32.add md_count 1ul))
 #pop-options
 
+let alloc_metadata_sl1
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
+  (md_count_v0: U32.t{U32.v md_count_v0 < U32.v metadata_max})
+  (m: SM.mem)
+  : Lemma
+  (requires
+    SM.interp (hp_of
+      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz (G.reveal md_count_v))))
+    ) m /\
+    G.reveal md_count_v == md_count_v0
+  )
+  (ensures
+    SM.interp (hp_of
+      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v0 page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v0 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v0)))
+    ) m /\
+    sel_of
+      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz (G.reveal md_count_v))))
+      m
+    ==
+    sel_of
+      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v0 page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v0 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz md_count_v0)))
+      m
+  )
+  =
+  ()
+
+let alloc_metadata_sl2
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
+  (md_count_v0: U32.t{U32.v md_count_v0 < U32.v metadata_max})
+  (m: SM.mem)
+  : Lemma
+  (requires
+    SM.interp (hp_of
+      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count_v0 1ul) page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count_v0 1ul) 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz (U32.add md_count_v0 1ul))))
+    ) m /\
+    G.reveal md_count_v == md_count_v0
+  )
+  (ensures
+    SM.interp (hp_of
+      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul))))
+    ) m /\
+    sel_of
+      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count_v0 1ul) page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count_v0 1ul) 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz (U32.add md_count_v0 1ul))))
+      m
+    ==
+    sel_of
+      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul))))
+      m
+  )
+  =
+  ()
+
 #push-options "--z3rlimit 100"
 let alloc_metadata
   (size_class: sc)
@@ -596,8 +670,7 @@ let alloc_metadata
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
-  //: Steel (SL.t blob & (G.erased (v:U32.t{U32.v v = U32.v md_count_v + 1 /\ U32.v v <= U32.v metadata_max})))
-  : Steel ((SL.t blob) & (G.erased U32.t))
+  : Steel (SL.t blob & G.erased U32.t)
   (
     vptr md_count `star`
     A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
@@ -611,16 +684,11 @@ let alloc_metadata
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul)))
   )
-  //  SL.llist (p_empty size_class) (fst r) `star`
-    //A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal (snd r)) page_size))) `star`
-    //A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal (snd r)) 4ul))) `star`
-    //A.varray (A.split_r md_region (u32_to_sz (G.reveal (snd r)))))
-  //)
   (requires fun h0 ->
     sel md_count h0 = G.reveal md_count_v
   )
   (ensures fun h0 r h1 ->
-  //  L.length (SL.v_llist (p_empty size_class) (fst r) h1) = 1 /\
+    L.length (SL.v_llist (p_empty size_class) (fst r) h1) = 1 /\
     sel md_count h0 = G.reveal md_count_v /\
     sel md_count h1 = U32.add (sel md_count h0) 1ul /\
     sel md_count h1 = G.reveal (snd r)
@@ -628,7 +696,6 @@ let alloc_metadata
   =
   let md_count_v0 = read md_count in
   assert (md_count_v0 == G.reveal md_count_v);
-  assert (U32.v md_count_v0 < U32.v metadata_max);
   change_slprop_rel
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) `star`
@@ -637,15 +704,9 @@ let alloc_metadata
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v0 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz md_count_v0)))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun m -> alloc_metadata_sl1 slab_region md_bm_region md_region md_count_v md_count_v0 m);
   let r = alloc_metadata_aux2 md_count_v0 size_class slab_region md_bm_region md_region in
-  write md_count (U32.add md_count_v0 1ul);
-  let md_count_v1 = read md_count in
-  assert (U32.v md_count_v1 = U32.v (G.reveal snd r));
-  //admit ();
-  //assert (md_count_v1 = U32.add md_count_v0 1ul);
-  //assert (U32.v md_count_v0 <= U32.v metadata_max);
-
+  assert (U32.add md_count_v0 1ul == U32.add (G.reveal md_count_v) 1ul);
   change_slprop_rel
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count_v0 1ul) page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count_v0 1ul) 4ul))) `star`
@@ -654,10 +715,12 @@ let alloc_metadata
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul))))
     (fun x y -> x == y)
-    (fun _ -> admit ());
-  //sladmit ();
+    (fun m -> admit (); alloc_metadata_sl2 slab_region md_bm_region md_region md_count_v md_count_v0 m);
+  write md_count (U32.add md_count_v0 1ul);
+  let md_count_v1 = read md_count in
+  assert (md_count_v1 == G.reveal (snd r));
+  //assert (U32.v md_count_v1 <= U32.v metadata_max);
   return r
-  //return (fst r, G.hide (md_count_v1))
 #pop-options
 
 
