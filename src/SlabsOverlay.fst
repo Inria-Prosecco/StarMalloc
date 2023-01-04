@@ -1,7 +1,17 @@
 module SlabsOverlay
 
+open Utils2
 open Steel.Effect.Atomic
 open Steel.Effect
+open Steel.Reference
+module A = Steel.Array
+
+open Slabs
+
+module U64 = FStar.UInt64
+module U32 = FStar.UInt32
+module U8 = FStar.UInt8
+module SL = Selectors.LList
 
 module SM = Steel.Memory
 module G = FStar.Ghost
@@ -141,6 +151,8 @@ let vrefinedep_idem
   ()
 #pop-options
 #pop-options
+
+open FStar.Mul
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let alloc_metadata2
