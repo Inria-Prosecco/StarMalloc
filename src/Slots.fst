@@ -58,9 +58,8 @@ let slot_vprop_lemma
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
   (t_of (slot_vprop size_class arr pos) == Seq.lseq U8.t (U32.v size_class))
-  = ()
-  //TODO: FIXME @Aymeric?
-//  admit ()
+  =
+  ()
 
 let slab_vprop_aux_f
   (size_class: sc)
