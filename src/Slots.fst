@@ -29,7 +29,7 @@ let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
     U32.v pos < U32.v (nb_slots size_class) /\
     A.length arr = U32.v page_size)
   (ensures fun r ->
-    A.length r = U32.v size_class /\
+    A.length r == U32.v size_class /\
     same_base_array r arr /\
     True)
   =
@@ -57,10 +57,10 @@ let slot_vprop_lemma
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
-  (t_of (slot_vprop size_class arr pos) == Seq.seq U8.t)
-  =
+  (t_of (slot_vprop size_class arr pos) == Seq.lseq U8.t (U32.v size_class))
+  = ()
   //TODO: FIXME @Aymeric?
-  admit ()
+//  admit ()
 
 let slab_vprop_aux_f
   (size_class: sc)
@@ -71,7 +71,7 @@ let slab_vprop_aux_f
   =
   let vp = slot_vprop size_class arr i in
   slot_vprop_lemma size_class arr i;
-  c2 #(Seq.seq U8.t) (not (Bitmap4.get md_as_seq i)) vp
+  c2 #(Seq.lseq U8.t (U32.v size_class)) (not (Bitmap4.get md_as_seq i)) vp
 
 let slab_vprop_aux_f_lemma
   (size_class: sc)
@@ -81,12 +81,12 @@ let slab_vprop_aux_f_lemma
     Lemma (
       t_of (slab_vprop_aux_f size_class md_as_seq arr i)
       ==
-      option (Seq.seq U8.t))
+      option (Seq.lseq U8.t (U32.v size_class)))
   =
   fun i ->
   let vp = slot_vprop size_class arr i in
   slot_vprop_lemma size_class arr i;
-  c2_t #(Seq.seq U8.t) (Bitmap4.get md_as_seq i) vp
+  c2_t #(Seq.lseq U8.t (U32.v size_class)) (Bitmap4.get md_as_seq i) vp
 
 let slab_vprop_aux
   (size_class: sc)
@@ -98,7 +98,7 @@ let slab_vprop_aux
   let incr_seq = SeqUtils.init_u32_refined nb_slots_as_nat in
   starseq
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(option (Seq.seq U8.t))
+    #(option (Seq.lseq U8.t (U32.v size_class)))
     (slab_vprop_aux_f size_class md_as_seq arr)
     (slab_vprop_aux_f_lemma size_class md_as_seq arr)
     incr_seq
@@ -240,7 +240,7 @@ let starseq_upd_aux_lemma2
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
         (U32.v pos)))
     ==
-    none_as_emp #(Seq.seq U8.t)
+    none_as_emp #(Seq.lseq U8.t (U32.v size_class))
   )
   =
   let bm2 = a2bv (G.reveal md_as_seq2) in
@@ -250,9 +250,7 @@ let starseq_upd_aux_lemma2
   assert (Seq.index bm2 k_index = true);
   equiv_get_a2bv_index size_class md_as_seq2 (U32.v pos);
   assert (Bitmap4.get md_as_seq2 pos = Seq.index bm2 k_index);
-  assert (Bitmap4.get md_as_seq2 pos = true);
-  // secret ingredient, typing issue leading to normalization issue
-  slot_vprop_lemma size_class arr pos
+  assert (Bitmap4.get md_as_seq2 pos = true)
 
 let apply_starseq_upd (#opened:_)
   (size_class: sc)
