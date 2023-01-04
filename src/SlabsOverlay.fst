@@ -154,6 +154,7 @@ let alloc_metadata2
   (
     vrefinedep
       (vptr md_count)
+      //TODO: hideous coercion
       (fun x -> U32.v x < U32.v metadata_max == true)
       (fun v ->
         A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
@@ -164,6 +165,7 @@ let alloc_metadata2
     SL.llist (p_empty size_class) r `star`
     vrefinedep
       (vptr md_count)
+      //TODO: hideous coercion
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v ->
         A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
@@ -190,6 +192,7 @@ let alloc_metadata2
   let x'
     : G.erased (x:U32.t{U32.v x < U32.v metadata_max})
     = G.hide (G.reveal x <: x:U32.t{U32.v x < U32.v metadata_max}) in
+  //TODO: hideous coercion that leads to 2 change_slprop_rel
   change_slprop_rel
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal x) page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal x) 4ul))) `star`
@@ -200,6 +203,7 @@ let alloc_metadata2
     (fun x y -> x == y)
     (fun _ -> admit ());
   let r = alloc_metadata size_class slab_region md_bm_region md_region md_count x' in
+  //TODO: hideous coercion that leads to 2 change_slprop_rel
   change_slprop_rel
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal x') 1ul) page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal x') 1ul) 4ul))) `star`
