@@ -386,18 +386,20 @@ let slab_region_mon_split
   A.ghost_split
     (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size)))
     (u32_to_sz page_size);
-  rewrite_slprop
+  change_slprop_rel
     (A.varray (A.split_l (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)))
     (A.varray (slab_array slab_region md_count))
+    (fun x y -> x == y)
     (fun _ -> ());
   let x1 = A.split_r (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size) in
   let x2 = A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size)) in
   A.ptr_base_offset_inj (A.ptr_of x1) (A.ptr_of x2);
   assert (A.length x1 = A.length x2);
   assert (x1 == x2);
-  rewrite_slprop
+  change_slprop_rel
     (A.varray (A.split_r (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)))
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))))
+    (fun x y -> x == y)
     (fun _ -> ())
 
 let md_bm_array
@@ -430,7 +432,24 @@ let md_bm_region_mon_split
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul)))
   )
   =
-  sladmit ()
+  A.ghost_split
+    (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul)))
+    (u32_to_sz 4ul);
+  change_slprop_rel
+    (A.varray (A.split_l (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)))
+    (A.varray (md_bm_array md_bm_region md_count))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  let x1 = A.split_r (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul) in
+  let x2 = A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul)) in
+  A.ptr_base_offset_inj (A.ptr_of x1) (A.ptr_of x2);
+  assert (A.length x1 = A.length x2);
+  assert (x1 == x2);
+  change_slprop_rel
+    (A.varray (A.split_r (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)))
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))))
+    (fun x y -> x == y)
+    (fun _ -> ())
 
 let md_array
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
@@ -461,7 +480,23 @@ let md_region_mon_split
     A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul)))
   )
   =
-  sladmit ()
+  A.ghost_split
+    (A.split_r md_region (u32_to_sz md_count))
+    (u32_to_sz 1ul);
+  change_slprop_rel
+    (A.varray (A.split_l (A.split_r md_region (u32_to_sz md_count)) (u32_to_sz 1ul)))
+    (A.varray (md_array md_region md_count))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  let x1 = A.split_r (A.split_r md_region (u32_to_sz md_count)) (u32_to_sz 1ul) in
+  let x2 = A.split_r md_region (u32_to_sz (U32.add md_count 1ul)) in
+  A.ptr_base_offset_inj (A.ptr_of x1) (A.ptr_of x2);
+  assert (A.length x1 = A.length x2);
+  assert (x1 == x2);
+  rewrite_slprop
+    (A.varray (A.split_r (A.split_r md_region (u32_to_sz (md_count))) (u32_to_sz 1ul)))
+    (A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul))))
+    (fun _ -> ())
 
 let intro_slab_vprop
   (#opened: _)
@@ -723,197 +758,6 @@ let alloc_metadata
   return r
 #pop-options
 
-assume val vrefinedep_hp
-  (v: vprop)
-  (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
-  : Tot (SM.slprop u#1)
-
-[@__steel_reduce__]
-let vrefinedep_t
-  (v: vprop)
-  (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
-  : Tot Type
-  =
-  dtuple2 (x: (t_of v){p x}) (fun x -> t_of (f x))
-
-assume val vrefinedep_sel
-  (v: vprop)
-  (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
-  : Tot (selector (vrefinedep_t v p f) (vrefinedep_hp v p f))
-
-[@@__steel_reduce__]
-let vrefinedep'
-  (v: vprop)
-  (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
-  : Tot vprop' = {
-  hp = vrefinedep_hp v p f;
-  t = vrefinedep_t v p f;
-  sel = vrefinedep_sel v p f;
-}
-[@@__steel_reduce__]
-let vrefinedep
-  (v: vprop)
-  (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
-  = VUnit (vrefinedep' v p f)
-
-assume val elim_vrefinedep
-  (#opened:_)
-  (v: vprop)
-  (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
-  : SteelGhost (G.erased (x: normal (t_of v){p x})) opened
-  (vrefinedep v p f)
-  (fun res -> v `star` f (G.reveal res))
-  (requires fun _ -> True)
-  (ensures fun h res h' ->
-    p res /\
-    G.reveal res == h' v /\
-    (let fs : x:t_of v{p x} = h' v in
-    let sn : t_of (f (G.reveal res)) = h' (f (G.reveal res)) in
-    let x2 = h (vrefinedep v p f) in
-    G.reveal res == fs /\
-    dfst x2 == fs /\
-    dsnd x2 == sn /\
-    True)
-  )
-
-assume val intro_vrefinedep
-  (#opened:_)
-  (v: vprop)
-  (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
-  (f': vprop)
-  : SteelGhost unit opened
-  (v `star` f')
-  (fun _ -> vrefinedep v p f)
-  (requires fun h ->
-    p (h v) /\
-    f' == f (h v))
-  (ensures fun h _ h' ->
-    p (h v) /\
-    f' == f (h v) /\
-    (let x2 = h' (vrefinedep v p f) in
-    let sn : t_of f' = h f' in
-    dfst x2 == h v /\
-    dsnd x2 == sn)
-  )
-
-#push-options "--compat_pre_typed_indexed_effects"
-#push-options "--z3rlimit 20"
-let vrefinedep_idem
-  (#opened:_)
-  (v: vprop)
-  (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
-  : SteelGhost unit opened
-  (vrefinedep v p f)
-  (fun _ -> vrefinedep v p f)
-  (requires fun _ -> True)
-  (ensures fun h _ h' ->
-    h (vrefinedep v p f)
-    ==
-    h' (vrefinedep v p f)
-  )
-  =
-  //let h0 = get () in
-  let x0 = gget (vrefinedep v p f) in
-  let x = elim_vrefinedep v p f in
-  intro_vrefinedep v p  f (f (G.reveal x));
-  //let h1 = get () in
-  let x1 = gget (vrefinedep v p f) in
-  assert (dfst x0 == dfst x1);
-  assert (dsnd x0 == dsnd x1);
-  //assert (x0 == x1);
-  ()
-#pop-options
-#pop-options
-
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
-let alloc_metadata2
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
-  : Steel (SL.t blob)
-  //: Steel unit
-  (
-    vrefinedep
-      (vptr md_count)
-      (fun x -> U32.v x < U32.v metadata_max == true)
-      (fun v ->
-        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
-        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
-  )
-  (fun r ->
-    SL.llist (p_empty size_class) r `star`
-    vrefinedep
-      (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
-        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
-  )
-  (requires fun h0 -> True)
-  (ensures fun h0 r h1 -> True
-    //TODO FIXME: fails with this postcondition
-    //L.length (SL.v_llist (p_empty size_class) r h1) = 1
-    ///\ sel md_count h1 = U32.add (sel md_count h0) 1ul
-  )
-  =
-  let x
-    : G.erased (x:U32.t{U32.v x < U32.v metadata_max == true})
-    = elim_vrefinedep
-    (vptr md_count)
-    (fun x -> U32.v x < U32.v metadata_max == true)
-    (fun v ->
-      A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
-      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-      A.varray (A.split_r md_region (u32_to_sz v)))
-  in
-  let x'
-    : G.erased (x:U32.t{U32.v x < U32.v metadata_max})
-    = G.hide (G.reveal x <: x:U32.t{U32.v x < U32.v metadata_max}) in
-  change_slprop_rel
-    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal x) page_size))) `star`
-    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal x) 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (G.reveal x))))
-    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal x') page_size))) `star`
-    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal x') 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (G.reveal x'))))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  let r = alloc_metadata size_class slab_region md_bm_region md_region md_count x' in
-  change_slprop_rel
-    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal x') 1ul) page_size))) `star`
-    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal x') 1ul) 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal x') 1ul))))
-    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal x) 1ul) page_size))) `star`
-    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal x) 1ul) 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal x) 1ul))))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  intro_vrefinedep
-    (vptr md_count)
-    (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v ->
-      A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
-      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-      A.varray (A.split_r md_region (u32_to_sz v)))
-    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal x) 1ul) page_size))) `star`
-      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal x) 1ul) 4ul))) `star`
-      A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal x) 1ul))));
-  return (fst r)
-#pop-options
-
-
 let unpack_list_singleton (#a: Type0)
   (p: a -> vprop)
   (ptr: SL.t a)
@@ -933,39 +777,6 @@ let unpack_list_singleton (#a: Type0)
   drop (SL.llist p (SL.get_next n));
   return n
 
-//assume val alloc_metadata3
-//  (size_class: sc)
-//  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-//  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-//  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
-//  (md_count: ref U32.t)
-//  : Steel (SL.t blob)
-//  //: Steel unit
-//  (
-//    vrefinedep
-//      (vptr md_count)
-//      (fun x -> U32.v x < U32.v metadata_max == true)
-//      (fun v ->
-//        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
-//        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-//        A.varray (A.split_r md_region (u32_to_sz v)))
-//  )
-//  (fun r ->
-//    SL.llist (p_empty size_class) r `star`
-//    vrefinedep
-//      (vptr md_count)
-//      (fun x -> U32.v x <= U32.v metadata_max == true)
-//      (fun v ->
-//        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
-//        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-//        A.varray (A.split_r md_region (u32_to_sz v)))
-//  )
-//  (requires fun h0 -> True)
-//  (ensures fun h0 r h1 ->
-//    //TODO FIXME: fails with this postcondition
-//    //L.length (SL.v_llist (p_empty size_class) r h1) = 1
-//    ///\ sel md_count h1 = U32.add (sel md_count h0) 1ul
-//  )
 #push-options "--z3rlimit 100"
 let alloc_metadata'
   (size_class: sc)
@@ -1080,8 +891,9 @@ let allocate_slab
     vptr md_count
   )
   (requires fun h0 ->
-    Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
-    Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0) \/
+    sel md_count h0 = G.reveal md_count_v /\
+    //Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
+    //Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0) \/
     U32.v (sel md_count h0) < U32.v metadata_max)
   (ensures fun _ _ _ -> True)
   //Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
@@ -1099,27 +911,27 @@ let allocate_slab
   SL.cons_imp_not_null (p_empty sc) empty_slabs;
   let h0 = get () in
   assert (
-    not (SL.is_null_t partial_slabs) \/
-    not (SL.is_null_t empty_slabs) \/
+    //not (SL.is_null_t partial_slabs) \/
+    //not (SL.is_null_t empty_slabs) \/
     U32.v (sel md_count h0) < U32.v metadata_max);
-  if (not (SL.is_null_t partial_slabs)) then (
-    let r = allocate_slab_aux_2 sc
-      partial_slabs_ptr empty_slabs_ptr
-      partial_slabs empty_slabs in
-    return r
-  ) else if (not (SL.is_null_t empty_slabs)) then (
-    let r = allocate_slab_aux_1 sc
-      partial_slabs_ptr empty_slabs_ptr
-      partial_slabs empty_slabs in
-    return r
-  ) else (
+  //if (not (SL.is_null_t partial_slabs)) then (
+  //  let r = allocate_slab_aux_2 sc
+  //    partial_slabs_ptr empty_slabs_ptr
+  //    partial_slabs empty_slabs in
+  //  return r
+  //) else if (not (SL.is_null_t empty_slabs)) then (
+  //  let r = allocate_slab_aux_1 sc
+  //    partial_slabs_ptr empty_slabs_ptr
+  //    partial_slabs empty_slabs in
+  //  return r
+  //) else (
     // h_malloc alloc_metadata equivalent
     let n_empty_slabs = allocate_slab_aux_3 sc
       empty_slabs_ptr empty_slabs
-      slab_region md_bm_region md_region md_count in
+      slab_region md_bm_region md_region md_count md_count_v in
     let r = allocate_slab_aux_1 sc
       partial_slabs_ptr empty_slabs_ptr
       partial_slabs n_empty_slabs in
     return r
-  )
+  //)
 #pop-options
