@@ -758,7 +758,6 @@ let alloc_metadata
   return r
 #pop-options
 
-(*)
 let unpack_list_singleton (#a: Type0)
   (p: a -> vprop)
   (ptr: SL.t a)
@@ -864,6 +863,7 @@ let allocate_slab_aux_3
   return r
 #pop-options
 
+(*)
 #push-options "--z3rlimit 75"
 let allocate_slab
   (sc: sc)

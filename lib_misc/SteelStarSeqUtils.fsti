@@ -275,3 +275,31 @@ val starseq_upd3 (#opened:_) (#a #b: Type0)
     let v1 = v_starseq #a #(option b) f2 f2_lemma s2 h1 in
     v1 == Seq.upd v0 n None
   )
+
+let starseq_upd4 (#opened:_) (#a #b: Type0)
+  (f1 f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
+  (s1: Seq.seq a)
+  (s2: Seq.seq a{Seq.length s1 = Seq.length s2})
+  (n: nat{n < Seq.length s1})
+  : SteelGhost unit opened
+  (f2 (Seq.index s2 n) `star`
+    starseq #a #(option b) f1 f1_lemma s1)
+  (fun _ ->
+    starseq #a #(option b) f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 = Seq.length s2 /\
+    (forall (k:nat{k <> n /\ k < Seq.length s1}).
+      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
+    f1 (Seq.index s1 n) == none_as_emp #b)
+  (ensures fun h0 _ h1 ->
+    f2_lemma (Seq.index s2 n);
+    v_starseq_len #a #(option b) f1 f1_lemma s1 h0;
+    v_starseq_len #a #(option b) f2 f2_lemma s2 h1;
+    let v0 = v_starseq #a #(option b) f1 f1_lemma s1 h0 in
+    let v1 = v_starseq #a #(option b) f2 f2_lemma s2 h1 in
+    let x : normal (t_of (f2 (Seq.index s2 n))) = h0 (f2 (Seq.index s2 n)) in
+    v1 == Seq.upd v0 n x
+  )
+  = sladmit ()
