@@ -909,8 +909,7 @@ let alloc_metadata2
   return r
 #pop-options
 
-(*)
-#push-options "--z3rlimit 75"
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 inline_for_extraction noextract
 let allocate_slab_aux_3
   (size_class: sc)
@@ -920,33 +919,49 @@ let allocate_slab_aux_3
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
   : Steel (SL.t blob)
   (
     vptr empty_slabs_ptr `star`
     SL.llist (p_empty size_class) empty_slabs `star`
-    A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
-    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (G.reveal md_count_v))) `star`
-    vptr md_count
+    vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))
   )
   (fun r ->
     vptr empty_slabs_ptr `star`
     SL.llist (p_empty size_class) r `star`
-    A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) page_size))) `star`
-    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul))) `star`
-    vptr md_count
+    vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))
   )
   (requires fun h0 ->
-    sel md_count h0 = G.reveal md_count_v /\
-    U32.v (sel md_count h0) < U32.v metadata_max)
+    let x = h0 (
+      vrefinedep
+        (vptr md_count)
+        //TODO: hideous coercion
+        (fun x -> U32.v x <= U32.v metadata_max == true)
+        (fun v ->
+          A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+          A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+          A.varray (A.split_r md_region (u32_to_sz v)))
+      ) in
+    U32.v (dfst x) < U32.v metadata_max)
   (ensures fun h0 r h1 ->
     sel empty_slabs_ptr h1 == r /\
     //sel partial_slabs_ptr h1 == sel partial_slabs_ptr h0 /\
     not (SL.is_null_t r))
   =
-  let r = alloc_metadata' size_class slab_region md_bm_region md_region md_count md_count_v in
+  let r = alloc_metadata2 size_class slab_region md_bm_region md_region md_count in
   let n_empty = unpack_list_singleton (p_empty size_class) r in
   let n_empty_2 = SL.mk_cell empty_slabs (SL.get_data n_empty) in
   write r n_empty_2;
@@ -959,6 +974,7 @@ let allocate_slab_aux_3
   return r
 #pop-options
 
+(*)
 #push-options "--z3rlimit 75"
 let allocate_slab
   (sc: sc)
@@ -967,24 +983,31 @@ let allocate_slab
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
   : Steel (array U8.t & G.erased (x: U32.t{U32.v x <= U32.v metadata_max}))
   (
     SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
-    A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
-    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (G.reveal md_count_v))) `star`
-    vptr md_count
+    vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))
   )
   (fun r ->
     A.varray (fst r) `star`
     SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
-    A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal (snd r)) page_size))) `star`
-    A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal (snd r)) 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (G.reveal (snd r)))) `star`
-    vptr md_count
+    vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))
   )
   (requires fun h0 ->
     sel md_count h0 = G.reveal md_count_v /\
