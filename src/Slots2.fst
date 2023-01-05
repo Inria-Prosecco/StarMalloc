@@ -58,6 +58,7 @@ let starseq_upd_aux_lemma3
 
 let apply_starseq_upd2 (#opened:_)
   (size_class: sc)
+  //TODO: remove
   (md: slab_metadata)
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
@@ -104,7 +105,7 @@ let apply_starseq_upd2 (#opened:_)
       (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       h1;
-    slab_vprop_aux_f_lemma size_class md_as_seq2 arr
+    slab_vprop_aux_f_lemma size_class md_as_seq1 arr
       (Seq.index
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
         (U32.v pos));
@@ -159,8 +160,105 @@ let apply_starseq_upd2 (#opened:_)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (U32.v pos)
 
+noextract inline_for_extraction
+let deallocate_slot_aux
+  (size_class: sc)
+  (md: slab_metadata)
+  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Steel unit
+  (
+    (slab_vprop_aux_f size_class md_as_seq arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)) `star`
+    A.varray md `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class (Bitmap4.set md_as_seq pos) arr)
+      (slab_vprop_aux_f_lemma size_class (Bitmap4.set md_as_seq pos) arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+  )
+  (fun _ ->
+    A.varray md `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+  )
+  (requires fun h0 ->
+    let bm0 = a2bv (A.asel md h0) in
+    let idx = Bitmap5.f #4 (U32.v pos) in
+    A.asel md h0 == G.reveal md_as_seq /\
+    Seq.index bm0 idx = false
+  )
+  (ensures fun h0 _ h1 ->
+    v_starseq_len
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class (Bitmap4.set md_as_seq pos) arr)
+      (slab_vprop_aux_f_lemma size_class (Bitmap4.set md_as_seq pos) arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+      h0;
+    v_starseq_len
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+      h1;
+    let blob1 = v_starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class (Bitmap4.set md_as_seq pos) arr)
+      (slab_vprop_aux_f_lemma size_class (Bitmap4.set md_as_seq pos) arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+      h0 in
+    let blob2 = v_starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+      h1 in
+    let v1 = A.asel md h0 in
+    let v2 = A.asel md h1 in
+    //let idx = Bitmap5.f #4 (U32.v pos) in
+    //TODO
+    //v2 == Bitmap4.unset v1 pos /\
+    //TODO
+    //blob2 == Seq.upd blob1 (U32.v pos) None)
+    True)
+  =
+  assert_norm (4 < FI.max_int U16.n);
+
+  let bm1 = G.hide (a2bv (Bitmap4.set md_as_seq pos)) in
+  let bm2 = G.hide (a2bv md_as_seq) in
+  assume (G.reveal bm1 == Seq.upd (G.reveal bm2) (Bitmap5.f #4 (U32.v pos)) true);
+  SeqUtils.lemma_upd_bij bm2 bm1 (Bitmap5.f #4 (U32.v pos)) true;
+  assert (G.reveal bm2 == Seq.upd (G.reveal bm1) (Bitmap5.f #4 (U32.v pos)) false);
+  apply_starseq_upd2
+    size_class
+    md
+    (G.hide (Bitmap4.set md_as_seq pos))
+    md_as_seq
+    arr
+    pos;
+  //TODO
+  //Bitmap5.bm_unset #4 md pos;
+  return ()
+
+
+
+
 (*)
 - [ok] ptrdiff
 - [ok] uintptr_t
-- deallocate_slot_aux
+- [ok-ish] deallocate_slot_aux
+  - bv lemma
+  - starseq lemma
 - deallocate_slot
