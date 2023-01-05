@@ -1,17 +1,7 @@
-module SlabsOverlay
+module SteelVRefineDep
 
-open Utils2
 open Steel.Effect.Atomic
 open Steel.Effect
-open Steel.Reference
-module A = Steel.Array
-
-open Slabs
-
-module U64 = FStar.UInt64
-module U32 = FStar.UInt32
-module U8 = FStar.UInt8
-module SL = Selectors.LList
 
 module SM = Steel.Memory
 module G = FStar.Ghost
@@ -68,6 +58,7 @@ let vrefinedep_lemma2
     dsnd (sel_of (vrefinedep v p f) m) == dsnd (sel_of (vdep (vrefine v p) (vrefine_f v p f)) m) )
   = ()
 
+#push-options "--compat_pre_core 1"
 let elim_vrefinedep
   (#opened:_)
   (v: vprop)
@@ -98,7 +89,6 @@ let elim_vrefinedep
     change_equal_slprop (vrefine_f v p f x) (f x);
     x
 
-#push-options "--compat_pre_core 0"
 let intro_vrefinedep
   (#opened:_)
   (v: vprop)
