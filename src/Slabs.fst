@@ -1008,18 +1008,7 @@ let allocate_slab
         A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
         A.varray (A.split_r md_region (u32_to_sz v)))
   )
-  (requires fun h0 ->
-    let x = h0 (
-      vrefinedep
-        (vptr md_count)
-        //TODO: hideous coercion
-        (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v ->
-          A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
-          A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-          A.varray (A.split_r md_region (u32_to_sz v)))
-      ) in
-    U32.v (dfst x) < U32.v metadata_max)
+  (requires fun h0 -> True)
   (ensures fun _ _ _ -> True)
   //Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
   //Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0) \/
@@ -1050,6 +1039,17 @@ let allocate_slab
       partial_slabs empty_slabs in
     return r
   ) else (
+    let x = gget (
+      vrefinedep
+        (vptr md_count)
+        //TODO: hideous coercion
+        (fun x -> U32.v x <= U32.v metadata_max == true)
+        (fun v ->
+          A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+          A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+          A.varray (A.split_r md_region (u32_to_sz v)))
+      ) in
+    assume (U32.v (dfst x) < U32.v metadata_max);
     // h_malloc alloc_metadata equivalent
     let n_empty_slabs = allocate_slab_aux_3 sc
       empty_slabs_ptr empty_slabs
