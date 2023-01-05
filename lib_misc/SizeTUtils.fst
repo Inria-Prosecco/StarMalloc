@@ -6,6 +6,7 @@ module US = FStar.SizeT
 module U32 = FStar.UInt32
 module U16 = FStar.UInt16
 
+//TODO: remove in favor of updated cast
 inline_for_extraction noextract
 let small_uint32_to_sizet (x: U32.t)
   : Pure US.t

@@ -74,6 +74,7 @@ let has_free_slot
   (bound > 2 && (U64.v (Seq.index s 2) <> max)) ||
   (bound > 3 && (U64.v (Seq.index s 3) <> max))
 
+//CAUTION: assume val
 val ffs64 (x: U64.t)
   : Pure U32.t
   (requires U64.v x <> U64.v max64)
