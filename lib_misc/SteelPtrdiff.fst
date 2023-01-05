@@ -41,3 +41,27 @@ assume val eq (a: UP.t) (b: UP.t) : Pure bool
 assume val rem (a: UP.t) (b: UP.t{UP.v b <> 0}) : Pure UP.t
   (requires True)
   (ensures (fun c -> admit (); mod_spec (UP.v a) (UP.v b) == UP.v c))
+
+
+// uintptr_t modelization
+
+assume val t : Type0
+
+assume val to_uintptr (#a: Type) (arr: array a) : t
+//not needed, likely risky
+//assume val uintptr_to_arr (#a: Type) (v: t) : array a
+//assume val uintptr_bij (#a: Type) (arr: array a) : Lemma
+assume val lt (a b: t) : bool
+assume val lte (a b: t) : bool
+
+assume val within_bounds (#a: Type)
+  (arr1 arr2 p: array a)
+  : Lemma
+  (requires
+    same_base_array arr1 arr2 /\
+    lte (to_uintptr arr1) (to_uintptr p) /\
+    lt (to_uintptr p) (to_uintptr arr2))
+  (ensures
+    same_base_array arr1 p /\
+    same_base_array arr2 p
+  )

@@ -160,8 +160,7 @@ let apply_starseq_upd2 (#opened:_)
     (U32.v pos)
 
 (*)
-- ptrdiff
-  - test
-  - Steel model
+- [ok] ptrdiff
+- [ok] uintptr_t
 - deallocate_slot_aux
 - deallocate_slot
