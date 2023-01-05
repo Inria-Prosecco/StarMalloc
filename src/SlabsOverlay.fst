@@ -56,6 +56,18 @@ let vrefinedep_lemma
     dsnd (sel_of (vrefinedep v p f) m) == dsnd (sel_of (vdep (vrefine v p) (vrefine_f v p f)) m) )
   = ()
 
+let vrefinedep_lemma2
+  (v: vprop)
+  (p: ( (t_of v) -> Tot prop))
+  (f: ( t_of (vrefine v p) -> Tot vprop))
+  (m:SM.mem) : Lemma
+  (requires SM.interp (hp_of (vdep (vrefine v p) (vrefine_f v p f))) m)
+  (ensures
+    SM.interp (hp_of (vrefinedep v p f)) m /\
+    dfst (sel_of (vrefinedep v p f) m) == dfst (sel_of (vdep (vrefine v p) (vrefine_f v p f)) m) /\
+    dsnd (sel_of (vrefinedep v p f) m) == dsnd (sel_of (vdep (vrefine v p) (vrefine_f v p f)) m) )
+  = ()
+
 let elim_vrefinedep
   (#opened:_)
   (v: vprop)
@@ -79,17 +91,19 @@ let elim_vrefinedep
   )
   =
     change_slprop_rel (vrefinedep v p f) (vdep (vrefine v p) (vrefine_f v p f))
-      (fun x y -> dfst x == dfst y /\ dsnd x == dsnd y) (vrefinedep_lemma v p f);
+      (fun x y -> dfst x == dfst y /\ dsnd x == dsnd y)
+      (vrefinedep_lemma v p f);
     let x = elim_vdep (vrefine v p) (vrefine_f v p f) in
     elim_vrefine v p;
     change_equal_slprop (vrefine_f v p f x) (f x);
     x
 
-assume val intro_vrefinedep
+#push-options "--compat_pre_core 0"
+let intro_vrefinedep
   (#opened:_)
   (v: vprop)
   (p: ( (t_of v) -> Tot prop))
-  (f: ( (x:t_of v{p x}) -> Tot vprop))
+  (f: ( (t_of (vrefine v p)) -> Tot vprop))
   (f': vprop)
   : SteelGhost unit opened
   (v `star` f')
@@ -105,3 +119,8 @@ assume val intro_vrefinedep
     dfst x2 == h v /\
     dsnd x2 == sn)
   )
+  = intro_vrefine v p;
+    intro_vdep (vrefine v p) f' (vrefine_f v p f);
+    change_slprop_rel (vdep (vrefine v p) (vrefine_f v p f)) (vrefinedep v p f)
+      (fun x y -> dfst x == dfst y /\ dsnd x == dsnd y)
+      (vrefinedep_lemma2 v p f)
