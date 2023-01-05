@@ -22,9 +22,39 @@ open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
 
-
-
 open Slots
+
+let starseq_upd_aux_lemma3
+  (size_class: sc)
+  (md: slab_metadata)
+  (md_as_seq1: G.erased (Seq.lseq U64.t 4))
+  (md_as_seq2: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Lemma
+  (requires (
+    let bm1 = a2bv (G.reveal md_as_seq1) in
+    let bm2 = a2bv (G.reveal md_as_seq2) in
+    Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = true /\
+    bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) false
+  ))
+  (ensures
+    ((slab_vprop_aux_f size_class md_as_seq2 arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)))
+    ==
+    some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos)
+  )
+  =
+  let bm2 = a2bv (G.reveal md_as_seq2) in
+  SeqUtils.init_u32_refined_index (U32.v (nb_slots size_class)) (U32.v pos);
+  assert (Seq.index (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) (U32.v pos) = pos);
+  let k_index = Bitmap5.f #4 (U32.v pos) in
+  assert (Seq.index bm2 k_index = false);
+  equiv_get_a2bv_index size_class md_as_seq2 (U32.v pos);
+  assert (Bitmap4.get md_as_seq2 pos = Seq.index bm2 k_index);
+  assert (Bitmap4.get md_as_seq2 pos = false)
 
 let apply_starseq_upd2 (#opened:_)
   (size_class: sc)
@@ -105,16 +135,19 @@ let apply_starseq_upd2 (#opened:_)
           (U32.v pos))) in
     v2 == Seq.upd v1 (U32.v pos) x)
   =
-  sladmit ()
-
-(*)
-
-
   starseq_upd_aux_lemma1
-    size_class md md_as_seq1 md_as_seq2 arr pos;
+    size_class md md_as_seq1 md_as_seq2 arr pos true;
+
+  let bm1 = a2bv (G.reveal md_as_seq1) in
+  let bm2 = a2bv (G.reveal md_as_seq2) in
+  SeqUtils.lemma_upd_bij bm1 bm2 (Bitmap5.f #4 (U32.v pos)) false;
+  assert (bm1 == Seq.upd bm2 (Bitmap5.f #4 (U32.v pos)) true);
+
   starseq_upd_aux_lemma2
+    size_class md md_as_seq2 md_as_seq1 arr pos;
+  starseq_upd_aux_lemma3
     size_class md md_as_seq1 md_as_seq2 arr pos;
-  starseq_upd3
+  starseq_upd4
     #_
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
@@ -125,3 +158,10 @@ let apply_starseq_upd2 (#opened:_)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (U32.v pos)
+
+(*)
+- ptrdiff
+  - test
+  - Steel model
+- deallocate_slot_aux
+- deallocate_slot
