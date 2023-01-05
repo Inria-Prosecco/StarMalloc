@@ -974,8 +974,7 @@ let allocate_slab_aux_3
   return r
 #pop-options
 
-(*)
-#push-options "--z3rlimit 75"
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let allocate_slab
   (sc: sc)
   (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
@@ -983,7 +982,7 @@ let allocate_slab
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  : Steel (array U8.t & G.erased (x: U32.t{U32.v x <= U32.v metadata_max}))
+  : Steel (array U8.t)
   (
     SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
@@ -997,7 +996,7 @@ let allocate_slab
         A.varray (A.split_r md_region (u32_to_sz v)))
   )
   (fun r ->
-    A.varray (fst r) `star`
+    A.varray r `star`
     SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
     vrefinedep
@@ -1010,10 +1009,17 @@ let allocate_slab
         A.varray (A.split_r md_region (u32_to_sz v)))
   )
   (requires fun h0 ->
-    sel md_count h0 = G.reveal md_count_v /\
-    //Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
-    //Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0) \/
-    U32.v (sel md_count h0) < U32.v metadata_max)
+    let x = h0 (
+      vrefinedep
+        (vptr md_count)
+        //TODO: hideous coercion
+        (fun x -> U32.v x <= U32.v metadata_max == true)
+        (fun v ->
+          A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+          A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+          A.varray (A.split_r md_region (u32_to_sz v)))
+      ) in
+    U32.v (dfst x) < U32.v metadata_max)
   (ensures fun _ _ _ -> True)
   //Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
   //Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0) \/
@@ -1026,31 +1032,31 @@ let allocate_slab
   //let h1 = get () in
   //assert (sel partial_slabs_ptr h1 == partial_slabs);
   //assert (sel empty_slabs_ptr h1 == empty_slabs);
-  SL.cons_imp_not_null (p_partial sc) partial_slabs;
-  SL.cons_imp_not_null (p_empty sc) empty_slabs;
-  let h0 = get () in
-  assert (
-    //not (SL.is_null_t partial_slabs) \/
-    //not (SL.is_null_t empty_slabs) \/
-    U32.v (sel md_count h0) < U32.v metadata_max);
-  //if (not (SL.is_null_t partial_slabs)) then (
-  //  let r = allocate_slab_aux_2 sc
-  //    partial_slabs_ptr empty_slabs_ptr
-  //    partial_slabs empty_slabs in
-  //  return r
-  //) else if (not (SL.is_null_t empty_slabs)) then (
-  //  let r = allocate_slab_aux_1 sc
-  //    partial_slabs_ptr empty_slabs_ptr
-  //    partial_slabs empty_slabs in
-  //  return r
-  //) else (
+  //SL.cons_imp_not_null (p_partial sc) partial_slabs;
+  //SL.cons_imp_not_null (p_empty sc) empty_slabs;
+  //let h0 = get () in
+  //assert (
+  //  //not (SL.is_null_t partial_slabs) \/
+  //  //not (SL.is_null_t empty_slabs) \/
+  //  U32.v (sel md_count h0) < U32.v metadata_max);
+  if (not (SL.is_null_t partial_slabs)) then (
+    let r = allocate_slab_aux_2 sc
+      partial_slabs_ptr empty_slabs_ptr
+      partial_slabs empty_slabs in
+    return r
+  ) else if (not (SL.is_null_t empty_slabs)) then (
+    let r = allocate_slab_aux_1 sc
+      partial_slabs_ptr empty_slabs_ptr
+      partial_slabs empty_slabs in
+    return r
+  ) else (
     // h_malloc alloc_metadata equivalent
     let n_empty_slabs = allocate_slab_aux_3 sc
       empty_slabs_ptr empty_slabs
-      slab_region md_bm_region md_region md_count md_count_v in
+      slab_region md_bm_region md_region md_count in
     let r = allocate_slab_aux_1 sc
       partial_slabs_ptr empty_slabs_ptr
       partial_slabs n_empty_slabs in
     return r
-  //)
+  )
 #pop-options
