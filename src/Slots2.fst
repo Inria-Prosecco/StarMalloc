@@ -241,6 +241,8 @@ let deallocate_slot_aux
   assume (G.reveal bm1 == Seq.upd (G.reveal bm2) (Bitmap5.f #4 (U32.v pos)) true);
   SeqUtils.lemma_upd_bij bm2 bm1 (Bitmap5.f #4 (U32.v pos)) true;
   assert (G.reveal bm2 == Seq.upd (G.reveal bm1) (Bitmap5.f #4 (U32.v pos)) false);
+  //TODO
+  //Bitmap5.bm_unset #4 md pos;
   apply_starseq_upd2
     size_class
     md
@@ -248,12 +250,56 @@ let deallocate_slot_aux
     md_as_seq
     arr
     pos;
-  //TODO
-  //Bitmap5.bm_unset #4 md pos;
   return ()
 
 
+open SteelPtrdiff
 
+module US = FStar.SizeT
+
+// if this function yields true,
+// with an additional condition on the offset,
+// then it means it is a valid pointer that *could* be allocated
+// proper alignment means also one can recover the pos of the slot within the slab
+let deallocate_slot_aux0
+  (size_class: sc)
+  (md: slab_metadata)
+  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (ptr: array U8.t)
+  : Steel bool
+  (
+    A.varray md `star`
+    A.varray ptr `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+  )
+  (fun _ ->
+    A.varray md `star`
+    A.varray ptr `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+  )
+  (requires fun h0 ->
+    same_base_array arr ptr /\
+    A.asel md h0 == G.reveal md_as_seq
+  )
+  (ensures fun _ _ _ -> True)
+  =
+  let diff = ptrdiff (A.ptr_of ptr) (A.ptr_of arr) in
+  assume (US.fits_u32);
+  let size_class_sz = US.uint32_to_sizet size_class in
+  let rem = US.rem diff size_class_sz in
+  let r = rem = 0sz in
+  return r
 
 (*)
 - [ok] ptrdiff
