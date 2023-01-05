@@ -110,7 +110,7 @@ dist/Slabs.c \
 dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
-src/ffs.c \
+src/utils.c \
 src/lib-alloc0.c \
 src/slab-alloc.c \
 src/slab-alloc.h
