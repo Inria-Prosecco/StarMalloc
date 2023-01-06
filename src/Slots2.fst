@@ -385,7 +385,7 @@ let temp (b: bool)
 
 //TODO: check for spec
 //CAUTION
-let deallocate_slot
+let deallocate_slot'
   (size_class: sc)
   (md: slab_metadata)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
@@ -445,6 +445,43 @@ let deallocate_slot
       return (G.hide false)
     )
   )
+#pop-options
+
+#push-options "--z3rlimit 30"
+let deallocate_slot
+  (size_class: sc)
+  (md: slab_metadata)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (ptr: array U8.t)
+  : Steel (G.erased bool)
+  (A.varray ptr `star` slab_vprop size_class arr md)
+  (fun b ->
+    (if (G.reveal b) then emp else A.varray ptr) `star`
+    slab_vprop size_class arr md)
+  (requires fun _ ->
+    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
+    same_base_array arr ptr /\
+    0 <= diff /\
+    diff < U32.v page_size)
+  (ensures fun _ _ _ -> True)
+  =
+  assert (t_of (A.varray md) == Seq.lseq U64.t 4);
+  let md_as_seq = elim_vdep
+    (A.varray md)
+    (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x)
+  in
+  let md_as_seq2 = G.hide ((G.reveal md_as_seq) <: Seq.lseq U64.t 4) in
+  change_slprop_rel
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  let r = deallocate_slot' size_class md md_as_seq2 arr ptr in
+  sladmit ();
+  return r
+#pop-options
+
+
 
 (*)
 - [ok] ptrdiff
