@@ -305,42 +305,6 @@ let allocate_slab_aux_2
   return r
 #pop-options
 
-//TODO:
-//to be improved
-//val alloc_metadata_v2
-//  (size_class: sc)
-//  : Steel (SL.t blob)
-//  emp
-//  (fun r ->
-//    vptr r `vdep` (fun n -> p_empty size_class (SL.get_data n)))
-//  (requires fun h0 -> True)
-//  (ensures fun _ r h1 ->
-//    not (SL.is_null_t r) /\
-//    SL.is_null_t (SL.get_next (sel r h1)))
-
-//#push-options "--z3rlimit 30"
-//let slab_array
-//  (slab_region: array U8.t)
-//  (md_count: U32.t)
-//  : Pure (array U8.t)
-//  (requires
-//    U32.v md_count < U32.v metadata_max /\
-//    A.length slab_region = U32.v page_size * U32.v metadata_max)
-//  (ensures fun r ->
-//    A.length r = U32.v page_size /\
-//    same_base_array r slab_region /\
-//    True)
-//  =
-//  let ptr = A.ptr_of slab_region in
-//  let shift = U32.mul md_count page_size in
-//  //assert (U32.v shift <= U32.v page_size);
-//  //assert_norm (U32.v shift <= FI.max_int U16.n);
-//  //assert (U32.v shift <= FI.max_int U16.n);
-//  let shift_size_t = STU.small_uint32_to_sizet shift in
-//  assert (US.v shift_size_t < A.length arr);
-//  let ptr_shifted = A.ptr_shift ptr shift_size_t in
-//  (| ptr_shifted, G.hide (U32.v size_class) |)
-//#pop-options
 open FStar.Mul
 
 let u32_to_sz
