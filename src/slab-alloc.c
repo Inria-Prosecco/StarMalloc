@@ -79,33 +79,6 @@ void init() {
   //pthread_mutex_unlock(&init_mutex);
 }
 
-Selectors_LList_cell__Slabs_blob*
-Slabs_alloc_metadata(
-  uint32_t sc,
-  uint8_t* slab_region,
-  uint64_t* md_bm_region,
-  Selectors_LList_cell__Slabs_blob* md_region,
-  uint32_t* md_count
-) {
-  size_t slab_offset = ((size_t) *md_count) * page_size;
-  size_t bitmap_offset = ((size_t) *md_count) * sizeof(uint64_t[4]);
-  size_t md_offset = ((size_t) *md_count) * sizeof(Selectors_LList_cell__Slabs_blob);
-  uint8_t* slab = slab_region + slab_offset;
-  uint64_t* bitmap = md_bm_region + bitmap_offset;
-  Selectors_LList_cell__Slabs_blob* md = md_region + md_offset;
-
-  //Slabs_blob b = { .fst = bitmap, .snd = slab};
-  //Selectors_LList_cell__Slabs_blob md_v = { .next = NULL, .data = b};
-  //*md = md_v;
-  md->data.fst = bitmap;
-  md->data.snd = slab;
-  //slab[2] = 1;
-  *md_count += 1;
-  //Slabs_blob b = { .fst = &(md->data).fst, .snd = slab};
-  //*md = mdv;
-  return md;
-}
-
 void slab_lock() {
   if (! init_status) init();
   //pthread_mutex_lock(&s_mutex);

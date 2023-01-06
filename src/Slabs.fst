@@ -552,29 +552,16 @@ let alloc_metadata_aux
   return b
 #pop-options
 
+//TODO: to be removed (vrefs)
 assume val singleton_array_to_ref
-  (#a: Type0)
-  (arr: array a)
-  : Steel (ref a)
+  (arr: array (SL.cell blob))
+  : Steel (ref (SL.cell blob))
   (A.varray arr)
   (fun r -> vptr r)
   (requires fun _ -> A.length arr = 1)
   (ensures fun h0 r h1 ->
     Seq.length (A.asel arr h0) = 1 /\
     Seq.index (A.asel arr h0) 0 == sel r h1
-  )
-
-assume val intro_singleton_llist_no_alloc
-  (#a: Type)
-  (p: a -> vprop)
-  (r: SL.t a)
-  (v: a)
-  : Steel (SL.t a)
-  (vptr r `star` p v)
-  (fun r' -> SL.llist p r')
-  (requires fun h0 -> True)
-  (ensures fun h0 r' h1 ->
-    SL.v_llist p r' h1 == [SL.get_data (sel r h0)]
   )
 
 #push-options "--z3rlimit 30"
@@ -617,9 +604,7 @@ let alloc_metadata_aux2
     (fun _ -> admit ());
   //p_empty_pack size_class b b;
   let r = singleton_array_to_ref (md_array md_region md_count) in
-  let b_cell = SL.mk_cell null b in
-  write r b_cell;
-  let r = intro_singleton_llist_no_alloc (p_empty size_class) r b in
+  let r = SL.intro_singleton_llist_no_alloc (p_empty size_class) r b in
   return (r, G.hide (U32.add md_count 1ul))
 #pop-options
 

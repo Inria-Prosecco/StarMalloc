@@ -125,6 +125,20 @@ val unpack_list (#a:Type0)
       (get_data (sel ptr h1)) :: (v_llist p (get_next n) h1) /\
      sel ptr h1 == n)
 
+val intro_singleton_llist_no_alloc
+  (#a: Type)
+  (p: a -> vprop)
+  (r: t a)
+  (v: a)
+  : Steel (t a)
+  (vptr r `star` p v)
+  (fun r' -> llist p r')
+  (requires fun h0 -> True)
+  (ensures fun h0 r' h1 ->
+    v_llist p r' h1 == [v]
+  )
+
+
 (** A variant of lists with an additional indirection pointer to enable in-place operations **)
 
 val ind_llist_sl (#a:Type0) (p: a -> vprop) (r:ref (t a)) : slprop u#1

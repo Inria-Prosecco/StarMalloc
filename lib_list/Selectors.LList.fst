@@ -196,6 +196,7 @@ let lemma_cons_imp_not_null (#a:Type)
   | [] -> Mem.pure_interp (ptr == null_t) m
   | hd::_ -> pts_to_not_null ptr full_perm hd m
 
+//TODO: remove
 let cons_imp_not_null #opened #a p ptr =
   let h = get () in
   let l = hide (v_llist p ptr h) in
@@ -265,6 +266,7 @@ let intro_cons_lemma (#a:Type0) (p : a -> vprop) (ptr1 ptr2:t a)
   intro_h_exists (x::l') (llist_sl' p ptr1) m;
   llist_sel_interp p ptr1 (x::l') m;
   ()
+
 
 
 //val intro_llist_cons (#a:Type0) (p : a -> vprop)
@@ -538,6 +540,26 @@ let unpack_list #a p ptr =
   from_list_cell p (get_next n);
   return n
 //#pop-options
+
+let intro_singleton_llist_no_alloc
+  (#a: Type)
+  (p: a -> vprop)
+  (r: t a)
+  (v: a)
+  : Steel (t a)
+  (vptr r `star` p v)
+  (fun r' -> llist p r')
+  (requires fun h0 -> True)
+  (ensures fun h0 r' h1 ->
+    v_llist p r' h1 == [v]
+  )
+  =
+  intro_llist_nil #_ #a p;
+  let cell = read r in
+  let new_cell = mk_cell (null_t #a) v in
+  write r new_cell;
+  pack_list p r (null_t #a) v;
+  return r
 
 
 let ind_llist_sl' (#a:Type0) (p: a -> vprop) (r:ref (t a)) (r2:t a) : slprop u#1 =
