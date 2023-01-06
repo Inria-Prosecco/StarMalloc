@@ -4,6 +4,7 @@ module FU = FStar.UInt
 module FI = FStar.Int
 module STU = SizeTUtils
 module US = FStar.SizeT
+module UP = FStar.PtrdiffT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module U16 = FStar.UInt16
@@ -262,31 +263,60 @@ module US = FStar.SizeT
 // then it means it is a valid pointer that *could* be allocated
 // proper alignment means also one can recover the pos of the slot within the slab
 
+let offset_diff (#a: Type)
+  (ptr1: A.ptr a)
+  (ptr2: A.ptr a{A.base ptr1 == A.base ptr2})
+  : GTot int
+  =
+  A.offset ptr1 - A.offset ptr2
+
 #push-options "--z3rlimit 30 --fuel 0 --ifuel 0"
 //TODO: check for spec
 let deallocate_slot_aux0
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
-  : Pure bool
-  (requires
+  : Pure UP.t
+  (requires (
+    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
-    US.v (ptrdiff (A.ptr_of ptr) (A.ptr_of arr)) < U32.v page_size
-  )
+    0 <= diff /\
+    diff < U32.v page_size
+  ))
   (ensures
     fun r ->
-    r == (US.v (ptrdiff (A.ptr_of ptr) (A.ptr_of arr)) % (U32.v size_class) = 0)
+      let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
+      let r = UP.v r in
+      if r = -1
+      then
+        (diff % (U32.v size_class) <> 0)
+      else
+        (diff % (U32.v size_class) == 0 /\
+        r >= 0 /\
+        r == diff / (U32.v size_class))
   )
   =
   let diff = ptrdiff (A.ptr_of ptr) (A.ptr_of arr) in
+  assert (UP.v diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
   assume (US.fits_u32);
-  let size_class_sz = US.uint32_to_sizet size_class in
-  assert (US.v size_class_sz == U32.v size_class);
-  let rem = US.rem diff size_class_sz in
-  assert (US.v rem = US.v diff % U32.v size_class);
-  let r = rem = 0sz in
-  assert (r == (US.v diff % U32.v size_class = 0));
-  r
+  let size_class_z = u32_to_z size_class in
+  assert (UP.v size_class_z == U32.v size_class);
+  let rem = rem diff size_class_z in
+  assert (UP.v rem = UP.v diff % U32.v size_class);
+  let b = rem = (UP.mk 0s) in
+  assert (b == (UP.v diff % U32.v size_class = 0));
+  if b then (
+    let div = div diff size_class_z in
+    assert (b == (UP.v diff % U32.v size_class = 0));
+    assert (UP.v diff % U32.v size_class = 0);
+    assert (UP.v div = UP.v diff / U32.v size_class);
+    assert (UP.v diff >= 0);
+    assume (forall (x: nat) (y:nat{y > 0}). x / y > 0);
+    assert (UP.v div > 0);
+    div
+  ) else (
+    UP.mk (-1s)
+  )
 
 let slot_array_offset_lemma (size_class: sc) (arr: array U8.t) (pos: U32.t)
   : Lemma
@@ -316,31 +346,29 @@ let deallocate_slot_aux1
   (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
   : Lemma
-  (requires
+  (requires (
+    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
-    US.v (ptrdiff (A.ptr_of ptr) (A.ptr_of arr)) < U32.v page_size /\
-    US.v (ptrdiff (A.ptr_of ptr) (A.ptr_of arr)) % (U32.v size_class) == 0
-  )
+    0 <= diff /\
+    diff <= U32.v page_size /\
+    diff % (U32.v size_class) == 0
+  ))
   (ensures (
-    let diff = ptrdiff (A.ptr_of ptr) (A.ptr_of arr) in
-    let pos = US.v diff / U32.v size_class in
+    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
+    let pos = diff / U32.v size_class in
     pos < U32.v (nb_slots size_class) /\
     ptr == slot_array size_class arr (U32.uint_to_t pos)
   ))
   =
-  let diff = ptrdiff (A.ptr_of ptr) (A.ptr_of arr) in
+  let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
   assume (US.fits_u32);
-  let size_class_sz = US.uint32_to_sizet size_class in
-  assert (US.v size_class_sz == U32.v size_class);
-  let pos = US.div diff size_class_sz in
-  let rem = US.rem diff size_class_sz in
-  assume (US.v rem = US.v pos % U32.v size_class);
-  assume (US.v rem == 0);
-  assert (diff = US.mul size_class_sz pos);
-  assume (U32.v (U32.uint_to_t (US.v pos)) < U32.v (nb_slots size_class));
-  slot_array_offset_lemma size_class arr (U32.uint_to_t (US.v pos));
-
-  let ptr' = slot_array size_class arr (U32.uint_to_t (US.v pos)) in
+  let pos = diff / (U32.v size_class) in
+  let rem = diff % (U32.v size_class) in
+  assert (rem = 0);
+  assert (diff = pos * (U32.v size_class));
+  assume (pos < U32.v (nb_slots size_class));
+  slot_array_offset_lemma size_class arr (U32.uint_to_t pos);
+  let ptr' = slot_array size_class arr (U32.uint_to_t pos) in
   assert (A.offset (A.ptr_of ptr) == A.offset (A.ptr_of ptr'));
   A.ptr_base_offset_inj (A.ptr_of ptr) (A.ptr_of ptr');
   assert (A.ptr_of ptr == A.ptr_of ptr');
@@ -355,51 +383,68 @@ let temp (b: bool)
   =
   return ()
 
-(*)
 //TODO: check for spec
-let deallocate_slot_aux1
+//CAUTION
+let deallocate_slot
   (size_class: sc)
   (md: slab_metadata)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
-  : Steel bool
+  : Steel (G.erased bool)
   (
     A.varray md `star`
-    A.varray ptr
-//    starseq
-//      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-//      #(option (Seq.lseq U8.t (U32.v size_class)))
-//      (slab_vprop_aux_f size_class md_as_seq arr)
-//      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-//      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    A.varray ptr `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
   )
-  (fun _ ->
+  (fun b ->
     A.varray md `star`
-    A.varray ptr
-//    starseq
-//      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-//      #(option (Seq.lseq U8.t (U32.v size_class)))
-//      (slab_vprop_aux_f size_class md_as_seq arr)
-//      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
-//      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    (if (G.reveal b) then emp else A.varray ptr) `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
   )
   (requires fun h0 ->
+    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
-    US.v (ptrdiff (A.ptr_of ptr) (A.ptr_of arr)) < U32.v page_size /\
-    US.v (ptrdiff (A.ptr_of ptr) (A.ptr_of arr)) % (U32.v size_class) /\
+    0 <= diff /\
+    diff < U32.v page_size /\
     A.asel md h0 == G.reveal md_as_seq
   )
   (ensures fun _ _ _ -> True)
   =
-  let diff = ptrdiff (A.ptr_of ptr) (A.ptr_of arr) in
   assume (US.fits_u32);
-  let size_class_sz = US.uint32_to_sizet size_class in
-  let rem = US.rem diff size_class_sz in
-  let r = rem = 0sz in
-  return r
-
-
+  assert_norm (4 < FI.max_int 16);
+  let pos = deallocate_slot_aux0 size_class arr ptr in
+  if (pos = UP.mk (-1s)) then (
+    return (G.hide false)
+  ) else (
+    deallocate_slot_aux1 size_class arr ptr;
+    let pos = z_to_u32 pos in
+    let b = Bitmap5.bm_get #4 md pos in
+    if b then (
+      rewrite_slprop
+        (A.varray ptr)
+        ((slab_vprop_aux_f size_class md_as_seq arr)
+          (Seq.index
+            (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+            (U32.v pos)))
+        (fun _ -> admit ());
+      sladmit ();
+      deallocate_slot_aux size_class md md_as_seq arr pos;
+      return (G.hide true)
+    ) else (
+      return (G.hide false)
+    )
+  )
 
 (*)
 - [ok] ptrdiff
@@ -407,4 +452,4 @@ let deallocate_slot_aux1
 - [ok-ish] deallocate_slot_aux
   - bv lemma
   - starseq lemma
-- deallocate_slot
+- [ok-ish] deallocate_slot

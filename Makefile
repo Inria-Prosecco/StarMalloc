@@ -111,6 +111,8 @@ dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 src/utils.c \
+dist/SteelPtrdiff.c \
+dist/SteelPtrdiff.h \
 src/lib-alloc0.c \
 src/slab-alloc.c \
 src/slab-alloc.h

@@ -3,6 +3,7 @@ module SteelPtrdiff
 open Steel.Effect.Atomic
 open Steel.Effect
 module A = Steel.Array
+module U32 = FStar.UInt32
 module US = FStar.SizeT
 module UP = FStar.PtrdiffT
 
@@ -13,11 +14,31 @@ open Utils2
 // that is, explicit the fact that the implemented allocator relies on the ">= 32-bit" assumption
 // TODO: convert back to UP
 assume val ptrdiff (#a: Type) (ptr1 ptr2: A.ptr a)
-  : Pure US.t
+  : Pure UP.t
   (requires A.base ptr1 == A.base ptr2)
   (ensures fun r ->
-    US.v r == A.offset ptr1 - A.offset ptr2
+    UP.v r == A.offset ptr1 - A.offset ptr2
   )
+
+assume val u32_to_z (x: U32.t)
+  : Pure UP.t
+  (requires US.fits_u32 /\ U32.v x < pow2 31)
+  (ensures fun r -> UP.v r == U32.v x)
+
+assume val sz_to_u32 (x: US.t)
+  : Pure U32.t
+  (requires US.fits_u32)
+  (ensures fun r -> U32.v r = US.v x)
+
+assume val z_to_u32 (x: UP.t)
+  : Pure U32.t
+  (requires US.fits_u32 /\ UP.v x >= 0)
+  (ensures fun r -> U32.v r = UP.v x)
+
+assume val z_to_sz (x: UP.t)
+  : Pure US.t
+  (requires UP.v x >= 0)
+  (ensures fun r -> US.v r = UP.v x)
 
 assume val fits_lte (x y: nat) : Lemma
   (requires (x <= y /\ UP.fits y))
@@ -31,9 +52,14 @@ let mod_spec (a:nat{UP.fits a}) (b:nat{UP.fits b /\ b <> 0}) : GTot (n:nat{UP.fi
   res
 
 // TODO: check why SizeT uses mod_spec
-assume val rem (a: UP.t) (b: UP.t{UP.v b <> 0}) : Pure UP.t
+assume val rem (a: UP.t) (b: UP.t{UP.v b > 0}) : Pure UP.t
   (requires True)
   (ensures (fun c -> admit (); mod_spec (UP.v a) (UP.v b) == UP.v c))
+
+
+assume val div (a: UP.t) (b: UP.t{UP.v b > 0}) : Pure UP.t
+  (requires True)
+  (ensures (fun c -> (UP.v a) / (UP.v b) == UP.v c))
 
 
 // uintptr_t modelization
