@@ -397,8 +397,6 @@ let pack_sc_lemma
   Mem.intro_h_exists b.scs_v (size_class_sl' r) m;
   size_class_sl'_witinv r
 
-//TODO: FIXME: BLOCKER
-//#push-options "--lax"
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let pack_sc (#opened:_)
   (r: ref size_class_struct)
@@ -425,8 +423,10 @@ let pack_sc (#opened:_)
     b.md_count_v == sel scs.md_count h0
   )
   =
-  let h0 = get () in
-  assert (scs == sel r h0);
+  sladmit ();
+  admit ()
+  //let h0 = get () in
+  //assert (scs == sel r h0);
   //let partial_slabs_v : list blob
   //  = G.hide (SL.v_ind_llist (p_partial scs.size) scs.partial_slabs h0) in
   //let empty_slabs_v : list blob
@@ -437,49 +437,53 @@ let pack_sc (#opened:_)
   //  = G.hide (A.asel scs.md_bm_region h0) in
   //let md_region_v : Seq.seq blob
   //  = G.hide (A.asel scs.md_region h0) in
+  //let md_count_v : U32.t
+  //  = G.hide (sel scs.md_count h0) in
   ////let m : G.erased ((size_class_struct * list blob) * list blob) =
   //  //G.hide ((scs, G.reveal partial_slabs_v), G.reveal empty_slabs_v) in
   //let b : blob2 = G.hide ({
   //  scs_v = scs;
   //  partial_slabs_v = G.reveal partial_slabs_v;
   //  empty_slabs_v = G.reveal empty_slabs_v;
-  //  md_counter_v = U32.v scs.metadata_allocated;
+  //  md_count_v = G.reveal md_count_v;
   //  slab_region_v = G.reveal slab_region_v;
   //  md_bm_region_v = G.reveal md_bm_region_v;
   //  md_region_v = G.reveal md_region_v;
   //}) in
-  //change_slprop_rel
+  //change_equal_slprop
   //  (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
   //  SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
   //  A.varray scs.slab_region `star`
   //  A.varray scs.md_bm_region `star`
-  //  A.varray scs.md_region)
+  //  A.varray scs.md_region `star`
+  //  vptr scs.md_count)
   //  (SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
   //  SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
   //  A.varray b.scs_v.slab_region `star`
   //  A.varray b.scs_v.md_bm_region `star`
-  //  A.varray b.scs_v.md_region)
-  //  (fun x y -> x == y)
-  //  (fun _ -> ());
+  //  A.varray b.scs_v.md_region `star`
+  //  vptr b.scs_v.md_count);
   //change_slprop
   //  (vptr r `star`
   //  SL.ind_llist (p_partial b.scs_v.size) b.scs_v.partial_slabs `star`
   //  SL.ind_llist (p_empty b.scs_v.size) b.scs_v.empty_slabs `star`
   //  A.varray b.scs_v.slab_region `star`
   //  A.varray b.scs_v.md_bm_region `star`
-  //  A.varray b.scs_v.md_region)
+  //  A.varray b.scs_v.md_region `star`
+  //  vptr b.scs_v.md_count)
   //  (size_class_full r)
-  //  (((((b.scs_v,
+  //  ((((((b.scs_v,
   //    b.partial_slabs_v),
   //    b.empty_slabs_v),
   //    b.slab_region_v),
   //    b.md_bm_region_v),
-  //    b.md_region_v)
+  //    b.md_region_v),
+  //    b.md_count_v)
   //  b
-  //  (fun m -> admit ())
+  //  (fun m -> admit ());
   //  //(fun m -> pack_sc_lemma r (G.reveal b) m);
-  sladmit ();
-  admit ()
+  //sladmit ();
+  //admit ()
 #pop-options
 
 let temp (r: ref size_class_struct)
@@ -495,18 +499,20 @@ let temp (r: ref size_class_struct)
   pack_sc r scs;
   return 0ul
 
-let size_class_refinement (b2: blob2)
-  =
-  Cons? b2.partial_slabs_v \/
-  Cons? b2.empty_slabs_v \/
-  U32.v b2.md_count_v < U32.v metadata_max
-
 let size_class_vprop (r: ref size_class_struct)
   =
-  size_class_full r
-  `vrefine`
-  (fun b2 -> size_class_refinement b2)
+  SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
+  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+  vrefinedep
+    (vptr md_count)
+    //TODO: hideous coercion
+    (fun x -> U32.v x <= U32.v metadata_max == true)
+    (fun v ->
+      A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz v)))
 
+(*)
 let temp2 (r: ref size_class_struct)
   : Steel U32.t
   (size_class_vprop r)
