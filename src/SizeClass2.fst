@@ -19,6 +19,8 @@ open Steel.Reference
 open Utils2
 open Slabs
 
+#push-options "--ide_id_info_off"
+
 //TODO: remove blob, use ptrdiff style
 //TODO: improve max_sc bound, use better spec'ed ffs64
 
@@ -49,6 +51,57 @@ type blob2 = {
 
 open SteelVRefineDep
 
+let size_class_vprop_aux
+  (scs: size_class_struct)
+  : vprop
+  =
+  SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
+  SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
+  vrefinedep
+    (vptr scs.md_count)
+    //TODO: hideous coercion
+    (fun x -> U32.v x <= U32.v metadata_max == true)
+    (fun v ->
+      A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size))) `star`
+      A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+      A.varray (A.split_r scs.md_region (u32_to_sz v))
+    )
+
+let size_class_vprop
+  (r: ref size_class_struct)
+  : vprop
+  =
+  vdep
+    (vptr r)
+    (fun scs -> size_class_vprop_aux scs)
+
+#restart-solver
+
+#push-options "--z3rlimit 20"
+let size_class_vprop_test
+  (r: ref size_class_struct)
+  : Steel unit
+  (size_class_vprop r)
+  (fun _ -> size_class_vprop r)
+  (requires fun h0 -> True)
+  (ensures fun h0 _ h1 ->
+    h0 (size_class_vprop r)
+    ==
+    h1 (size_class_vprop r)
+  )
+  =
+  let x0 = gget (size_class_vprop r) in
+  let x = elim_vdep (vptr r) (fun scs -> size_class_vprop_aux scs) in
+  intro_vdep
+    (vptr r)
+    (size_class_vprop_aux (G.reveal x))
+    (fun scs -> size_class_vprop_aux scs);
+  let x1 = gget (size_class_vprop r) in
+  assert (dfst x1 == dfst x0);
+  assert (dsnd x1 == dsnd x0)
+#pop-options
+
+(*)
 let size_class_sl'
   (r: ref size_class_struct)
   (scs: size_class_struct)
