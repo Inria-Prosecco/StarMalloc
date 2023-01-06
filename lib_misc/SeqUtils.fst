@@ -28,6 +28,20 @@ let lemma_index_slice (#a:Type) (s:Seq.seq a)
   =
   Seq.lemma_index_slice s i j k
 
+let lemma_upd_bij (#a:Type)
+  (s1 s2:Seq.seq a)
+  (n:nat{n < Seq.length s1})
+  (v: a)
+  : Lemma
+  (requires
+    Seq.length s1 == Seq.length s2 /\
+    s2 == Seq.upd s1 n v)
+  (ensures
+    s1 == Seq.upd s2 n (Seq.index s1 n)
+  )
+  =
+  Seq.lemma_eq_intro s1 (Seq.upd s2 n (Seq.index s1 n))
+
 noextract
 let init_nat (len: nat)
   : Seq.lseq (k:nat{k < len}) len

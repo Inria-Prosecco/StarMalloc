@@ -154,13 +154,14 @@ let starseq_upd_aux_lemma1_aux
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  (v: bool)
   (k:nat{k <> (U32.v pos) /\ k < U32.v (nb_slots size_class)})
   : Lemma
   (requires (
     let bm1 = a2bv (G.reveal md_as_seq1) in
     let bm2 = a2bv (G.reveal md_as_seq2) in
-    Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false /\
-    bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) true
+    Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = v /\
+    bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) (not v)
   ))
   (ensures
     (slab_vprop_aux_f size_class md_as_seq2 arr)
@@ -177,13 +178,12 @@ let starseq_upd_aux_lemma1_aux
   let bm1 = a2bv (G.reveal md_as_seq1) in
   let bm2 = a2bv (G.reveal md_as_seq2) in
   let k_index = Bitmap5.f #4 k in
-  Seq.lemma_index_upd2 bm1 (Bitmap5.f #4 (U32.v pos)) true k_index;
+  Seq.lemma_index_upd2 bm1 (Bitmap5.f #4 (U32.v pos)) (not v) k_index;
   assert (Seq.index bm1 k_index = Seq.index bm2 k_index);
   equiv_get_a2bv_index size_class md_as_seq1 k;
   equiv_get_a2bv_index size_class md_as_seq2 k;
   assert (Bitmap4.get md_as_seq1 (U32.uint_to_t k) == Seq.index bm1 k_index);
   assert (Bitmap4.get md_as_seq2 (U32.uint_to_t k) == Seq.index bm2 k_index);
-  assert (Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false);
   SeqUtils.init_u32_refined_index (U32.v (nb_slots size_class)) k;
   assert (Seq.index (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) k = U32.uint_to_t k)
 
@@ -194,12 +194,13 @@ let starseq_upd_aux_lemma1
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  (v: bool)
   : Lemma
   (requires (
     let bm1 = a2bv (G.reveal md_as_seq1) in
     let bm2 = a2bv (G.reveal md_as_seq2) in
-    Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = false /\
-    bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) true
+    Seq.index bm1 (Bitmap5.f #4 (U32.v pos)) = v /\
+    bm2 == Seq.upd bm1 (Bitmap5.f #4 (U32.v pos)) (not v)
   ))
   (ensures
     forall (k:nat{k <> (U32.v pos) /\ k < U32.v (nb_slots size_class)}).
@@ -216,7 +217,7 @@ let starseq_upd_aux_lemma1
   =
   Classical.forall_intro (Classical.move_requires (
     starseq_upd_aux_lemma1_aux
-      size_class md md_as_seq1 md_as_seq2 arr pos
+      size_class md md_as_seq1 md_as_seq2 arr pos v
   ))
 
 let starseq_upd_aux_lemma2
@@ -318,7 +319,7 @@ let apply_starseq_upd (#opened:_)
     v2 == Seq.upd v1 (U32.v pos) None)
   =
   starseq_upd_aux_lemma1
-    size_class md md_as_seq1 md_as_seq2 arr pos;
+    size_class md md_as_seq1 md_as_seq2 arr pos false;
   starseq_upd_aux_lemma2
     size_class md md_as_seq1 md_as_seq2 arr pos;
   starseq_upd3
