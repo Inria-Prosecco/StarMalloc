@@ -391,7 +391,7 @@ let deallocate_slot'
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
-  : Steel (G.erased bool)
+  : Steel bool
   (
     A.varray md `star`
     A.varray ptr `star`
@@ -404,7 +404,7 @@ let deallocate_slot'
   )
   (fun b ->
     A.varray md `star`
-    (if (G.reveal b) then emp else A.varray ptr) `star`
+    (if b then emp else A.varray ptr) `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
       #(option (Seq.lseq U8.t (U32.v size_class)))
@@ -425,7 +425,7 @@ let deallocate_slot'
   assert_norm (4 < FI.max_int 16);
   let pos = deallocate_slot_aux0 size_class arr ptr in
   if (pos = UP.mk (-1s)) then (
-    return (G.hide false)
+    return false
   ) else (
     deallocate_slot_aux1 size_class arr ptr;
     let pos = z_to_u32 pos in
@@ -440,9 +440,9 @@ let deallocate_slot'
         (fun _ -> admit ());
       sladmit ();
       deallocate_slot_aux size_class md md_as_seq arr pos;
-      return (G.hide true)
+      return true
     ) else (
-      return (G.hide false)
+      return false
     )
   )
 #pop-options
@@ -453,10 +453,10 @@ let deallocate_slot
   (md: slab_metadata)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
-  : Steel (G.erased bool)
+  : Steel bool
   (A.varray ptr `star` slab_vprop size_class arr md)
   (fun b ->
-    (if (G.reveal b) then emp else A.varray ptr) `star`
+    (if b then emp else A.varray ptr) `star`
     slab_vprop size_class arr md)
   (requires fun _ ->
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
