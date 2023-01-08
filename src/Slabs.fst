@@ -478,7 +478,7 @@ let allocate_slab_aux_1
     (SL.get_data n_empty)
     b;
   let r = allocate_slot_refined sc (fst b) (snd b) in
-  let cond = allocate_slab_aux_cond sc b in
+  let cond = allocate_slab_aux_cond sc (fst b) (snd b) in
   if cond then (
     allocate_slab_aux_1_full
       sc
@@ -1166,7 +1166,7 @@ let allocate_slab_aux_3
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let allocate_slab
   (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
+  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref (SL.t blob))
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
@@ -1175,6 +1175,7 @@ let allocate_slab
   (
     SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+    SL.ind_llist (p_full sc) full_slabs_ptr `star`
     vrefinedep
       (vptr md_count)
       //TODO: hideous coercion
@@ -1188,6 +1189,7 @@ let allocate_slab
     A.varray r `star`
     SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+    SL.ind_llist (p_full sc) full_slabs_ptr `star`
     vrefinedep
       (vptr md_count)
       //TODO: hideous coercion
@@ -1207,6 +1209,9 @@ let allocate_slab
     = SL.unpack_ind (p_partial sc) partial_slabs_ptr in
   let empty_slabs
     = SL.unpack_ind (p_empty sc) empty_slabs_ptr in
+  let full_slabs
+    = SL.unpack_ind (p_full sc) full_slabs_ptr in
+
   //let h1 = get () in
   //assert (sel partial_slabs_ptr h1 == partial_slabs);
   //assert (sel empty_slabs_ptr h1 == empty_slabs);
@@ -1221,11 +1226,12 @@ let allocate_slab
     let r = allocate_slab_aux_2 sc
       partial_slabs_ptr empty_slabs_ptr
       partial_slabs empty_slabs in
+    SL.pack_ind (p_full sc) full_slabs_ptr full_slabs;
     return r
   ) else if (not (SL.is_null_t empty_slabs)) then (
     let r = allocate_slab_aux_1 sc
-      partial_slabs_ptr empty_slabs_ptr
-      partial_slabs empty_slabs in
+      partial_slabs_ptr empty_slabs_ptr full_slabs_ptr
+      partial_slabs empty_slabs full_slabs in
     return r
   ) else (
     let x = gget (
@@ -1244,8 +1250,8 @@ let allocate_slab
       empty_slabs_ptr empty_slabs
       slab_region md_bm_region md_region md_count in
     let r = allocate_slab_aux_1 sc
-      partial_slabs_ptr empty_slabs_ptr
-      partial_slabs n_empty_slabs in
+      partial_slabs_ptr empty_slabs_ptr full_slabs_ptr
+      partial_slabs n_empty_slabs full_slabs in
     return r
   )
 #pop-options
