@@ -64,8 +64,7 @@ let allocate_slot_refined
     let blob1 : (t_of (slab_vprop size_class arr md))
       = h1 (slab_vprop size_class arr md) in
     let v1 : Seq.lseq U64.t 4 = dfst blob1 in
-    is_partial size_class v1)
-    //\/ is_full size_class v1)
+    not (is_empty size_class v1))
   =
   admit ();
   allocate_slot size_class md arr
@@ -533,6 +532,11 @@ let allocate_slab_aux_2
     (SL.get_data n_partial)
     b;
   let r = allocate_slot_refined sc (fst b) (snd b) in
+  let blob0
+    : G.erased (t_of (slab_vprop sc (snd b) (fst b)))
+    = gget (slab_vprop sc (snd b) (fst b)) in
+  let v0 : G.erased (Seq.lseq U64.t 4) = dfst blob0 in
+  assume (is_partial sc v0);
   p_partial_pack sc
     b
     (SL.get_data n_partial);
