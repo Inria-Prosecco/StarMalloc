@@ -30,6 +30,7 @@ type size_class_struct = {
   size: sc;
   partial_slabs: ref (SL.t blob);
   empty_slabs: ref (SL.t blob);
+  full_slabs: ref (SL.t blob);
   md_count: ref U32.t;
   slab_region: slab_region:array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size};
   //TODO: duplicata due to karamel extraction issue
@@ -43,6 +44,7 @@ type blob2 = {
   scs_v: size_class_struct;
   partial_slabs_v: list blob;
   empty_slabs_v: list blob;
+  full_slabs_v: list blob;
   md_count_v: U32.t;
   slab_region_v: Seq.seq U8.t;
   md_bm_region_v: Seq.seq U64.t;
@@ -57,6 +59,7 @@ let size_class_vprop_aux
   =
   SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
   SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
+  SL.ind_llist (p_full scs.size) scs.full_slabs `star`
   vrefinedep
     (vptr scs.md_count)
     //TODO: hideous coercion
@@ -120,6 +123,7 @@ let allocate_size_class
     (size_class_vprop_aux scs)
     (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
     SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
+    SL.ind_llist (p_full scs.size) scs.full_slabs `star`
     vrefinedep
       (vptr scs.md_count)
       //TODO: hideous coercion
@@ -133,7 +137,7 @@ let allocate_size_class
     (fun x y -> x == y)
     (fun _ -> admit ());
   let result = allocate_slab
-    scs.size scs.partial_slabs scs.empty_slabs
+    scs.size scs.partial_slabs scs.empty_slabs scs.full_slabs
     scs.slab_region scs.md_bm_region scs.md_region
     scs.md_count in
   sladmit ();
