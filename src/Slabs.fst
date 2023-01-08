@@ -392,28 +392,59 @@ let allocate_slab_aux_1_full
     empty_slabs_ptr
     (SL.get_next cell_content)
 
+#push-options "--z3rlimit 50"
 let allocate_slab_aux_cond
   (size_class: sc)
-  (b: blob)
+  (md: slab_metadata)
+  (arr: array U8.t{A.length arr = U32.v page_size})
   : Steel bool
-  (slab_vprop size_class (snd b) (fst b))
-  (fun _ -> slab_vprop size_class (snd b) (fst b))
+  (slab_vprop size_class arr md)
+  (fun _ -> slab_vprop size_class arr md)
   (requires fun _ -> True)
   (ensures fun h0 r h1 ->
     let blob0
-      : t_of (slab_vprop size_class (snd b) (fst b))
-      = h0 (slab_vprop size_class (snd b) (fst b)) in
+      : t_of (slab_vprop size_class arr md)
+      = h0 (slab_vprop size_class arr md) in
     let blob1
-      : t_of (slab_vprop size_class (snd b) (fst b))
-      = h1 (slab_vprop size_class (snd b) (fst b)) in
+      : t_of (slab_vprop size_class arr md)
+      = h1 (slab_vprop size_class arr md) in
     let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     blob0 == blob1 /\
     r == is_full size_class v0
   )
   =
-  sladmit ();
+  //TODO: FIXME
   admit ();
+  let blob0
+    : G.erased (t_of (slab_vprop size_class arr md))
+    = gget (slab_vprop size_class arr md) in
+  let v0 : G.erased (Seq.lseq U64.t 4) = dfst blob0 in
+  assert (t_of (A.varray md) == Seq.lseq U64.t 4);
+  let md_as_seq = elim_vdep
+    (A.varray md)
+    (fun (x: Seq.lseq U64.t 4) ->
+      slab_vprop_aux size_class arr x)
+  in
+  let md_as_seq2 = G.hide ((G.reveal md_as_seq) <: Seq.lseq U64.t 4) in
+  change_slprop_rel
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  let h0 = get () in
+  let v1 = G.hide (A.asel md h0) in
+  assert (G.reveal v0 == G.reveal v1);
+  let r = is_full_s size_class md in
+  assert (r == is_full size_class (G.reveal v1));
+  assert (r == is_full size_class (G.reveal v0));
+  intro_vdep
+    (A.varray md)
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
+    (fun (x: Seq.lseq U64.t 4) ->
+      slab_vprop_aux size_class arr x);
   return true
+#pop-options
+#pop-options
 
 #push-options "--z3rlimit 75"
 inline_for_extraction noextract
