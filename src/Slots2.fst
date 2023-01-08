@@ -494,14 +494,16 @@ let deallocate_slot
 sides:
 - remove src/Slots remaining admit with src/Slots2 lemma
 - remove Slots2 admits + aux lemmas (some work ahead!)
+- merge extraction to main when extractable
 
 roadmap:
+- [ok] add has_free_slot & co extractable versions (with proper spec ofc)
 - add full_slabs list: src/Slabs, src/SizeClass
-- add has_free_slot & co extractable versions (with proper spec ofc)
 - remove allocate_slot_refined (src/Slabs):
   postcond is is_partial \/ is_full (as nb_slots size_class > 1, exclusive for now)
 - patch allocate_slab_aux_1
 - patch allocate_slab_aux_2
 - flattening lemma sketch (large ghost seq will be used to keep information for flattened state, hopefully no issue with starseq)
+=> besoin de listes doublement chaînées
 NOTE: all of this does not block having an extractable version
 - use within_bounds from src/Sizeclass2 to get a deallocate_sizeclass function

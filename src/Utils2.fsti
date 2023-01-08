@@ -74,6 +74,92 @@ let has_free_slot
   (bound > 2 && (U64.v (Seq.index s 2) <> max)) ||
   (bound > 3 && (U64.v (Seq.index s 3) <> max))
 
+let has_free_slot_s
+  (size_class: sc)
+  (md: slab_metadata)
+  : Steel bool
+  (A.varray md) (fun _ -> A.varray md)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == A.asel md h0 /\
+    r == has_free_slot size_class (A.asel md h0)
+  )
+  =
+  let bound = U32.div (nb_slots size_class) 64ul in
+  let v0 = A.index md 0sz in
+  let v1 = A.index md 1sz in
+  let v2 = A.index md 2sz in
+  let v3 = A.index md 3sz in
+  (not (U64.eq v0 max64)) ||
+  (U32.gt bound 1ul && (not (U64.eq v1 max64))) ||
+  (U32.gt bound 2ul && (not (U64.eq v2 max64))) ||
+  (U32.gt bound 3ul && (not (U64.eq v3 max64)))
+
+noextract
+let is_empty
+  (size_class: sc)
+  (s: Seq.lseq U64.t 4)
+  : bool
+  =
+  let max = FStar.Int.max_int U64.n in
+  let bound = U32.v (nb_slots size_class) / 64 in
+  (U64.v (Seq.index s 0) = 0) &&
+  (bound <= 1 || (U64.v (Seq.index s 1) = 0)) &&
+  (bound <= 2 || (U64.v (Seq.index s 2) = 0)) &&
+  (bound <= 3 || (U64.v (Seq.index s 3) = 0))
+
+let is_empty_s
+  (size_class: sc)
+  (md: slab_metadata)
+  : Steel bool
+  (A.varray md) (fun _ -> A.varray md)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == A.asel md h0 /\
+    r == is_empty size_class (A.asel md h0)
+  )
+  =
+  let bound = U32.div (nb_slots size_class) 64ul in
+  let v0 = A.index md 0sz in
+  let v1 = A.index md 1sz in
+  let v2 = A.index md 2sz in
+  let v3 = A.index md 3sz in
+  (U64.eq v0 0UL) &&
+  (U32.lte bound 1ul || (U64.eq v1 0UL)) &&
+  (U32.lte bound 2ul || (U64.eq v2 0UL)) &&
+  (U32.lte bound 3ul || (U64.eq v3 0UL))
+
+noextract
+let is_partial
+  (size_class: sc)
+  (s: Seq.lseq U64.t 4)
+  : bool
+  =
+  has_free_slot size_class s && (not (is_empty size_class s))
+
+let is_partial_s
+  (size_class: sc)
+  (md: slab_metadata)
+  : Steel bool
+  (A.varray md) (fun _ -> A.varray md)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == A.asel md h0 /\
+    r == is_partial size_class (A.asel md h0)
+  )
+  =
+  let b1 = has_free_slot_s size_class md in
+  let b2 = is_empty_s size_class md in
+  b1 && not b2
+
+noextract
+let is_full
+  (size_class: sc)
+  (s: Seq.lseq U64.t 4)
+  : bool
+  =
+  not (has_free_slot size_class s)
+
 //CAUTION: assume val
 val ffs64 (x: U64.t)
   : Pure U32.t
@@ -82,27 +168,6 @@ val ffs64 (x: U64.t)
     U32.v r < 64 /\
     FU.nth (U64.v x) (U64.n - U32.v r - 1) = false
   )
-
-noextract
-let is_empty
-  (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : prop
-  =
-  let max = FStar.Int.max_int U64.n in
-  let bound = U32.v (nb_slots size_class) / 64 in
-  (U64.v (Seq.index s 0) = 0) /\
-  (bound > 1 && (U64.v (Seq.index s 1) = 0)) /\
-  (bound > 2 && (U64.v (Seq.index s 2) = 0)) /\
-  (bound > 3 && (U64.v (Seq.index s 3) = 0))
-
-noextract
-let is_partial
-  (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : prop
-  =
-  ~ (is_empty size_class s) /\ has_free_slot size_class s
 
 open FStar.Mul
 let lemma_div (x y z: nat)
