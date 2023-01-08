@@ -412,12 +412,6 @@ let allocate_slab_aux_cond
     r == is_full size_class v0
   )
   =
-  //TODO: FIXME
-  admit ();
-  let blob0
-    : G.erased (t_of (slab_vprop size_class arr md))
-    = gget (slab_vprop size_class arr md) in
-  let v0 : G.erased (Seq.lseq U64.t 4) = dfst blob0 in
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let md_as_seq = elim_vdep
     (A.varray md)
@@ -430,18 +424,13 @@ let allocate_slab_aux_cond
     (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
     (fun x y -> x == y)
     (fun _ -> ());
-  let h0 = get () in
-  let v1 = G.hide (A.asel md h0) in
-  assert (G.reveal v0 == G.reveal v1);
   let r = is_full_s size_class md in
-  assert (r == is_full size_class (G.reveal v1));
-  assert (r == is_full size_class (G.reveal v0));
   intro_vdep
     (A.varray md)
     (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
     (fun (x: Seq.lseq U64.t 4) ->
       slab_vprop_aux size_class arr x);
-  return true
+  return r
 #pop-options
 #pop-options
 
