@@ -932,6 +932,7 @@ let alloc_metadata
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul))))
     (fun x y -> x == y)
+    //TODO/FIXME @Aymeric
     (fun m -> admit (); alloc_metadata_sl2 slab_region md_bm_region md_region md_count_v md_count_v0 m);
   write md_count (U32.add md_count_v0 1ul);
   let md_count_v1 = read md_count in
