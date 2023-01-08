@@ -311,8 +311,7 @@ let deallocate_slot_aux0
     assert (UP.v diff % U32.v size_class = 0);
     assert (UP.v div = UP.v diff / U32.v size_class);
     assert (UP.v diff >= 0);
-    assume (forall (x: nat) (y:nat{y > 0}). x / y > 0);
-    assert (UP.v div > 0);
+    assert (UP.v div >= 0);
     div
   ) else (
     UP.mk (-1s)
@@ -494,6 +493,7 @@ let deallocate_slot
 
 sides:
 - remove src/Slots remaining admit with src/Slots2 lemma
+  - + c2 lemma on selectors?
 - remove Slots2 admits + aux lemmas (some work ahead!)
 - merge extraction to main when extractable
 
@@ -505,8 +505,17 @@ roadmap:
   - allocate_slot_refined (src/Slabs):
     [ok] - improve spec
     postcond is is_partial \/ is_full (as nb_slots size_class > 1, exclusive for now)
-    - remove admit
-- flattening lemma sketch (large ghost seq will be used to keep information for flattened state, hopefully no issue with starseq)
-=> besoin de listes doublement chaînées
-NOTE: all of this does not block having an extractable version
+    [todo] - remove admit
+
+[!] - flattening lemma sketch (large ghost seq will be used to keep information for flattened state, hopefully no issue with starseq)
+[!] - doubly-linked lists with additional predicate over arrayrefs...
+- test Aymeric F* branch
+  - a cast to ptrdiff_t from u32_t is required, that is, a cast from size_t to ptrdiff_t
 - use within_bounds from src/Sizeclass2 to get a deallocate_sizeclass function
+  => within_bounds should be a Steel function with live arrays
+- free: expected_size requirement: refine starseq...
+- ptrdiff: array requirement: add a ghost_split on region_start everywhere
+- deallocation
+- initialization to Steel
+- sizeclass selection
+- mmap flags check
