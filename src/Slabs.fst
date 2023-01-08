@@ -295,7 +295,127 @@ let p_empty_pack (#opened:_)
 #pop-options
 #pop-options
 
+
+#push-options "--compat_pre_typed_indexed_effects"
 #push-options "--z3rlimit 30"
+let allocate_slab_aux_1_partial
+  (size_class: sc)
+  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
+  (partial_slabs empty_slabs: SL.t blob)
+  (cell_ptr: SL.t blob)
+  (cell_content: SL.cell blob)
+  (b: blob)
+  : Steel unit
+  (
+    slab_vprop size_class (snd b) (fst b) `star`
+    (vptr cell_ptr `star`
+    vptr empty_slabs_ptr `star`
+    SL.llist (p_empty size_class) (SL.get_next cell_content) `star`
+    vptr partial_slabs_ptr `star`
+    SL.llist (p_partial size_class) partial_slabs)
+  )
+  (fun r ->
+    SL.ind_llist (p_empty size_class) empty_slabs_ptr `star`
+    SL.ind_llist (p_partial size_class) partial_slabs_ptr
+  )
+  (requires fun h0 ->
+    let slab_vprop_data
+      : t_of (slab_vprop size_class (snd b) (fst b))
+      = h0 (slab_vprop size_class (snd b) (fst b)) in
+    let md_seq : Seq.lseq U64.t 4 = dfst slab_vprop_data in
+    sel partial_slabs_ptr h0 == partial_slabs /\
+    sel cell_ptr h0 == cell_content /\
+    is_partial size_class md_seq /\
+    SL.get_data cell_content == b)
+  (ensures fun h0 _ h1 ->
+    True
+  )
+  =
+  p_partial_pack size_class b (SL.get_data cell_content);
+  let n_partial = SL.mk_cell partial_slabs (SL.get_data cell_content) in
+  write cell_ptr n_partial;
+  SL.pack_list (p_partial size_class)
+    cell_ptr
+    partial_slabs
+    (SL.get_data cell_content);
+  write partial_slabs_ptr cell_ptr;
+  SL.pack_ind (p_partial size_class) partial_slabs_ptr cell_ptr;
+  write empty_slabs_ptr (SL.get_next cell_content);
+  SL.pack_ind (p_empty size_class)
+    empty_slabs_ptr
+    (SL.get_next cell_content)
+
+let allocate_slab_aux_1_full
+  (size_class: sc)
+  (full_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
+  (full_slabs empty_slabs: SL.t blob)
+  (cell_ptr: SL.t blob)
+  (cell_content: SL.cell blob)
+  (b: blob)
+  : Steel unit
+  (
+    slab_vprop size_class (snd b) (fst b) `star`
+    (vptr cell_ptr `star`
+    vptr empty_slabs_ptr `star`
+    SL.llist (p_empty size_class) (SL.get_next cell_content) `star`
+    vptr full_slabs_ptr `star`
+    SL.llist (p_full size_class) full_slabs)
+  )
+  (fun r ->
+    SL.ind_llist (p_empty size_class) empty_slabs_ptr `star`
+    SL.ind_llist (p_full size_class) full_slabs_ptr
+  )
+  (requires fun h0 ->
+    let slab_vprop_data
+      : t_of (slab_vprop size_class (snd b) (fst b))
+      = h0 (slab_vprop size_class (snd b) (fst b)) in
+    let md_seq : Seq.lseq U64.t 4 = dfst slab_vprop_data in
+    sel full_slabs_ptr h0 == full_slabs /\
+    sel cell_ptr h0 == cell_content /\
+    is_full size_class md_seq /\
+    SL.get_data cell_content == b)
+  (ensures fun h0 _ h1 ->
+    True
+  )
+  =
+  p_full_pack size_class b (SL.get_data cell_content);
+  let n_full = SL.mk_cell full_slabs (SL.get_data cell_content) in
+  write cell_ptr n_full;
+  SL.pack_list (p_full size_class)
+    cell_ptr
+    full_slabs
+    (SL.get_data cell_content);
+  write full_slabs_ptr cell_ptr;
+  SL.pack_ind (p_full size_class) full_slabs_ptr cell_ptr;
+  write empty_slabs_ptr (SL.get_next cell_content);
+  SL.pack_ind (p_empty size_class)
+    empty_slabs_ptr
+    (SL.get_next cell_content)
+
+let allocate_slab_aux_cond
+  (size_class: sc)
+  (b: blob)
+  : Steel bool
+  (slab_vprop size_class (snd b) (fst b))
+  (fun _ -> slab_vprop size_class (snd b) (fst b))
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    let blob0
+      : t_of (slab_vprop size_class (snd b) (fst b))
+      = h0 (slab_vprop size_class (snd b) (fst b)) in
+    let blob1
+      : t_of (slab_vprop size_class (snd b) (fst b))
+      = h1 (slab_vprop size_class (snd b) (fst b)) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    blob0 == blob1 /\
+    r == is_full size_class v0
+  )
+  =
+  sladmit ();
+  admit ();
+  return true
+
+#push-options "--z3rlimit 75"
 inline_for_extraction noextract
 let allocate_slab_aux_1
   (sc: sc)
@@ -327,21 +447,33 @@ let allocate_slab_aux_1
     (SL.get_data n_empty)
     b;
   let r = allocate_slot_refined sc (fst b) (snd b) in
-  p_partial_pack sc
-    b
-    (SL.get_data n_empty);
-  let n_partial = SL.mk_cell partial_slabs (SL.get_data n_empty) in
-  write empty_slabs n_partial;
-  SL.pack_list (p_partial sc)
-    empty_slabs
-    partial_slabs
-    (SL.get_data n_empty);
-  write partial_slabs_ptr empty_slabs;
-  SL.pack_ind (p_partial sc) partial_slabs_ptr empty_slabs;
-  SL.pack_ind (p_full sc) full_slabs_ptr full_slabs;
-  write empty_slabs_ptr (SL.get_next n_empty);
-  SL.pack_ind (p_empty sc) empty_slabs_ptr (SL.get_next n_empty);
-  return r
+  let cond = allocate_slab_aux_cond sc b in
+  if cond then (
+    allocate_slab_aux_1_full
+      sc
+      full_slabs_ptr
+      empty_slabs_ptr
+      full_slabs
+      (SL.get_next n_empty)
+      empty_slabs
+      n_empty
+      b;
+    SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
+    return r
+  ) else (
+    allocate_slab_aux_1_partial
+      sc
+      partial_slabs_ptr
+      empty_slabs_ptr
+      partial_slabs
+      (SL.get_next n_empty)
+      empty_slabs
+      n_empty
+      b;
+    SL.pack_ind (p_full sc) full_slabs_ptr full_slabs;
+    return r
+  )
+#pop-options
 
 inline_for_extraction noextract
 let allocate_slab_aux_2

@@ -160,6 +160,21 @@ let is_full
   =
   not (has_free_slot size_class s)
 
+let is_full_s
+  (size_class: sc)
+  (md: slab_metadata)
+  : Steel bool
+  (A.varray md) (fun _ -> A.varray md)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == A.asel md h0 /\
+    r == is_full size_class (A.asel md h0)
+  )
+  =
+  let b = has_free_slot_s size_class md in
+  not b
+
+
 //CAUTION: assume val
 val ffs64 (x: U64.t)
   : Pure U32.t
