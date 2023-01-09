@@ -1142,6 +1142,77 @@ let allocate_slab_aux_3
   return r
 #pop-options
 
+#push-options "--z3rlimit 30"
+let test
+  (b: bool)
+  (arr: array U8.t)
+  : Steel (array U8.t)
+  (A.varray arr)
+  (fun r -> (if b then (A.varray r) else emp) <: vprop)
+  (requires fun _ -> A.is_full_array arr)
+  (ensures fun _ _ _ -> True)
+  =
+  if b then (
+    sladmit ();
+    return arr
+  ) else (
+    assert (b = false);
+    A.free arr;
+    sladmit ();
+    return (A.null #U8.t)
+  )
+
+#push-options "--compat_pre_typed_indexed_effects"
+assume val allocate_slab_check_md_count
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_count: ref U32.t)
+  : Steel bool
+  (
+    vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))
+  )
+  (fun _ ->
+    vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))
+  )
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    let blob0
+      = h0 (vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))) in
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))) in
+    blob0 == blob1 /\
+    r == (U32.v (dfst blob0) < U32.v metadata_max)
+  )
+
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let allocate_slab
   (sc: sc)
@@ -1150,7 +1221,7 @@ let allocate_slab
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  : Steel (array U8.t)
+  : Steel (array U8.t & G.erased bool)
   (
     SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
@@ -1165,8 +1236,8 @@ let allocate_slab
         A.varray (A.split_r md_region (u32_to_sz v)))
   )
   (fun r ->
-    A.varray r `star`
-    SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
+    (if (G.reveal (snd r)) then A.varray (fst r) else emp) `star`
+    (SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
     SL.ind_llist (p_full sc) full_slabs_ptr `star`
     vrefinedep
@@ -1176,13 +1247,10 @@ let allocate_slab
       (fun v ->
         A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
         A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
+        A.varray (A.split_r md_region (u32_to_sz v))))
   )
   (requires fun h0 -> True)
   (ensures fun _ _ _ -> True)
-  //Cons? (SL.v_ind_llist (p_partial sc) partial_slabs_ptr h0) \/
-  //Cons? (SL.v_ind_llist (p_empty sc) empty_slabs_ptr h0) \/
-  //U32.v (sel md_count h0) < U32.v metadata_max)
   =
   let partial_slabs
     = SL.unpack_ind (p_partial sc) partial_slabs_ptr in
@@ -1190,28 +1258,17 @@ let allocate_slab
     = SL.unpack_ind (p_empty sc) empty_slabs_ptr in
   let full_slabs
     = SL.unpack_ind (p_full sc) full_slabs_ptr in
-
-  //let h1 = get () in
-  //assert (sel partial_slabs_ptr h1 == partial_slabs);
-  //assert (sel empty_slabs_ptr h1 == empty_slabs);
-  //SL.cons_imp_not_null (p_partial sc) partial_slabs;
-  //SL.cons_imp_not_null (p_empty sc) empty_slabs;
-  //let h0 = get () in
-  //assert (
-  //  //not (SL.is_null_t partial_slabs) \/
-  //  //not (SL.is_null_t empty_slabs) \/
-  //  U32.v (sel md_count h0) < U32.v metadata_max);
   if (not (SL.is_null_t partial_slabs)) then (
     let r = allocate_slab_aux_2 sc
       partial_slabs_ptr empty_slabs_ptr
       partial_slabs empty_slabs in
     SL.pack_ind (p_full sc) full_slabs_ptr full_slabs;
-    return r
+    return (r, G.hide true)
   ) else if (not (SL.is_null_t empty_slabs)) then (
     let r = allocate_slab_aux_1 sc
       partial_slabs_ptr empty_slabs_ptr full_slabs_ptr
       partial_slabs empty_slabs full_slabs in
-    return r
+    return (r, G.hide true)
   ) else (
     let x = gget (
       vrefinedep
@@ -1223,15 +1280,25 @@ let allocate_slab
           A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
           A.varray (A.split_r md_region (u32_to_sz v)))
       ) in
-    // TODO: add a check, emit an error and return null (null arrays)
-    assume (U32.v (dfst x) < U32.v metadata_max);
-    // h_malloc alloc_metadata equivalent
-    let n_empty_slabs = allocate_slab_aux_3 sc
-      empty_slabs_ptr empty_slabs
-      slab_region md_bm_region md_region md_count in
-    let r = allocate_slab_aux_1 sc
-      partial_slabs_ptr empty_slabs_ptr full_slabs_ptr
-      partial_slabs n_empty_slabs full_slabs in
-    return r
+    let b = allocate_slab_check_md_count slab_region md_bm_region md_region md_count in
+    if b then (
+      let n_empty_slabs = allocate_slab_aux_3 sc
+        empty_slabs_ptr empty_slabs
+        slab_region md_bm_region md_region md_count in
+      let r = allocate_slab_aux_1 sc
+        partial_slabs_ptr empty_slabs_ptr full_slabs_ptr
+        partial_slabs n_empty_slabs full_slabs in
+      change_equal_slprop
+        (A.varray r)
+        (if b then A.varray r else emp);
+      return (r, G.hide b)
+    ) else (
+      let r = A.null #U8.t in
+      change_equal_slprop
+        emp
+        (if b then A.varray r else emp);
+      sladmit ();
+      return (r, G.hide b)
+    )
   )
 #pop-options
