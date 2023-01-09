@@ -40,20 +40,22 @@ let v_c
 let v_c_dep
   (n: Ghost.erased nat)
   (#a: Type0)
+  (p: a -> vprop)
   (r: t a)
   (nllist: (n': Ghost.erased nat) -> (r: t a  { Ghost.reveal n' < Ghost.reveal n }) -> Pure vprop (requires True) (ensures (fun y -> t_of y == list a)))
   (c: normal (t_of (vrefine (vptr r) (v_c n r))))
 : Tot vprop
-= nllist c.tail_fuel c.next
+= nllist c.tail_fuel c.next `star` p c.data
 
 let v_c_l_rewrite
   (n: Ghost.erased nat)
   (#a: Type0)
+  (p: a -> vprop)
   (r: t a)
   (nllist: (n': Ghost.erased nat) -> (r: t a { Ghost.reveal n' < Ghost.reveal n }) -> Pure vprop (requires True) (ensures (fun y -> t_of y == list a)))
-  (res: normal (t_of ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n r nllist)))
+  (res: normal (t_of ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n p r nllist)))
 : Tot (list a)
-= let (| c, l |) = res in
+= let (| c, (l, _) |) = res in
   c.data :: l
 
 let rec nllist
@@ -67,7 +69,7 @@ let rec nllist
   (decreases (Ghost.reveal n))
 = if is_null_t r
   then emp `vrewrite` v_null_rewrite a
-  else ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n r (nllist a p)) `vrewrite` v_c_l_rewrite n r (nllist a p)
+  else ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n p r (nllist a p)) `vrewrite` v_c_l_rewrite n p r (nllist a p)
 
 let nllist_eq_not_null
   (a: Type0)
@@ -77,12 +79,12 @@ let nllist_eq_not_null
 : Lemma
   (requires (is_null r == false))
   (ensures (
-    nllist a p n r == ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n r (nllist a p)) `vrewrite` v_c_l_rewrite n r (nllist a p)
+    nllist a p n r == ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n p r (nllist a p)) `vrewrite` v_c_l_rewrite n p r (nllist a p)
   ))
 = assert_norm (nllist a p n r ==
     begin if is_null r
     then emp `vrewrite` v_null_rewrite a
-    else ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n r (nllist a p)) `vrewrite` v_c_l_rewrite n r (nllist a p)
+    else ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n p r (nllist a p)) `vrewrite` v_c_l_rewrite n p r (nllist a p)
     end
   )
 
@@ -92,7 +94,7 @@ let llist_vdep
   (r: t a)
   (c: normal (t_of (vptr r)))
 : Tot vprop
-= nllist a p c.tail_fuel c.next
+= nllist a p c.tail_fuel c.next `star` p c.data
 
 let llist_vrewrite
   (#a: Type0)
@@ -100,7 +102,7 @@ let llist_vrewrite
   (r: t a)
   (cl: normal (t_of (vptr r `vdep` llist_vdep p r)))
 : GTot (list a)
-= (dfst cl).data :: dsnd cl
+= (dfst cl).data :: fst (dsnd cl)
 
 let llist0
   (#a: Type0)
@@ -144,11 +146,11 @@ let nllist_of_llist0
     intro_vdep
       (vptr r `vrefine` v_c res r)
       (llist_vdep p r (Ghost.reveal gk))
-      (v_c_dep res r (nllist a p));
-    intro_vrewrite ((vptr r `vrefine` v_c res r) `vdep` v_c_dep res r (nllist a p)) (v_c_l_rewrite res r (nllist a p));
+      (v_c_dep res p r (nllist a p));
+    intro_vrewrite ((vptr r `vrefine` v_c res r) `vdep` v_c_dep res p r (nllist a p)) (v_c_l_rewrite res p r (nllist a p));
     nllist_eq_not_null a p res r;
     change_equal_slprop
-      (((vptr r `vrefine` v_c res r) `vdep` v_c_dep res r (nllist a p)) `vrewrite` v_c_l_rewrite res r (nllist a p))
+      (((vptr r `vrefine` v_c res r) `vdep` v_c_dep res p r (nllist a p)) `vrewrite` v_c_l_rewrite res p r (nllist a p))
       (nllist a p res r);
     res
   end
@@ -177,13 +179,13 @@ let llist0_of_nllist
     nllist_eq_not_null a p n r;
     change_equal_slprop
       (nllist a p n r)
-      (((vptr r `vrefine` v_c n r) `vdep` v_c_dep n r (nllist a p)) `vrewrite` v_c_l_rewrite n r (nllist a p));
-    elim_vrewrite ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n r (nllist a p)) (v_c_l_rewrite n r (nllist a p));
-    let gk = elim_vdep (vptr r `vrefine` v_c n r) (v_c_dep n r (nllist a p)) in
+      (((vptr r `vrefine` v_c n r) `vdep` v_c_dep n p r (nllist a p)) `vrewrite` v_c_l_rewrite n p r (nllist a p));
+    elim_vrewrite ((vptr r `vrefine` v_c n r) `vdep` v_c_dep n p r (nllist a p)) (v_c_l_rewrite n p r (nllist a p));
+    let gk = elim_vdep (vptr r `vrefine` v_c n r) (v_c_dep n p r (nllist a p)) in
     elim_vrefine (vptr r) (v_c n r);
     intro_vdep
       (vptr r)
-      (v_c_dep n r (nllist a p) (Ghost.reveal gk))
+      (v_c_dep n p r (nllist a p) (Ghost.reveal gk))
       (llist_vdep p r);
     intro_vrewrite (vptr r `vdep` llist_vdep p r) (llist_vrewrite p r);
     change_equal_slprop
