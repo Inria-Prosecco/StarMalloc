@@ -349,7 +349,7 @@ let deallocate_slot_aux2
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff /\
-    diff <= U32.v page_size /\
+    diff < U32.v page_size /\
     diff % (U32.v size_class) == 0
   ))
   (ensures (
@@ -365,6 +365,10 @@ let deallocate_slot_aux2
   let rem = diff % (U32.v size_class) in
   assert (rem = 0);
   assert (diff = pos * (U32.v size_class));
+  // TODO: FIXME
+  // nb_slots size_class = page_size / size_class
+  // diff < page_size
+  // pos = diff / size_class
   assume (pos < U32.v (nb_slots size_class));
   slot_array_offset_lemma size_class arr (U32.uint_to_t pos);
   let ptr' = slot_array size_class arr (U32.uint_to_t pos) in
@@ -513,6 +517,7 @@ let deallocate_slot
     (fun x y -> x == y)
     (fun _ -> ());
   let r = deallocate_slot' size_class md md_as_seq2 arr ptr in
+  // TODO: update md, add intro_vdep, remove sladmit
   sladmit ();
   return r
 #pop-options
