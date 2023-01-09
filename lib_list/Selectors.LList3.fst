@@ -242,84 +242,105 @@ let intro_llist_nil #opened #a p =
     (llist0 p (null_t #a));
   llist_of_llist0 p (null_t #a)
 
-let is_nil' (#opened: _) (#a:Type0) (ptr:t a)
-  : SteelGhost unit opened (llist ptr) (fun _ -> llist ptr)
+/// A very generic SteelGhost lemma, relating null pointers to the Nil selector.
+/// Most of the stateful lemmas in the interface are more restricted versions of is_nil
+let is_nil (#opened: _) (#a:Type0) (p: a -> vprop) (ptr:t a)
+  : SteelGhost unit opened (llist p ptr) (fun _ -> llist p ptr)
           (requires fun _ -> True)
           (ensures fun h0 _ h1 ->
             let res = is_null ptr in
-            (res == true <==> ptr == null_llist #a) /\
-            v_llist ptr h0 == v_llist ptr h1 /\
-            res == Nil? (v_llist ptr h1))
+            (res == true <==> ptr == null_t #a) /\
+            v_llist p ptr h0 == v_llist p ptr h1 /\
+            res == Nil? (v_llist p ptr h1))
 =
   let res = is_null ptr in
-  llist0_of_llist ptr;
+  llist0_of_llist p ptr;
   if res
   then begin
     change_equal_slprop
-      (llist0 ptr)
+      (llist0 p ptr)
       (emp `vrewrite` v_null_rewrite a);
     elim_vrewrite emp (v_null_rewrite a);
     intro_vrewrite emp (v_null_rewrite a);
     change_equal_slprop
       (emp `vrewrite` v_null_rewrite a)
-      (llist0 ptr)
+      (llist0 p ptr)
   end else begin
     change_equal_slprop
-      (llist0 ptr)
-      ((vptr ptr `vdep` llist_vdep ptr) `vrewrite` llist_vrewrite ptr);
-      elim_vrewrite (vptr ptr `vdep` llist_vdep ptr) (llist_vrewrite ptr);
-      intro_vrewrite (vptr ptr `vdep` llist_vdep ptr) (llist_vrewrite ptr);
+      (llist0 p ptr)
+      ((vptr ptr `vdep` llist_vdep p ptr) `vrewrite` llist_vrewrite p ptr);
+      elim_vrewrite (vptr ptr `vdep` llist_vdep p ptr) (llist_vrewrite p ptr);
+      intro_vrewrite (vptr ptr `vdep` llist_vdep p ptr) (llist_vrewrite p ptr);
     change_equal_slprop
-      ((vptr ptr `vdep` llist_vdep ptr) `vrewrite` llist_vrewrite ptr)
-      (llist0 ptr)
+      ((vptr ptr `vdep` llist_vdep p ptr) `vrewrite` llist_vrewrite p ptr)
+      (llist0 p ptr)
   end;
-  llist_of_llist0 ptr
+  llist_of_llist0 p ptr
 
-let is_nil
-  #a ptr
-= is_nil' ptr;
-  return (is_null ptr)
+let elim_llist_nil p r = is_nil p r
 
-let intro_llist_cons
-  #a ptr1 ptr2
+let cons_is_not_null #opened #a p r = is_nil p r
+
+let cons_imp_not_null p r = is_nil p r
+
+let pack_list
+  #a p ptr1 ptr2 c
 =
-  llist0_of_llist ptr2;
-  let n = nllist_of_llist0 ptr2 in
+  llist0_of_llist p ptr2;
+  let n = nllist_of_llist0 p ptr2 in
   (* set the fuel of the new cons cell *)
-  let c = read ptr1 in
-  let c' = {c with tail_fuel = n} in
-  write ptr1 c' ;
+  let x = read ptr1 in
+  let x' = {x with tail_fuel = n} in
+  write ptr1 x' ;
+
   (* actually cons the cell *)
   vptr_not_null ptr1;
   intro_vdep
     (vptr ptr1)
-    (nllist a n ptr2)
-    (llist_vdep ptr1);
+    (nllist a p n ptr2 `star` p c)
+    (llist_vdep p ptr1);
   intro_vrewrite
-    (vptr ptr1 `vdep` llist_vdep ptr1)
-    (llist_vrewrite ptr1);
+    (vptr ptr1 `vdep` llist_vdep p ptr1)
+    (llist_vrewrite p ptr1);
   change_equal_slprop
-    ((vptr ptr1 `vdep` llist_vdep ptr1) `vrewrite` llist_vrewrite ptr1)
-    (llist0 ptr1);
-  llist_of_llist0 ptr1
+    ((vptr ptr1 `vdep` llist_vdep p ptr1) `vrewrite` llist_vrewrite p ptr1)
+    (llist0 p ptr1);
+  llist_of_llist0 p ptr1
 
-let tail
-  #a ptr
+let unpack_list
+  #a p ptr
 =
-  llist0_of_llist ptr;
+  llist0_of_llist p ptr;
   change_equal_slprop
-    (llist0 ptr)
-    ((vptr ptr `vdep` llist_vdep ptr) `vrewrite` llist_vrewrite ptr);
-  elim_vrewrite (vptr ptr `vdep` llist_vdep ptr) (llist_vrewrite ptr);
-  let gc = elim_vdep (vptr ptr) (llist_vdep ptr) in
+    (llist0 p ptr)
+    ((vptr ptr `vdep` llist_vdep p ptr) `vrewrite` llist_vrewrite p ptr);
+  elim_vrewrite (vptr ptr `vdep` llist_vdep p ptr) (llist_vrewrite p ptr);
+  let gc = elim_vdep (vptr ptr) (llist_vdep p ptr) in
   (* reset tail fuel to match mk_cell *)
   let c = read ptr in
-  let c' = {c with tail_fuel = Ghost.hide 0} in
-  write ptr c' ;
   (* actually destruct the list *)
   change_equal_slprop
-    (llist_vdep ptr (Ghost.reveal gc))
-    (nllist a c.tail_fuel c.next);
-  llist0_of_nllist c.tail_fuel c.next;
-  llist_of_llist0 c.next;
-  return c.next
+    (llist_vdep p ptr (Ghost.reveal gc))
+    (nllist a p c.tail_fuel c.next `star` p c.data);
+  llist0_of_nllist p c.tail_fuel c.next;
+  llist_of_llist0 p c.next;
+  return c
+
+let intro_singleton_llist_no_alloc #a p r v =
+  intro_llist_nil p;
+  llist0_of_llist p (null_t #a);
+  let n = nllist_of_llist0 p (null_t #a) in
+  let c = {next = null_t #a; data = v; tail_fuel = n} in
+  write r c;
+  vptr_not_null r;
+  intro_vdep
+    (vptr r)
+    (nllist a p n (null_t #a) `star` p v)
+    (llist_vdep p r);
+  intro_vrewrite
+    (vptr r `vdep` llist_vdep p r)
+    (llist_vrewrite p r);
+    change_equal_slprop
+    ((vptr r `vdep` llist_vdep p r) `vrewrite` llist_vrewrite p r)
+    (llist0 p r);
+  llist_of_llist0 p r

@@ -101,11 +101,11 @@ val cons_imp_not_null (#opened:inames) (#a:Type0) (p: a -> vprop) (ptr:t a)
 // val nil_is_null
 // val not_null_is_cons
 
-val pack_list (#opened:inames) (#a:Type0)
+val pack_list (#a:Type0)
   (p: a -> vprop)
   (ptr1 ptr2: t a)
   (x: a)
-  : SteelGhost unit opened
+  : Steel unit
   (vptr ptr1 `star`
   llist p ptr2 `star`
   p x)
@@ -136,13 +136,14 @@ val intro_singleton_llist_no_alloc
   (p: a -> vprop)
   (r: t a)
   (v: a)
-  : Steel (t a)
+  : Steel unit
   (vptr r `star` p v)
-  (fun r' -> llist p r')
+  (fun r' -> llist p r)
   (requires fun h0 -> True)
-  (ensures fun h0 r' h1 ->
-    v_llist p r' h1 == [v]
+  (ensures fun h0 _ h1 ->
+    v_llist p r h1 == [v]
   )
+
 
 (** A variant of lists with an additional indirection pointer to enable in-place operations **)
 
