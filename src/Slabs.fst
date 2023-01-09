@@ -66,6 +66,7 @@ let allocate_slot_refined
     let v1 : Seq.lseq U64.t 4 = dfst blob1 in
     not (is_empty size_class v1))
   =
+  // to be removed: prove refinement
   admit ();
   allocate_slot size_class md arr
 
@@ -525,6 +526,7 @@ let allocate_slab_aux_2
     : G.erased (t_of (slab_vprop sc (snd b) (fst b)))
     = gget (slab_vprop sc (snd b) (fst b)) in
   let v0 : G.erased (Seq.lseq U64.t 4) = dfst blob0 in
+  // TODO: false, but ok for now as nb_slots size_class > 1
   assume (is_partial sc v0);
   p_partial_pack sc
     b
@@ -540,6 +542,7 @@ let allocate_slab_aux_2
 
 open FStar.Mul
 
+// TODO: to be removed/move apart ; use stdlib
 let u32_to_sz
   (x:U32.t)
   : Tot (y:US.t{US.v y == U32.v x})
@@ -695,16 +698,6 @@ let md_region_mon_split
     (A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul))))
     (fun _ -> ())
 
-let intro_slab_vprop
-  (#opened: _)
-  (size_class: sc)
-  (b: blob)
-  : SteelGhostT unit opened
-  (A.varray (snd b) `star` A.varray (fst b))
-  (fun _ -> slab_vprop size_class (snd b) (fst b))
-  =
-  sladmit ()
-
 #push-options "--z3rlimit 30"
 let alloc_metadata_aux
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -749,8 +742,10 @@ let alloc_metadata_aux
     (A.varray (snd b) `star` A.varray (fst b))
     (fun x y -> x == y)
     (fun _ -> ());
-  admit ();
+  // prove A.varray slab -> slab_vprop transformation
   sladmit ();
+  // prove never-used slab bitmap metadata is empty
+  admit ();
   return b
 #pop-options
 
@@ -798,6 +793,7 @@ let alloc_metadata_aux2
   =
   let b : blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
   let h0 = get () in
+  // prove is_empty sc x ==> x = Seq.create 4 0UL
   assume (A.asel (fst b) h0 == Seq.create 4 0UL);
   intro_vdep
     (A.varray (fst b))
@@ -807,6 +803,7 @@ let alloc_metadata_aux2
       : G.erased (t_of (slab_vprop size_class (snd b) (fst b)))
       = gget (slab_vprop size_class (snd b) (fst b)) in
   let v0 : G.erased (Seq.lseq U64.t 4) = dfst blob0 in
+  // fix it...
   assume (G.reveal v0 == A.asel (fst b) h0);
   p_empty_pack size_class b b;
   let r = singleton_array_to_ref (md_array md_region md_count) in
@@ -1247,6 +1244,7 @@ let allocate_slab
           A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
           A.varray (A.split_r md_region (u32_to_sz v)))
       ) in
+    // TODO: add a check, emit an error and return null (null arrays)
     assume (U32.v (dfst x) < U32.v metadata_max);
     // h_malloc alloc_metadata equivalent
     let n_empty_slabs = allocate_slab_aux_3 sc
