@@ -537,15 +537,15 @@ roadmap:
 [~ok] - add full_slabs list: src/Slabs, src/SizeClass
   [ok] - patch allocate_slab_aux_1
   [sk] - patch allocate_slab_aux_2 (later)
-  - allocate_slot_refined (src/Slabs):
+  [~ok] - allocate_slot_refined (src/Slabs):
     [ok] - improve spec
     postcond is is_partial \/ is_full (as nb_slots size_class > 1, exclusive for now)
-    [todo] - remove admit
+    [ok-ish] - remove admit
+    [sk] - prove Utils2 lemma
 
 [!] - flattening lemma sketch (large ghost seq will be used to keep information for flattened state, hopefully no issue with starseq)
 [!] - doubly-linked lists with additional predicate over arrayrefs...
 - test Aymeric F* branch
-  - a cast to ptrdiff_t from u32_t is required, that is, a cast from size_t to ptrdiff_t
 - use within_bounds from src/Sizeclass2 to get a deallocate_sizeclass function
   => within_bounds should be a Steel function with live arrays
 - free: expected_size requirement: refine starseq...

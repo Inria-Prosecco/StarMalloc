@@ -521,7 +521,7 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     get_free_slot_aux size_class bitmap 0ul
   )
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 50"
 let allocate_slot
   (size_class: sc)
   (md: slab_metadata)
@@ -541,7 +541,9 @@ let allocate_slot
       = h1 (slab_vprop size_class arr md) in
     let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     let v1 : Seq.lseq U64.t 4 = dfst blob1 in
-    True)
+    not (is_empty size_class v1))
+    //U32.v (G.reveal (snd r)) < U64.n * 4 /\
+    //v1 == Bitmap4.set v0 (G.reveal (snd r)))
     //TODO: is it worth having such a precise spec?
     //requires having pos as ghost in returned value
     //considering the case of multiple consecutive allocations
@@ -565,6 +567,8 @@ let allocate_slot
     md_as_seq2
     arr
     pos in
+  let md_as_seq3 = gget (A.varray md) in
+  set_lemma_nonzero size_class (G.reveal md_as_seq2) (G.reveal md_as_seq3) pos;
   intro_vdep
     (A.varray md)
     (slab_vprop_aux size_class arr (Bitmap4.set md_as_seq2 pos))

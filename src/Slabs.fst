@@ -48,28 +48,6 @@ open Slots
 
 #set-options "--ide_id_info_off"
 
-let allocate_slot_refined
-  (size_class: sc)
-  (md: slab_metadata)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  : Steel (array U8.t)
-  (slab_vprop size_class arr md)
-  (fun r -> A.varray r `star` slab_vprop size_class arr md)
-  (requires fun h0 ->
-    let blob0 : (t_of (slab_vprop size_class arr md))
-      = h0 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
-    has_free_slot size_class v0)
-  (ensures fun h0 _ h1 ->
-    let blob1 : (t_of (slab_vprop size_class arr md))
-      = h1 (slab_vprop size_class arr md) in
-    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
-    not (is_empty size_class v1))
-  =
-  // to be removed: prove refinement
-  admit ();
-  allocate_slot size_class md arr
-
 unfold
 let blob
   = slab_metadata &
@@ -466,7 +444,7 @@ let allocate_slab_aux_1
   p_empty_unpack sc
     (SL.get_data n_empty)
     b;
-  let r = allocate_slot_refined sc (fst b) (snd b) in
+  let r = allocate_slot sc (fst b) (snd b) in
   let cond = allocate_slab_aux_cond sc (fst b) (snd b) in
   if cond then (
     allocate_slab_aux_1_full
@@ -521,7 +499,7 @@ let allocate_slab_aux_2
   p_partial_unpack sc
     (SL.get_data n_partial)
     b;
-  let r = allocate_slot_refined sc (fst b) (snd b) in
+  let r = allocate_slot sc (fst b) (snd b) in
   let blob0
     : G.erased (t_of (slab_vprop sc (snd b) (fst b)))
     = gget (slab_vprop sc (snd b) (fst b)) in

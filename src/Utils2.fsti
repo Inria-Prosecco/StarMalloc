@@ -215,3 +215,26 @@ let array_to_bv_slice
     FU.to_vec #64 (U64.v x)))
   =
   Bitmap4.array_to_bv_lemma_upd_set_aux4 s0 (i*64)
+
+open FStar.UInt
+let set_lemma_nonzero
+  (size_class: sc)
+  (md_as_seq1: Seq.lseq U64.t 4)
+  (md_as_seq2: Seq.lseq U64.t 4)
+  (pos: U32.t{U32.v pos < U64.n * 4})
+  //: Steel unit opened
+  //(A.varray md) (fun _ -> A.varray md)
+  : Lemma
+  (requires
+    md_as_seq2 == Bitmap4.set md_as_seq1 pos /\
+    U32.v pos < U32.v (nb_slots size_class))
+  (ensures not (is_empty size_class md_as_seq2))
+  =
+  admit ();
+  let i1 = U32.div pos 64ul in
+  let i2 = U32.rem pos 64ul in
+  assert (Seq.index md_as_seq2 (U32.v i1) == Bitmap3.set (Seq.index md_as_seq1 (U32.v i1)) i2);
+  assume (Seq.index md_as_seq2 (U32.v i1) <> 0UL);
+  //assert (Seq.index md_as_seq2 (U32.v ))
+  //admit ();
+  ()
