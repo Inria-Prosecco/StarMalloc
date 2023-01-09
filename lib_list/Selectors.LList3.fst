@@ -406,14 +406,20 @@ let indllist0_of_indllist
     (fun _ -> ())
 
 let unpack_ind #a p r =
-  let h0 = get () in
   indllist0_of_indllist p r;
+  assert_norm (ind_llist0 p r == ((vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)));
+  change_equal_slprop (ind_llist0 p r) ((vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r));
   elim_vrewrite
     (vptr r `vdep` llist p)
     (ind_llist_vrewrite p r);
   let gr = elim_vdep (vptr r) (llist p) in
-  let h1 = gget (llist p gr) in
-  assume (Ghost.reveal h1 == (Ghost.reveal h0) (ind_llist p r));
   let r2 = read r in
   change_equal_slprop (llist p gr) (llist p r2);
   return r2
+
+let pack_ind p r r2 =
+  intro_vdep (vptr r) (llist p r2) (llist p);
+  intro_vrewrite (vptr r `vdep` llist p) (ind_llist_vrewrite p r);
+  assert_norm (ind_llist0 p r == ((vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)));
+  change_equal_slprop ((vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)) (ind_llist0 p r);
+  indllist_of_indllist0 p r
