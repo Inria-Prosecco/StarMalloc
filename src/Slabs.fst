@@ -723,7 +723,8 @@ let alloc_metadata_aux
   ////`star` vptr md_count)
   (fun r ->
     //TODO: these 2 varrays will be packed into slab_vprop, then into the p_empty part of SL.llist
-    A.varray (snd r) `star`
+    //A.varray (snd r) `star`
+    slab_vprop_aux size_class (snd r) (Seq.create 4 0UL) `star`
     A.varray (fst r) `star`
     //TODO: this varray will be somehow casted into the ref that corresponds to the SL.t type
     A.varray (md_array md_region md_count) `star`
@@ -732,7 +733,9 @@ let alloc_metadata_aux
     A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul)))
   )
   (requires fun h0 -> True)
-  (ensures fun h0 r h1 -> True)
+  (ensures fun h0 r h1 ->
+    is_empty size_class (A.asel (fst r) h1)
+  )
   =
   slab_region_mon_split slab_region md_count;
   md_bm_region_mon_split md_bm_region md_count;
@@ -746,8 +749,11 @@ let alloc_metadata_aux
     (A.varray (snd b) `star` A.varray (fst b))
     (fun x y -> x == y)
     (fun _ -> ());
+  admit ();
+  sladmit ();
   return b
 #pop-options
+
 
 //TODO: to be removed (vrefs)
 assume val singleton_array_to_ref
@@ -761,7 +767,7 @@ assume val singleton_array_to_ref
     Seq.index (A.asel arr h0) 0 == sel r h1
   )
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 75"
 let alloc_metadata_aux2
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
   (size_class: sc)
@@ -791,15 +797,18 @@ let alloc_metadata_aux2
   )
   =
   let b : blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
-  //let h = get () in
-  //assume (is_empty size_class (A.asel (fst b) h));
-  intro_slab_vprop size_class b;
-  change_slprop_rel
-    (slab_vprop size_class (snd b) (fst b))
-    (p_empty size_class b)
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  //p_empty_pack size_class b b;
+  let h0 = get () in
+  assume (A.asel (fst b) h0 == Seq.create 4 0UL);
+  intro_vdep
+    (A.varray (fst b))
+    (slab_vprop_aux size_class (snd b) (Seq.create 4 0UL))
+    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (snd b) md_as_seq);
+   let blob0
+      : G.erased (t_of (slab_vprop size_class (snd b) (fst b)))
+      = gget (slab_vprop size_class (snd b) (fst b)) in
+  let v0 : G.erased (Seq.lseq U64.t 4) = dfst blob0 in
+  assume (G.reveal v0 == A.asel (fst b) h0);
+  p_empty_pack size_class b b;
   let r = singleton_array_to_ref (md_array md_region md_count) in
   let r = SL.intro_singleton_llist_no_alloc (p_empty size_class) r b in
   return (r, G.hide (U32.add md_count 1ul))
