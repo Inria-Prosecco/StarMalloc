@@ -1162,8 +1162,8 @@ let test
     return (A.null #U8.t)
   )
 
-#push-options "--compat_pre_typed_indexed_effects"
-assume val allocate_slab_check_md_count
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
+let allocate_slab_check_md_count
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
@@ -1212,6 +1212,47 @@ assume val allocate_slab_check_md_count
     blob0 == blob1 /\
     r == (U32.v (dfst blob0) < U32.v metadata_max)
   )
+  =
+  let x0 = gget (vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))) in
+  let x
+    = elim_vrefinedep
+    (vptr md_count)
+    (fun x -> U32.v x <= U32.v metadata_max == true)
+    (fun v ->
+      A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz v)))
+  in
+  let r = read md_count in
+  intro_vrefinedep
+    (vptr md_count)
+    (fun x -> U32.v x <= U32.v metadata_max == true)
+    (fun v ->
+      A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz v)))
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal x) page_size))) `star`
+      A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal x) 4ul))) `star`
+      A.varray (A.split_r md_region (u32_to_sz (G.reveal x))));
+  let x1 = gget (vrefinedep
+      (vptr md_count)
+      //TODO: hideous coercion
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+        A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
+        A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        A.varray (A.split_r md_region (u32_to_sz v)))) in
+  assert (dfst x0 == dfst x1);
+  assert (dsnd x0 == dsnd x1);
+  return (U32.lt r metadata_max)
+
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let allocate_slab
