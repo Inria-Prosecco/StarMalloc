@@ -521,6 +521,7 @@ let allocate_slab_aux_2
 open FStar.Mul
 
 // TODO: to be removed/move apart ; use stdlib
+// discussion
 let u32_to_sz
   (x:U32.t)
   : Tot (y:US.t{US.v y == U32.v x})

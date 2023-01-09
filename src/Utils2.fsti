@@ -234,7 +234,5 @@ let set_lemma_nonzero
   let i1 = U32.div pos 64ul in
   let i2 = U32.rem pos 64ul in
   assert (Seq.index md_as_seq2 (U32.v i1) == Bitmap3.set (Seq.index md_as_seq1 (U32.v i1)) i2);
-  assume (Seq.index md_as_seq2 (U32.v i1) <> 0UL);
-  //assert (Seq.index md_as_seq2 (U32.v ))
-  //admit ();
+  assert (Seq.index md_as_seq2 (U32.v i1) <> 0UL);
   ()

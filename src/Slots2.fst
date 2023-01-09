@@ -445,10 +445,10 @@ let deallocate_slot'
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))))
     (fun _ -> admit ());
   assert (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
-  let diff_sz = z_to_sz diff in
+  let diff_sz = UP.ptrdifft_to_sizet diff in
   assume (US.fits_u32);
   assert_norm (4 < FI.max_int 16);
-  let diff_u32 = sz_to_u32 diff_sz in
+  let diff_u32 = US.sizet_to_uint32 diff_sz in
   let b = deallocate_slot_aux0 size_class arr ptr diff_u32 in
   if b then (
     deallocate_slot_aux2 size_class arr ptr;
