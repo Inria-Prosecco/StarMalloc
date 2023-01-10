@@ -1311,16 +1311,6 @@ let allocate_slab
       partial_slabs empty_slabs full_slabs in
     return (r, G.hide true)
   ) else (
-    let x = gget (
-      vrefinedep
-        (vptr md_count)
-        //TODO: hideous coercion
-        (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v ->
-          A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
-          A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-          A.varray (A.split_r md_region (u32_to_sz v)))
-      ) in
     let b = allocate_slab_check_md_count slab_region md_bm_region md_region md_count in
     if b then (
       let n_empty_slabs = allocate_slab_aux_3 sc
@@ -1334,11 +1324,13 @@ let allocate_slab
         (if b then A.varray r else emp);
       return (r, G.hide b)
     ) else (
+      SL.pack_ind (p_empty sc) empty_slabs_ptr empty_slabs;
+      SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
+      SL.pack_ind (p_full sc) full_slabs_ptr full_slabs;
       let r = A.null #U8.t in
       change_equal_slprop
         emp
         (if b then A.varray r else emp);
-      sladmit ();
       return (r, G.hide b)
     )
   )
