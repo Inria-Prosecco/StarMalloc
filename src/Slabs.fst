@@ -412,6 +412,7 @@ let allocate_slab_aux_cond
   return r
 #pop-options
 #pop-options
+#pop-options
 
 #push-options "--z3rlimit 75"
 inline_for_extraction noextract
@@ -740,6 +741,8 @@ assume val singleton_array_to_ref
     Seq.length (A.asel arr h0) = 1 /\
     Seq.index (A.asel arr h0) 0 == sel r h1
   )
+
+#pop-options
 
 #push-options "--z3rlimit 100"
 let alloc_metadata_aux2
