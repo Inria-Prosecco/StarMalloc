@@ -706,7 +706,7 @@ let alloc_metadata_aux
   )
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
-    is_empty size_class (A.asel (fst r) h1)
+    A.asel (fst r) h1 == Seq.create 4 0UL
   )
   =
   slab_region_mon_split slab_region md_count;
@@ -741,22 +741,19 @@ assume val singleton_array_to_ref
     Seq.index (A.asel arr h0) 0 == sel r h1
   )
 
-#push-options "--z3rlimit 75"
+#push-options "--z3rlimit 100"
 let alloc_metadata_aux2
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
-  //: Steel (SL.t blob & (G.erased (v:U32.t{U32.v v = U32.v md_count + 1 /\ U32.v v <= U32.v metadata_max})))
   : Steel (SL.t blob & (G.erased U32.t))
   (
     A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz md_count))
   )
-  //TODO: add a refinement over a md_count ref, discussion with Aymeric
-  ////`star` vptr md_count)
   (fun r ->
     SL.llist (p_empty size_class) (fst r) `star`
     A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))) `star`
@@ -771,19 +768,19 @@ let alloc_metadata_aux2
   )
   =
   let b : blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
-  let h0 = get () in
-  // prove is_empty sc x ==> x = Seq.create 4 0UL
-  assume (A.asel (fst b) h0 == Seq.create 4 0UL);
+  let v0 : G.erased (Seq.lseq U64.t 4) = gget (A.varray (fst b)) in
+  assert (G.reveal v0 == Seq.create 4 0UL);
   intro_vdep
     (A.varray (fst b))
     (slab_vprop_aux size_class (snd b) (Seq.create 4 0UL))
     (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (snd b) md_as_seq);
-   let blob0
+  let blob1
       : G.erased (t_of (slab_vprop size_class (snd b) (fst b)))
       = gget (slab_vprop size_class (snd b) (fst b)) in
-  let v0 : G.erased (Seq.lseq U64.t 4) = dfst blob0 in
+  let v1 : G.erased (Seq.lseq U64.t 4) = dfst blob1 in
   // fix it...
-  assume (G.reveal v0 == A.asel (fst b) h0);
+  assume (G.reveal v1 == G.reveal v0);
+  zeroes_impl_empty size_class (G.reveal v1);
   p_empty_pack size_class b b;
   let r = singleton_array_to_ref (md_array md_region md_count) in
   let r = SL.intro_singleton_llist_no_alloc (p_empty size_class) r b in
@@ -1141,26 +1138,6 @@ let allocate_slab_aux_3
   write empty_slabs_ptr r;
   return r
 #pop-options
-
-#push-options "--z3rlimit 30"
-let test
-  (b: bool)
-  (arr: array U8.t)
-  : Steel (array U8.t)
-  (A.varray arr)
-  (fun r -> (if b then (A.varray r) else emp) <: vprop)
-  (requires fun _ -> A.is_full_array arr)
-  (ensures fun _ _ _ -> True)
-  =
-  if b then (
-    sladmit ();
-    return arr
-  ) else (
-    assert (b = false);
-    A.free arr;
-    sladmit ();
-    return (A.null #U8.t)
-  )
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let allocate_slab_check_md_count

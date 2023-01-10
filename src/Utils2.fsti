@@ -174,6 +174,16 @@ let is_full_s
   let b = has_free_slot_s size_class md in
   not b
 
+noextract
+let zeroes_impl_empty
+  (size_class: sc)
+  (s: Seq.lseq U64.t 4)
+  : Lemma
+  (requires s == Seq.create 4 0UL)
+  (ensures is_empty size_class s)
+  = ()
+
+
 
 //CAUTION: assume val
 val ffs64 (x: U64.t)
