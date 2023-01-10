@@ -17,7 +17,7 @@ open Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
-module SL = Selectors.LList
+module SL = Selectors.LList3
 
 //module Temp = TempLock
 
@@ -273,6 +273,7 @@ let p_empty_pack (#opened:_)
 #pop-options
 #pop-options
 
+module SAR = Steel.ArrayRef
 
 #push-options "--compat_pre_typed_indexed_effects"
 #push-options "--z3rlimit 30"
@@ -286,7 +287,7 @@ let allocate_slab_aux_1_partial
   : Steel unit
   (
     slab_vprop size_class (snd b) (fst b) `star`
-    (vptr cell_ptr `star`
+    (SAR.vptr cell_ptr `star`
     vptr empty_slabs_ptr `star`
     SL.llist (p_empty size_class) (SL.get_next cell_content) `star`
     vptr partial_slabs_ptr `star`
@@ -302,7 +303,7 @@ let allocate_slab_aux_1_partial
       = h0 (slab_vprop size_class (snd b) (fst b)) in
     let md_seq : Seq.lseq U64.t 4 = dfst slab_vprop_data in
     sel partial_slabs_ptr h0 == partial_slabs /\
-    sel cell_ptr h0 == cell_content /\
+    SAR.sel cell_ptr h0 == cell_content /\
     is_partial size_class md_seq /\
     SL.get_data cell_content == b)
   (ensures fun h0 _ h1 ->
@@ -311,7 +312,7 @@ let allocate_slab_aux_1_partial
   =
   p_partial_pack size_class b (SL.get_data cell_content);
   let n_partial = SL.mk_cell partial_slabs (SL.get_data cell_content) in
-  write cell_ptr n_partial;
+  SAR.write cell_ptr n_partial;
   SL.pack_list (p_partial size_class)
     cell_ptr
     partial_slabs
@@ -333,7 +334,7 @@ let allocate_slab_aux_1_full
   : Steel unit
   (
     slab_vprop size_class (snd b) (fst b) `star`
-    (vptr cell_ptr `star`
+    (SAR.vptr cell_ptr `star`
     vptr empty_slabs_ptr `star`
     SL.llist (p_empty size_class) (SL.get_next cell_content) `star`
     vptr full_slabs_ptr `star`
@@ -349,7 +350,7 @@ let allocate_slab_aux_1_full
       = h0 (slab_vprop size_class (snd b) (fst b)) in
     let md_seq : Seq.lseq U64.t 4 = dfst slab_vprop_data in
     sel full_slabs_ptr h0 == full_slabs /\
-    sel cell_ptr h0 == cell_content /\
+    SAR.sel cell_ptr h0 == cell_content /\
     is_full size_class md_seq /\
     SL.get_data cell_content == b)
   (ensures fun h0 _ h1 ->
@@ -358,7 +359,7 @@ let allocate_slab_aux_1_full
   =
   p_full_pack size_class b (SL.get_data cell_content);
   let n_full = SL.mk_cell full_slabs (SL.get_data cell_content) in
-  write cell_ptr n_full;
+  SAR.write cell_ptr n_full;
   SL.pack_list (p_full size_class)
     cell_ptr
     full_slabs
@@ -634,7 +635,7 @@ let md_bm_region_mon_split
 let md_array
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
-  : Pure (array (SL.cell blob))
+  : Pure (SAR.ref (SL.cell blob))
   (requires
     A.length md_region = U32.v metadata_max /\
     U32.v md_count < U32.v metadata_max)
@@ -728,23 +729,9 @@ let alloc_metadata_aux
   admit ();
   return b
 #pop-options
-
-
-//TODO: to be removed (vrefs)
-assume val singleton_array_to_ref
-  (arr: array (SL.cell blob))
-  : Steel (ref (SL.cell blob))
-  (A.varray arr)
-  (fun r -> vptr r)
-  (requires fun _ -> A.length arr = 1)
-  (ensures fun h0 r h1 ->
-    Seq.length (A.asel arr h0) = 1 /\
-    Seq.index (A.asel arr h0) 0 == sel r h1
-  )
-
 #pop-options
 
-#push-options "--z3rlimit 100"
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let alloc_metadata_aux2
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
   (size_class: sc)
@@ -785,9 +772,13 @@ let alloc_metadata_aux2
   assume (G.reveal v1 == G.reveal v0);
   zeroes_impl_empty size_class (G.reveal v1);
   p_empty_pack size_class b b;
-  let r = singleton_array_to_ref (md_array md_region md_count) in
-  let r = SL.intro_singleton_llist_no_alloc (p_empty size_class) r b in
-  return (r, G.hide (U32.add md_count 1ul))
+  change_slprop_rel
+    (A.varray (md_array md_region md_count))
+    (SAR.vptr (md_array md_region md_count))
+    (fun x y -> Seq.index x 0 == y)
+    (fun _ -> admit ());
+  SL.intro_singleton_llist_no_alloc (p_empty size_class) (md_array md_region md_count) b;
+  return (md_array md_region md_count, G.hide (U32.add md_count 1ul))
 #pop-options
 
 let alloc_metadata_sl1
@@ -931,13 +922,13 @@ let unpack_list_singleton (#a: Type0)
   (ptr: SL.t a)
   : Steel (SL.cell a)
   (SL.llist p ptr)
-  (fun n -> vptr ptr `star` p (SL.get_data n))
+  (fun n -> SAR.vptr ptr `star` p (SL.get_data n))
   (requires fun h0 ->
     L.length (SL.v_llist p ptr h0) = 1)
   (ensures fun h0 n h1 ->
     SL.v_llist p ptr h0 ==
-      (SL.get_data (sel ptr h1)) :: [] /\
-    sel ptr h1 == n)
+      (SL.get_data (SAR.sel ptr h1)) :: [] /\
+    SAR.sel ptr h1 == n)
   =
   SL.cons_is_not_null p ptr;
   let n = SL.unpack_list p ptr in
@@ -1132,7 +1123,7 @@ let allocate_slab_aux_3
   let r = alloc_metadata2 size_class slab_region md_bm_region md_region md_count in
   let n_empty = unpack_list_singleton (p_empty size_class) r in
   let n_empty_2 = SL.mk_cell empty_slabs (SL.get_data n_empty) in
-  write r n_empty_2;
+  SAR.write r n_empty_2;
   SL.pack_list (p_empty size_class)
     r
     empty_slabs
