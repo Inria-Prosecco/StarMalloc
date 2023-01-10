@@ -4,6 +4,7 @@ open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.ArrayRef
+module SR = Steel.Reference
 
 module L = FStar.List.Tot
 
@@ -147,34 +148,34 @@ val intro_singleton_llist_no_alloc
 
 (** A variant of lists with an additional indirection pointer to enable in-place operations **)
 
-val ind_llist_sl (#a:Type0) (p: a -> vprop) (r:ref (t a)) : slprop u#1
-val ind_llist_sel (#a:Type0) (p: a -> vprop) (r:ref (t a)) : selector (list a) (ind_llist_sl p r)
+val ind_llist_sl (#a:Type0) (p: a -> vprop) (r:SR.ref (t a)) : slprop u#1
+val ind_llist_sel (#a:Type0) (p: a -> vprop) (r:SR.ref (t a)) : selector (list a) (ind_llist_sl p r)
 
 [@@__steel_reduce__]
-let ind_llist' (#a:Type0) (p: a -> vprop) (r:ref (t a)) : vprop' =
+let ind_llist' (#a:Type0) (p: a -> vprop) (r:SR.ref (t a)) : vprop' =
   { hp = ind_llist_sl p r;
     t = list a;
     sel = ind_llist_sel p r}
 unfold
-let ind_llist (#a:Type0) (p: a -> vprop) (r:ref (t a)) = VUnit (ind_llist' p r)
+let ind_llist (#a:Type0) (p: a -> vprop) (r:SR.ref (t a)) = VUnit (ind_llist' p r)
 
 [@@ __steel_reduce__]
-let v_ind_llist (#a:Type0) (#p2:vprop) (p: a -> vprop) (r:ref (t a))
+let v_ind_llist (#a:Type0) (#p2:vprop) (p: a -> vprop) (r:SR.ref (t a))
   (h:rmem p2{FStar.Tactics.with_tactic selector_tactic (can_be_split p2 (ind_llist p r) /\ True)}) : GTot (list a)
   = h (ind_llist p r)
 
-val unpack_ind (#a:Type0) (p: a -> vprop) (r:ref (t a))
+val unpack_ind (#a:Type0) (p: a -> vprop) (r:SR.ref (t a))
   : Steel (t a)
   (ind_llist p r)
-  (fun r2 -> vptr r `star` llist p r2)
+  (fun r2 -> SR.vptr r `star` llist p r2)
   (requires fun _ -> True)
   (ensures fun h0 r2 h1 ->
-    sel r h1 == r2 /\
+    SR.sel r h1 == r2 /\
     v_llist p r2 h1 == v_ind_llist p r h0)
 
-val pack_ind (#opened:inames) (#a:Type0) (p: a -> vprop) (r:ref (t a)) (r2:t a)
+val pack_ind (#opened:inames) (#a:Type0) (p: a -> vprop) (r:SR.ref (t a)) (r2:t a)
   : SteelGhost unit opened
-  (vptr r `star` llist p r2)
+  (SR.vptr r `star` llist p r2)
   (fun _ -> ind_llist p r)
-  (requires fun h -> sel r h == r2)
+  (requires fun h -> SR.sel r h == r2)
   (ensures fun h0 _ h1 -> v_llist p r2 h0 == v_ind_llist p r h1)

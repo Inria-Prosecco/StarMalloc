@@ -2,6 +2,7 @@ module Selectors.LList3
 
 open Steel.FractionalPermission
 module Mem = Steel.Memory
+module SR = Steel.Reference
 
 #push-options "--__no_positivity"
 noeq
@@ -348,19 +349,19 @@ let intro_singleton_llist_no_alloc #a p r v =
 let ind_llist_vrewrite
   (#a: Type0)
   (p: a -> vprop)
-  (r: ref (t a))
-  (cl: normal (t_of (vptr r `vdep` llist p)))
+  (r: SR.ref (t a))
+  (cl: normal (t_of (SR.vptr r `vdep` llist p)))
 : GTot (list a)
 = dsnd cl
 
 let ind_llist0
   (#a: Type0)
   (p: a -> vprop)
-  (r: ref (t a))
+  (r: SR.ref (t a))
 : Pure vprop
   (requires True)
   (ensures (fun y -> t_of y == list a))
-= (vptr r `vdep` llist p) `vrewrite` ind_llist_vrewrite p r
+= (SR.vptr r `vdep` llist p) `vrewrite` ind_llist_vrewrite p r
 
 let ind_llist_sl
   #a p r
@@ -375,7 +376,7 @@ let indllist_of_indllist0
   (#opened: _)
   (#a: Type)
   (p: a -> vprop)
-  (r: ref (t a))
+  (r: SR.ref (t a))
 : SteelGhost unit opened
     (ind_llist0 p r)
     (fun _ -> ind_llist p r)
@@ -392,7 +393,7 @@ let indllist0_of_indllist
   (#opened: _)
   (#a: Type)
   (p: a -> vprop)
-  (r: ref (t a))
+  (r: SR.ref (t a))
 : SteelGhost unit opened
     (ind_llist p r)
     (fun _ -> ind_llist0 p r)
@@ -407,19 +408,19 @@ let indllist0_of_indllist
 
 let unpack_ind #a p r =
   indllist0_of_indllist p r;
-  assert_norm (ind_llist0 p r == ((vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)));
-  change_equal_slprop (ind_llist0 p r) ((vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r));
+  assert_norm (ind_llist0 p r == ((SR.vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)));
+  change_equal_slprop (ind_llist0 p r) ((SR.vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r));
   elim_vrewrite
-    (vptr r `vdep` llist p)
+    (SR.vptr r `vdep` llist p)
     (ind_llist_vrewrite p r);
-  let gr = elim_vdep (vptr r) (llist p) in
-  let r2 = read r in
+  let gr = elim_vdep (SR.vptr r) (llist p) in
+  let r2 = SR.read r in
   change_equal_slprop (llist p gr) (llist p r2);
   return r2
 
 let pack_ind p r r2 =
-  intro_vdep (vptr r) (llist p r2) (llist p);
-  intro_vrewrite (vptr r `vdep` llist p) (ind_llist_vrewrite p r);
-  assert_norm (ind_llist0 p r == ((vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)));
-  change_equal_slprop ((vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)) (ind_llist0 p r);
+  intro_vdep (SR.vptr r) (llist p r2) (llist p);
+  intro_vrewrite (SR.vptr r `vdep` llist p) (ind_llist_vrewrite p r);
+  assert_norm (ind_llist0 p r == ((SR.vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)));
+  change_equal_slprop ((SR.vptr r `vdep` llist p) `vrewrite` (ind_llist_vrewrite p r)) (ind_llist0 p r);
   indllist_of_indllist0 p r
