@@ -282,7 +282,7 @@ let deallocate_slot_aux0
     let diff2 = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff2 /\
-    diff2 < U32.v page_size /\
+    diff2 <= U32.v page_size /\
     U32.v diff == diff2
   ))
   (ensures
@@ -305,7 +305,7 @@ let deallocate_slot_aux1
     let diff2 = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff2 /\
-    diff2 < U32.v page_size /\
+    diff2 <= U32.v page_size /\
     diff2 % (U32.v size_class) = 0 /\
     U32.v diff == diff2
   ))
@@ -349,7 +349,7 @@ let deallocate_slot_aux2
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff /\
-    diff < U32.v page_size /\
+    diff <= U32.v page_size - U32.v size_class /\
     diff % (U32.v size_class) == 0
   ))
   (ensures (
@@ -365,11 +365,8 @@ let deallocate_slot_aux2
   let rem = diff % (U32.v size_class) in
   assert (rem = 0);
   assert (diff = pos * (U32.v size_class));
-  // TODO: FIXME
-  // nb_slots size_class = page_size / size_class
-  // diff < page_size
-  // pos = diff / size_class
-  assume (pos < U32.v (nb_slots size_class));
+  assert (nb_slots size_class = U32.div page_size size_class);
+  assert (pos < U32.v (nb_slots size_class));
   slot_array_offset_lemma size_class arr (U32.uint_to_t pos);
   let ptr' = slot_array size_class arr (U32.uint_to_t pos) in
   assert (A.offset (A.ptr_of ptr) == A.offset (A.ptr_of ptr'));
@@ -380,16 +377,8 @@ let deallocate_slot_aux2
   assume (A.length ptr == U32.v size_class);
   assert (ptr == ptr')
 
-let temp (b: bool)
-  : SteelT unit
-  (if b then emp else emp)
-  (fun _ -> if b then emp else emp)
-  =
-  return ()
-
 //TODO: check for spec
 //CAUTION
-
 #push-options "--z3rlimit 75"
 let deallocate_slot'
   (size_class: sc)
@@ -422,7 +411,7 @@ let deallocate_slot'
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array ptr arr /\
     0 <= diff /\
-    diff < U32.v page_size /\
+    diff <= U32.v page_size - U32.v size_class /\
     A.asel md h0 == G.reveal md_as_seq
   )
   (ensures fun _ _ _ -> True)
@@ -499,7 +488,7 @@ let deallocate_slot
     //let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     same_base_array arr ptr /\
     0 <= diff /\
-    diff < U32.v page_size /\
+    diff <= U32.v page_size - U32.v size_class /\
     True)
     //not (is_empty size_class v0))
   (ensures fun _ _ _ -> True)
