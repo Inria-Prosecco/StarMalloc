@@ -37,7 +37,7 @@ assume val within_bounds_intro (#a: Type)
   : Steel bool
   (A.varray arr1 `star` A.varray p `star` A.varray arr2)
   (fun _ -> A.varray arr1 `star` A.varray p `star` A.varray arr2)
-  (requires fun h0 -> True)
+  (requires fun h0 -> same_base_array arr1 arr2)
   (ensures fun h0 r h1 ->
     if r then within_bounds arr1 p arr2 else True /\
     A.asel arr1 h1 == A.asel arr1 h0 /\
@@ -49,7 +49,6 @@ assume val within_bounds_elim (#a: Type)
   (arr1 arr2 p: array a)
   : Lemma
   (requires
-    same_base_array arr1 arr2 /\
     within_bounds arr1 p arr2)
   (ensures
     same_base_array arr1 p /\
