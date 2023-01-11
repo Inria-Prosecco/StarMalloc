@@ -29,7 +29,7 @@ let some_as_vp
   (#a: Type0)
   (vp: vprop)
   : Pure vprop
-  (requires t_of vp == a /\ VUnit? vp)
+  (requires t_of vp == a)
   (ensures fun r -> t_of r == option a)
   =
   VUnit ({
@@ -41,7 +41,7 @@ let some_as_vp
 let c2
  (#a: Type0)
  (b: bool)
- (vp: vprop{t_of vp == a /\ VUnit? vp})
+ (vp: vprop{t_of vp == a})
  : vprop
  =
  if b
@@ -51,20 +51,7 @@ let c2
 let c2_t
  (#a: Type0)
  (b: bool)
- (vp: vprop{t_of vp == a /\ VUnit? vp})
+ (vp: vprop{t_of vp == a})
  : Lemma
  (t_of (c2 #a b vp) == option a)
  = ()
-
-//let c2_sel_lemma
-//  (#a: Type0)
-//  (b: bool)
-//  (vp: vprop{t_of vp == a /\ VUnit? vp})
-//  (m: SM.mem)
-//  : Lemma
-//  (requires SM.interp (hp_of (c2 #a b vp)) m)
-//  (ensures
-//    (b ==> Some? (sel_of (c2 #a b vp) m <: option a)) /\
-//    (not b ==> None? (sel_of (c2 #a b vp) m <: option a))
-//  )
-//  = ()

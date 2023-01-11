@@ -334,32 +334,72 @@ let apply_starseq_upd (#opened:_)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (U32.v pos)
 
-noextract inline_for_extraction
-let get_slot_as_returned_value
+let starseq_upd_aux_lemma3
   (size_class: sc)
-  (md: slab_metadata)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-  : Steel (array U8.t)
-  ((slab_vprop_aux_f size_class md_as_seq arr)
-      (Seq.index
-        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-        (U32.v pos)))
-  (fun r -> A.varray r)
-  (requires fun _ -> True)
-  (ensures fun h0 _ h1 -> True)
-  =
-  let r = slot_array size_class arr pos in
-  //TODO: selector relation
-  rewrite_slprop
+  : Lemma
+  (requires (
+    let bm = a2bv (G.reveal md_as_seq) in
+    Seq.index bm (Bitmap5.f #4 (U32.v pos)) = false
+  ))
+  (ensures
     ((slab_vprop_aux_f size_class md_as_seq arr)
       (Seq.index
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
         (U32.v pos)))
+    ==
+    some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos)
+  )
+  =
+  let bm = a2bv (G.reveal md_as_seq) in
+  SeqUtils.init_u32_refined_index (U32.v (nb_slots size_class)) (U32.v pos);
+  assert (Seq.index (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) (U32.v pos) = pos);
+  let k_index = Bitmap5.f #4 (U32.v pos) in
+  assert (Seq.index bm k_index = false);
+  equiv_get_a2bv_index size_class md_as_seq (U32.v pos);
+  assert (Bitmap4.get md_as_seq pos = Seq.index bm k_index);
+  assert (Bitmap4.get md_as_seq pos = false)
+
+noextract inline_for_extraction
+let get_slot_as_returned_value
+  (size_class: sc)
+  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Steel (array U8.t)
+  ((slab_vprop_aux_f size_class (G.reveal md_as_seq) arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)))
+  (fun r -> A.varray r)
+  (requires fun h0 ->
+    let bm = a2bv md_as_seq in
+    Seq.index bm (Bitmap5.f #4 (U32.v pos)) = false)
+  (ensures fun h0 _ h1 -> True)
+  =
+  starseq_upd_aux_lemma3 size_class (G.reveal md_as_seq) arr pos;
+  change_slprop_rel
+    ((slab_vprop_aux_f size_class md_as_seq arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)))
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  let r = slot_array size_class arr pos in
+  change_slprop_rel
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos))
     (A.varray r)
-    //(fun x y -> Some?.v x == y)
-    (fun _ -> admit ());
+    (fun
+      (x: t_of (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos)))
+      (y: t_of (A.varray r))
+      ->
+      let x' : option (Seq.lseq U8.t (U32.v size_class)) = x in
+      let y' : Seq.lseq U8.t (U32.v size_class) = y in
+      x' == Some y')
+    (fun _ -> ());
   return r
 
 noextract inline_for_extraction
@@ -441,7 +481,7 @@ let allocate_slot_aux
     arr
     pos;
   let r = get_slot_as_returned_value
-    size_class md md_as_seq arr pos in
+    size_class md_as_seq arr pos in
   return r
 
 //TODO: FIXME @SizeT lib

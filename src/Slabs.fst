@@ -729,7 +729,6 @@ let alloc_metadata_aux
   admit ();
   return b
 #pop-options
-#pop-options
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let alloc_metadata_aux2
