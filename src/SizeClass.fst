@@ -6,7 +6,7 @@ module U8 = FStar.UInt8
 
 module G = FStar.Ghost
 
-module SL = Selectors.LList
+module SL = Selectors.LList3
 
 module P = Steel.FractionalPermission
 module SM = Steel.Memory
@@ -100,20 +100,19 @@ let size_class_vprop_test
 
 #push-options "--z3rlimit 50"
 let allocate_size_class
-  (r: ref size_class_struct)
-  //: Steel unit
-  : Steel (array U8.t)
-  (size_class_vprop r)
-  (fun result ->
-    A.varray result `star`
-    size_class_vprop r)
+  (ptr: ref size_class_struct)
+  : Steel (array U8.t & G.erased bool)
+  (size_class_vprop ptr)
+  (fun r ->
+    (if (G.reveal (snd r)) then A.varray (fst r) else emp) `star`
+    size_class_vprop ptr)
   (requires fun h0 -> True)
   (ensures fun h0 _ h1 -> True)
   =
   let scs' = elim_vdep
-    (vptr r)
+    (vptr ptr)
     (fun scs -> size_class_vprop_aux scs) in
-  let scs = read r in
+  let scs = read ptr in
   change_slprop_rel
     (size_class_vprop_aux (G.reveal scs'))
     (size_class_vprop_aux scs)
@@ -141,8 +140,4 @@ let allocate_size_class
     scs.slab_region scs.md_bm_region scs.md_region
     scs.md_count in
   sladmit ();
-  //intro_vdep
-  //  (vptr r)
-  //  (size_class_vprop_aux scs)
-  //  (fun scs -> size_class_vprop_aux scs);
   return result
