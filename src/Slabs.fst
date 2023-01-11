@@ -771,11 +771,7 @@ let alloc_metadata_aux2
   assume (G.reveal v1 == G.reveal v0);
   zeroes_impl_empty size_class (G.reveal v1);
   p_empty_pack size_class b b;
-  change_slprop_rel
-    (A.varray (md_array md_region md_count))
-    (SAR.vptr (md_array md_region md_count))
-    (fun x y -> Seq.index x 0 == y)
-    (fun _ -> admit ());
+  SAR.intro_vptr (md_array md_region md_count);
   SL.intro_singleton_llist_no_alloc (p_empty size_class) (md_array md_region md_count) b;
   return (md_array md_region md_count, G.hide (U32.add md_count 1ul))
 #pop-options
