@@ -230,14 +230,6 @@ module US = FStar.SizeT
 // with an additional condition on the offset,
 // then it means it is a valid pointer that *could* be allocated
 // proper alignment means also one can recover the pos of the slot within the slab
-
-let offset_diff (#a: Type)
-  (ptr1: A.ptr a)
-  (ptr2: A.ptr a{A.base ptr1 == A.base ptr2})
-  : GTot int
-  =
-  A.offset ptr1 - A.offset ptr2
-
 #push-options "--z3rlimit 30 --fuel 0 --ifuel 0"
 //TODO: check for spec
 let deallocate_slot_aux0
@@ -379,7 +371,8 @@ let deallocate_slot'
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array ptr arr /\
     0 <= diff /\
-    diff <= U32.v page_size - U32.v size_class /\
+    diff < U32.v page_size /\
+    (U32.v page_size) % (U32.v size_class) = 0 /\
     A.asel md h0 == G.reveal md_as_seq
   )
   (ensures fun _ _ _ -> True)
@@ -456,7 +449,8 @@ let deallocate_slot
     //let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     same_base_array arr ptr /\
     0 <= diff /\
-    diff <= U32.v page_size - U32.v size_class /\
+    diff < U32.v page_size /\
+    (U32.v page_size) % (U32.v size_class) = 0 /\
     True)
     //not (is_empty size_class v0))
   (ensures fun _ _ _ -> True)
@@ -488,8 +482,7 @@ let deallocate_slot
 - [ok-ish] deallocate_slot
 
 sides:
-- remove src/Slots remaining admit with src/Slots2 lemma
-  - + c2 lemma on selectors?
+[ok] - remove src/Slots remaining admit with src/Slots2 lemma
 - remove Slots2 admits + aux lemmas (some work ahead!)
   [ok] - remove dubious coercions
 - merge extraction to main when extractable
@@ -505,14 +498,22 @@ roadmap:
     [ok-ish] - remove admit
     [sk] - prove Utils2 lemma
 
-[!] - flattening lemma sketch (large ghost seq will be used to keep information for flattened state, hopefully no issue with starseq)
-[!] - doubly-linked lists with additional predicate over arrayrefs...
-- test Aymeric F* branch
-- use within_bounds from src/Sizeclass2 to get a deallocate_sizeclass function
-  => within_bounds should be a Steel function with live arrays
-- free: expected_size requirement: refine starseq...
-- ptrdiff: array requirement: add a ghost_split on region_start everywhere
+- mandatory lemmas
+  - array_to_pieces
+  - slab_to_slots
+  - slots_to_slab
+  - flattening lemma
+  (large ghost seq will be used to keep information for flattened state, hopefully no issue with starseq)
+
+- complications
+  - remove expected_size, add a split for each slot
+  - ptrdiff on live arrays: add a split 0 arr everywhere
+  - page_size % size_class <> 0: take it into account
+
 - deallocation
+  - src/Slabs2
+  - src/SizeClass2: within_bound
+
 - initialization to Steel
 - sizeclass selection
 - mmap flags check

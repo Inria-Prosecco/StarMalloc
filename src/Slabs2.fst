@@ -51,7 +51,8 @@ let deallocate_slab_aux
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab) in
     same_base_array slab ptr /\
     0 <= diff /\
-    diff < U32.v page_size /\
+    diff <= U32.v page_size - U32.v size_class /\
+    (U32.v page_size) % (U32.v size_class) = 0 /\
     sel partial_slabs_ptr h0 == partial_slabs /\
     sel empty_slabs_ptr h0 == empty_slabs /\
     not (SL.is_null_t partial_slabs))
