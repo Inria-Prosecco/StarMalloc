@@ -201,7 +201,7 @@ let deallocate_slot_aux
     //v2 == Bitmap4.unset v1 pos /\
     //TODO
     //blob2 == Seq.upd blob1 (U32.v pos) None)
-    True)
+    v2 == v1)
   =
   assert_norm (4 < FI.max_int U16.n);
 
@@ -266,14 +266,15 @@ let deallocate_slot_aux1
     let diff2 = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff2 /\
-    diff2 <= U32.v page_size /\
+    diff2 <= U32.v page_size - U32.v size_class /\
     diff2 % (U32.v size_class) = 0 /\
     U32.v diff == diff2
   ))
-  (ensures
-    fun r ->
-      let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
-      U32.v r = diff / (U32.v size_class))
+  (ensures fun r ->
+    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
+    U32.v r = diff / (U32.v size_class) /\
+    U32.v r < U32.v (nb_slots size_class) /\
+    U32.v r < U64.n * 4)
   =
   let div = U32.div diff size_class in
   div
@@ -492,7 +493,8 @@ let deallocate_slot'_aux2
 
 //TODO: check for spec
 //CAUTION
-#push-options "--z3rlimit 100"
+#restart-solver
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let deallocate_slot'
   (size_class: sc)
   (md: slab_metadata)
@@ -547,7 +549,6 @@ let deallocate_slot'
     (not (fst r) ==> v1 == v0)
   )
   =
-  admit ();
   //TODO: ptr of length 0 as region start for ptrdiff
   rewrite_slprop
     (starseq
@@ -577,7 +578,8 @@ let deallocate_slot'
   let b = deallocate_slot_aux0 size_class arr ptr diff_u32 in
   if b then (
     deallocate_slot_aux2 size_class arr ptr;
-    let pos = deallocate_slot_aux1 size_class arr ptr diff_u32 in
+    let pos : pos:U32.t{U32.v pos < U64.n * 4}
+      = deallocate_slot_aux1 size_class arr ptr diff_u32 in
     let b = Bitmap5.bm_get #4 md pos in
     if b then (
       Bitmap5.bm_unset #4 md pos;
