@@ -635,7 +635,7 @@ let md_bm_region_mon_split
 let md_array
   (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
-  : Pure (SAR.ref (SL.cell blob))
+  : Pure (array (SL.cell blob))
   (requires
     A.length md_region = U32.v metadata_max /\
     U32.v md_count < U32.v metadata_max)
@@ -723,10 +723,9 @@ let alloc_metadata_aux
     (A.varray (snd b) `star` A.varray (fst b))
     (fun x y -> x == y)
     (fun _ -> ());
-  // prove A.varray slab -> slab_vprop transformation
-  sladmit ();
   // prove never-used slab bitmap metadata is empty
   admit ();
+  Helpers.slab_to_slots size_class (snd b);
   return b
 #pop-options
 
