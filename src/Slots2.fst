@@ -598,7 +598,6 @@ let deallocate_slot'
  )
 #pop-options
 
-#push-options "--compat_pre_typed_indexed_effects"
 #push-options "--z3rlimit 75"
 let deallocate_slot
   (size_class: sc)
