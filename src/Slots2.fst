@@ -493,8 +493,7 @@ let deallocate_slot'_aux2
 
 //TODO: check for spec
 //CAUTION
-#restart-solver
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 100"
 let deallocate_slot'
   (size_class: sc)
   (md: slab_metadata)
