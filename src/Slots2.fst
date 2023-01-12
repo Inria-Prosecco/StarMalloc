@@ -338,8 +338,8 @@ let deallocate_slot_aux2
   assert (ptr == ptr')
 #pop-options
 
-#push-options "--z3rlimit 30"
-let deallocate_slot'_aux
+#push-options "--z3rlimit 50"
+let deallocate_slot'_aux0
   (#opened:_)
   (size_class: sc)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
@@ -382,15 +382,35 @@ let deallocate_slot'_aux
   assert (Seq.index
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
         (U32.v pos) == pos);
-  sladmit ()
-  //change_slprop_rel
-  //  (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos))
-  //  ((slab_vprop_aux_f size_class (G.reveal md_as_seq) arr)
-  //    (Seq.index
-  //      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-  //      (U32.v pos)))
-  //  (fun x y -> x == y)
-  //  (fun _ -> ())
+  assert (Bitmap4.get (G.reveal md_as_seq) pos = false);
+  assert (
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos))
+    ==
+    ((slab_vprop_aux_f size_class (G.reveal md_as_seq) arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)))
+  );
+  change_equal_slprop
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos))
+    ((slab_vprop_aux_f size_class (G.reveal md_as_seq) arr)
+      (Seq.index
+        (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+        (U32.v pos)))
+
+
+(*)
+let deallocate_slot'_aux1
+  (#opened: _)
+  (size_class: sc)
+  (md: slab_metadata)
+  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  : SteelGhost unit opened
+  (
+
+  )
+
 
 let _ = 0
 
@@ -401,7 +421,7 @@ let deallocate_slot'
   (size_class: sc)
   (md: slab_metadata)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
-  (arr: array U8.t{A.length arr = 4096})
+  (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
   : Steel bool
   (
@@ -469,7 +489,7 @@ let deallocate_slot'
       Bitmap5.bm_unset #4 md pos;
       let md_as_seq2' = gget (A.varray md) in
       // analogous of Slots@returned_value lemma
-      deallocate_slot'_aux size_class md_as_seq2' arr pos ptr;
+      deallocate_slot'_aux0 size_class md_as_seq2' arr pos ptr;
       // TODO: starseq_weakening + upd lemma
       //assert (Bitmap4.set #4 md pos)
       sladmit ();
@@ -522,6 +542,11 @@ let deallocate_slot
     (fun x y -> x == y)
     (fun _ -> ());
   let r = deallocate_slot' size_class md md_as_seq2 arr ptr in
+  let gget
+  intro_vdep
+    (A.varray md)
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq3))
+    (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x)
   // TODO: update md, add intro_vdep, remove sladmit
   sladmit ();
   return r
