@@ -84,37 +84,164 @@ let slot_vprop_lemma (#a: Type)
   =
   ()
 
-#push-options "--z3rlimit 30"
-let rec array_to_pieces_rec (#opened:_)
-  (#a: Type)
-  (size: U32.t{U32.v size > 0})
-  (max: U32.t{U32.v max * U32.v size <= FI.max_int U32.n})
-  (arr: array a{A.length arr = U32.v (U32.mul max size)})
-  : SteelGhostT unit opened
-  (A.varray arr)
+let starseq_to_singleton_s (#opened:_) (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a{Seq.length s > 0})
+  : SteelGhost unit opened
+  (starseq #a #b f f_lemma s)
   (fun _ ->
-    starseq
-      #(pos: U32.t{U32.v pos < U32.v max})
-      #(Seq.lseq a (U32.v size))
-      (slot_vprop #a size max arr)
-      (slot_vprop_lemma #a size max arr)
-      (SeqUtils.init_u32_refined (U32.v max))
+    f (Seq.index s 0)
   )
-  (decreases (U32.v max))
+  (requires fun _ -> Seq.length s == 1)
+  (ensures fun _ _ _ -> True)
   =
-  if (U32.eq max U32.zero) then (
-    sladmit ()
-  ) else (
-    assert (U32.gt max U32.zero);
-    let max' = U32.sub max U32.one in
-    assert_norm (FStar.UInt.size (U32.v max' * U32.v size) U32.n);
-    assert (U32.v (U32.mul max' size) == U32.v max' * U32.v size);
-    let index = U32.mul max' size in
-    let index = u32_to_sz index in
-    A.ghost_split arr index;
-    array_to_pieces_rec size max' (A.split_l arr index);
-    sladmit ()
+  starseq_unpack_s
+    #_ #a #b
+    f f_lemma s 0;
+  assume (starseq #a #b f f_lemma (Seq.slice s 0 0) == emp);
+  assume (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s)) == emp);
+  change_equal_slprop
+    (starseq #a #b f f_lemma (Seq.slice s 0 0)) emp;
+  change_equal_slprop
+    (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s))) emp
+
+let starseq_from_singleton_s (#opened:_) (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a{Seq.length s > 0})
+  : SteelGhost unit opened
+  (f (Seq.index s 0))
+  (fun _ ->
+    starseq #a #b f f_lemma s
   )
+  (requires fun _ -> Seq.length s == 1)
+  (ensures fun _ _ _ -> True)
+  =
+  assume (starseq #a #b f f_lemma (Seq.slice s 0 0) == emp);
+  assume (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s)) == emp);
+  change_equal_slprop
+    emp (starseq #a #b f f_lemma (Seq.slice s 0 0));
+  change_equal_slprop
+    emp (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s)));
+  starseq_pack_s
+    #_ #a #b
+    f f_lemma s 0
+
+let starseq_add_singleton_s (#opened:_) (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  (n: nat{Seq.length s = n + 1})
+  : SteelGhost unit opened
+  (starseq #a #b f f_lemma (Seq.slice s 0 n) `star`
+  f (Seq.index s n))
+  (fun _ ->
+    starseq #a #b f f_lemma s)
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  =
+  assume (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)) == emp);
+  change_equal_slprop
+    emp
+    (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)));
+  starseq_pack_s
+    #_ #a #b
+    f f_lemma s n
+
+assume val starseq_weakening_ref (#opened:_)
+  (#a1 #a2 #b: Type0)
+  (f1: a1 -> vprop)
+  (f2: a2 -> vprop)
+  (f1_lemma: (x:a1 -> Lemma (t_of (f1 x) == b)))
+  (f2_lemma: (x:a2 -> Lemma (t_of (f2 x) == b)))
+  (s1: Seq.seq a1)
+  (s2: Seq.seq a2)
+  : SteelGhost unit opened
+  (starseq #a1 #b f1 f1_lemma s1)
+  (fun _ -> starseq #a2 #b f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 = Seq.length s2 /\
+    (forall (k:nat{k < Seq.length s1}).
+      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
+  (ensures fun h0 _ h1 ->
+    Seq.length s1 = Seq.length s2 /\
+    v_starseq #a1 #b f1 f1_lemma s1 h0
+    ==
+    v_starseq #a2 #b f2 f2_lemma s2 h1
+  )
+
+//#push-options "--z3rlimit 30"
+//let rec array_to_pieces_rec (#opened:_)
+//  (#a: Type)
+//  (size: U32.t{U32.v size > 0})
+//  (max: U32.t{U32.v max > 0 /\ U32.v max * U32.v size <= FI.max_int U32.n})
+//  (arr: array a{A.length arr = U32.v (U32.mul max size)})
+//  : SteelGhostT unit opened
+//  (A.varray arr)
+//  (fun _ ->
+//    starseq
+//      #(pos: U32.t{U32.v pos < U32.v max})
+//      #(Seq.lseq a (U32.v size))
+//
+//      (slot_vprop #a size max arr)
+//      (slot_vprop_lemma #a size max arr)
+//      (SeqUtils.init_u32_refined (U32.v max))
+//  )
+//  (decreases (U32.v max))
+//  =
+//  if (U32.eq max U32.one) then (
+//    admit ();
+//    let arr2 = slot_array size max arr 0ul in
+//    let p1 = A.ptr_of arr in
+//    let p2 = A.ptr_of arr2 in
+//    assert (A.base p1 == A.base p2);
+//    assert (A.offset p1 == A.offset p2);
+//    A.ptr_base_offset_inj p1 p2;
+//    assert (A.ptr_of arr == A.ptr_of arr2);
+//    assert (slot_array size max arr 0ul == arr);
+//    SeqUtils.init_u32_refined_index (U32.v max) 0;
+//    change_equal_slprop
+//      (A.varray arr)
+//      (slot_vprop #a size max arr (Seq.index (SeqUtils.init_u32_refined (U32.v max)) 0));
+//    starseq_from_singleton_s
+//      #_
+//      #(pos: U32.t{U32.v pos < U32.v max})
+//      #(Seq.lseq a (U32.v size))
+//      (slot_vprop #a size max arr)
+//      (slot_vprop_lemma #a size max arr)
+//      (SeqUtils.init_u32_refined (U32.v max))
+//  ) else (
+//    assert (U32.gt max U32.one);
+//    let max' = U32.sub max U32.one in
+//    assert_norm (FStar.UInt.size (U32.v max' * U32.v size) U32.n);
+//    assert (U32.v (U32.mul max' size) == U32.v max' * U32.v size);
+//    let index = U32.mul max' size in
+//    let index = u32_to_sz index in
+//    A.ghost_split arr index;
+//    array_to_pieces_rec size max' (A.split_l arr index);
+//    assume (A.split_r arr index == slot_array size max arr max');
+//    change_equal_slprop
+//      (A.varray (A.split_r arr index))
+//      (slot_vprop size max arr max');
+//    admit ();
+//    starseq_weakening
+//      #_
+//      #(pos: U32.t{U32.v pos < U32.v max'})
+//      #(Seq.lseq a (U32.v size))
+//      (slot_vprop #a size max' (A.split_l arr index))
+//      (slot_vprop #a size max arr)
+//      (slot_vprop_lemma #a size max' (A.split_l arr index))
+//      (slot_vprop_lemma #a size max arr)
+//      (SeqUtils.init_u32_refined (U32.v max'))
+//      (Seq.slice (SeqUtils.init_u32_refined (U32.v max)) 0 (U32.v max'));
+//    sladmit ()
+//  )
+//
+//array_to_pieces
+//starseq_weakening_ref
+//pieces_to_slots
+//starseq_weakening_rel
 
 (*)
     change_slprop_rel
@@ -173,7 +300,8 @@ let array_to_pieces (#opened:_)
       (SeqUtils.init_u32_refined (U32.v max))
   )
   =
-  array_to_pieces_rec size max arr
+  //array_to_pieces_rec size max arr
+  sladmit ()
 
 let slab_to_slots (#opened:_)
   (size_class: sc)
