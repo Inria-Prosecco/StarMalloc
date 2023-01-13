@@ -99,12 +99,14 @@ let starseq_to_singleton_s (#opened:_) (#a #b: Type0)
   starseq_unpack_s
     #_ #a #b
     f f_lemma s 0;
-  assume (starseq #a #b f f_lemma (Seq.slice s 0 0) == emp);
-  assume (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s)) == emp);
-  change_equal_slprop
-    (starseq #a #b f f_lemma (Seq.slice s 0 0)) emp;
-  change_equal_slprop
+  assume (hp_of (starseq #a #b f f_lemma (Seq.slice s 0 0)) == hp_of emp);
+  assume (hp_of (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s))) == hp_of emp);
+  rewrite_slprop
+    (starseq #a #b f f_lemma (Seq.slice s 0 0)) emp
+    (fun _ -> ());
+  rewrite_slprop
     (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s))) emp
+    (fun _ -> ())
 
 let starseq_from_singleton_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -118,12 +120,14 @@ let starseq_from_singleton_s (#opened:_) (#a #b: Type0)
   (requires fun _ -> Seq.length s == 1)
   (ensures fun _ _ _ -> True)
   =
-  assume (starseq #a #b f f_lemma (Seq.slice s 0 0) == emp);
-  assume (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s)) == emp);
-  change_equal_slprop
-    emp (starseq #a #b f f_lemma (Seq.slice s 0 0));
-  change_equal_slprop
-    emp (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s)));
+  assume (hp_of (starseq #a #b f f_lemma (Seq.slice s 0 0)) == hp_of emp);
+  assume (hp_of (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s))) == hp_of emp);
+  rewrite_slprop
+    emp (starseq #a #b f f_lemma (Seq.slice s 0 0))
+    (fun _ -> ());
+  rewrite_slprop
+    emp (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s)))
+    (fun _ -> ());
   starseq_pack_s
     #_ #a #b
     f f_lemma s 0
@@ -141,10 +145,11 @@ let starseq_add_singleton_s (#opened:_) (#a #b: Type0)
   (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
   =
-  assume (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)) == emp);
-  change_equal_slprop
+  assume (hp_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) == hp_of emp);
+  rewrite_slprop
     emp
-    (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)));
+    (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)))
+    (fun _ -> ());
   starseq_pack_s
     #_ #a #b
     f f_lemma s n
