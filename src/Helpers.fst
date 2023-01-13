@@ -249,11 +249,6 @@ let rec array_to_pieces_rec (#opened:_)
       (U32.v max')
   )
 
-//array_to_pieces
-//starseq_weakening_ref
-//pieces_to_slots
-//starseq_weakening_rel
-
 let array_to_pieces (#opened:_)
   (#a: Type)
   (size: U32.t{U32.v size > 0})
@@ -272,6 +267,33 @@ let array_to_pieces (#opened:_)
   =
   array_to_pieces_rec size max arr
 
+assume val starseq_weakening_rel (#opened:_)
+  (#a #b1 #b2: Type0)
+  (f1: a -> vprop)
+  (f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == b1)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b2)))
+  (s1: Seq.seq a)
+  (s2: Seq.seq a)
+  (rel1: (vp1:vprop{t_of vp1 == b1} -> vp2:vprop{t_of vp2 == b2} -> prop))
+  (rel2: G.erased b1 -> G.erased b2)
+  : SteelGhost unit opened
+  (starseq #a #b1 f1 f1_lemma s1)
+  (fun _ -> starseq #a #b2 f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 = Seq.length s2 /\
+    (forall (k:nat{k < Seq.length s1}).
+      (f1_lemma (Seq.index s1 k);
+      f2_lemma (Seq.index s2 k);
+      rel1 (f1 (Seq.index s1 k)) (f2 (Seq.index s2 k)))))
+  (ensures fun h0 _ h1 ->
+    Seq.map_seq_len rel2 (v_starseq #a #b1 f1 f1_lemma s1 h0);
+    Seq.length s1 = Seq.length s2 /\
+    Seq.map_seq rel2 (v_starseq #a #b1 f1 f1_lemma s1 h0)
+    ==
+    v_starseq #a #b2 f2 f2_lemma s2 h1
+  )
+
 let slab_to_slots (#opened:_)
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -286,12 +308,40 @@ let slab_to_slots (#opened:_)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
   )
   (requires fun h0 ->
-    //(U32.v page_size) % (U32.v size_class) == 0 /\
+    (U32.v page_size) % (U32.v size_class) == 0 /\
     A.asel arr h0 == Seq.create (U32.v page_size) U8.zero
   )
   (ensures fun _ _ _ ->
     True
   )
   =
-  sladmit ();
-  admit ()
+  array_to_pieces size_class (nb_slots size_class) arr;
+  admit ();
+  starseq_weakening
+    #_
+    #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+    #(Seq.lseq U8.t (U32.v size_class))
+    (slot_vprop size_class (nb_slots size_class) arr)
+    (Slots.slot_vprop size_class arr)
+    (slot_vprop_lemma size_class (nb_slots size_class) arr)
+    (Slots.slot_vprop_lemma size_class arr)
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
+  starseq_weakening_rel
+    #_
+    #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+    #(Seq.lseq U8.t (U32.v size_class))
+    #(option (Seq.lseq U8.t (U32.v size_class)))
+    (Slots.slot_vprop size_class arr)
+    (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr)
+    (Slots.slot_vprop_lemma size_class arr)
+    (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL) arr)
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    (fun _ _ -> True)
+    (fun x -> G.hide (Some (G.reveal x)))
+
+//array_to_pieces
+//starseq_weakening_ref
+//pieces_to_slots
+//starseq_weakening_rel
