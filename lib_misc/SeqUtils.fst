@@ -146,13 +146,11 @@ let map_seq_slice (#a #b:Type)
     (Seq.map_seq f (Seq.slice s i j))
     (Seq.slice (Seq.map_seq f s) i j)
 
-let map_seq_weakening (#a #b:Type)
-  (#p1: a -> bool)
-  (#p2: a -> bool)
-  (f1: (x:a{p1 x}) -> Tot b)
-  (f2: (x:a{p2 x}) -> Tot b)
-  (s1:Seq.seq (x:a{p1 x}))
-  (s2:Seq.seq (x:a{p2 x}))
+let map_seq_weakening (#a1 #a2 #b:Type)
+  (f1: a1 -> Tot b)
+  (f2: a2 -> Tot b)
+  (s1:Seq.seq a1)
+  (s2:Seq.seq a2)
   : Lemma
   (requires
     Seq.length s1 = Seq.length s2 /\

@@ -985,70 +985,68 @@ let starseq_idem (#opened:_) (#a #b: Type0)
   Seq.lemma_eq_intro v0 v1
 #pop-options
 
-let starseq_weakening_lemma_aux (#a #b: Type0)
-  (f1 f2: a -> vprop)
-  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == b)))
-  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b)))
-  (s1 s2: Seq.seq a)
+let starseq_weakening_lemma_aux (#a1 #a2 #b: Type0)
+  (f1: a1 -> vprop)
+  (f2: a2 -> vprop)
+  (f1_lemma: (x:a1 -> Lemma (t_of (f1 x) == b)))
+  (f2_lemma: (x:a2 -> Lemma (t_of (f2 x) == b)))
+  (s1: Seq.seq a1)
+  (s2: Seq.seq a2)
   : Lemma
   (requires
     Seq.length s1 = Seq.length s2 /\
     (forall (k:nat{k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
   (ensures
-    starseq #a #b f1 f1_lemma s1
+    starseq #a1 #b f1 f1_lemma s1
     `equiv`
-    starseq #a #b f2 f2_lemma s2)
+    starseq #a2 #b f2 f2_lemma s2)
   =
-  SeqUtils.map_seq_weakening
-    #_ #_
-    #(fun _ -> true)
-    #(fun _ -> true)
-    f1 f2 s1 s2;
-  let p1 = starseq #a #b f1 f1_lemma s1 in
-  let p2 = starseq #a #b f2 f2_lemma s2 in
+  SeqUtils.map_seq_weakening f1 f2 s1 s2;
+  let p1 = starseq #a1 #b f1 f1_lemma s1 in
+  let p2 = starseq #a2 #b f2 f2_lemma s2 in
   reveal_equiv p1 p2
 
-let starseq_weakening_lemma (#a #b: Type0)
-  (f1 f2: a -> vprop)
-  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == b)))
-  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b)))
-  (s1 s2: Seq.seq a)
+let starseq_weakening_lemma (#a1 #a2 #b: Type0)
+  (f1: a1 -> vprop)
+  (f2: a2 -> vprop)
+  (f1_lemma: (x:a1 -> Lemma (t_of (f1 x) == b)))
+  (f2_lemma: (x:a2 -> Lemma (t_of (f2 x) == b)))
+  (s1: Seq.seq a1)
+  (s2: Seq.seq a2)
   (m: SM.mem)
   : Lemma
   (requires
     Seq.length s1 = Seq.length s2 /\
     (forall (k:nat{k < Seq.length s1}).
       f1 (Seq.index s1 k) == f2 (Seq.index s2 k)) /\
-    SM.interp (hp_of (starseq #a #b f1 f1_lemma s1)) m)
+    SM.interp (hp_of (starseq #a1 #b f1 f1_lemma s1)) m)
   (ensures
-    SM.interp (hp_of (starseq #a #b f2 f2_lemma s2)) m /\
+    SM.interp (hp_of (starseq #a2 #b f2 f2_lemma s2)) m /\
     (let v2 : Seq.seq (G.erased b)
-      = sel_of (starseq #a #b f2 f2_lemma s2) m in
+      = sel_of (starseq #a2 #b f2 f2_lemma s2) m in
     let v1 : Seq.seq (G.erased b)
-      = sel_of (starseq #a #b f1 f1_lemma s1) m
+      = sel_of (starseq #a1 #b f1 f1_lemma s1) m
     in
     v2 == v1)
   )
   =
-  let p1 = starseq #a #b f1 f1_lemma s1 in
-  let p2 = starseq #a #b f2 f2_lemma s2 in
-  starseq_weakening_lemma_aux #a #b f1 f2 f1_lemma f2_lemma s1 s2;
+  let p1 = starseq #a1 #b f1 f1_lemma s1 in
+  let p2 = starseq #a2 #b f2 f2_lemma s2 in
+  starseq_weakening_lemma_aux #a1 #a2 #b f1 f2 f1_lemma f2_lemma s1 s2;
   reveal_equiv p1 p2;
-  assert (SM.interp (hp_of (starseq #a #b f2 f2_lemma s2)) m);
+  assert (SM.interp (hp_of (starseq #a2 #b f2 f2_lemma s2)) m);
   let v1 : Seq.seq (G.erased b)
-    = sel_of (starseq #a #b f1 f1_lemma s1) m in
+    = sel_of (starseq #a1 #b f1 f1_lemma s1) m in
   let v2 : Seq.seq (G.erased b)
-    = sel_of (starseq #a #b f2 f2_lemma s2) m in
-  starseq_sel_len #a #b f1 f1_lemma s1 m;
-  starseq_sel_len #a #b f2 f2_lemma s2 m;
+    = sel_of (starseq #a2 #b f2 f2_lemma s2) m in
   assert (Seq.length v1 = Seq.length v2);
-  let f1' = starl_seq_sel_aux #a #b f1 f1_lemma s1 m in
-  let f2' = starl_seq_sel_aux #a #b f2 f2_lemma s2 m in
+  let f1' = starl_seq_sel_aux #a1 #b f1 f1_lemma s1 m in
+  let f2' = starl_seq_sel_aux #a2 #b f2 f2_lemma s2 m in
   let s1' = SeqUtils.init_nat (Seq.length s1) in
   let s2' = SeqUtils.init_nat (Seq.length s2) in
-  assert (v1 == starl_seq_sel #a #b f1 f1_lemma s1 m);
-  assert (v2 == starl_seq_sel #a #b f2 f2_lemma s2 m);
+  assert (v1 == starl_seq_sel #a1 #b f1 f1_lemma s1 m);
+  assert (v2 == starl_seq_sel #a2 #b f2 f2_lemma s2 m);
   Seq.map_seq_len f1' s1';
   Seq.map_seq_len f2' s2';
   assert (v1 == Seq.map_seq f1' s1');
@@ -1060,6 +1058,38 @@ let starseq_weakening_lemma (#a #b: Type0)
   Seq.lemma_eq_intro v1 v2;
   assert (v1 == v2);
   ()
+
+let starseq_weakening_ref (#opened:_)
+  (#a1 #a2 #b: Type0)
+  (f1: a1 -> vprop)
+  (f2: a2 -> vprop)
+  (f1_lemma: (x:a1 -> Lemma (t_of (f1 x) == b)))
+  (f2_lemma: (x:a2 -> Lemma (t_of (f2 x) == b)))
+  (s1: Seq.seq a1)
+  (s2: Seq.seq a2)
+  : SteelGhost unit opened
+  (starseq #a1 #b f1 f1_lemma s1)
+  (fun _ -> starseq #a2 #b f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 = Seq.length s2 /\
+    (forall (k:nat{k < Seq.length s1}).
+      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
+  (ensures fun h0 _ h1 ->
+    Seq.length s1 = Seq.length s2 /\
+    v_starseq #a1 #b f1 f1_lemma s1 h0
+    ==
+    v_starseq #a2 #b f2 f2_lemma s2 h1
+  )
+  =
+  change_slprop_rel
+    (starseq #a1 #b f1 f1_lemma s1)
+    (starseq #a2 #b f2 f2_lemma s2)
+    (fun x y -> x == y)
+    (fun m -> starseq_weakening_lemma #a1 #a2 #b
+      f1 f2
+      f1_lemma f2_lemma
+      s1 s2
+    m)
 
 let starseq_weakening (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
@@ -1080,15 +1110,7 @@ let starseq_weakening (#opened:_) (#a #b: Type0)
     v_starseq #a #b f2 f2_lemma s2 h1
   )
   =
-  change_slprop_rel
-    (starseq #a #b f1 f1_lemma s1)
-    (starseq #a #b f2 f2_lemma s2)
-    (fun x y -> x == y)
-    (fun m -> starseq_weakening_lemma #a #b
-      f1 f2
-      f1_lemma f2_lemma
-      s1 s2
-    m)
+  starseq_weakening_ref #_ #a #a #b f1 f2 f1_lemma f2_lemma s1 s2
 
 let starseq_upd (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)

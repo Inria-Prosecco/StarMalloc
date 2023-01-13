@@ -164,6 +164,28 @@ val starseq_pack_s (#opened:_) (#a #b: Type0)
       == Seq.slice v (n+1) (Seq.length s)
   )
 
+val starseq_weakening_ref (#opened:_)
+  (#a1 #a2 #b: Type0)
+  (f1: a1 -> vprop)
+  (f2: a2 -> vprop)
+  (f1_lemma: (x:a1 -> Lemma (t_of (f1 x) == b)))
+  (f2_lemma: (x:a2 -> Lemma (t_of (f2 x) == b)))
+  (s1: Seq.seq a1)
+  (s2: Seq.seq a2)
+  : SteelGhost unit opened
+  (starseq #a1 #b f1 f1_lemma s1)
+  (fun _ -> starseq #a2 #b f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 = Seq.length s2 /\
+    (forall (k:nat{k < Seq.length s1}).
+      f1 (Seq.index s1 k) == f2 (Seq.index s2 k)))
+  (ensures fun h0 _ h1 ->
+    Seq.length s1 = Seq.length s2 /\
+    v_starseq #a1 #b f1 f1_lemma s1 h0
+    ==
+    v_starseq #a2 #b f2 f2_lemma s2 h1
+  )
+
 val starseq_weakening (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == b)))
