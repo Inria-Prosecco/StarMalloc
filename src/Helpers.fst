@@ -183,12 +183,19 @@ assume val starseq_weakening_ref (#opened:_)
 
 let init_u32_slice_lemma
   (n: U32.t{0 < U32.v n})
-  (i: nat{i < U32.v n})
+  (i: nat{i < U32.v n - 1})
   : Lemma
   (Seq.index (SeqUtils.init_u32_refined (U32.v (U32.sub n U32.one))) i
   ==
   Seq.index (Seq.slice (SeqUtils.init_u32_refined (U32.v n)) 0 (U32.v (U32.sub n U32.one))) i)
-  = admit ()
+  =
+  SeqUtils.init_u32_refined_index
+    (U32.v (U32.sub n U32.one)) i;
+  SeqUtils.lemma_index_slice
+    (SeqUtils.init_u32_refined (U32.v n))
+    0 (U32.v (U32.sub n U32.one)) i;
+  SeqUtils.init_u32_refined_index
+    (U32.v n) i
 
 #push-options "--z3rlimit 50"
 let rec array_to_pieces_rec (#opened:_)
@@ -248,7 +255,7 @@ let rec array_to_pieces_rec (#opened:_)
       (slot_vprop size max arr
         (Seq.index (SeqUtils.init_u32_refined (U32.v max)) (U32.v max'))
       );
-    Classical.forall_intro (init_u32_slice_lemma max');
+    Classical.forall_intro (init_u32_slice_lemma max);
     assert (forall i.
       Seq.index (SeqUtils.init_u32_refined (U32.v max')) i
       ==
