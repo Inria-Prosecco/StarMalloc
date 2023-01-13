@@ -326,7 +326,6 @@ let slab_to_slots (#opened:_)
   )
   =
   array_to_pieces size_class (nb_slots size_class) arr;
-  admit ();
   starseq_weakening
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
