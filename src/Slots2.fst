@@ -605,7 +605,6 @@ let deallocate_slot
   (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
   : Steel bool
-  //: Steel bool
   (A.varray ptr `star` slab_vprop size_class arr md)
   (fun b ->
     (if b then emp else A.varray ptr) `star`
@@ -723,8 +722,9 @@ let deallocate_slot
 
 sides:
 [ok] - remove src/Slots remaining admit with src/Slots2 lemma
-- remove Slots2 admits + aux lemmas (some work ahead!)
+[~ok]- remove Slots2 admits + aux lemmas (some work ahead!)
   [ok] - remove dubious coercions
+  - add bitmap lemmas
 - merge extraction to main when extractable
 
 roadmap:
