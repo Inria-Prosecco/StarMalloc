@@ -181,7 +181,16 @@ assume val starseq_weakening_ref (#opened:_)
     v_starseq #a2 #b f2 f2_lemma s2 h1
   )
 
-#push-options "--z3rlimit 30"
+let init_u32_slice_lemma
+  (n: U32.t{0 < U32.v n})
+  (i: nat{i < U32.v n})
+  : Lemma
+  (Seq.index (SeqUtils.init_u32_refined (U32.v (U32.sub n U32.one))) i
+  ==
+  Seq.index (Seq.slice (SeqUtils.init_u32_refined (U32.v n)) 0 (U32.v (U32.sub n U32.one))) i)
+  = admit ()
+
+#push-options "--z3rlimit 50"
 let rec array_to_pieces_rec (#opened:_)
   (#a: Type)
   (size: U32.t{U32.v size > 0})
@@ -201,7 +210,6 @@ let rec array_to_pieces_rec (#opened:_)
   (decreases (U32.v max))
   =
   if (U32.eq max U32.one) then (
-    admit ();
     let arr2 = slot_array size max arr 0ul in
     let p1 = A.ptr_of arr in
     let p2 = A.ptr_of arr2 in
@@ -230,14 +238,21 @@ let rec array_to_pieces_rec (#opened:_)
     let index = u32_to_sz index in
     A.ghost_split arr index;
     array_to_pieces_rec size max' (A.split_l arr index);
-    assume (A.split_r arr index == slot_array size max arr max');
+    let arr1 = A.split_r arr index in
+    let arr2 = slot_array size max arr max' in
+    A.ptr_base_offset_inj (A.ptr_of arr1) (A.ptr_of arr2);
+    assert (arr1 == arr2);
     SeqUtils.init_u32_refined_index (U32.v max) (U32.v max');
     change_equal_slprop
       (A.varray (A.split_r arr index))
       (slot_vprop size max arr
         (Seq.index (SeqUtils.init_u32_refined (U32.v max)) (U32.v max'))
       );
-    admit ();
+    Classical.forall_intro (init_u32_slice_lemma max');
+    assert (forall i.
+      Seq.index (SeqUtils.init_u32_refined (U32.v max')) i
+      ==
+      Seq.index (Seq.slice (SeqUtils.init_u32_refined (U32.v max)) 0 (U32.v max')) i);
     starseq_weakening_ref
       #_
       #(pos: U32.t{U32.v pos < U32.v max'})
