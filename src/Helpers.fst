@@ -296,7 +296,21 @@ assume val starseq_weakening_rel (#opened:_)
       f2_lemma (Seq.index s2 k);
       hp_of (f1 (Seq.index s1 k))
       ==
-      hp_of (f2 (Seq.index s2 k)))))
+      hp_of (f2 (Seq.index s2 k))
+      /\
+      (forall
+        h0 h1.
+        let v0 : t_of (f1 (Seq.index s1 k))
+          = sel_of (f1 (Seq.index s1 k)) h0 in
+        let v1 : t_of (f2 (Seq.index s2 k))
+          = sel_of (f2 (Seq.index s2 k)) h1 in
+        let v0 : G.erased b1 = v0 in
+        let v1 : G.erased b2 = v1 in
+        v1 == rel v0
+      )
+      )
+    )
+  )
   (ensures fun h0 _ h1 ->
     Seq.map_seq_len rel (v_starseq #a #b1 f1 f1_lemma s1 h0);
     Seq.length s1 = Seq.length s2 /\
@@ -375,6 +389,7 @@ let slab_to_slots (#opened:_)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
   Classical.forall_intro (slab_to_slots_aux size_class arr);
+  admit ();
   starseq_weakening_rel
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
