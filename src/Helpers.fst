@@ -305,6 +305,43 @@ assume val starseq_weakening_rel (#opened:_)
     v_starseq #a #b2 f2 f2_lemma s2 h1
   )
 
+module FU = FStar.UInt
+module FBV = FStar.BitVector
+
+let empty_md_lemma
+  (idx: nat{idx < U64.n * 4})
+  : Lemma
+  (Seq.index (a2bv (Seq.create 4 0UL)) idx == false)
+  =
+  let s = Seq.create 4 0UL in
+  let r = Seq.index (a2bv s) idx in
+  Bitmap4.array_to_bv2_index #4 s idx;
+  assert (Seq.index s (idx/U64.n) == 0UL);
+  assert (r == FU.nth #U64.n (U64.v 0UL) (idx%U64.n));
+  assert (r == Seq.index (FU.to_vec #U64.n 0) (idx%U64.n));
+  assert (FU.to_vec #U64.n 0 == FU.to_vec #U64.n (FU.zero U64.n))
+
+let slab_to_slots_aux
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Lemma
+  (hp_of (Slots.slot_vprop size_class arr pos)
+  ==
+  hp_of (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos))
+  =
+  let bm = a2bv (Seq.create 4 0UL) in
+  let idx = Bitmap5.f #4 (U32.v pos) in
+  empty_md_lemma idx;
+  Slots.starseq_upd_aux_lemma3 size_class (Seq.create 4 0UL) arr pos;
+  SeqUtils.init_u32_refined_index (U32.v (nb_slots size_class)) (U32.v pos);
+  assert (
+    (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos)
+    ==
+    some_as_vp #(Seq.lseq U8.t (U32.v size_class))
+      (Slots.slot_vprop size_class arr pos)
+  )
+
 let slab_to_slots (#opened:_)
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -337,14 +374,7 @@ let slab_to_slots (#opened:_)
     (Slots.slot_vprop_lemma size_class arr)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
-  Classical.forall_intro (Classical.move_requires (
-    starseq_upd_aux_lemma3 size_class (Seq.create 4 0UL) arr
-  ));
-  assume (forall i.
-    hp_of (Slots.slot_vprop size_class arr i)
-    ==
-    hp_of (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr i)
-  );
+  Classical.forall_intro (slab_to_slots_aux size_class arr);
   starseq_weakening_rel
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
