@@ -285,8 +285,7 @@ assume val starseq_weakening_rel (#opened:_)
   (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b2)))
   (s1: Seq.seq a)
   (s2: Seq.seq a)
-  (rel1: (vp1:vprop{t_of vp1 == b1} -> vp2:vprop{t_of vp2 == b2} -> prop))
-  (rel2: G.erased b1 -> G.erased b2)
+  (rel: G.erased b1 -> G.erased b2)
   : SteelGhost unit opened
   (starseq #a #b1 f1 f1_lemma s1)
   (fun _ -> starseq #a #b2 f2 f2_lemma s2)
@@ -295,11 +294,13 @@ assume val starseq_weakening_rel (#opened:_)
     (forall (k:nat{k < Seq.length s1}).
       (f1_lemma (Seq.index s1 k);
       f2_lemma (Seq.index s2 k);
-      rel1 (f1 (Seq.index s1 k)) (f2 (Seq.index s2 k)))))
+      hp_of (f1 (Seq.index s1 k))
+      ==
+      hp_of (f2 (Seq.index s2 k)))))
   (ensures fun h0 _ h1 ->
-    Seq.map_seq_len rel2 (v_starseq #a #b1 f1 f1_lemma s1 h0);
+    Seq.map_seq_len rel (v_starseq #a #b1 f1 f1_lemma s1 h0);
     Seq.length s1 = Seq.length s2 /\
-    Seq.map_seq rel2 (v_starseq #a #b1 f1 f1_lemma s1 h0)
+    Seq.map_seq rel (v_starseq #a #b1 f1 f1_lemma s1 h0)
     ==
     v_starseq #a #b2 f2 f2_lemma s2 h1
   )
@@ -336,6 +337,14 @@ let slab_to_slots (#opened:_)
     (Slots.slot_vprop_lemma size_class arr)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
+  Classical.forall_intro (Classical.move_requires (
+    starseq_upd_aux_lemma3 size_class (Seq.create 4 0UL) arr
+  ));
+  assume (forall i.
+    hp_of (Slots.slot_vprop size_class arr i)
+    ==
+    hp_of (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr i)
+  );
   starseq_weakening_rel
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
@@ -347,7 +356,6 @@ let slab_to_slots (#opened:_)
     (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL) arr)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-    (fun _ _ -> True)
     (fun x -> G.hide (Some (G.reveal x)))
 
 //array_to_pieces
