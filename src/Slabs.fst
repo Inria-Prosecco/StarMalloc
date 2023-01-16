@@ -883,27 +883,22 @@ let alloc_metadata
   =
   let md_count_v0 = read md_count in
   assert (md_count_v0 == G.reveal md_count_v);
-  change_slprop_rel
+  change_equal_slprop
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz (G.reveal md_count_v))))
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v0 page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v0 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz md_count_v0)))
-    (fun x y -> x == y)
-    (fun m -> alloc_metadata_sl1 slab_region md_bm_region md_region md_count_v md_count_v0 m);
+    A.varray (A.split_r md_region (u32_to_sz md_count_v0)));
   let r = alloc_metadata_aux2 md_count_v0 size_class slab_region md_bm_region md_region in
   assert (U32.add md_count_v0 1ul == U32.add (G.reveal md_count_v) 1ul);
-  change_slprop_rel
+  change_equal_slprop
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count_v0 1ul) page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count_v0 1ul) 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz (U32.add md_count_v0 1ul))))
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) `star`
-    A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul))))
-    (fun x y -> x == y)
-    //TODO/FIXME @Aymeric
-    (fun m -> admit (); alloc_metadata_sl2 slab_region md_bm_region md_region md_count_v md_count_v0 m);
+    A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul))));
   write md_count (U32.add md_count_v0 1ul);
   let md_count_v1 = read md_count in
   assert (md_count_v1 == G.reveal (snd r));
