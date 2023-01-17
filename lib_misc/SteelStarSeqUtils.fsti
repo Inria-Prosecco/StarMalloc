@@ -98,6 +98,14 @@ val starseq_empty_equiv_emp (#a #b: Type)
   (requires Seq.length s == 0)
   (ensures hp_of (starseq #a #b f f_lemma s) == hp_of emp)
 
+val starseq_singleton_equiv (#a #b: Type)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  : Lemma
+  (requires Seq.length s == 1)
+  (ensures hp_of (starseq #a #b f f_lemma s) == hp_of (f (Seq.index s 0) `star` emp))
+
 [@@ __steel_reduce__]
 let v_starseq (#a #b: Type)
   (#p: vprop)
