@@ -1238,7 +1238,7 @@ let allocate_slab
   )
   (fun r ->
     (if (G.reveal (snd r)) then A.varray (fst r) else emp) `star`
-    (SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
+    SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
     SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
     SL.ind_llist (p_full sc) full_slabs_ptr `star`
     vrefinedep
@@ -1248,7 +1248,7 @@ let allocate_slab
       (fun v ->
         A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))) `star`
         A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
-        A.varray (A.split_r md_region (u32_to_sz v))))
+        A.varray (A.split_r md_region (u32_to_sz v)))
   )
   (requires fun h0 -> True)
   (ensures fun _ _ _ -> True)
