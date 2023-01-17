@@ -277,46 +277,32 @@ let array_to_pieces (#opened:_)
   =
   array_to_pieces_rec size max arr
 
-assume val starseq_weakening_rel (#opened:_)
-  (#a #b1 #b2: Type0)
+assume val starseq_weakening_rel_some (#opened:_)
+  (#a #b: Type0)
   (f1: a -> vprop)
   (f2: a -> vprop)
-  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == b1)))
-  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b2)))
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
   (s1: Seq.seq a)
-  (s2: Seq.seq a)
-  (rel: G.erased b1 -> G.erased b2)
+  (s2: Seq.seq a{Seq.length s1 == Seq.length s2})
   : SteelGhost unit opened
-  (starseq #a #b1 f1 f1_lemma s1)
-  (fun _ -> starseq #a #b2 f2 f2_lemma s2)
+  (starseq #a #b f1 f1_lemma s1)
+  (fun _ -> starseq #a #(option b) f2 f2_lemma s2)
   (requires fun _ ->
-    Seq.length s1 = Seq.length s2 /\
-    (forall (k:nat{k < Seq.length s1}).
-      (f1_lemma (Seq.index s1 k);
-      f2_lemma (Seq.index s2 k);
-      hp_of (f1 (Seq.index s1 k))
+    Seq.length s1 == Seq.length s2 /\
+    (forall (k:nat{k < Seq.length s1}). (
+      f1_lemma (Seq.index s1 k);
+      f2 (Seq.index s2 k)
       ==
-      hp_of (f2 (Seq.index s2 k))
-      /\
-      (forall
-        h0 h1.
-        let v0 : t_of (f1 (Seq.index s1 k))
-          = sel_of (f1 (Seq.index s1 k)) h0 in
-        let v1 : t_of (f2 (Seq.index s2 k))
-          = sel_of (f2 (Seq.index s2 k)) h1 in
-        let v0 : G.erased b1 = v0 in
-        let v1 : G.erased b2 = v1 in
-        v1 == rel v0
-      )
-      )
-    )
+      some_as_vp #b (f1 (Seq.index s1 k))
+    ))
   )
   (ensures fun h0 _ h1 ->
-    Seq.map_seq_len rel (v_starseq #a #b1 f1 f1_lemma s1 h0);
+    Seq.map_seq_len (fun x -> G.hide (Some (G.reveal x))) (v_starseq #a #b f1 f1_lemma s1 h0);
     Seq.length s1 = Seq.length s2 /\
-    Seq.map_seq rel (v_starseq #a #b1 f1 f1_lemma s1 h0)
+    Seq.map_seq (fun x -> G.hide (Some (G.reveal x))) (v_starseq #a #b f1 f1_lemma s1 h0)
     ==
-    v_starseq #a #b2 f2 f2_lemma s2 h1
+    v_starseq #a #(option b) f2 f2_lemma s2 h1
   )
 
 module FU = FStar.UInt
@@ -340,9 +326,9 @@ let slab_to_slots_aux
   (arr: array U8.t{A.length arr = U32.v page_size})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
-  (hp_of (Slots.slot_vprop size_class arr pos)
+  (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos
   ==
-  hp_of (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos))
+  some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (Slots.slot_vprop size_class arr pos))
   =
   let bm = a2bv (Seq.create 4 0UL) in
   let idx = Bitmap5.f #4 (U32.v pos) in
@@ -389,19 +375,16 @@ let slab_to_slots (#opened:_)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
   Classical.forall_intro (slab_to_slots_aux size_class arr);
-  admit ();
-  starseq_weakening_rel
+  starseq_weakening_rel_some
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
-    #(option (Seq.lseq U8.t (U32.v size_class)))
     (Slots.slot_vprop size_class arr)
     (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr)
     (Slots.slot_vprop_lemma size_class arr)
     (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL) arr)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
-    (fun x -> G.hide (Some (G.reveal x)))
 
 //array_to_pieces
 //starseq_weakening_ref
