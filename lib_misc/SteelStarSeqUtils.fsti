@@ -95,7 +95,7 @@ val starseq_empty_equiv_emp (#a #b: Type)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   : Lemma
-  (requires s == Seq.empty)
+  (requires Seq.length s == 0)
   (ensures hp_of (starseq #a #b f f_lemma s) == hp_of emp)
 
 [@@ __steel_reduce__]

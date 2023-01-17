@@ -889,10 +889,23 @@ let starseq_empty_equiv_emp (#a #b: Type)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   : Lemma
-  (requires s == Seq.empty)
+  (requires Seq.length s == 0)
   (ensures hp_of (starseq #a #b f f_lemma s) == hp_of emp)
   =
   Seq.map_seq_len f s
+
+let starseq_singleton_equiv (#a #b: Type)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  : Lemma
+  (requires Seq.length s == 1)
+  (ensures hp_of (starseq #a #b f f_lemma s) == hp_of (f (Seq.index s 0) `star` emp))
+  =
+  Seq.map_seq_len f s;
+  Seq.map_seq_index f s 0;
+  Seq.lemma_index_is_nth (Seq.map_seq f s) 0;
+  assert (hp_of (starseq #a #b f f_lemma s) == hp_of (f (Seq.index s 0) `star` emp))
 
 let starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -1029,8 +1042,6 @@ let rec starseq_weakening_lemma_aux_generic
   (decreases Seq.length s1)
   = match Seq.length s1 with
   | 0 ->
-    Seq.lemma_empty s1;
-    Seq.lemma_empty s2;
     starseq_empty_equiv_emp #a1 #b1 f1 f1_lemma s1;
     starseq_empty_equiv_emp #a2 #b2 f2 f2_lemma s2;
     reveal_equiv
@@ -1038,37 +1049,42 @@ let rec starseq_weakening_lemma_aux_generic
       (starseq #a2 #b2 f2 f2_lemma s2)
   | _ ->
     assert (Seq.length s1 > 0);
-    assert (Seq.length s2 > 0);
-    let s11, s12 = Seq.split s1 (Seq.length s1 - 1) in
-    let s21, s22 = Seq.split s2 (Seq.length s1 - 1) in
-    Seq.lemma_split s1 (Seq.length s1 - 1);
-    Seq.lemma_split s2 (Seq.length s1 - 1);
-    starseq_append #a1 #b1 f1 f1_lemma s11 s12;
-    starseq_append #a2 #b2 f2 f2_lemma s21 s22;
-    assume (Seq.length s12 < Seq.length s1);
-    assume (Seq.length s22 < Seq.length s2);
-    starseq_weakening_lemma_aux_generic #a1 #a2 #b1 #b2 f1 f2 f1_lemma f2_lemma s11 s21;
-    starseq_weakening_lemma_aux_generic #a1 #a2 #b1 #b2 f1 f2 f1_lemma f2_lemma s12 s22;
-    star_congruence
-      (starseq #a1 #b1 f1 f1_lemma s11)
-      (starseq #a1 #b1 f1 f1_lemma s12)
-      (starseq #a2 #b2 f2 f2_lemma s21)
-      (starseq #a2 #b2 f2 f2_lemma s22);
-    equiv_sym
-      (starseq #a2 #b2 f2 f2_lemma s2)
-      (starseq #a2 #b2 f2 f2_lemma s21 `star`
-      starseq #a2 #b2 f2 f2_lemma s22);
-    equiv_trans
-      (starseq #a1 #b1 f1 f1_lemma s1)
-      (starseq #a1 #b1 f1 f1_lemma s11 `star`
-      starseq #a1 #b1 f1 f1_lemma s12)
-      (starseq #a2 #b2 f2 f2_lemma s21 `star`
-      starseq #a2 #b2 f2 f2_lemma s22);
-    equiv_trans
-      (starseq #a1 #b1 f1 f1_lemma s1)
-      (starseq #a2 #b2 f2 f2_lemma s21 `star`
-      starseq #a2 #b2 f2 f2_lemma s22)
-      (starseq #a2 #b2 f2 f2_lemma s2)
+    if (Seq.length s1 = 1) then (
+      starseq_singleton_equiv #a1 #b1 f1 f1_lemma s1;
+      starseq_singleton_equiv #a2 #b2 f2 f2_lemma s2;
+      reveal_equiv
+        (starseq #a1 #b1 f1 f1_lemma s1)
+        (starseq #a2 #b2 f2 f2_lemma s2)
+    ) else (
+      let s11, s12 = Seq.split s1 (Seq.length s1 - 1) in
+      let s21, s22 = Seq.split s2 (Seq.length s1 - 1) in
+      Seq.lemma_split s1 (Seq.length s1 - 1);
+      Seq.lemma_split s2 (Seq.length s1 - 1);
+      starseq_append #a1 #b1 f1 f1_lemma s11 s12;
+      starseq_append #a2 #b2 f2 f2_lemma s21 s22;
+      starseq_weakening_lemma_aux_generic #a1 #a2 #b1 #b2 f1 f2 f1_lemma f2_lemma s11 s21;
+      starseq_weakening_lemma_aux_generic #a1 #a2 #b1 #b2 f1 f2 f1_lemma f2_lemma s12 s22;
+      star_congruence
+        (starseq #a1 #b1 f1 f1_lemma s11)
+        (starseq #a1 #b1 f1 f1_lemma s12)
+        (starseq #a2 #b2 f2 f2_lemma s21)
+        (starseq #a2 #b2 f2 f2_lemma s22);
+      equiv_sym
+        (starseq #a2 #b2 f2 f2_lemma s2)
+        (starseq #a2 #b2 f2 f2_lemma s21 `star`
+        starseq #a2 #b2 f2 f2_lemma s22);
+      equiv_trans
+        (starseq #a1 #b1 f1 f1_lemma s1)
+        (starseq #a1 #b1 f1 f1_lemma s11 `star`
+        starseq #a1 #b1 f1 f1_lemma s12)
+        (starseq #a2 #b2 f2 f2_lemma s21 `star`
+        starseq #a2 #b2 f2 f2_lemma s22);
+      equiv_trans
+        (starseq #a1 #b1 f1 f1_lemma s1)
+        (starseq #a2 #b2 f2 f2_lemma s21 `star`
+        starseq #a2 #b2 f2 f2_lemma s22)
+        (starseq #a2 #b2 f2 f2_lemma s2)
+    )
 
 let starseq_weakening_rel_some_lemma_aux_rel (#a #b: Type0)
   (f1: a -> vprop)
