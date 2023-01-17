@@ -8,6 +8,16 @@ module L = FStar.List.Tot
 module G = FStar.Ghost
 open SteelOptUtils
 
+let starl (l: list vprop)
+  : vprop
+  =
+  L.fold_right star l emp
+
+let starl_seq (s: Seq.seq vprop)
+  : vprop
+  =
+  starl (Seq.seq_to_list s)
+
 let rec starl_append (l1 l2: list vprop)
   : Lemma
   (starl (L.append l1 l2) `equiv` (starl l1 `star` starl l2))
@@ -873,6 +883,16 @@ let starseq_pack_lemma (#a #b: Type0)
   starseq_sel_index #a #b f f_lemma s n m;
   starseq_sel_slice_1 #a #b f f_lemma s n m;
   starseq_sel_slice_2 #a #b f f_lemma s n m
+
+let starseq_empty_equiv_emp (#a #b: Type)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  : Lemma
+  (requires s == Seq.empty)
+  (ensures hp_of (starseq #a #b f f_lemma s) == hp_of emp)
+  =
+  Seq.map_seq_len f s
 
 let starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)

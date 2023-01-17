@@ -8,16 +8,11 @@ module L = FStar.List.Tot
 module G = FStar.Ghost
 open SteelOptUtils
 
-
-let starl (l: list vprop)
+val starl (l: list vprop)
   : vprop
-  =
-  L.fold_right star l emp
 
-let starl_seq (s: Seq.seq vprop)
+val starl_seq (s: Seq.seq vprop)
   : vprop
-  =
-  starl (Seq.seq_to_list s)
 
 val starl_append (l1 l2: list vprop)
   : Lemma
@@ -94,6 +89,14 @@ let starseq (#a #b: Type)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   = VUnit (starseq' #a #b f f_lemma s)
+
+val starseq_empty_equiv_emp (#a #b: Type)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  : Lemma
+  (requires s == Seq.empty)
+  (ensures hp_of (starseq #a #b f f_lemma s) == hp_of emp)
 
 [@@ __steel_reduce__]
 let v_starseq (#a #b: Type)

@@ -99,10 +99,10 @@ let starseq_to_singleton_s (#opened:_) (#a #b: Type0)
   starseq_unpack_s
     #_ #a #b
     f f_lemma s 0;
-  Seq.map_seq_len f (Seq.empty);
-  assert_norm (hp_of (starseq #a #b f f_lemma (Seq.slice s 0 0)) == hp_of emp);
-  Seq.map_seq_len f (Seq.slice s 1 (Seq.length s));
-  assert_norm (hp_of (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s))) == hp_of emp);
+  starseq_empty_equiv_emp #a #b f f_lemma (Seq.slice s 0 0);
+  assert (hp_of (starseq #a #b f f_lemma (Seq.slice s 0 0)) == hp_of emp);
+  starseq_empty_equiv_emp #a #b f f_lemma (Seq.slice s 1 (Seq.length s));
+  assert (hp_of (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s))) == hp_of emp);
   rewrite_slprop
     (starseq #a #b f f_lemma (Seq.slice s 0 0)) emp
     (fun _ -> ());
@@ -122,10 +122,10 @@ let starseq_from_singleton_s (#opened:_) (#a #b: Type0)
   (requires fun _ -> Seq.length s == 1)
   (ensures fun _ _ _ -> True)
   =
-  Seq.map_seq_len f (Seq.slice s 0 0);
-  assert_norm (hp_of (starseq #a #b f f_lemma (Seq.slice s 0 0)) == hp_of emp);
-  Seq.map_seq_len f (Seq.slice s 1 (Seq.length s));
-  assert_norm (hp_of (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s))) == hp_of emp);
+  starseq_empty_equiv_emp #a #b f f_lemma (Seq.slice s 0 0);
+  assert (hp_of (starseq #a #b f f_lemma (Seq.slice s 0 0)) == hp_of emp);
+  starseq_empty_equiv_emp #a #b f f_lemma (Seq.slice s 1 (Seq.length s));
+  assert (hp_of (starseq #a #b f f_lemma (Seq.slice s 1 (Seq.length s))) == hp_of emp);
   rewrite_slprop
     emp (starseq #a #b f f_lemma (Seq.slice s 0 0))
     (fun _ -> ());
@@ -149,8 +149,8 @@ let starseq_add_singleton_s (#opened:_) (#a #b: Type0)
   (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
   =
-  Seq.map_seq_len f (Seq.slice s (n+1) (Seq.length s));
-  assert_norm (hp_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) == hp_of emp);
+  starseq_empty_equiv_emp #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s));
+  assert (hp_of (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s))) == hp_of emp);
   rewrite_slprop
     emp
     (starseq #a #b f f_lemma (Seq.slice s (n+1) (Seq.length s)))
