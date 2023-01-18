@@ -531,7 +531,7 @@ let deallocate_slot'
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
         #(option (Seq.lseq U8.t (U32.v size_class)))
         (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
-        (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r  arr 0sz))
+        (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     )
   )
@@ -584,6 +584,7 @@ let deallocate_slot'
  )
 #pop-options
 
+(*)
 #push-options "--z3rlimit 75"
 let deallocate_slot
   (size_class: sc)
