@@ -60,21 +60,21 @@ let p_empty (size_class: sc)
   fun (b: blob) ->
     slab_vprop size_class (snd b) (fst b)
     `vrefine`
-    (fun (|s,_|) -> is_empty size_class s == true)
+    (fun ((|s,_|), _) -> is_empty size_class s == true)
 
 let p_partial (size_class: sc)
   =
   fun (b: blob) ->
     slab_vprop size_class (snd b) (fst b)
     `vrefine`
-    (fun (|s,_|) -> is_partial size_class s == true)
+    (fun ((|s,_|), _) -> is_partial size_class s == true)
 
 let p_full (size_class: sc)
   =
   fun (b: blob) ->
     slab_vprop size_class (snd b) (fst b)
     `vrefine`
-    (fun (|s,_|) -> is_full size_class s == true)
+    (fun ((|s,_|), _) -> is_full size_class s == true)
 
 #push-options "--compat_pre_typed_indexed_effects"
 #push-options "--z3rlimit 30"
@@ -90,7 +90,7 @@ let p_empty_unpack (#opened:_)
     let blob1
       : t_of (slab_vprop sc (snd b2) (fst b2))
       = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
+    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
     b1 == b2 /\
     is_empty sc v1 /\
     h0 ((p_empty sc) b1)
@@ -102,12 +102,12 @@ let p_empty_unpack (#opened:_)
     ((p_empty sc) b1)
     (slab_vprop sc (snd b2) (fst b2)
     `vrefine`
-    (fun (|s,_|) -> is_empty sc s == true))
+    (fun ((|s,_|), _) -> is_empty sc s == true))
     (fun x y -> x == y)
     (fun _ -> ());
   elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
-    (fun (|s,_|) -> is_empty sc s == true)
+    (fun ((|s,_|), _) -> is_empty sc s == true)
 
 let p_partial_unpack (#opened:_)
   (sc: sc)
@@ -121,7 +121,7 @@ let p_partial_unpack (#opened:_)
     let blob1
       : t_of (slab_vprop sc (snd b2) (fst b2))
       = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
+    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
     b1 == b2 /\
     is_partial sc v1 /\
     h0 ((p_partial sc) b1)
@@ -133,12 +133,12 @@ let p_partial_unpack (#opened:_)
     ((p_partial sc) b1)
     (slab_vprop sc (snd b2) (fst b2)
     `vrefine`
-    (fun (|s,_|) -> is_partial sc s == true))
+    (fun ((|s,_|), _) -> is_partial sc s == true))
     (fun x y -> x == y)
     (fun _ -> ());
   elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
-    (fun (|s,_|) -> is_partial sc s == true)
+    (fun ((|s,_|), _) -> is_partial sc s == true)
 
 let p_full_unpack (#opened:_)
   (sc: sc)
@@ -152,7 +152,7 @@ let p_full_unpack (#opened:_)
     let blob1
       : t_of (slab_vprop sc (snd b2) (fst b2))
       = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
+    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
     b1 == b2 /\
     is_full sc v1 /\
     h0 ((p_full sc) b1)
@@ -164,12 +164,12 @@ let p_full_unpack (#opened:_)
     ((p_full sc) b1)
     (slab_vprop sc (snd b2) (fst b2)
     `vrefine`
-    (fun (|s,_|) -> is_full sc s == true))
+    (fun ((|s,_|), _) -> is_full sc s == true))
     (fun x y -> x == y)
     (fun _ -> ());
   elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
-    (fun (|s,_|) -> is_full sc s == true)
+    (fun ((|s,_|), _) -> is_full sc s == true)
 
 let p_full_pack (#opened:_)
   (sc: sc)
@@ -182,7 +182,7 @@ let p_full_pack (#opened:_)
     let blob0
       : t_of (slab_vprop sc (snd b1) (fst b1))
       = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     is_full sc v0 /\
     b1 == b2
   )
@@ -195,11 +195,11 @@ let p_full_pack (#opened:_)
   =
   intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
-    (fun (|s,_|) -> is_full sc s == true);
+    (fun ((|s,_|), _) -> is_full sc s == true);
   change_slprop_rel
     (slab_vprop sc (snd b1) (fst b1)
     `vrefine`
-    (fun (|s,_|) -> is_full sc s == true))
+    (fun ((|s,_|), _) -> is_full sc s == true))
     ((p_full sc) b2)
     (fun x y -> x == y)
     (fun _ -> ())
@@ -215,7 +215,7 @@ let p_partial_pack (#opened:_)
     let blob0
       : t_of (slab_vprop sc (snd b1) (fst b1))
       = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     is_partial sc v0 /\
     b1 == b2
   )
@@ -228,11 +228,11 @@ let p_partial_pack (#opened:_)
   =
   intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
-    (fun (|s,_|) -> is_partial sc s == true);
+    (fun ((|s,_|), _) -> is_partial sc s == true);
   change_slprop_rel
     (slab_vprop sc (snd b1) (fst b1)
     `vrefine`
-    (fun (|s,_|) -> is_partial sc s == true))
+    (fun ((|s,_|), _) -> is_partial sc s == true))
     ((p_partial sc) b2)
     (fun x y -> x == y)
     (fun _ -> ())
@@ -248,7 +248,7 @@ let p_empty_pack (#opened:_)
     let blob0
       : t_of (slab_vprop sc (snd b1) (fst b1))
       = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     is_empty sc v0 /\
     b1 == b2
   )
@@ -261,11 +261,11 @@ let p_empty_pack (#opened:_)
   =
   intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
-    (fun (|s,_|) -> is_empty sc s == true);
+    (fun ((|s,_|), _) -> is_empty sc s == true);
   change_slprop_rel
     (slab_vprop sc (snd b1) (fst b1)
     `vrefine`
-    (fun (|s,_|) -> is_empty sc s == true))
+    (fun ((|s,_|), _) -> is_empty sc s == true))
     ((p_empty sc) b2)
     (fun x y -> x == y)
     (fun _ -> ())
@@ -301,7 +301,7 @@ let allocate_slab_aux_1_partial
     let slab_vprop_data
       : t_of (slab_vprop size_class (snd b) (fst b))
       = h0 (slab_vprop size_class (snd b) (fst b)) in
-    let md_seq : Seq.lseq U64.t 4 = dfst slab_vprop_data in
+    let md_seq : Seq.lseq U64.t 4 = dfst (fst slab_vprop_data) in
     sel partial_slabs_ptr h0 == partial_slabs /\
     SAR.sel cell_ptr h0 == cell_content /\
     is_partial size_class md_seq /\
@@ -348,7 +348,7 @@ let allocate_slab_aux_1_full
     let slab_vprop_data
       : t_of (slab_vprop size_class (snd b) (fst b))
       = h0 (slab_vprop size_class (snd b) (fst b)) in
-    let md_seq : Seq.lseq U64.t 4 = dfst slab_vprop_data in
+    let md_seq : Seq.lseq U64.t 4 = dfst (fst slab_vprop_data) in
     sel full_slabs_ptr h0 == full_slabs /\
     SAR.sel cell_ptr h0 == cell_content /\
     is_full size_class md_seq /\
@@ -387,7 +387,7 @@ let allocate_slab_aux_cond
     let blob1
       : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     blob0 == blob1 /\
     r == is_full size_class v0
   )
@@ -396,7 +396,18 @@ let allocate_slab_aux_cond
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
   let r = is_full_s size_class md in
-  sladmit ();
+  admit ();
+  intro_vdep
+    (A.varray md)
+    (slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+    (fun (x: Seq.lseq U64.t 4) ->
+      slab_vprop_aux size_class (A.split_r arr 0sz) x);
+  change_equal_slprop
+    (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+      slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+    `star`
+    A.varray (A.split_l arr 0sz))
+    (slab_vprop size_class arr md);
   return r
 #pop-options
 #pop-options
@@ -492,7 +503,7 @@ let allocate_slab_aux_2
   let blob0
     : G.erased (t_of (slab_vprop sc (snd b) (fst b)))
     = gget (slab_vprop sc (snd b) (fst b)) in
-  let v0 : G.erased (Seq.lseq U64.t 4) = dfst blob0 in
+  let v0 : G.erased (Seq.lseq U64.t 4) = dfst (fst blob0) in
   // TODO: false, but ok for now as nb_slots size_class > 1
   assume (is_partial sc v0);
   p_partial_pack sc
@@ -749,15 +760,19 @@ let alloc_metadata_aux2
   assert (G.reveal v0 == Seq.create 4 0UL);
   intro_vdep
     (A.varray (fst b))
-    (A.varray (A.split_l (snd b) 0sz) `star`
-      slab_vprop_aux size_class (A.split_r (snd b) 0sz) (Seq.create 4 0UL))
+    (slab_vprop_aux size_class (A.split_r (snd b) 0sz) (Seq.create 4 0UL))
     (fun (md_as_seq: Seq.lseq U64.t 4) ->
-      A.varray (A.split_l (snd b) 0sz) `star`
       slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq);
+  change_equal_slprop
+    (A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+      slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
+    `star`
+    A.varray (A.split_l (snd b) 0sz))
+    (slab_vprop size_class (snd b) (fst b));
   let blob1
       : G.erased (t_of (slab_vprop size_class (snd b) (fst b)))
       = gget (slab_vprop size_class (snd b) (fst b)) in
-  let v1 : G.erased (Seq.lseq U64.t 4) = dfst blob1 in
+  let v1 : G.erased (Seq.lseq U64.t 4) = dfst (fst blob1) in
   // fix it...
   assume (G.reveal v1 == G.reveal v0);
   zeroes_impl_empty size_class (G.reveal v1);
