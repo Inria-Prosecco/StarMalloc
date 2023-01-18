@@ -493,7 +493,6 @@ let deallocate_slot'_aux2
 
 //TODO: check for spec
 //CAUTION
-#restart-solver
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let deallocate_slot'
   (size_class: sc)
@@ -552,6 +551,7 @@ let deallocate_slot'
     (not (fst r) ==> v1 == v0)
   )
   =
+  let _ = UP.mk (FStar.Int.Cast.uint32_to_int16 page_size) in ();
   let diff = ptrdiff ptr (A.split_l arr 0sz) in
   assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
   assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (A.split_r arr 0sz)));

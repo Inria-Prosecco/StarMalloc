@@ -18,17 +18,27 @@ open Utils2
 //  (ensures fun r ->
 //    UP.v r == A.offset (A.ptr_of arr1) - A.offset (A.ptr_of arr2)
 //  )
+module P = Steel.FractionalPermission
 
-assume val ptrdiff (#a: Type) (arr1 arr2: array a)
+assume val ptrdiff (#a: Type) (#p1 #p2:P.perm) (arr1 arr2: array a)
   : Steel UP.t
-  (A.varray arr1 `star` A.varray arr2)
-  (fun _ -> A.varray arr1 `star` A.varray arr2)
-  (requires fun _ -> same_base_array arr1 arr2)
+  (A.varrayp arr1 p1 `star` A.varrayp arr2 p2)
+  (fun _ -> A.varrayp arr1 p1 `star` A.varrayp arr2 p2)
+  (requires fun _ ->
+    A.base (A.ptr_of arr1) == A.base (A.ptr_of arr2) /\
+    UP.fits (A.offset (A.ptr_of arr1) - A.offset (A.ptr_of arr2)))
   (ensures fun h0 r h1 ->
-    A.asel arr1 h1 == A.asel arr1 h0 /\
-    A.asel arr2 h1 == A.asel arr2 h0 /\
+    A.aselp arr1 p1 h1 == A.aselp arr1 p1 h0 /\
+    A.aselp arr2 p2 h1 == A.aselp arr2 p2 h0 /\
     UP.v r == A.offset (A.ptr_of arr1) - A.offset (A.ptr_of arr2)
   )
+
+let f () =
+  //let x =
+  let _ = UP.mk (FStar.Int.Cast.uint32_to_int16 page_size) in ();
+  assert (UP.fits 4096)
+  //UP.fits_lt 4093 4096
+
 
 assume val within_bounds (#a: Type) (arr1 p arr2: array a) : prop
 
