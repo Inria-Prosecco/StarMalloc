@@ -553,9 +553,8 @@ let deallocate_slot'
   )
   =
   let diff = ptrdiff ptr (A.split_l arr 0sz) in
-  assume (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
-  assume (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (A.split_r arr 0sz)));
-  assume (A.length (A.split_r arr 0sz) == A.length arr);
+  assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
+  assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (A.split_r arr 0sz)));
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assume (US.fits_u32);
   assert_norm (4 < FI.max_int 16);
