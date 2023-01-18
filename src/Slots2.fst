@@ -222,11 +222,6 @@ let deallocate_slot_aux
     pos;
   return ()
 
-
-open SteelPtrdiff
-
-module US = FStar.SizeT
-
 // if this function yields true,
 // with an additional condition on the offset,
 // then it means it is a valid pointer that *could* be allocated
@@ -552,7 +547,7 @@ let deallocate_slot'
   )
   =
   let _ = UP.mk (FStar.Int.Cast.uint32_to_int16 page_size) in ();
-  let diff = ptrdiff ptr (A.split_l arr 0sz) in
+  let diff = A.ptrdiff ptr (A.split_l arr 0sz) in
   assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
   assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (A.split_r arr 0sz)));
   let diff_sz = UP.ptrdifft_to_sizet diff in
