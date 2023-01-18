@@ -110,8 +110,9 @@ let slab_vprop
   (md: slab_metadata)
   =
   A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-    A.varray (A.split_l arr 0sz) `star`
     slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+  `star`
+  A.varray (A.split_l arr 0sz)
 
 #push-options "--print_implicits"
 
@@ -563,7 +564,7 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     get_free_slot_aux size_class bitmap 0ul
   )
 
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 30"
+#push-options "--z3rlimit 30"
 let elim_slab_vprop (#opened:_)
   (size_class: sc)
   (md: slab_metadata)
@@ -573,42 +574,33 @@ let elim_slab_vprop (#opened:_)
   (fun r ->
     A.varray md `star`
     A.varray (A.split_l arr 0sz) `star`
-    slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal r))
+    slab_vprop_aux size_class (A.split_r arr 0sz) r)
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
-    let blob0 : (t_of (slab_vprop size_class arr md))
+    let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
-    let x0 : Seq.lseq U64.t 4 = dfst blob0 in
-    //let y0 : t_of _ = dsnd blob0 in
-    G.reveal r == A.asel md h1 /\
+    let x0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     G.reveal r == x0 /\
-    //fst y0 == A.asel (A.split_l arr 0sz) h1 /\
-    //snd y0 == h1 (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal r))
-    True
+    G.reveal r == A.asel md h1
   )
   =
-  let blob0 : G.erased (t_of (slab_vprop size_class arr md))
-    = gget (slab_vprop size_class arr md) in
+  change_equal_slprop
+    (slab_vprop size_class arr md)
+    (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+      slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+    `star`
+    A.varray (A.split_l arr 0sz));
   let md_as_seq : G.erased (t_of (A.varray md)) = elim_vdep
     (A.varray md)
     (fun (x: Seq.lseq U64.t 4) ->
-      A.varray (A.split_l arr 0sz) `star`
       slab_vprop_aux size_class (A.split_r arr 0sz) x) in
-  assume (dfst (G.reveal blob0) == G.reveal md_as_seq);
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let md_as_seq2 = G.hide ((G.reveal md_as_seq) <: Seq.lseq U64.t 4) in
-  admit ();
-  let md_as_seq3 = gget (A.varray md) in
-  assert (G.reveal md_as_seq3 == G.reveal md_as_seq2);
-  assert (G.reveal md_as_seq3 == G.reveal md_as_seq);
-  change_slprop_rel
+  change_equal_slprop
     (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq))
-    (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq2))
-    (fun x y -> x == y)
-    (fun _ -> ());
+    (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq2));
   md_as_seq2
 
-#push-options "--z3rlimit 30 --compat_pre_typed_indexed_effects"
 let allocate_slot
   (size_class: sc)
   (md: slab_metadata)
@@ -617,17 +609,17 @@ let allocate_slot
   (slab_vprop size_class arr md)
   (fun r -> A.varray r `star` slab_vprop size_class arr md)
   (requires fun h0 ->
-    let blob0 : (t_of (slab_vprop size_class arr md))
+    let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     has_free_slot size_class v0)
   (ensures fun h0 _ h1 ->
-    let blob0 : (t_of (slab_vprop size_class arr md))
+    let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
-    let blob1 : (t_of (slab_vprop size_class arr md))
+    let blob1 : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
-    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
     not (is_empty size_class v1))
     //U32.v (G.reveal (snd r)) < U64.n * 4 /\
     //v1 == Bitmap4.set v0 (G.reveal (snd r)))
@@ -639,8 +631,6 @@ let allocate_slot
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
-  //let md_as_seq_ = gget (A.varray md) in
-  //assert (G.reveal md_as_seq_ == G.reveal md_as_seq);
   assert (has_free_slot size_class (G.reveal md_as_seq));
   let pos = get_free_slot size_class md in
   let r = allocate_slot_aux
@@ -653,10 +643,14 @@ let allocate_slot
   set_lemma_nonzero size_class (G.reveal md_as_seq) (G.reveal md_as_seq3) pos;
   intro_vdep
     (A.varray md)
-    (A.varray (A.split_l arr 0sz) `star`
-    slab_vprop_aux size_class (A.split_r arr 0sz) (Bitmap4.set md_as_seq pos))
+    (slab_vprop_aux size_class (A.split_r arr 0sz) (Bitmap4.set md_as_seq pos))
     (fun (x: Seq.lseq U64.t 4) ->
-      A.varray (A.split_l arr 0sz) `star`
       slab_vprop_aux size_class (A.split_r arr 0sz) x);
+  change_equal_slprop
+    (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+      slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+    `star`
+    A.varray (A.split_l arr 0sz))
+    (slab_vprop size_class arr md);
   return r
 #pop-options
