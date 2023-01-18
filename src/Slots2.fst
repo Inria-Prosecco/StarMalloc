@@ -584,7 +584,6 @@ let deallocate_slot'
  )
 #pop-options
 
-(*)
 #push-options "--z3rlimit 75"
 let deallocate_slot
   (size_class: sc)
@@ -610,54 +609,54 @@ let deallocate_slot
   (ensures fun _ _ _ -> True)
   =
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
-  let md_as_seq : G.erased (t_of (A.varray md)) = elim_vdep
-    (A.varray md)
-    (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x)
-  in
-  let md_as_seq2 : G.erased (Seq.lseq U64.t 4) = G.hide ((G.reveal md_as_seq) <: Seq.lseq U64.t 4) in
-  assert (G.reveal md_as_seq == G.reveal md_as_seq2);
-  change_slprop_rel
-    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
-    (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
-    (fun x y -> x == y)
-    (fun _ -> ());
-  let r = deallocate_slot' size_class md md_as_seq2 arr ptr in
+  let md_as_seq : G.erased (Seq.lseq U64.t 4)
+    = elim_slab_vprop size_class md arr in
+  let r = deallocate_slot' size_class md md_as_seq arr ptr in
   if (fst r) then (
     change_equal_slprop
       (if (fst r) then
         emp `star`
+        A.varray (A.split_l arr 0sz) `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
           #(option (Seq.lseq U8.t (U32.v size_class)))
-          (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq2 (snd r)) arr)
-          (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq2 (snd r)) arr)
+          (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
+          (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       else
         A.varray ptr `star`
+        A.varray (A.split_l arr 0sz) `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
           #(option (Seq.lseq U8.t (U32.v size_class)))
-          (slab_vprop_aux_f size_class md_as_seq2 arr)
-          (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+          (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
+          (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       )
       (emp `star`
+      A.varray (A.split_l arr 0sz) `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
         #(option (Seq.lseq U8.t (U32.v size_class)))
-        (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq2 (snd r)) arr)
-        (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq2 (snd r)) arr)
+        (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
+        (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
     let md_as_seq3 = gget (A.varray md) in
     change_slprop_rel
-      (slab_vprop_aux size_class arr (Bitmap4.unset md_as_seq2 (snd r)))
-      (slab_vprop_aux size_class arr (G.reveal md_as_seq3))
+      (slab_vprop_aux size_class (A.split_r arr 0sz) (Bitmap4.unset md_as_seq (snd r)))
+      (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq3))
       (fun x y -> x == y)
       (fun _ -> ());
     intro_vdep
       (A.varray md)
-      (slab_vprop_aux size_class arr (G.reveal md_as_seq3))
-      (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
+      (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq3))
+      (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) x);
+    change_equal_slprop
+      (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+        slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+      `star`
+      A.varray (A.split_l arr 0sz))
+      (slab_vprop size_class arr md);
     change_equal_slprop
       emp
       (if (fst r) then emp else A.varray ptr);
@@ -666,32 +665,41 @@ let deallocate_slot
     change_equal_slprop
       (if (fst r) then
         emp `star`
+        A.varray (A.split_l arr 0sz) `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
           #(option (Seq.lseq U8.t (U32.v size_class)))
-          (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq2 (snd r)) arr)
-          (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq2 (snd r)) arr)
+          (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
+          (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       else
         A.varray ptr `star`
+        A.varray (A.split_l arr 0sz) `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
           #(option (Seq.lseq U8.t (U32.v size_class)))
-          (slab_vprop_aux_f size_class md_as_seq2 arr)
-          (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+          (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
+          (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       )
       (A.varray ptr `star`
+      A.varray (A.split_l arr 0sz) `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
         #(option (Seq.lseq U8.t (U32.v size_class)))
-        (slab_vprop_aux_f size_class md_as_seq2 arr)
-        (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
+        (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
+        (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
     intro_vdep
       (A.varray md)
-      (slab_vprop_aux size_class arr (G.reveal md_as_seq2))
-      (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr x);
+      (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq))
+      (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) x);
+    change_equal_slprop
+      (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+        slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+      `star`
+      A.varray (A.split_l arr 0sz))
+      (slab_vprop size_class arr md);
     change_equal_slprop
       (A.varray ptr)
       (if (fst r) then emp else A.varray ptr);
