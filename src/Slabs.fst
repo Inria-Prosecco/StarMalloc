@@ -729,6 +729,40 @@ let alloc_metadata_aux
   return b
 #pop-options
 
+let lemma_sl_aux
+  (size_class: sc)
+  (b: blob)
+  (m: SM.mem)
+  : Lemma
+  (requires
+    SM.interp (hp_of (
+      A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+        slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
+      `star`
+      A.varray (A.split_l (snd b) 0sz)
+    )) m)
+  (ensures
+    SM.interp (hp_of (
+      slab_vprop size_class (snd b) (fst b)
+    )) m /\
+    sel_of (slab_vprop size_class (snd b) (fst b)) m
+    ==
+    sel_of (
+      A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+        slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
+      `star`
+      A.varray (A.split_l (snd b) 0sz)) m
+  )
+  =
+  assert_norm (
+    (A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
+      slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
+    `star`
+    A.varray (A.split_l (snd b) 0sz))
+    ==
+    (slab_vprop size_class (snd b) (fst b))
+  )
+
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let alloc_metadata_aux2
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -763,12 +797,14 @@ let alloc_metadata_aux2
     (slab_vprop_aux size_class (A.split_r (snd b) 0sz) (Seq.create 4 0UL))
     (fun (md_as_seq: Seq.lseq U64.t 4) ->
       slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq);
-  change_equal_slprop
+  change_slprop_rel
     (A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
       slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
     `star`
     A.varray (A.split_l (snd b) 0sz))
-    (slab_vprop size_class (snd b) (fst b));
+    (slab_vprop size_class (snd b) (fst b))
+    (fun x y -> x == y)
+    (fun m -> lemma_sl_aux size_class b m);
   let blob1
       : G.erased (t_of (slab_vprop size_class (snd b) (fst b)))
       = gget (slab_vprop size_class (snd b) (fst b)) in
