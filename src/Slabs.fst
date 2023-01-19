@@ -383,6 +383,8 @@ let allocate_slab_aux_cond
       : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
     let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    dfst (fst blob0) == dfst (fst blob1) /\
+    dsnd (fst blob0) == dsnd (fst blob1) /\
     blob0 == blob1 /\
     r == is_full size_class v0
   )
@@ -391,7 +393,6 @@ let allocate_slab_aux_cond
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
   let r = is_full_s size_class md in
-  admit ();
   intro_vdep
     (A.varray md)
     (slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)

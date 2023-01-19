@@ -580,7 +580,9 @@ let elim_slab_vprop (#opened:_)
       = h0 (slab_vprop size_class arr md) in
     let x0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     G.reveal r == x0 /\
-    G.reveal r == A.asel md h1
+    G.reveal r == A.asel md h1 /\
+    dsnd (fst blob0) == h1 (slab_vprop_aux size_class (A.split_r arr 0sz) r) /\
+    snd blob0 == A.asel (A.split_l arr 0sz) h1
   )
   =
   change_equal_slprop
