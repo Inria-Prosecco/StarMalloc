@@ -9,7 +9,7 @@
 
 //static uint8_t* region_start = NULL;
 //static uint64_t* md_bm_region_start = NULL;
-//static Selectors_LList_cell__Slabs_blob* md_region_start = NULL;
+//static BlobList_cell* md_region_start = NULL;
 
 //static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 //static pthread_mutex_t s_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -19,8 +19,6 @@ static uint64_t init_status = 0UL;
 const size_t page_size = 4096UL;
 const size_t max_slabs = 1024UL;
 
-//static Selectors_LList3_cell__Slabs_blob** partial_slabs_ptr;
-//static Selectors_LList3_cell__Slabs_blob** empty_slabs_ptr;
 static BlobList_cell* full_slabs_sc16;
 static BlobList_cell* full_slabs_sc32;
 static BlobList_cell* full_slabs_sc64;
