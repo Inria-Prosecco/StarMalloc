@@ -79,6 +79,7 @@ test: verify extract
 
 FILES = \
 dist/Aux.h \
+dist/BlobList.h \
 dist/Map_M.h \
 dist/Impl_AVL_M.h \
 dist/Impl_BST_M.h \
@@ -95,6 +96,7 @@ dist/Slots.h \
 dist/Bitmap5.h \
 dist/Utils2.h \
 dist/Mman.h \
+dist/BlobList.c \
 dist/Map_M.c \
 dist/Impl_AVL_M.c \
 dist/Impl_BST_M.c \
@@ -110,8 +112,6 @@ dist/Slabs.c \
 dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
-dist/Selectors_LList3.c \
-dist/Selectors_LList3.h \
 src/utils.c \
 src/lib-alloc0.c \
 src/slab-alloc.c \

@@ -17,7 +17,7 @@ open Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
-module SL = Selectors.LList
+module SL = BlobList
 
 //module Temp = TempLock
 
@@ -28,8 +28,8 @@ open Slabs
 
 let deallocate_slab_aux
   (size_class: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  (partial_slabs empty_slabs: SL.t blob)
+  (partial_slabs_ptr empty_slabs_ptr: ref SL.t)
+  (partial_slabs empty_slabs: SL.t)
   (slab: array U8.t{A.length slab = U32.v page_size})
   (md: slab_metadata)
   (ptr: array U8.t)

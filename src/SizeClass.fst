@@ -6,7 +6,7 @@ module U8 = FStar.UInt8
 
 module G = FStar.Ghost
 
-module SL = Selectors.LList3
+module SL = BlobList
 
 module P = Steel.FractionalPermission
 module SM = Steel.Memory
@@ -28,14 +28,14 @@ open FStar.Mul
 noeq
 type size_class_struct = {
   size: sc;
-  partial_slabs: ref (SL.t blob);
-  empty_slabs: ref (SL.t blob);
-  full_slabs: ref (SL.t blob);
+  partial_slabs: ref SL.t;
+  empty_slabs: ref SL.t;
+  full_slabs: ref SL.t;
   md_count: ref U32.t;
   slab_region: slab_region:array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size};
   //TODO: duplicata due to karamel extraction issue
   md_bm_region: md_bm_region:array U64.t{A.length md_bm_region = U32.v metadata_max * 4};
-  md_region: md_region:array (SL.cell blob){A.length md_region = U32.v metadata_max};
+  md_region: md_region:array SL.cell{A.length md_region = U32.v metadata_max};
   //lock: ref bool;
 }
 
@@ -43,13 +43,13 @@ type size_class_struct = {
 noeq
 type blob2 = {
   scs_v: size_class_struct;
-  partial_slabs_v: list blob;
-  empty_slabs_v: list blob;
-  full_slabs_v: list blob;
+  partial_slabs_v: list SL.blob;
+  empty_slabs_v: list SL.blob;
+  full_slabs_v: list SL.blob;
   md_count_v: U32.t;
   slab_region_v: Seq.seq U8.t;
   md_bm_region_v: Seq.seq U64.t;
-  md_region_v: Seq.seq (SL.cell blob);
+  md_region_v: Seq.seq SL.cell;
 }
 
 open SteelVRefineDep

@@ -17,7 +17,7 @@ open Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
-module SL = Selectors.LList3
+module SL = BlobList
 
 //module Temp = TempLock
 
@@ -48,30 +48,25 @@ open Slots
 
 #set-options "--ide_id_info_off"
 
-unfold
-let blob
-  = slab_metadata &
-    (arr:array U8.t{A.length arr = U32.v page_size})
-
 //[@@__steel_reduce__]
 //unfold
 let p_empty (size_class: sc)
   =
-  fun (b: blob) ->
+  fun (b: SL.blob) ->
     slab_vprop size_class (snd b) (fst b)
     `vrefine`
     (fun ((|s,_|), _) -> is_empty size_class s == true)
 
 let p_partial (size_class: sc)
   =
-  fun (b: blob) ->
+  fun (b: SL.blob) ->
     slab_vprop size_class (snd b) (fst b)
     `vrefine`
     (fun ((|s,_|), _) -> is_partial size_class s == true)
 
 let p_full (size_class: sc)
   =
-  fun (b: blob) ->
+  fun (b: SL.blob) ->
     slab_vprop size_class (snd b) (fst b)
     `vrefine`
     (fun ((|s,_|), _) -> is_full size_class s == true)
@@ -80,8 +75,8 @@ let p_full (size_class: sc)
 #push-options "--z3rlimit 30"
 let p_empty_unpack (#opened:_)
   (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (b1: SL.blob)
+  (b2: SL.blob)
   : SteelGhost unit opened
   ((p_empty sc) b1)
   (fun _ -> slab_vprop sc (snd b2) (fst b2))
@@ -111,8 +106,8 @@ let p_empty_unpack (#opened:_)
 
 let p_partial_unpack (#opened:_)
   (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (b1: SL.blob)
+  (b2: SL.blob)
   : SteelGhost unit opened
   ((p_partial sc) b1)
   (fun _ -> slab_vprop sc (snd b2) (fst b2))
@@ -142,8 +137,8 @@ let p_partial_unpack (#opened:_)
 
 let p_full_unpack (#opened:_)
   (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (b1: SL.blob)
+  (b2: SL.blob)
   : SteelGhost unit opened
   ((p_full sc) b1)
   (fun _ -> slab_vprop sc (snd b2) (fst b2))
@@ -173,8 +168,8 @@ let p_full_unpack (#opened:_)
 
 let p_full_pack (#opened:_)
   (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (b1: SL.blob)
+  (b2: SL.blob)
   : SteelGhost unit opened
   (slab_vprop sc (snd b1) (fst b1))
   (fun _ -> (p_full sc) b2)
@@ -206,8 +201,8 @@ let p_full_pack (#opened:_)
 
 let p_partial_pack (#opened:_)
   (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (b1: SL.blob)
+  (b2: SL.blob)
   : SteelGhost unit opened
   (slab_vprop sc (snd b1) (fst b1))
   (fun _ -> (p_partial sc) b2)
@@ -239,8 +234,8 @@ let p_partial_pack (#opened:_)
 
 let p_empty_pack (#opened:_)
   (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (b1: SL.blob)
+  (b2: SL.blob)
   : SteelGhost unit opened
   (slab_vprop sc (snd b1) (fst b1))
   (fun _ -> (p_empty sc) b2)
@@ -279,11 +274,11 @@ module SAR = Steel.ArrayRef
 #push-options "--z3rlimit 30"
 let allocate_slab_aux_1_partial
   (size_class: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  (partial_slabs empty_slabs: SL.t blob)
-  (cell_ptr: SL.t blob)
-  (cell_content: SL.cell blob)
-  (b: blob)
+  (partial_slabs_ptr empty_slabs_ptr: ref SL.t)
+  (partial_slabs empty_slabs: SL.t)
+  (cell_ptr: SL.t)
+  (cell_content: SL.cell)
+  (b: SL.blob)
   : Steel unit
   (
     slab_vprop size_class (snd b) (fst b) `star`
@@ -326,11 +321,11 @@ let allocate_slab_aux_1_partial
 
 let allocate_slab_aux_1_full
   (size_class: sc)
-  (full_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  (full_slabs empty_slabs: SL.t blob)
-  (cell_ptr: SL.t blob)
-  (cell_content: SL.cell blob)
-  (b: blob)
+  (full_slabs_ptr empty_slabs_ptr: ref SL.t)
+  (full_slabs empty_slabs: SL.t)
+  (cell_ptr: SL.t)
+  (cell_content: SL.cell)
+  (b: SL.blob)
   : Steel unit
   (
     slab_vprop size_class (snd b) (fst b) `star`
@@ -417,8 +412,8 @@ let allocate_slab_aux_cond
 inline_for_extraction noextract
 let allocate_slab_aux_1
   (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref (SL.t blob))
-  (partial_slabs empty_slabs full_slabs: SL.t blob)
+  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
+  (partial_slabs empty_slabs full_slabs: SL.t)
   : Steel (array U8.t)
   (
   vptr empty_slabs_ptr `star`
@@ -476,8 +471,8 @@ let allocate_slab_aux_1
 inline_for_extraction noextract
 let allocate_slab_aux_2
   (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref (SL.t blob))
-  (partial_slabs empty_slabs: SL.t blob)
+  (partial_slabs_ptr empty_slabs_ptr: ref SL.t)
+  (partial_slabs empty_slabs: SL.t)
   : Steel (array U8.t)
   (
   vptr empty_slabs_ptr `star`
@@ -631,9 +626,9 @@ let md_bm_region_mon_split
     (fun _ -> ())
 
 let md_array
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
-  : Pure (array (SL.cell blob))
+  : Pure (array SL.cell)
   (requires
     A.length md_region = U32.v metadata_max /\
     U32.v md_count < U32.v metadata_max)
@@ -650,7 +645,7 @@ let md_array
 
 let md_region_mon_split
   (#opened:_)
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
   : SteelGhostT unit opened
   (A.varray (A.split_r md_region (u32_to_sz md_count)))
@@ -683,9 +678,9 @@ let alloc_metadata_aux
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   //: Steel (SL.t blob)
-  : Steel blob
+  : Steel SL.blob
   (
     A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) `star`
@@ -731,7 +726,7 @@ let alloc_metadata_aux
 
 let lemma_sl_aux
   (size_class: sc)
-  (b: blob)
+  (b: SL.blob)
   (m: SM.mem)
   : Lemma
   (requires
@@ -769,8 +764,8 @@ let alloc_metadata_aux2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
-  : Steel (SL.t blob & (G.erased U32.t))
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
+  : Steel (SL.t & (G.erased U32.t))
   (
     A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) `star`
@@ -789,7 +784,7 @@ let alloc_metadata_aux2
     U32.v (G.reveal (snd r)) <= U32.v metadata_max
   )
   =
-  let b : blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
+  let b : SL.blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
   let v0 : G.erased (Seq.lseq U64.t 4) = gget (A.varray (fst b)) in
   assert (G.reveal v0 == Seq.create 4 0UL);
   intro_vdep
@@ -821,7 +816,7 @@ let alloc_metadata_aux2
 let alloc_metadata_sl1
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
   (md_count_v0: U32.t{U32.v md_count_v0 < U32.v metadata_max})
   (m: SM.mem)
@@ -858,7 +853,7 @@ let alloc_metadata_sl1
 let alloc_metadata_sl2
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
   (md_count_v0: U32.t{U32.v md_count_v0 < U32.v metadata_max})
   (m: SM.mem)
@@ -897,10 +892,10 @@ let alloc_metadata
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
-  : Steel (SL.t blob & G.erased U32.t)
+  : Steel (SL.t & G.erased U32.t)
   (
     vptr md_count `star`
     A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
@@ -949,10 +944,10 @@ let alloc_metadata
   return r
 #pop-options
 
-let unpack_list_singleton (#a: Type0)
-  (p: a -> vprop)
-  (ptr: SL.t a)
-  : Steel (SL.cell a)
+let unpack_list_singleton
+  (p: SL.blob -> vprop)
+  (ptr: SL.t)
+  : Steel SL.cell
   (SL.llist p ptr)
   (fun n -> SAR.vptr ptr `star` p (SL.get_data n))
   (requires fun h0 ->
@@ -973,10 +968,10 @@ let alloc_metadata'
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
-  : Steel (SL.t blob)
+  : Steel SL.t
   (
     vptr md_count `star`
     A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) `star`
@@ -1012,9 +1007,9 @@ let alloc_metadata2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  : Steel (SL.t blob)
+  : Steel SL.t
   //: Steel unit
   (
     vrefinedep
@@ -1104,13 +1099,13 @@ let alloc_metadata2
 inline_for_extraction noextract
 let allocate_slab_aux_3
   (size_class: sc)
-  (empty_slabs_ptr: ref (SL.t blob))
-  (empty_slabs: SL.t blob)
+  (empty_slabs_ptr: ref SL.t)
+  (empty_slabs: SL.t)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  : Steel (SL.t blob)
+  : Steel SL.t
   (
     vptr empty_slabs_ptr `star`
     SL.llist (p_empty size_class) empty_slabs `star`
@@ -1169,7 +1164,7 @@ let allocate_slab_aux_3
 let allocate_slab_check_md_count
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   : Steel bool
   (
@@ -1260,10 +1255,10 @@ let allocate_slab_check_md_count
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let allocate_slab
   (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref (SL.t blob))
+  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (SL.cell blob){A.length md_region = U32.v metadata_max})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   : Steel (array U8.t & G.erased bool)
   (
