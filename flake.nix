@@ -19,6 +19,7 @@
         FSTAR_HOME = haclpkgs.fstar;
         KRML_HOME = haclpkgs.karamel;
         buildTarget = "verify";
+        installPhase = "touch $out";
         #buildPhase = ''
         #  make verify
         #'';
