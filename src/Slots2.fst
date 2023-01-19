@@ -226,7 +226,7 @@ let deallocate_slot_aux
 // with an additional condition on the offset,
 // then it means it is a valid pointer that *could* be allocated
 // proper alignment means also one can recover the pos of the slot within the slab
-#push-options "--z3rlimit 30 --fuel 0 --ifuel 0"
+#push-options "--z3rlimit 50 --fuel 0 --ifuel 0"
 //TODO: check for spec
 let deallocate_slot_aux0
   (size_class: sc)
@@ -546,7 +546,7 @@ let deallocate_slot'
     (not (fst r) ==> v1 == v0)
   )
   =
-  let _ = UP.mk (FStar.Int.Cast.uint32_to_int16 page_size) in ();
+  let _ = Ghost.hide (UP.mk (FStar.Int.Cast.uint32_to_int16 page_size)) in
   let diff = A.ptrdiff ptr (A.split_l arr 0sz) in
   assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
   assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (A.split_r arr 0sz)));
