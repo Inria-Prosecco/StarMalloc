@@ -39,6 +39,7 @@ type size_class_struct = {
   //lock: ref bool;
 }
 
+[@@erasable]
 noeq
 type blob2 = {
   scs_v: size_class_struct;

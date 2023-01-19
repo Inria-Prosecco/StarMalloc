@@ -47,8 +47,8 @@ let f_lemma (#n: nat) (k:nat{k < n * U64.n})
 
 noextract
 let bm_get_aux
-  (#n: nat{n < FI.max_int U16.n})
-  (arr: array U64.t{A.length arr = n})
+  (#n: G.erased nat{n < FI.max_int U16.n})
+  (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel bool
   (A.varray arr)
@@ -68,8 +68,8 @@ let bm_get_aux
 
 #push-options "--z3rlimit 50"
 let bm_get
-  (#n: nat{n < FI.max_int U16.n})
-  (arr: array U64.t{A.length arr = n})
+  (#n: G.erased nat{n < FI.max_int U16.n})
+  (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel bool
   (A.varray arr)
@@ -102,8 +102,8 @@ let bm_get
 
 noextract
 let bm_set_aux
-  (#n: nat{n < FI.max_int U16.n})
-  (arr: array U64.t{A.length arr = n})
+  (#n: G.erased nat{n < FI.max_int U16.n})
+  (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
   (A.varray arr)
@@ -122,7 +122,7 @@ let bm_set_aux
 
 #push-options "--z3rlimit 50"
 let bm_set
-  (#n: nat{n < FI.max_int U16.n})
+  (#n: G.erased nat{n < FI.max_int U16.n})
   (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
@@ -193,8 +193,8 @@ let bm_unset_aux
 
 #push-options "--z3rlimit 50"
 let bm_unset
-  (#n: nat{n < FI.max_int U16.n})
-  (arr: array U64.t{A.length arr = n})
+  (#n: G.erased nat{n < FI.max_int U16.n})
+  (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
   (A.varray arr)

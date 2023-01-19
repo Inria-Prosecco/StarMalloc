@@ -365,7 +365,6 @@ let starseq_upd_aux_lemma3
   assert (Bitmap4.get md_as_seq pos = Seq.index bm k_index);
   assert (Bitmap4.get md_as_seq pos = false)
 
-noextract inline_for_extraction
 let get_slot_as_returned_value
   (size_class: sc)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
@@ -475,7 +474,7 @@ let allocate_slot_aux
     blob2 == Seq.upd blob1 (U32.v pos) None)
   =
   assert_norm (4 < FI.max_int U16.n);
-  Bitmap5.bm_set #4 md pos;
+  Bitmap5.bm_set #(Ghost.hide 4) md pos;
   apply_starseq_upd
     size_class
     md
