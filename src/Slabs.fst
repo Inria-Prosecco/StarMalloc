@@ -551,16 +551,25 @@ let slab_region_mon_split
   (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
-  : SteelGhostT unit opened
+  : SteelGhost unit opened
   (A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))))
   (fun _ ->
     A.varray (slab_array slab_region md_count) `star`
     A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size)))
   )
+  (requires fun h0 ->
+    zf_u8 (A.asel (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) h0))
+  (ensures fun h0 _ h1 ->
+    zf_u8 (A.asel (slab_array slab_region md_count) h1) /\
+    zf_u8 (A.asel (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))) h1)
+  )
   =
+  let h0 = get () in
   A.ghost_split
     (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size)))
     (u32_to_sz page_size);
+  zf_u8_slice (A.asel (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) h0) 0 (US.v (u32_to_sz page_size));
+  zf_u8_slice (A.asel (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) h0) (US.v (u32_to_sz page_size)) (A.length (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))));
   change_slprop_rel
     (A.varray (A.split_l (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)))
     (A.varray (slab_array slab_region md_count))
@@ -712,10 +721,13 @@ let alloc_metadata_aux
   )
   (requires fun h0 ->
     (U32.v page_size) % (U32.v size_class) == 0 /\
+    zf_u8 (A.asel (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0)
   )
   (ensures fun h0 r h1 ->
-    A.asel (fst r) h1 == Seq.create 4 0UL
+    A.asel (fst r) h1 == Seq.create 4 0UL /\
+    zf_u8 (A.asel (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))) h1) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))) h1)
   )
   =
   slab_region_mon_split slab_region md_count;
@@ -801,7 +813,6 @@ let alloc_metadata_aux2
     zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))) h1)
   )
   =
-  admit ();
   let b : SL.blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
   let v0 : G.erased (Seq.lseq U64.t 4) = gget (A.varray (fst b)) in
   assert (G.reveal v0 == Seq.create 4 0UL);
