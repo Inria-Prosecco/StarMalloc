@@ -18,7 +18,7 @@
         #buildInputs = [ haclpkgs.fstar haclpkgs.karamel ];
         FSTAR_HOME = haclpkgs.fstar;
         KRML_HOME = haclpkgs.karamel;
-        buildTarget = "verify";
+        buildTarget = "extract";
         installPhase = "touch $out";
         #buildPhase = ''
         #  make verify
