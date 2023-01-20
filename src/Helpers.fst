@@ -328,8 +328,8 @@ let slab_to_slots (#opened:_)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
   )
   (requires fun h0 ->
-    (U32.v page_size) % (U32.v size_class) == 0 /\
-    A.asel arr h0 == Seq.create (U32.v page_size) U8.zero
+    //A.asel arr h0 == Seq.create (U32.v page_size) U8.zero /\
+    (U32.v page_size) % (U32.v size_class) == 0
   )
   (ensures fun _ _ _ ->
     True

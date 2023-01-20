@@ -600,16 +600,25 @@ let md_bm_region_mon_split
   (#opened:_)
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
-  : SteelGhostT unit opened
+  : SteelGhost unit opened
   (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))))
   (fun _ ->
     A.varray (md_bm_array md_bm_region md_count) `star`
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul)))
   )
+  (requires fun h0 ->
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0))
+  (ensures fun h0 _ h1 ->
+    zf_u64 (A.asel (md_bm_array md_bm_region md_count) h1) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))) h1)
+  )
   =
+  let h0 = get () in
   A.ghost_split
     (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul)))
     (u32_to_sz 4ul);
+  zf_u64_slice (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0) 0 (US.v (u32_to_sz 4ul));
+  zf_u64_slice (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0) (US.v (u32_to_sz 4ul)) (A.length (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))));
   change_slprop_rel
     (A.varray (A.split_l (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)))
     (A.varray (md_bm_array md_bm_region md_count))
@@ -701,7 +710,10 @@ let alloc_metadata_aux
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul)))
   )
-  (requires fun h0 -> True)
+  (requires fun h0 ->
+    (U32.v page_size) % (U32.v size_class) == 0 /\
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0)
+  )
   (ensures fun h0 r h1 ->
     A.asel (fst r) h1 == Seq.create 4 0UL
   )
@@ -710,6 +722,7 @@ let alloc_metadata_aux
   md_bm_region_mon_split md_bm_region md_count;
   md_region_mon_split md_region md_count;
   let md_bm = md_bm_array md_bm_region md_count in
+  let v = gget (A.varray (md_bm_array md_bm_region md_count)) in
   let slab = slab_array slab_region md_count in
   let b = (md_bm, slab) in
   change_slprop_rel
@@ -719,8 +732,6 @@ let alloc_metadata_aux
     (fun x y -> x == y)
     (fun _ -> ());
   A.ghost_split (snd b) 0sz;
-  // prove never-used slab bitmap metadata is empty
-  admit ();
   Helpers.slab_to_slots size_class (A.split_r (snd b) 0sz);
   return b
 #pop-options
@@ -778,7 +789,9 @@ let alloc_metadata_aux2
     A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))) `star`
     A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul)))
   )
-  (requires fun h0 -> True)
+  (requires fun h0 ->
+    (U32.v page_size) % (U32.v size_class) == 0 /\
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0))
   (ensures fun h0 r h1 ->
     L.length (SL.v_llist (p_empty size_class) (fst r) h1) = 1 /\
     G.reveal (snd r) = U32.add md_count 1ul /\
@@ -911,6 +924,8 @@ let alloc_metadata
     A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul)))
   )
   (requires fun h0 ->
+    (U32.v page_size) % (U32.v size_class) == 0 /\
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) h0) /\
     sel md_count h0 = G.reveal md_count_v
   )
   (ensures fun h0 r h1 ->
@@ -987,7 +1002,9 @@ let alloc_metadata'
     A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal md_count_v) 1ul)))
   )
   (requires fun h0 ->
-    sel md_count h0 = G.reveal md_count_v
+    sel md_count h0 = G.reveal md_count_v /\
+    (U32.v page_size) % (U32.v size_class) == 0 /\
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) h0)
   )
   (ensures fun h0 r h1 ->
     L.length (SL.v_llist (p_empty size_class) r h1) = 1 /\

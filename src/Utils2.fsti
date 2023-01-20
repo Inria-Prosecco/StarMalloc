@@ -183,7 +183,20 @@ let zeroes_impl_empty
   (ensures is_empty size_class s)
   = ()
 
+let zf_u64
+  (arr: Seq.seq U64.t)
+  : prop
+  = arr == (Seq.create (Seq.length arr) 0UL)
 
+let zf_u64_slice
+  (arr: Seq.seq U64.t)
+  (i:nat)
+  (j:nat{i <= j /\ j <= Seq.length arr})
+  : Lemma
+  (requires zf_u64 arr)
+  (ensures zf_u64 (Seq.slice arr i j))
+  =
+  Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) 0UL)
 
 //CAUTION: assume val
 val ffs64 (x: U64.t)
