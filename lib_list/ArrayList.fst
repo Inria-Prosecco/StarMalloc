@@ -15,7 +15,8 @@ open FStar.FiniteSet.Ambient
 
 /// The type of cells for the doubly linked list. Compared to a standard doubly linked list,
 /// the `prev` and `next` fields are not pointers, but offsets in the array containing the list.
-/// To keep unsigned (positive) integers, we will represent NULL as the length of the base array
+/// To keep unsigned (positive) integers, we will represent NULL as 0, and not store anything
+/// in the first element slot of the array
 noeq
 type cell (a:Type0) = {
   prev: US.t;
@@ -23,21 +24,23 @@ type cell (a:Type0) = {
   data: a;
 }
 
+/// As a convention, we represent NULL as 0
+let null : nat = 0
 
 /// The core logical predicate: For a sequence of cells [s], corresponding to the contents of an array,
 /// there is a doubly linked list starting at s.[idx].
 /// The [visited] argument is needed to ensure termination, it corresponds to the set of cells
 /// previously visited. Acyclicity is specified by guaranteeing that we do not visit a cell twice.
 /// [prev] corresponds to the index of the previous cell.
-/// Note, as a convention, we consider that length of the sequence corresponds to the NULL case
+/// Note, as a convention, we consider that NULL corresponds to 0, and do not store anything there
 let rec is_dlist' (#a:Type0) (hd:nat) (s:Seq.seq (cell a)) (prev:nat)
   (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
   : Tot prop (decreases (Seq.length s - FS.cardinality visited)) =
   // Null case.
-  if hd = Seq.length s then True
+  if hd = null then True
   else
     // Forbid cycles, ensure well-formedness of the "pointers"
-    if FS.cardinality visited = Seq.length s || FS.mem hd visited || hd > Seq.length s then False
+    if FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s then False
     else
       let cur = Seq.index s hd in
       let next = US.v cur.next in
@@ -47,12 +50,12 @@ let rec is_dlist' (#a:Type0) (hd:nat) (s:Seq.seq (cell a)) (prev:nat)
 /// When [hd] is the head pointer of the list, the set of visited nodes
 /// is initially empty, and the prev "pointer" should be "NULL"
 let is_dlist (#a:Type0) (hd:nat) (s:Seq.seq (cell a)) : prop =
-  is_dlist' hd s (Seq.length s) FS.emptyset
+  is_dlist' hd s null FS.emptyset
 
 let rec mem' (#a:Type0) (x:nat) (hd:nat) (s:Seq.seq (cell a))
   (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
   : Tot prop (decreases (Seq.length s - FS.cardinality visited)) =
-  if x >= Seq.length s then False
+  if x = null || x >= Seq.length s then False
   else
     if x = hd then True
     else
@@ -73,8 +76,20 @@ let read_data (#a:Type) (c:cell a) : a = c.data
 let write_data (#a:Type0) (c:cell a) (v:a) : cell a =
   {c with data = v}
 
+let next_ptr (#a:Type)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (prev:nat)
+  (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
+  : Ghost nat
+          (requires is_dlist' hd s prev visited /\ hd <> null)
+          (ensures fun _ -> True)
+  = US.v (Seq.index s hd).next
+
+(** Lemmas about the dlist predicate *)
+
 /// Framing lemma: Only changing the `data` field of a cell
-/// does not change the structure of the linked list
+/// does not change the structure of the doubly linked list
 let rec lemma_write_data_frame' (#a:Type0)
   (hd:nat)
   (s:Seq.seq (cell a))
@@ -87,7 +102,7 @@ let rec lemma_write_data_frame' (#a:Type0)
       (ensures is_dlist' hd (Seq.upd s idx (write_data (Seq.index s idx) v)) prev visited)
       (decreases (Seq.length s - FS.cardinality visited))
   = let s' = Seq.upd s idx (write_data (Seq.index s idx) v) in
-    if hd = Seq.length s then ()
+    if hd = null then ()
     else
       if FS.cardinality visited = Seq.length s || FS.mem hd visited || hd > Seq.length s then ()
       else
@@ -104,17 +119,43 @@ let lemma_write_data_frame (#a:Type0)
   : Lemma
       (requires is_dlist hd s)
       (ensures is_dlist hd (Seq.upd s idx (write_data (Seq.index s idx) v)))
-  = lemma_write_data_frame' hd s (Seq.length s) idx v FS.emptyset
+  = lemma_write_data_frame' hd s null idx v FS.emptyset
+
+// val lemma_remove_elem_hd' (#a:Type0)
+//   (hd:nat)
+//   (s:Seq.seq (cell a))
+//   (idx:nat{idx < Seq.length s})
+//   (v:a)
+//   (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
+//   : Lemma
+//       (requires is_dlist' hd s (Seq.length s) visited /\ hd <> Seq.length s)
+//       (ensures is_dlist' (next_ptr hd s (Seq.length s) visited) s (Seq.length s) visited)
+
+// let lemma_remove_elem_hd' #a hd s idx v visited = admit()
+
+// let lemma_remove_elem_hd (#a:Type0)
+//   (hd:nat)
+//   (s:Seq.seq (cell a))
+//   (idx:nat{idx < Seq.length s})
+//   (v:a)
+//   : Lemma
+//       (requires is_dlist hd s /\ hd <> Seq.length s)
+//       (ensures is_dlist (next_ptr hd s (Seq.length s) FS.emptyset) s)
+//   = lemma_remove_elem_hd' hd s idx v FS.emptyset
 
 /// The main vprop of this module.
-/// We have access to an array, such that the array contains a linked list
+/// We have access to an array, such that the array contains a doubly linked list
 /// when starting at offset [hd]
-let varraylist (#a:Type) (r:A.array (cell a)) (hd:nat{hd < A.length r}) : vprop
+[@@__steel_reduce__]
+let varraylist (#a:Type) (r:A.array (cell a)) (hd:nat) : vprop
   = A.varray r `vrefine` (is_dlist hd)
 
 /// Reads at index [idx] in the array.
 /// TODO: The hd pointer should be ghost
-val read_in_place (#a:Type) (r:A.array (cell a)) (hd:nat{hd < A.length r}) (idx:US.t{US.v idx < A.length r})
+val read_in_place (#a:Type)
+  (r:A.array (cell a))
+  (hd:nat)
+  (idx:US.t{US.v idx < A.length r})
   : Steel a
           (varraylist r hd)
           (fun _ -> varraylist r hd)
@@ -128,7 +169,12 @@ let read_in_place #a r hd idx =
   return res.data
 
 /// Updates the `data` field of the cell at index [idx] in the array [r] with [v]
-val write_in_place (#a:Type) (r:A.array (cell a)) (hd:nat{hd < A.length r}) (idx:US.t{US.v idx < A.length r}) (v:a)
+/// TODO: The hd pointer should be ghost
+val write_in_place (#a:Type)
+  (r:A.array (cell a))
+  (hd:nat)
+  (idx:US.t{US.v idx < A.length r})
+  (v:a)
    : Steel unit
           (varraylist r hd)
           (fun _ -> varraylist r hd)
@@ -142,6 +188,20 @@ let write_in_place #a r hd idx v =
   A.upd r idx (write_data c v);
   lemma_write_data_frame hd gs (US.v idx) v;
   intro_vrefine (A.varray r) (is_dlist hd)
+
+// val remove (#a:Type)
+//   (r:A.array (cell a))
+//   (hd:nat)
+//   (idx:US.t{US.v idx < A.length r})
+//   (v:a)
+//    : Steel nat
+//           (varraylist r hd)
+//           (fun hd' -> varraylist r hd')
+//           (requires fun h -> mem (US.v idx) hd (h (varraylist r hd)))
+//           (ensures fun h0 hd' h1 ->
+//             ~ (mem (US.v idx) hd' (h1 (varraylist r hd')))) // TODO
+
+// let remove #a r hd idx v =
 
 // remove
 // insert
