@@ -26,6 +26,8 @@ type cell (a:Type0) = {
 
 /// As a convention, we represent NULL as 0
 let null : nat = 0
+noextract inline_for_extraction
+let null_ptr : US.t = 0sz
 
 /// The core logical predicate: For a sequence of cells [s], corresponding to the contents of an array,
 /// there is a doubly linked list starting at s.[idx].
@@ -111,7 +113,7 @@ let rec lemma_write_data_frame' (#a:Type0)
         assert (next1 == next2);
         lemma_write_data_frame' next1 s hd idx v (FS.insert hd visited)
 
-let lemma_write_data_frame (#a:Type0)
+val lemma_write_data_frame (#a:Type0)
   (hd:nat)
   (s:Seq.seq (cell a))
   (idx:nat{idx < Seq.length s})
@@ -119,7 +121,24 @@ let lemma_write_data_frame (#a:Type0)
   : Lemma
       (requires is_dlist hd s)
       (ensures is_dlist hd (Seq.upd s idx (write_data (Seq.index s idx) v)))
-  = lemma_write_data_frame' hd s null idx v FS.emptyset
+
+let lemma_write_data_frame #a hd s idx v =
+  lemma_write_data_frame' hd s null idx v FS.emptyset
+
+let null_or_valid (#a:Type) (ptr:nat) (s:Seq.seq (cell a)) = ptr = null \/ ptr < Seq.length s
+
+val lemma_mem_valid_or_null_next_prev (#a:Type0)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (idx:nat)
+  : Lemma
+      (requires is_dlist hd s /\ mem idx hd s)
+      (ensures
+        (let cell = Seq.index s idx in
+        null_or_valid (US.v cell.prev) s /\ null_or_valid (US.v cell.next) s)
+      )
+
+let lemma_mem_valid_or_null_next_prev #a hd s idx = admit()
 
 // val lemma_remove_elem_hd' (#a:Type0)
 //   (hd:nat)
@@ -189,19 +208,98 @@ let write_in_place #a r hd idx v =
   lemma_write_data_frame hd gs (US.v idx) v;
   intro_vrefine (A.varray r) (is_dlist hd)
 
-// val remove (#a:Type)
-//   (r:A.array (cell a))
-//   (hd:nat)
-//   (idx:US.t{US.v idx < A.length r})
-//   (v:a)
-//    : Steel nat
-//           (varraylist r hd)
-//           (fun hd' -> varraylist r hd')
-//           (requires fun h -> mem (US.v idx) hd (h (varraylist r hd)))
-//           (ensures fun h0 hd' h1 ->
-//             ~ (mem (US.v idx) hd' (h1 (varraylist r hd')))) // TODO
+/// Removes the element at offset [idx] from the dlist pointed to by [hd]
+val remove (#a:Type)
+  (r:A.array (cell a))
+  (hd:nat)
+  (idx:US.t{US.v idx < A.length r})
+   : Steel nat
+          (varraylist r hd)
+          (fun hd' -> varraylist r hd')
+          (requires fun h -> mem (US.v idx) hd (h (varraylist r hd)))
+          (ensures fun h0 hd' h1 ->
+            ~ (mem (US.v idx) hd' (h1 (varraylist r hd')))) // TODO
 
-// let remove #a r hd idx v =
+/// A ghost specification of the remove function for doubly linked lists
+let remove_spec (#a:Type)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (idx:nat{idx < Seq.length s})
+  : Ghost (Seq.seq (cell a))
+         (requires is_dlist hd s /\ mem idx hd s)
+         (ensures fun _ -> True)
+         =
+  let cell = Seq.index s idx in
+  lemma_mem_valid_or_null_next_prev hd s idx;
+  let s =
+    if cell.prev <> null_ptr then
+      let prev = Seq.index s (US.v cell.prev) in
+      let prev = {prev with next = cell.next} in
+      Seq.upd s (US.v cell.prev) prev
+    else s
+  in
 
-// remove
+  let s =
+    if cell.next <> null_ptr then
+      // Next is not null, we need to update it
+      let next = Seq.index s (US.v cell.next) in
+      let next = {next with prev = cell.prev} in
+      Seq.upd s (US.v cell.next) next
+    else s
+  in s
+
+/// Functional correctness of the remove_spec function:
+/// The resulting list is still a doubly linked list, and
+/// the element pointed to by [idx] was successfully removed
+val lemma_remove_spec (#a:Type)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (idx:nat{idx < Seq.length s})
+  : Lemma (requires is_dlist hd s /\ mem idx hd s)
+          (ensures (
+            let c = Seq.index s idx in
+            let hd' = if hd = idx then US.v c.next else hd in
+            let s' = remove_spec hd s idx in
+            is_dlist hd' s' /\ ~ (mem idx hd' s')
+          ))
+
+let lemma_remove_spec #a hd s idx = admit()
+
+/// AF: The regular noop does not seem to pick the equality of selectors, not sure why
+val noop (#opened:inames) (#p:vprop) (_:unit)
+  : SteelGhostF unit opened p (fun _ -> p) (requires fun _ -> True) (ensures fun h0 _ h1 -> h0 p == h1 p)
+let noop () = noop ()
+
+let remove #a r hd idx =
+  assert (US.v idx <> null);
+  elim_vrefine (A.varray r) (is_dlist hd);
+  let gs0 = gget (A.varray r) in
+  assert (is_dlist hd gs0);
+  assert (mem (US.v idx) hd gs0);
+  let cell = A.index r idx in
+  lemma_mem_valid_or_null_next_prev hd gs0 (US.v idx);
+
+  if cell.prev <> null_ptr then
+    // Prev is not null, we need to update it
+    let prev = A.index r cell.prev in
+    let prev = {prev with next = cell.next} in
+    A.upd r cell.prev prev
+  else noop ();
+
+  if cell.next <> null_ptr then
+    // Next is not null, we need to update it
+    let next = A.index r cell.next in
+    let next = {next with prev = cell.prev} in
+    A.upd r cell.next next
+  else noop ();
+
+  let gs1 = gget (A.varray r) in
+  let hd' = if hd = US.v idx then US.v cell.next else hd in
+
+  assert (Ghost.reveal gs1 == remove_spec hd (Ghost.reveal gs0) (US.v idx));
+  lemma_remove_spec hd gs0 (US.v idx);
+
+  intro_vrefine (A.varray r) (is_dlist hd');
+  return hd'
+
 // insert
