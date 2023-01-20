@@ -67,8 +67,10 @@ let size_class_vprop_aux
     //TODO: hideous coercion
     (fun x -> U32.v x <= U32.v metadata_max == true)
     (fun v ->
-      A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size))) `star`
-      (A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul))) `vrefine` zf_u64) `star`
+      (A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size)))
+        `vrefine` zf_u8) `star`
+      (A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul)))
+        `vrefine` zf_u64) `star`
       A.varray (A.split_r scs.md_region (u32_to_sz v))
     )
 

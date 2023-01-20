@@ -3,6 +3,7 @@ module Utils2
 module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
+module U8 = FStar.UInt8
 module FU = FStar.UInt
 
 open Steel.Effect.Atomic
@@ -197,6 +198,21 @@ let zf_u64_slice
   (ensures zf_u64 (Seq.slice arr i j))
   =
   Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) 0UL)
+
+let zf_u8
+  (arr: Seq.seq U8.t)
+  : prop
+  = arr == (Seq.create (Seq.length arr) 0z)
+
+let zf_u8_slice
+  (arr: Seq.seq U8.t)
+  (i:nat)
+  (j:nat{i <= j /\ j <= Seq.length arr})
+  : Lemma
+  (requires zf_u8 arr)
+  (ensures zf_u8 (Seq.slice arr i j))
+  =
+  Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) 0z)
 
 //CAUTION: assume val
 val ffs64 (x: U64.t)
