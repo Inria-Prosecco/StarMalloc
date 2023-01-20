@@ -140,85 +140,25 @@ val lemma_mem_valid_or_null_next_prev (#a:Type0)
 
 let lemma_mem_valid_or_null_next_prev #a hd s idx = admit()
 
-// val lemma_remove_elem_hd' (#a:Type0)
-//   (hd:nat)
-//   (s:Seq.seq (cell a))
-//   (idx:nat{idx < Seq.length s})
-//   (v:a)
-//   (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
-//   : Lemma
-//       (requires is_dlist' hd s (Seq.length s) visited /\ hd <> Seq.length s)
-//       (ensures is_dlist' (next_ptr hd s (Seq.length s) visited) s (Seq.length s) visited)
+(** Functional specifications of the more complicated functions *)
 
-// let lemma_remove_elem_hd' #a hd s idx v visited = admit()
-
-// let lemma_remove_elem_hd (#a:Type0)
-//   (hd:nat)
-//   (s:Seq.seq (cell a))
-//   (idx:nat{idx < Seq.length s})
-//   (v:a)
-//   : Lemma
-//       (requires is_dlist hd s /\ hd <> Seq.length s)
-//       (ensures is_dlist (next_ptr hd s (Seq.length s) FS.emptyset) s)
-//   = lemma_remove_elem_hd' hd s idx v FS.emptyset
-
-/// The main vprop of this module.
-/// We have access to an array, such that the array contains a doubly linked list
-/// when starting at offset [hd]
-[@@__steel_reduce__]
-let varraylist (#a:Type) (r:A.array (cell a)) (hd:nat) : vprop
-  = A.varray r `vrefine` (is_dlist hd)
-
-/// Reads at index [idx] in the array.
-/// TODO: The hd pointer should be ghost
-val read_in_place (#a:Type)
-  (r:A.array (cell a))
-  (hd:nat)
-  (idx:US.t{US.v idx < A.length r})
-  : Steel a
-          (varraylist r hd)
-          (fun _ -> varraylist r hd)
-          (requires fun _ -> True)
-          (ensures fun h0 _ h1 -> h0 (varraylist r hd) == h1 (varraylist r hd))
-
-let read_in_place #a r hd idx =
-  elim_vrefine (A.varray r) (is_dlist hd);
-  let res = A.index r idx in
-  intro_vrefine (A.varray r) (is_dlist hd);
-  return res.data
-
-/// Updates the `data` field of the cell at index [idx] in the array [r] with [v]
-/// TODO: The hd pointer should be ghost
-val write_in_place (#a:Type)
-  (r:A.array (cell a))
-  (hd:nat)
-  (idx:US.t{US.v idx < A.length r})
+/// A ghost specification of the insertion function for doubly linked lists
+let insert_spec (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
+  (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
   (v:a)
-   : Steel unit
-          (varraylist r hd)
-          (fun _ -> varraylist r hd)
-          (requires fun _ -> True)
-          (ensures fun h0 _ h1 -> True) // TODO
+  : Ghost (Seq.seq (cell a))
+         (requires is_dlist (US.v hd) s /\ ~ (mem (US.v idx) (US.v hd) s))
+         (ensures fun _ -> True)
+  = let cell = {data = v; prev = null_ptr; next = hd} in
+    let s = Seq.upd s (US.v idx) cell in
+    if hd <> null_ptr then
+      let cell = Seq.index s (US.v hd) in
+      let cell = {cell with prev = idx} in
+      Seq.upd s (US.v hd) cell
+    else s
 
-let write_in_place #a r hd idx v =
-  elim_vrefine (A.varray r) (is_dlist hd);
-  let c = A.index r idx in
-  (**) let gs = gget (A.varray r) in
-  A.upd r idx (write_data c v);
-  lemma_write_data_frame hd gs (US.v idx) v;
-  intro_vrefine (A.varray r) (is_dlist hd)
-
-/// Removes the element at offset [idx] from the dlist pointed to by [hd]
-val remove (#a:Type)
-  (r:A.array (cell a))
-  (hd:nat)
-  (idx:US.t{US.v idx < A.length r})
-   : Steel nat
-          (varraylist r hd)
-          (fun hd' -> varraylist r hd')
-          (requires fun h -> mem (US.v idx) hd (h (varraylist r hd)))
-          (ensures fun h0 hd' h1 ->
-            ~ (mem (US.v idx) hd' (h1 (varraylist r hd')))) // TODO
 
 /// A ghost specification of the remove function for doubly linked lists
 let remove_spec (#a:Type)
@@ -248,6 +188,20 @@ let remove_spec (#a:Type)
     else s
   in s
 
+(** Functional correctness lemmas for insert and remove *)
+
+/// Functional correctness of the insert_spec function:
+/// The resulting list is still a doubly linked list.
+/// Note, proving that the element was added is trivial, so we do not include it here
+let lemma_insert_spec (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
+  (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
+  (v:a)
+  : Lemma (requires is_dlist (US.v hd) s /\ ~ (mem (US.v idx) (US.v hd) s))
+          (ensures is_dlist (US.v idx) (insert_spec s hd idx v))
+  = admit()
+
 /// Functional correctness of the remove_spec function:
 /// The resulting list is still a doubly linked list, and
 /// the element pointed to by [idx] was successfully removed
@@ -265,19 +219,79 @@ val lemma_remove_spec (#a:Type)
 
 let lemma_remove_spec #a hd s idx = admit()
 
+(** Steel functions and vprops *)
+
+/// The main vprop of this module.
+/// We have access to an array, such that the array contains a doubly linked list
+/// when starting at offset [hd]
+[@@__steel_reduce__]
+let varraylist (#a:Type) (r:A.array (cell a)) (hd:nat) : vprop
+  = A.varray r `vrefine` (is_dlist hd)
+
+
 /// AF: The regular noop does not seem to pick the equality of selectors, not sure why
 val noop (#opened:inames) (#p:vprop) (_:unit)
   : SteelGhostF unit opened p (fun _ -> p) (requires fun _ -> True) (ensures fun h0 _ h1 -> h0 p == h1 p)
 let noop () = noop ()
 
+/// Reads at index [idx] in the array.
+/// TODO: The hd pointer should be ghost
+val read_in_place (#a:Type)
+  (r:A.array (cell a))
+  (hd:nat)
+  (idx:US.t{US.v idx < A.length r})
+  : Steel a
+          (varraylist r hd)
+          (fun _ -> varraylist r hd)
+          (requires fun _ -> True)
+          (ensures fun h0 _ h1 -> h0 (varraylist r hd) == h1 (varraylist r hd))
+
+let read_in_place #a r hd idx =
+  (**) elim_vrefine (A.varray r) (is_dlist hd);
+  let res = A.index r idx in
+  (**) intro_vrefine (A.varray r) (is_dlist hd);
+  (**) return res.data
+
+
+/// Updates the `data` field of the cell at index [idx] in the array [r] with [v]
+/// TODO: The hd pointer should be ghost
+val write_in_place (#a:Type)
+  (r:A.array (cell a))
+  (hd:nat)
+  (idx:US.t{US.v idx < A.length r})
+  (v:a)
+   : Steel unit
+          (varraylist r hd)
+          (fun _ -> varraylist r hd)
+          (requires fun _ -> True)
+          (ensures fun h0 _ h1 -> True) // TODO
+
+let write_in_place #a r hd idx v =
+  (**) elim_vrefine (A.varray r) (is_dlist hd);
+  let c = A.index r idx in
+  (**) let gs = gget (A.varray r) in
+  A.upd r idx (write_data c v);
+  (**) lemma_write_data_frame hd gs (US.v idx) v;
+  (**) intro_vrefine (A.varray r) (is_dlist hd)
+
+
+/// Removes the element at offset [idx] from the dlist pointed to by [hd]
+val remove (#a:Type)
+  (r:A.array (cell a))
+  (hd:nat)
+  (idx:US.t{US.v idx < A.length r})
+   : Steel nat
+          (varraylist r hd)
+          (fun hd' -> varraylist r hd')
+          (requires fun h -> mem (US.v idx) hd (h (varraylist r hd)))
+          (ensures fun h0 hd' h1 ->
+            ~ (mem (US.v idx) hd' (h1 (varraylist r hd')))) // TODO
+
 let remove #a r hd idx =
-  assert (US.v idx <> null);
-  elim_vrefine (A.varray r) (is_dlist hd);
-  let gs0 = gget (A.varray r) in
-  assert (is_dlist hd gs0);
-  assert (mem (US.v idx) hd gs0);
+  (**) elim_vrefine (A.varray r) (is_dlist hd);
+  (**) let gs0 = gget (A.varray r) in
   let cell = A.index r idx in
-  lemma_mem_valid_or_null_next_prev hd gs0 (US.v idx);
+  (**) lemma_mem_valid_or_null_next_prev hd gs0 (US.v idx);
 
   if cell.prev <> null_ptr then
     // Prev is not null, we need to update it
@@ -293,13 +307,39 @@ let remove #a r hd idx =
     A.upd r cell.next next
   else noop ();
 
-  let gs1 = gget (A.varray r) in
+  (**) let gs1 = gget (A.varray r) in
   let hd' = if hd = US.v idx then US.v cell.next else hd in
+  (**) lemma_remove_spec hd gs0 (US.v idx);
 
-  assert (Ghost.reveal gs1 == remove_spec hd (Ghost.reveal gs0) (US.v idx));
-  lemma_remove_spec hd gs0 (US.v idx);
-
-  intro_vrefine (A.varray r) (is_dlist hd');
+  (**) intro_vrefine (A.varray r) (is_dlist hd');
   return hd'
 
-// insert
+
+/// Assuming the element at offset [idx] does not belong to the dlist,
+/// insert it at the head
+val insert (#a:Type)
+  (r:A.array (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
+  (v: a)
+   : Steel unit
+          (varraylist r (US.v hd))
+          (fun _ -> varraylist r (US.v idx))
+          (requires fun h -> ~ (mem (US.v idx) (US.v hd) (h (varraylist r (US.v hd)))))
+          (ensures fun h0 hd' h1 ->
+            mem (US.v idx) (US.v idx) (h1 (varraylist r (US.v idx)))) // TODO
+
+let insert #a r hd idx v =
+  (**) elim_vrefine (A.varray r) (is_dlist (US.v hd));
+  (**) let gs0 = gget (A.varray r) in
+
+  let cell = {data = v; prev = null_ptr; next = hd} in
+  A.upd r idx cell;
+  if hd <> null_ptr then
+    let cell = A.index r hd in
+    let cell = {cell with prev = idx} in
+    A.upd r hd cell
+  else noop ();
+
+  (**) lemma_insert_spec gs0 hd idx v;
+  (**) intro_vrefine (A.varray r) (is_dlist (US.v idx))
