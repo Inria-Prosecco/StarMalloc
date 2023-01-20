@@ -791,13 +791,17 @@ let alloc_metadata_aux2
   )
   (requires fun h0 ->
     (U32.v page_size) % (U32.v size_class) == 0 /\
+    zf_u8 (A.asel (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0))
   (ensures fun h0 r h1 ->
     L.length (SL.v_llist (p_empty size_class) (fst r) h1) = 1 /\
     G.reveal (snd r) = U32.add md_count 1ul /\
-    U32.v (G.reveal (snd r)) <= U32.v metadata_max
+    U32.v (G.reveal (snd r)) <= U32.v metadata_max /\
+    zf_u8 (A.asel (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))) h1) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))) h1)
   )
   =
+  admit ();
   let b : SL.blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
   let v0 : G.erased (Seq.lseq U64.t 4) = gget (A.varray (fst b)) in
   assert (G.reveal v0 == Seq.create 4 0UL);
@@ -938,7 +942,6 @@ let alloc_metadata
     zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) h1)
   )
   =
-  admit ();
   let md_count_v0 = read md_count in
   assert (md_count_v0 == G.reveal md_count_v);
   change_equal_slprop
