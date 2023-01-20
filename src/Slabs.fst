@@ -925,6 +925,7 @@ let alloc_metadata
   )
   (requires fun h0 ->
     (U32.v page_size) % (U32.v size_class) == 0 /\
+    zf_u8 (A.asel (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))) h0) /\
     sel md_count h0 = G.reveal md_count_v
   )
@@ -932,9 +933,12 @@ let alloc_metadata
     L.length (SL.v_llist (p_empty size_class) (fst r) h1) = 1 /\
     sel md_count h0 = G.reveal md_count_v /\
     sel md_count h1 = U32.add (sel md_count h0) 1ul /\
-    sel md_count h1 = G.reveal (snd r)
+    sel md_count h1 = G.reveal (snd r) /\
+    zf_u8 (A.asel (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) page_size))) h1) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))) h1)
   )
   =
+  admit ();
   let md_count_v0 = read md_count in
   assert (md_count_v0 == G.reveal md_count_v);
   change_equal_slprop
@@ -960,6 +964,7 @@ let alloc_metadata
   return r
 #pop-options
 
+//TODO: move it inside SL lib
 let unpack_list_singleton
   (p: SL.blob -> vprop)
   (ptr: SL.t)
@@ -980,7 +985,7 @@ let unpack_list_singleton
   return n
 
 #push-options "--z3rlimit 100"
-assume val alloc_metadata'
+let alloc_metadata'
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -1016,9 +1021,21 @@ assume val alloc_metadata'
     U32.v (U32.add (sel md_count h0) 1ul) <= U32.v metadata_max
     //sel md_count h1 = G.reveal (snd r)
   )
-  //=
-  //let r = alloc_metadata size_class slab_region md_bm_region md_region md_count md_count_v in
-  //return (fst r)
+  =
+  elim_vrefine
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))))
+    zf_u8;
+  elim_vrefine
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))))
+    zf_u64;
+  let r = alloc_metadata size_class slab_region md_bm_region md_region md_count md_count_v in
+  intro_vrefine
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) page_size))))
+    zf_u8;
+  intro_vrefine
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal md_count_v) 1ul) 4ul))))
+    zf_u64;
+  return (fst r)
 #pop-options
 
 open SteelVRefineDep
