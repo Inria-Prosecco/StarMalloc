@@ -119,8 +119,10 @@ let allocate_size_class_sl_lemma1
         //TODO: hideous coercion
         (fun x -> U32.v x <= U32.v metadata_max == true)
         (fun v ->
-          A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size))) `star`
-          A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+          (A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size)))
+            `vrefine` zf_u8) `star`
+          (A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul)))
+            `vrefine` zf_u64) `star`
           A.varray (A.split_r scs.md_region (u32_to_sz v))
         )
     )) m /\
@@ -135,8 +137,10 @@ let allocate_size_class_sl_lemma1
         //TODO: hideous coercion
         (fun x -> U32.v x <= U32.v metadata_max == true)
         (fun v ->
-          A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size))) `star`
-          A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+          (A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size)))
+            `vrefine` zf_u8) `star`
+          (A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul)))
+            `vrefine` zf_u64) `star`
           A.varray (A.split_r scs.md_region (u32_to_sz v))
         )
     ) m
@@ -157,8 +161,10 @@ let allocate_size_class_sl_lemma2
         //TODO: hideous coercion
         (fun x -> U32.v x <= U32.v metadata_max == true)
         (fun v ->
-          A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size))) `star`
-          A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+          (A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size)))
+            `vrefine` zf_u8) `star`
+          (A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul)))
+            `vrefine` zf_u64) `star`
           A.varray (A.split_r scs.md_region (u32_to_sz v))
         )
     )) m
@@ -176,8 +182,10 @@ let allocate_size_class_sl_lemma2
         //TODO: hideous coercion
         (fun x -> U32.v x <= U32.v metadata_max == true)
         (fun v ->
-          A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size))) `star`
-          A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+          (A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size)))
+            `vrefine` zf_u8) `star`
+          (A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul)))
+            `vrefine` zf_u64) `star`
           A.varray (A.split_r scs.md_region (u32_to_sz v))
         )
     ) m
@@ -212,13 +220,16 @@ let allocate_size_class
       //TODO: hideous coercion
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v ->
-        A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size))) `star`
-        A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        (A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size)))
+          `vrefine` zf_u8) `star`
+        (A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul)))
+          `vrefine` zf_u64) `star`
         A.varray (A.split_r scs.md_region (u32_to_sz v))
       )
     )
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
+  assume ((U32.v page_size) % (U32.v scs.size) == 0);
   let result = allocate_slab
     scs.size scs.partial_slabs scs.empty_slabs scs.full_slabs
     scs.slab_region scs.md_bm_region scs.md_region
@@ -232,8 +243,10 @@ let allocate_size_class
       //TODO: hideous coercion
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v ->
-        A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size))) `star`
-        A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul))) `star`
+        (A.varray (A.split_r scs.slab_region (u32_to_sz (U32.mul v page_size)))
+          `vrefine` zf_u8) `star`
+        (A.varray (A.split_r scs.md_bm_region (u32_to_sz (U32.mul v 4ul)))
+          `vrefine` zf_u64) `star`
         A.varray (A.split_r scs.md_region (u32_to_sz v))
       )
     )
