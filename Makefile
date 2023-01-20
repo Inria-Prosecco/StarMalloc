@@ -142,7 +142,7 @@ src/lib-alloc.c
 	./bench/a.out
 
 test-slab: verify extract
-	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
+	gcc-12 -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 -o bench/a.out \
