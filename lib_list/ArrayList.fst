@@ -72,9 +72,33 @@ let lemma_write_data_frame (#a:Type0)
 let varraylist (#a:Type) (r:A.array (cell a)) (hd:nat{hd < A.length r}) : vprop
   = A.varray r `vrefine` (is_list hd)
 
+val read_in_place (#a:Type) (r:A.array (cell a)) (hd:nat{hd < A.length r}) (idx:US.t{US.v idx < A.length r})
+  : Steel a
+          (varraylist r hd)
+          (fun _ -> varraylist r hd)
+          (requires fun _ -> True)
+          (ensures fun h0 _ h1 -> h0 (varraylist r hd) == h1 (varraylist r hd))
 
+let read_in_place #a r hd idx =
+  elim_vrefine (A.varray r) (is_list hd);
+  let res = A.index r idx in
+  intro_vrefine (A.varray r) (is_list hd);
+  return res.data
 
-// read_in_place
-// write_in_place
+val write_in_place (#a:Type) (r:A.array (cell a)) (hd:nat{hd < A.length r}) (idx:US.t{US.v idx < A.length r}) (v:a)
+   : Steel unit
+          (varraylist r hd)
+          (fun _ -> varraylist r hd)
+          (requires fun _ -> True)
+          (ensures fun h0 _ h1 -> True) // TODO
+
+let write_in_place #a r hd idx v =
+  elim_vrefine (A.varray r) (is_list hd);
+  let c = A.index r idx in
+  (**) let gs = gget (A.varray r) in
+  A.upd r idx (write_data c v);
+  lemma_write_data_frame hd gs (US.v idx) v;
+  intro_vrefine (A.varray r) (is_list hd)
+
 // remove
 // insert
