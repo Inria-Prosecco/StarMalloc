@@ -830,11 +830,11 @@ let alloc_metadata_aux2
     (fun x y -> x == y)
     (fun m -> lemma_sl_aux size_class b m);
   let blob1
-      : G.erased (t_of (slab_vprop size_class (snd b) (fst b)))
-      = gget (slab_vprop size_class (snd b) (fst b)) in
-  let v1 : G.erased (Seq.lseq U64.t 4) = dfst (fst blob1) in
-  // fix it...
-  assume (G.reveal v1 == G.reveal v0);
+    : G.erased (t_of (slab_vprop size_class (snd b) (fst b)))
+    = gget (slab_vprop size_class (snd b) (fst b)) in
+  let v1 : G.erased (Seq.lseq U64.t 4)
+    = G.hide (dfst (fst (G.reveal blob1))) in
+  assert (G.reveal v1 == G.reveal v0);
   zeroes_impl_empty size_class (G.reveal v1);
   p_empty_pack size_class b b;
   SAR.intro_vptr (md_array md_region md_count);
