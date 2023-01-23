@@ -1080,6 +1080,64 @@ let vp_aux_lt
     `vrefine` zf_u64) `star`
   A.varray (A.split_r md_region (u32_to_sz v))
 
+let vp_aux_lt_equal_lemma
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
+  (v: U32.t{U32.v v < U32.v metadata_max == true})
+  (m: SM.mem)
+  : Lemma
+  (requires SM.interp (hp_of (
+    vp_aux_lt slab_region md_bm_region md_region v
+  )) m)
+  (ensures SM.interp (hp_of (
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
+      `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
+      `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region (u32_to_sz v))
+  )) m /\
+  sel_of (
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
+      `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
+      `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region (u32_to_sz v))
+  ) m
+  ==
+  sel_of (vp_aux_lt slab_region md_bm_region md_region v) m
+  )
+  = ()
+
+let vp_aux_equal_lemma
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
+  (v: U32.t{U32.v v <= U32.v metadata_max == true})
+  (m: SM.mem)
+  : Lemma
+  (requires SM.interp (hp_of (
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
+      `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
+      `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region (u32_to_sz v))
+  )) m)
+  (ensures SM.interp (hp_of (
+    vp_aux slab_region md_bm_region md_region v
+  )) m /\
+  sel_of (
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
+      `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
+      `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region (u32_to_sz v))
+  ) m
+  ==
+  sel_of (vp_aux slab_region md_bm_region md_region v) m
+  )
+  = ()
+
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let alloc_metadata2
   (size_class: sc)
@@ -1135,7 +1193,7 @@ let alloc_metadata2
       `vrefine` zf_u64) `star`
     A.varray (A.split_r md_region (u32_to_sz (G.reveal x'))))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun m -> vp_aux_lt_equal_lemma slab_region md_bm_region md_region (G.reveal x') m);
   let r = alloc_metadata' size_class slab_region md_bm_region md_region md_count x' in
   //TODO: hideous coercion that leads to 2 change_slprop_rel
   change_slprop_rel
@@ -1146,7 +1204,7 @@ let alloc_metadata2
     A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal x') 1ul))))
     (vp_aux slab_region md_bm_region md_region (U32.add (G.reveal x') 1ul))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun m -> vp_aux_equal_lemma slab_region md_bm_region md_region (U32.add (G.reveal x') 1ul) m);
   change_equal_slprop
     (vp_aux slab_region md_bm_region md_region (U32.add (G.reveal x') 1ul))
     (vp_aux slab_region md_bm_region md_region (U32.add (G.reveal x) 1ul));
