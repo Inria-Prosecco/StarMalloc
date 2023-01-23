@@ -4,7 +4,7 @@
 #include "SmallAlloc.h"
 #include "Slabs.h"
 #include "LargeAlloc.h"
-#include "Selectors_LList3.h"
+#include "BlobList.h"
 //#include <pthread.h>
 
 //static uint8_t* region_start = NULL;
@@ -21,12 +21,15 @@ const size_t max_slabs = 1024UL;
 
 //static Selectors_LList3_cell__Slabs_blob** partial_slabs_ptr;
 //static Selectors_LList3_cell__Slabs_blob** empty_slabs_ptr;
-static Selectors_LList3_cell__Slabs_blob* partial_slabs_sc16;
-static Selectors_LList3_cell__Slabs_blob* partial_slabs_sc32;
-static Selectors_LList3_cell__Slabs_blob* partial_slabs_sc64;
-static Selectors_LList3_cell__Slabs_blob* empty_slabs_sc16;
-static Selectors_LList3_cell__Slabs_blob* empty_slabs_sc32;
-static Selectors_LList3_cell__Slabs_blob* empty_slabs_sc64;
+static BlobList_cell* full_slabs_sc16;
+static BlobList_cell* full_slabs_sc32;
+static BlobList_cell* full_slabs_sc64;
+static BlobList_cell* partial_slabs_sc16;
+static BlobList_cell* partial_slabs_sc32;
+static BlobList_cell* partial_slabs_sc64;
+static BlobList_cell* empty_slabs_sc16;
+static BlobList_cell* empty_slabs_sc32;
+static BlobList_cell* empty_slabs_sc64;
 static uint32_t* md_count_sc16;
 static uint32_t* md_count_sc32;
 static uint32_t* md_count_sc64;
@@ -35,6 +38,7 @@ static SizeClass_size_class_struct scs16_v = {
   .size = (uint32_t)16U,
   .partial_slabs = &partial_slabs_sc16,
   .empty_slabs = &empty_slabs_sc16,
+  .full_slabs = &full_slabs_sc16,
   .md_count = &md_count_sc16,
   .slab_region = NULL,
   .md_bm_region = NULL,
@@ -44,6 +48,7 @@ static SizeClass_size_class_struct scs32_v = {
   .size = (uint32_t)32U,
   .partial_slabs = &partial_slabs_sc32,
   .empty_slabs = &empty_slabs_sc32,
+  .full_slabs = &full_slabs_sc32,
   .md_count = &md_count_sc32,
   .slab_region = NULL,
   .md_bm_region = NULL,
@@ -53,6 +58,7 @@ static SizeClass_size_class_struct scs64_v = {
   .size = (uint32_t)64U,
   .partial_slabs = &partial_slabs_sc64,
   .empty_slabs = &empty_slabs_sc64,
+  .full_slabs = &full_slabs_sc64,
   .md_count = &md_count_sc64,
   .slab_region = NULL,
   .md_bm_region = NULL,
@@ -68,13 +74,13 @@ void init() {
   if (! init_status) {
     scs16->slab_region = (uint8_t*) LargeAlloc_mmap(max_slabs * page_size, 3l);
     scs16->md_bm_region = (uint64_t*) LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
-    scs16->md_region = (Selectors_LList3_cell__Slabs_blob*) LargeAlloc_mmap(max_slabs * sizeof(Selectors_LList3_cell__Slabs_blob), 3l);
+    scs16->md_region = (BlobList_cell*) LargeAlloc_mmap(max_slabs * sizeof(BlobList_cell), 3l);
     scs32->slab_region = (uint8_t*) LargeAlloc_mmap(max_slabs * page_size, 3l);
     scs32->md_bm_region = (uint64_t*) LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
-    scs32->md_region = (Selectors_LList3_cell__Slabs_blob*) LargeAlloc_mmap(max_slabs * sizeof(Selectors_LList3_cell__Slabs_blob), 3l);
+    scs32->md_region = (BlobList_cell*) LargeAlloc_mmap(max_slabs * sizeof(BlobList_cell), 3l);
     scs64->slab_region = (uint8_t*) LargeAlloc_mmap(max_slabs * page_size, 3l);
     scs64->md_bm_region = (uint64_t*) LargeAlloc_mmap(max_slabs * sizeof(uint64_t[4]), 3l);
-    scs64->md_region = (Selectors_LList3_cell__Slabs_blob*) LargeAlloc_mmap(max_slabs * sizeof(Selectors_LList3_cell__Slabs_blob), 3l);
+    scs64->md_region = (BlobList_cell*) LargeAlloc_mmap(max_slabs * sizeof(BlobList_cell), 3l);
     init_status = 1UL;
   }
   //pthread_mutex_unlock(&init_mutex);
