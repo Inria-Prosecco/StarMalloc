@@ -1054,6 +1054,32 @@ let alloc_metadata'
 
 open SteelVRefineDep
 
+let vp_aux
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
+  (v: U32.t{U32.v v <= U32.v metadata_max == true})
+  : vprop
+  =
+  (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
+    `vrefine` zf_u8) `star`
+  (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
+    `vrefine` zf_u64) `star`
+  A.varray (A.split_r md_region (u32_to_sz v))
+
+let vp_aux_lt
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
+  (v: U32.t{U32.v v < U32.v metadata_max == true})
+  : vprop
+  =
+  (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
+    `vrefine` zf_u8) `star`
+  (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
+    `vrefine` zf_u64) `star`
+  A.varray (A.split_r md_region (u32_to_sz v))
+
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let alloc_metadata2
   (size_class: sc)
@@ -1066,36 +1092,21 @@ let alloc_metadata2
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-        (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-          `vrefine` zf_u8) `star`
-        (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-          `vrefine` zf_u64) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
+      (fun v -> vp_aux slab_region md_bm_region md_region v)
   )
   (fun r ->
     SL.llist (p_empty size_class) r `star`
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-        (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-          `vrefine` zf_u8) `star`
-        (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-          `vrefine` zf_u64) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
+      (fun v -> vp_aux slab_region md_bm_region md_region v)
   )
   (requires fun h0 ->
     let x = h0 (
       vrefinedep
         (vptr md_count)
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v ->
-          (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-            `vrefine` zf_u8) `star`
-          (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-            `vrefine` zf_u64) `star`
-          A.varray (A.split_r md_region (u32_to_sz v)))
+        (fun v -> vp_aux slab_region md_bm_region md_region v)
       ) in
     U32.v (dfst x) < U32.v metadata_max /\
     (U32.v page_size) % (U32.v size_class) == 0)
@@ -1107,56 +1118,43 @@ let alloc_metadata2
     = elim_vrefinedep
     (vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v ->
-      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-        `vrefine` zf_u8) `star`
-      (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-        `vrefine` zf_u64) `star`
-      A.varray (A.split_r md_region (u32_to_sz v)))
+    (fun v -> vp_aux slab_region md_bm_region md_region v)
   in
- let x'
+  let x'
     : G.erased (x:U32.t{U32.v x < U32.v metadata_max})
     = G.hide (G.reveal x <: x:U32.t{U32.v x < U32.v metadata_max}) in
   //TODO: hideous coercion that leads to 2 change_slprop_rel
   change_equal_slprop
-    ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal x) page_size)))
-      `vrefine` zf_u8) `star`
-    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal x) 4ul)))
-      `vrefine` zf_u64) `star`
-    A.varray (A.split_r md_region (u32_to_sz (G.reveal x))))
+    (vp_aux slab_region md_bm_region md_region (G.reveal x))
+    (vp_aux_lt slab_region md_bm_region md_region (G.reveal x'));
+  change_slprop_rel
+    (vp_aux_lt slab_region md_bm_region md_region (G.reveal x'))
     ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal x') page_size)))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal x') 4ul)))
       `vrefine` zf_u64) `star`
-    A.varray (A.split_r md_region (u32_to_sz (G.reveal x'))));
+    A.varray (A.split_r md_region (u32_to_sz (G.reveal x'))))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
   let r = alloc_metadata' size_class slab_region md_bm_region md_region md_count x' in
   //TODO: hideous coercion that leads to 2 change_slprop_rel
-  change_equal_slprop
+  change_slprop_rel
     ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal x') 1ul) page_size)))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal x') 1ul) 4ul)))
       `vrefine` zf_u64) `star`
     A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal x') 1ul))))
-    ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal x) 1ul) page_size)))
-      `vrefine` zf_u8) `star`
-    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal x) 1ul) 4ul)))
-      `vrefine` zf_u64) `star`
-    A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal x) 1ul))));
-  admit ();
+    (vp_aux slab_region md_bm_region md_region (U32.add (G.reveal x') 1ul))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  change_equal_slprop
+    (vp_aux slab_region md_bm_region md_region (U32.add (G.reveal x') 1ul))
+    (vp_aux slab_region md_bm_region md_region (U32.add (G.reveal x) 1ul));
   intro_vrefinedep
     (vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v ->
-      (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-        `vrefine` zf_u8) `star`
-      (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-        `vrefine` zf_u64) `star`
-      A.varray (A.split_r md_region (u32_to_sz v)))
-    ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add (G.reveal x) 1ul) page_size)))
-      `vrefine` zf_u8) `star`
-    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add (G.reveal x) 1ul) 4ul)))
-      `vrefine` zf_u64) `star`
-    A.varray (A.split_r md_region (u32_to_sz (U32.add (G.reveal x) 1ul))));
+    (fun v -> vp_aux slab_region md_bm_region md_region v)
+    (vp_aux slab_region md_bm_region md_region (U32.add (G.reveal x) 1ul));
   return r
 #pop-options
 
@@ -1177,12 +1175,7 @@ let allocate_slab_aux_3
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-        (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-          `vrefine` zf_u8) `star`
-        (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-          `vrefine` zf_u64) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
+      (fun v -> vp_aux slab_region md_bm_region md_region v)
   )
   (fun r ->
     vptr empty_slabs_ptr `star`
@@ -1190,25 +1183,15 @@ let allocate_slab_aux_3
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-        (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-          `vrefine` zf_u8) `star`
-        (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-          `vrefine` zf_u64) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
+      (fun v -> vp_aux slab_region md_bm_region md_region v)
   )
   (requires fun h0 ->
     let x = h0 (
       vrefinedep
         (vptr md_count)
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v ->
-          (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-            `vrefine` zf_u8) `star`
-          (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-            `vrefine` zf_u64) `star`
-          A.varray (A.split_r md_region (u32_to_sz v))
-      )) in
+        (fun v -> vp_aux slab_region md_bm_region md_region v)
+      ) in
     U32.v (dfst x) < U32.v metadata_max /\
     (U32.v page_size) % (U32.v size_class) == 0)
   (ensures fun h0 r h1 ->
@@ -1228,20 +1211,6 @@ let allocate_slab_aux_3
   write empty_slabs_ptr r;
   return r
 #pop-options
-
-let vp_aux
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array SL.cell{A.length md_region = U32.v metadata_max})
-  (v: U32.t{U32.v v <= U32.v metadata_max == true})
-  : vprop
-  =
-  (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-    `vrefine` zf_u8) `star`
-  (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-    `vrefine` zf_u64) `star`
-  A.varray (A.split_r md_region (u32_to_sz v))
-
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let allocate_slab_check_md_count
@@ -1323,12 +1292,7 @@ let allocate_slab
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-        (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-          `vrefine` zf_u8) `star`
-        (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-          `vrefine` zf_u64) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
+      (fun v -> vp_aux slab_region md_bm_region md_region v)
   )
   (fun r ->
     (if (G.reveal (snd r)) then A.varray (fst r) else emp) `star`
@@ -1338,12 +1302,7 @@ let allocate_slab
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-        (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-          `vrefine` zf_u8) `star`
-        (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-          `vrefine` zf_u64) `star`
-        A.varray (A.split_r md_region (u32_to_sz v)))
+      (fun v -> vp_aux slab_region md_bm_region md_region v)
   )
   (requires fun h0 ->
     (U32.v page_size) % (U32.v sc) == 0)
