@@ -1,6 +1,5 @@
 module Slots2
 
-module FU = FStar.UInt
 module FI = FStar.Int
 module STU = SizeTUtils
 module US = FStar.SizeT

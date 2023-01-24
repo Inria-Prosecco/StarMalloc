@@ -9,7 +9,7 @@ module I32 = FStar.Int32
 module U8 = FStar.UInt8
 
 module G = FStar.Ghost
-module FU = FStar.UInt
+module FI = FStar.Int
 module L = FStar.List.Tot
 
 open Steel.Effect.Atomic
@@ -116,7 +116,18 @@ let deallocate_slab
   (ensures fun _ _ _ -> True)
   =
   let diff = A.ptrdiff ptr (A.split_l slab_region 0sz) in
+  let diff_sz = UP.ptrdifft_to_sizet diff in
+  assume (US.fits_u32);
+  assert_norm (4 < FI.max_int 16);
+  let diff_u32 = US.sizet_to_uint32 diff_sz in
+  assert (U32.v diff_u32 == UP.v diff);
+  let pos = U32.div diff_u32 page_size in
+  let md_count_v = read md_count in
   // first part: check diff/page_size < md_count
-  sladmit ();
-  // second part: get corresponding slab/md pointers
-  return true
+  if U32.lt pos md_count_v then (
+    // second part: get corresponding slab/md pointers
+    sladmit ();
+    return true
+  ) else (
+    return false
+  )
