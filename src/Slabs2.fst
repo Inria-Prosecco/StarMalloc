@@ -19,14 +19,14 @@ module A = Steel.Array
 module SM = Steel.Memory
 
 module SL = BlobList
-
-//module Temp = TempLock
+module AL = ArrayList
 
 open Utils2
 open Slots
 open Slots2
 open Slabs
 
+//TODO: remove, now likely useless
 let deallocate_slab_aux
   (size_class: sc)
   (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
@@ -77,42 +77,46 @@ let deallocate_slab_aux
     return r
   )
 
-//module P = Steel.FractionalPermission
 open FStar.Mul
 
-#push-options "--compat_pre_typed_indexed_effects"
+unfold
+let blob
+  = slab_metadata &
+    (arr:array U8.t{A.length arr = U32.v page_size})
+
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let deallocate_slab
   (size_class: sc)
-  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
-  (partial_slabs empty_slabs full_slabs: SL.t)
+  //(partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
+  //(partial_slabs empty_slabs full_slabs: SL.t)
   (slab_region: array U8.t{A.length slab_region == U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (AL.cell blob){A.length md_region = U32.v metadata_max})
   (ptr: array U8.t)
-  (md_count: ref U32.t)
+  (md_count_v: (x:U32.t{U32.v x <= U32.v metadata_max}))
   : Steel bool
   (
     A.varray ptr `star`
-    SL.ind_llist (p_empty size_class) empty_slabs_ptr `star`
-    SL.ind_llist (p_partial size_class) partial_slabs_ptr `star`
-    SL.ind_llist (p_full size_class) full_slabs_ptr `star`
-    A.varray (A.split_l slab_region 0sz) `star`
-    vptr md_count
+    AL.varraylist (A.split_l md_region (u32_to_sz md_count_v)) 0 `star`
+    A.varray (A.split_l slab_region 0sz)
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
-    SL.ind_llist (p_empty size_class) empty_slabs_ptr `star`
-    SL.ind_llist (p_partial size_class) partial_slabs_ptr `star`
-    SL.ind_llist (p_full size_class) full_slabs_ptr `star`
-    A.varray (A.split_l slab_region 0sz) `star`
-    vptr md_count
+    AL.varraylist (A.split_l md_region (u32_to_sz md_count_v)) 0 `star`
+    A.varray (A.split_l slab_region 0sz)
   )
   (requires fun h0 ->
+    //TODO: FIXME @Aymeric
+    //let s = h0 (AL.varraylist (A.split_l md_region (u32_to_sz md_count_v)) 0) in
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     same_base_array ptr slab_region /\
     0 <= diff /\
     UP.fits ((U32.v page_size) * (U32.v metadata_max)) /\
     diff < (U32.v page_size) * (U32.v metadata_max) /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
-    U32.v (sel md_count h0) <= U32.v metadata_max)
+    U32.v md_count_v <= U32.v metadata_max
+
+  )
   (ensures fun _ _ _ -> True)
   =
   let diff = A.ptrdiff ptr (A.split_l slab_region 0sz) in
@@ -122,12 +126,32 @@ let deallocate_slab
   let diff_u32 = US.sizet_to_uint32 diff_sz in
   assert (U32.v diff_u32 == UP.v diff);
   let pos = U32.div diff_u32 page_size in
-  let md_count_v = read md_count in
-  // first part: check diff/page_size < md_count
+  // check diff/page_size < md_count
   if U32.lt pos md_count_v then (
-    // second part: get corresponding slab/md pointers
-    sladmit ();
-    return true
+    // get corresponding slab/md pointers
+    let b = AL.read_in_place (A.split_l md_region (u32_to_sz md_count_v)) 0 (u32_to_sz pos) in
+    // refinement: Steel issue, does not work as logical precond
+    assume (snd b == slab_array slab_region pos);
+    // ArrayList predicate + unpacking/packing support 1/2
+    rewrite_slprop
+      emp (slab_vprop size_class (snd b) (fst b))
+      (fun _ -> admit ());
+    // metadata check done at slots level
+    let status = deallocate_slot size_class (fst b) (snd b) ptr in
+    // ArrayList predicate + unpacking/packing support 2/2
+    rewrite_slprop
+      (slab_vprop size_class (snd b) (fst b)) emp
+      (fun _ -> admit ());
+    if status then (
+      // update {partial, free, full}_slabs lists accordingly
+      sladmit ();
+      return true
+    ) else (
+      change_equal_slprop
+        (if status then emp else A.varray ptr)
+        (A.varray ptr);
+      return false
+    )
   ) else (
     return false
   )
