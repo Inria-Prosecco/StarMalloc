@@ -1,5 +1,6 @@
 module Slabs2
 
+module UP = FStar.PtrdiffT
 module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
@@ -28,8 +29,8 @@ open Slabs
 
 let deallocate_slab_aux
   (size_class: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref SL.t)
-  (partial_slabs empty_slabs: SL.t)
+  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
+  (partial_slabs empty_slabs full_slabs: SL.t)
   (slab: array U8.t{A.length slab = U32.v page_size})
   (md: slab_metadata)
   (ptr: array U8.t)
@@ -40,12 +41,15 @@ let deallocate_slab_aux
     vptr empty_slabs_ptr `star`
     SL.llist (p_empty size_class) empty_slabs `star`
     vptr partial_slabs_ptr `star`
-    SL.llist (p_partial size_class) partial_slabs
+    SL.llist (p_partial size_class) partial_slabs `star`
+    vptr full_slabs_ptr `star`
+    SL.llist (p_full size_class) full_slabs
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
     SL.ind_llist (p_empty size_class) empty_slabs_ptr `star`
-    SL.ind_llist (p_partial size_class) partial_slabs_ptr
+    SL.ind_llist (p_partial size_class) partial_slabs_ptr `star`
+    SL.ind_llist (p_full size_class) full_slabs_ptr
   )
   (requires fun h0 ->
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab) in
@@ -72,3 +76,47 @@ let deallocate_slab_aux
     SL.pack_ind (p_empty size_class) empty_slabs_ptr empty_slabs;
     return r
   )
+
+//module P = Steel.FractionalPermission
+open FStar.Mul
+
+#push-options "--compat_pre_typed_indexed_effects"
+let deallocate_slab
+  (size_class: sc)
+  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
+  (partial_slabs empty_slabs full_slabs: SL.t)
+  (slab_region: array U8.t{A.length slab_region == U32.v metadata_max * U32.v page_size})
+  (ptr: array U8.t)
+  (md_count: ref U32.t)
+  : Steel bool
+  (
+    A.varray ptr `star`
+    SL.ind_llist (p_empty size_class) empty_slabs_ptr `star`
+    SL.ind_llist (p_partial size_class) partial_slabs_ptr `star`
+    SL.ind_llist (p_full size_class) full_slabs_ptr `star`
+    A.varray (A.split_l slab_region 0sz) `star`
+    vptr md_count
+  )
+  (fun b ->
+    (if b then emp else A.varray ptr) `star`
+    SL.ind_llist (p_empty size_class) empty_slabs_ptr `star`
+    SL.ind_llist (p_partial size_class) partial_slabs_ptr `star`
+    SL.ind_llist (p_full size_class) full_slabs_ptr `star`
+    A.varray (A.split_l slab_region 0sz) `star`
+    vptr md_count
+  )
+  (requires fun h0 ->
+    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
+    same_base_array ptr slab_region /\
+    0 <= diff /\
+    UP.fits ((U32.v page_size) * (U32.v metadata_max)) /\
+    diff < (U32.v page_size) * (U32.v metadata_max) /\
+    (U32.v page_size) % (U32.v size_class) = 0 /\
+    U32.v (sel md_count h0) <= U32.v metadata_max)
+  (ensures fun _ _ _ -> True)
+  =
+  let diff = A.ptrdiff ptr (A.split_l slab_region 0sz) in
+  // first part: check diff/page_size < md_count
+  sladmit ();
+  // second part: get corresponding slab/md pointers
+  return true
