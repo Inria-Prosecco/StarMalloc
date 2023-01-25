@@ -57,7 +57,7 @@ let is_dlist (#a:Type0) (hd:nat) (s:Seq.seq (cell a)) : prop =
 let rec mem' (#a:Type0) (x:nat) (hd:nat) (s:Seq.seq (cell a))
   (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
   : Tot prop (decreases (Seq.length s - FS.cardinality visited)) =
-  if x = null || x >= Seq.length s then False
+  if x = null || x >= Seq.length s || hd = null then False
   else
     if x = hd then True
     else
@@ -147,22 +147,6 @@ val lemma_mem_valid_or_null_next_prev' (#a:Type0)
       )
       (decreases (Seq.length s - FS.cardinality visited))
 
-let mem_null (#a: Type0) (x:nat) (s:Seq.seq (cell a))
-  (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
-  : Lemma
-  (requires x <> null /\ not (FS.mem x visited))
-  (ensures ~ (mem' x null s visited))
-  =
-  if x = null || x >= Seq.length s then ()
-  else
-    if FS.cardinality visited = Seq.length s || FS.mem null visited || null >= Seq.length s
-    then ()
-    else begin
-      let next = US.v (Seq.index s null).next in
-      //assert (next == null);
-      admit ()
-    end
-
 let rec lemma_mem_valid_or_null_next_prev' #a hd s prev visited idx
   =
   assert (not (idx = null || idx >= Seq.length s));
@@ -172,7 +156,7 @@ let rec lemma_mem_valid_or_null_next_prev' #a hd s prev visited idx
   if hd = null then begin
     assert (idx <> null);
     assert (mem' idx null s visited);
-    mem_null #a idx s visited;
+    //mem_null #a idx s visited;
     assert (~ (mem' idx null s visited))
   end else begin
     assert (not (FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s));
@@ -267,7 +251,7 @@ let rec lemma_dlist_upd' (#a:Type)
   let s' = Seq.upd s (US.v idx) v in
   if US.v hd = null
   then
-    mem_null (US.v idx) s' visited
+    ()
   else begin
     let cur = Seq.index s (US.v hd) in
     let next = cur.next in
@@ -292,7 +276,7 @@ let lemma_dlist_upd (#a:Type)
     ~ (mem (US.v idx) (US.v hd) s')))
   = lemma_dlist_upd' s hd idx null FS.emptyset v
 
-assume val lemma_dlist_insert_visited (#a:Type)
+let rec lemma_dlist_insert_visited (#a:Type)
   (s:Seq.seq (cell a))
   (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
   (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
@@ -300,10 +284,29 @@ assume val lemma_dlist_insert_visited (#a:Type)
   (visited: FS.set nat{Seq.length s > FS.cardinality visited})
   : Lemma
   (requires
-    is_dlist' (US.v hd)  s prev visited /\
+    is_dlist' (US.v hd) s prev visited /\
     ~ (mem' (US.v idx) (US.v hd) s visited))
   (ensures
-    is_dlist' (US.v hd) s prev (FS.insert (US.v idx) visited))
+    is_dlist' (US.v hd) s prev (FS.insert (US.v idx) visited) /\
+    ~ (mem' (US.v idx) (US.v hd) s (FS.insert (US.v idx) visited)))
+  (decreases (Seq.length s - FS.cardinality visited))
+  =
+  if US.v hd = null
+  then ()
+  else begin
+    let cur = Seq.index s (US.v hd) in
+    let next = cur.next in
+    assert (is_dlist' (US.v next) s (US.v hd) (FS.insert (US.v hd) visited));
+    assert (~ (mem' (US.v idx) (US.v hd) s (FS.insert (US.v hd) visited)));
+    // will likely be fixed when rewriting things with partition
+    assume (FS.cardinality (FS.insert (US.v hd) visited) < Seq.length s);
+    lemma_dlist_insert_visited s next idx (US.v hd) (FS.insert (US.v hd) visited);
+    assume (
+      FS.insert (US.v hd) (FS.insert (US.v idx) visited)
+      ==
+      FS.insert (US.v idx) (FS.insert (US.v hd) visited)
+    )
+  end
 
 /// Functional correctness of the insert_spec function:
 /// The resulting list is still a doubly linked list.
