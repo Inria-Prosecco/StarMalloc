@@ -127,6 +127,40 @@ let lemma_write_data_frame #a hd s idx v =
 
 let null_or_valid (#a:Type) (ptr:nat) (s:Seq.seq (cell a)) = ptr = null \/ ptr < Seq.length s
 
+val lemma_mem_valid_or_null_next_prev' (#a:Type0)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (prev: nat)
+  (visited: FS.set nat{Seq.length s >= FS.cardinality visited})
+  (idx:nat)
+  : Lemma
+      (requires is_dlist' hd s prev visited /\ mem' idx hd s visited /\ null_or_valid prev s)
+      (ensures
+        (let cell = Seq.index s idx in
+        null_or_valid (US.v cell.next) s /\
+        null_or_valid (US.v cell.prev) s /\
+        True)
+      )
+      (decreases (Seq.length s - FS.cardinality visited))
+
+let rec lemma_mem_valid_or_null_next_prev' #a hd s prev visited idx
+  =
+  assert (not (idx = null || idx >= Seq.length s));
+  let cur = Seq.index s hd in
+  let next = US.v cur.next in
+  if hd = idx then () else
+  if hd = null then begin
+    assert (idx <> null);
+    assert (mem' idx null s visited);
+    // this should lead to false, auxiliary lemma
+    admit ()
+  end else begin
+    assert (not (FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s));
+    assert (is_dlist' next s hd (FS.insert hd visited));
+    assert (mem' idx next s (FS.insert hd visited));
+    lemma_mem_valid_or_null_next_prev' #a next s hd (FS.insert hd visited) idx
+  end
+
 val lemma_mem_valid_or_null_next_prev (#a:Type0)
   (hd:nat)
   (s:Seq.seq (cell a))
@@ -138,7 +172,8 @@ val lemma_mem_valid_or_null_next_prev (#a:Type0)
         null_or_valid (US.v cell.prev) s /\ null_or_valid (US.v cell.next) s)
       )
 
-let lemma_mem_valid_or_null_next_prev #a hd s idx = admit()
+let lemma_mem_valid_or_null_next_prev #a hd s idx =
+  lemma_mem_valid_or_null_next_prev' hd s null FS.emptyset idx
 
 (** Functional specifications of the more complicated functions *)
 
@@ -200,7 +235,10 @@ let lemma_insert_spec (#a:Type)
   (v:a)
   : Lemma (requires is_dlist (US.v hd) s /\ ~ (mem (US.v idx) (US.v hd) s))
           (ensures is_dlist (US.v idx) (insert_spec s hd idx v))
-  = admit()
+  =
+  if hd <> null_ptr then
+    admit ()
+  else ()
 
 /// Functional correctness of the remove_spec function:
 /// The resulting list is still a doubly linked list, and
