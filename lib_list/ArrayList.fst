@@ -239,13 +239,11 @@ let rec lemma_dlist_upd' (#a:Type)
   : Lemma
   (requires
     is_dlist' (US.v hd) s prev visited /\
-    ~ (mem' (US.v idx) (US.v hd) s visited) /\
-    ~ (FS.mem (US.v idx) visited))
+    ~ (mem' (US.v idx) (US.v hd) s visited))
   (ensures (
     let s' = Seq.upd s (US.v idx) v in
     is_dlist' (US.v hd) s' prev visited /\
-    ~ (mem' (US.v idx) (US.v hd) s' visited) /\
-    ~ (FS.mem (US.v idx) visited)))
+    ~ (mem' (US.v idx) (US.v hd) s' visited)))
   (decreases (Seq.length s - FS.cardinality visited))
   =
   let s' = Seq.upd s (US.v idx) v in
@@ -257,7 +255,6 @@ let rec lemma_dlist_upd' (#a:Type)
     let next = cur.next in
     assert (is_dlist' (US.v next) s (US.v hd) (FS.insert (US.v hd) visited));
     assert (~ (mem' (US.v idx) (US.v hd) s (FS.insert (US.v hd) visited)));
-    assert (~ (FS.mem (US.v idx) (FS.insert (US.v hd) visited)));
     lemma_dlist_upd' s next idx (US.v hd) (FS.insert (US.v hd) visited) v
   end
 
@@ -319,6 +316,7 @@ let lemma_insert_spec (#a:Type)
   : Lemma (requires is_dlist (US.v hd) s /\ ~ (mem (US.v idx) (US.v hd) s))
           (ensures is_dlist (US.v idx) (insert_spec s hd idx v))
   =
+  admit ();
   assert (is_dlist' (US.v hd) s null FS.emptyset);
   let cell = {data = v; prev = null_ptr; next = hd} in
   let s' = Seq.upd s (US.v idx) cell in
@@ -326,11 +324,29 @@ let lemma_insert_spec (#a:Type)
   assert (is_dlist' (US.v hd) s' null FS.emptyset);
   if hd <> null_ptr then begin
     lemma_dlist_insert_visited s' hd idx null FS.emptyset;
+    let fs1 = FS.insert (US.v idx) FS.emptyset in
     assert (is_dlist' (US.v hd) s' null (FS.insert (US.v idx) FS.emptyset));
     let cell = Seq.index s' (US.v hd) in
     let cell = {cell with prev = idx} in
+    let cur = Seq.index s' (US.v hd) in
+    let next = cur.next in
+    let fs2 = FS.insert (US.v hd) FS.emptyset in
+    // insert is commutative
+    assume (FS.insert (US.v hd) fs1 == FS.insert (US.v idx) fs2);
+    assert (is_dlist' (US.v next) s' (US.v hd) fs2);
+    assume (~ (mem' (US.v hd) (US.v next) s' fs2));
+    lemma_dlist_upd' s' next hd (US.v hd) fs2 cell;
     let s1 = Seq.upd s' (US.v hd) cell in
-    assume (is_dlist' (US.v hd) s1 (US.v idx) (FS.insert (US.v idx) FS.emptyset));
+    assert (is_dlist' (US.v next) s1 (US.v hd) fs2);
+    FS.all_finite_set_facts_lemma ();
+    //assume (next == (Seq.index s1 (US.v hd)).next);
+    assume (is_dlist' (US.v hd) s1 (US.v idx) (FS.singleton (US.v idx))
+    ==
+    is_dlist' (US.v next) s1 (US.v hd) (FS.insert (US.v hd) (FS.singleton (US.v idx))) /\
+    (US.v (Seq.index s1 (US.v hd)).prev == US.v idx)
+    );
+    assert (US.v (Seq.index s1 (US.v hd)).prev == US.v idx);
+    //admit ();
     let s2 = insert_spec s hd idx v in
     assert (s1 == s2);
     ()
