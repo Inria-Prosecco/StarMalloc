@@ -245,7 +245,39 @@ let remove_spec (#a:Type)
 
 (** Functional correctness lemmas for insert and remove *)
 
-assume val lemma_dlist_upd (#a:Type)
+let rec lemma_dlist_upd' (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
+  (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
+  (prev: nat)
+  (visited: FS.set nat{Seq.length s >= FS.cardinality visited})
+  (v: cell a)
+  : Lemma
+  (requires
+    is_dlist' (US.v hd) s prev visited /\
+    ~ (mem' (US.v idx) (US.v hd) s visited) /\
+    ~ (FS.mem (US.v idx) visited))
+  (ensures (
+    let s' = Seq.upd s (US.v idx) v in
+    is_dlist' (US.v hd) s' prev visited /\
+    ~ (mem' (US.v idx) (US.v hd) s' visited) /\
+    ~ (FS.mem (US.v idx) visited)))
+  (decreases (Seq.length s - FS.cardinality visited))
+  =
+  let s' = Seq.upd s (US.v idx) v in
+  if US.v hd = null
+  then
+    mem_null (US.v idx) s' visited
+  else begin
+    let cur = Seq.index s (US.v hd) in
+    let next = cur.next in
+    assert (is_dlist' (US.v next) s (US.v hd) (FS.insert (US.v hd) visited));
+    assert (~ (mem' (US.v idx) (US.v hd) s (FS.insert (US.v hd) visited)));
+    assert (~ (FS.mem (US.v idx) (FS.insert (US.v hd) visited)));
+    lemma_dlist_upd' s next idx (US.v hd) (FS.insert (US.v hd) visited) v
+  end
+
+let lemma_dlist_upd (#a:Type)
   (s:Seq.seq (cell a))
   (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
   (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
@@ -254,8 +286,11 @@ assume val lemma_dlist_upd (#a:Type)
   (requires
     is_dlist (US.v hd) s /\
     ~ (mem (US.v idx) (US.v hd) s))
-  (ensures
-    is_dlist (US.v idx) (Seq.upd s (US.v idx) v))
+  (ensures (
+    let s' = Seq.upd s (US.v idx) v in
+    is_dlist (US.v hd) s' /\
+    ~ (mem (US.v idx) (US.v hd) s')))
+  = lemma_dlist_upd' s hd idx null FS.emptyset v
 
 assume val lemma_dlist_insert_visited (#a:Type)
   (s:Seq.seq (cell a))
@@ -287,12 +322,12 @@ let lemma_insert_spec (#a:Type)
   lemma_dlist_upd s hd idx cell;
   assert (is_dlist' (US.v hd) s' null FS.emptyset);
   if hd <> null_ptr then begin
-    //assert (is_dlist' (US.v hd) s' null FS.emptyset);
     lemma_dlist_insert_visited s' hd idx null FS.emptyset;
+    assert (is_dlist' (US.v hd) s' null (FS.insert (US.v idx) FS.emptyset));
     let cell = Seq.index s' (US.v hd) in
     let cell = {cell with prev = idx} in
     let s1 = Seq.upd s' (US.v hd) cell in
-    assert (is_dlist' (US.v hd) s1 (US.v idx) (FS.insert (US.v idx) FS.emptyset));
+    assume (is_dlist' (US.v hd) s1 (US.v idx) (FS.insert (US.v idx) FS.emptyset));
     let s2 = insert_spec s hd idx v in
     assert (s1 == s2);
     ()
