@@ -134,7 +134,11 @@ val lemma_mem_valid_or_null_next_prev' (#a:Type0)
   (visited: FS.set nat{Seq.length s >= FS.cardinality visited})
   (idx:nat)
   : Lemma
-      (requires is_dlist' hd s prev visited /\ mem' idx hd s visited /\ null_or_valid prev s)
+      (requires
+        is_dlist' hd s prev visited /\
+        mem' idx hd s visited /\
+        null_or_valid prev s /\
+        not (FS.mem idx visited))
       (ensures
         (let cell = Seq.index s idx in
         null_or_valid (US.v cell.next) s /\
@@ -142,6 +146,22 @@ val lemma_mem_valid_or_null_next_prev' (#a:Type0)
         True)
       )
       (decreases (Seq.length s - FS.cardinality visited))
+
+let mem_null (#a: Type0) (x:nat) (s:Seq.seq (cell a))
+  (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
+  : Lemma
+  (requires x <> null /\ not (FS.mem x visited))
+  (ensures ~ (mem' x null s visited))
+  =
+  if x = null || x >= Seq.length s then ()
+  else
+    if FS.cardinality visited = Seq.length s || FS.mem null visited || null >= Seq.length s
+    then ()
+    else begin
+      let next = US.v (Seq.index s null).next in
+      //assert (next == null);
+      admit ()
+    end
 
 let rec lemma_mem_valid_or_null_next_prev' #a hd s prev visited idx
   =
@@ -152,8 +172,8 @@ let rec lemma_mem_valid_or_null_next_prev' #a hd s prev visited idx
   if hd = null then begin
     assert (idx <> null);
     assert (mem' idx null s visited);
-    // this should lead to false, auxiliary lemma
-    admit ()
+    mem_null #a idx s visited;
+    assert (~ (mem' idx null s visited))
   end else begin
     assert (not (FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s));
     assert (is_dlist' next s hd (FS.insert hd visited));
