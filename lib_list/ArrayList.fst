@@ -83,6 +83,7 @@ let next_ptr (#a:Type)
   (s:Seq.seq (cell a))
   (prev:nat)
   (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
+
   : Ghost nat
           (requires is_dlist' hd s prev visited /\ hd <> null)
           (ensures fun _ -> True)
@@ -298,12 +299,40 @@ let rec lemma_dlist_insert_visited (#a:Type)
     // will likely be fixed when rewriting things with partition
     assume (FS.cardinality (FS.insert (US.v hd) visited) < Seq.length s);
     lemma_dlist_insert_visited s next idx (US.v hd) (FS.insert (US.v hd) visited);
+    // FS lemma
     assume (
       FS.insert (US.v hd) (FS.insert (US.v idx) visited)
       ==
       FS.insert (US.v idx) (FS.insert (US.v hd) visited)
     )
   end
+
+let lemma_dlist_mem_uniq (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:US.t{hd <> null_ptr \/ US.v hd < Seq.length s})
+  (prev: nat)
+  (visited: FS.set nat{Seq.length s > FS.cardinality visited})
+  : Lemma
+  (requires
+    is_dlist' (US.v hd) s prev visited /\
+    not (FS.mem (US.v hd) visited)
+  )
+  (ensures (
+    let cur = Seq.index s (US.v hd) in
+    let next = cur.next in
+    ~ (mem' (US.v hd) (US.v next) s (FS.insert (US.v hd) visited))
+  ))
+  =
+  let cur = Seq.index s (US.v hd) in
+  let next = cur.next in
+  if (next = null_ptr)
+  then ()
+  else begin
+    assert (next <> null_ptr);
+    admit ();
+    ()
+  end
+
 
 /// Functional correctness of the insert_spec function:
 /// The resulting list is still a doubly linked list.
@@ -337,7 +366,8 @@ let lemma_insert_spec (#a:Type)
     assume (FS.insert (US.v hd) fs1 == FS.insert (US.v idx) fs2);
     assert (is_dlist' (US.v next) s' (US.v hd) (FS.insert (US.v idx) fs2));
     // dedicated aux lemma
-    assume (~ (mem' (US.v hd) (US.v next) s' (FS.insert (US.v idx) fs2)));
+    lemma_dlist_mem_uniq s' hd null fs1;
+    assert (~ (mem' (US.v hd) (US.v next) s' (FS.insert (US.v idx) fs2)));
     lemma_dlist_upd' s' next hd (US.v hd) (FS.insert (US.v idx) fs2) cell;
     let s1 = Seq.upd s' (US.v hd) cell in
     assert (is_dlist' (US.v next) s1 (US.v hd) (FS.insert (US.v idx) fs2));
