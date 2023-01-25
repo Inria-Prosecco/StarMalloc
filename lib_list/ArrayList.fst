@@ -334,15 +334,36 @@ let rec lemma_dlist_insert_visited (#a:Type)
     end
   end
 
+/// If an element belongs to the visited set, then it
+/// does not belong to the dlist
+let rec lemma_mem_not_in_visited (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:nat)
+  (prev:nat)
+  (visited:FS.set nat{FS.cardinality visited <= Seq.length s})
+  (ptr:nat)
+  : Lemma
+  (requires
+    is_dlist' hd s prev visited /\
+    FS.mem ptr visited
+  )
+  (ensures
+    ~ (mem' ptr hd s visited))
+  (decreases (Seq.length s - FS.cardinality visited))
+  = if hd = null then ()
+    else
+      let cur = Seq.index s hd in
+      let next = cur.next in
+      lemma_mem_not_in_visited s (US.v next) hd (FS.insert hd visited) ptr
+
 let lemma_dlist_mem_uniq (#a:Type)
   (s:Seq.seq (cell a))
   (hd:US.t{hd <> null_ptr \/ US.v hd < Seq.length s})
   (prev: nat)
-  (visited: FS.set nat{Seq.length s > FS.cardinality visited})
+  (visited: FS.set nat{FS.cardinality visited < Seq.length s})
   : Lemma
   (requires
-    is_dlist' (US.v hd) s prev visited /\
-    not (FS.mem (US.v hd) visited)
+    is_dlist' (US.v hd) s prev visited
   )
   (ensures (
     let cur = Seq.index s (US.v hd) in
@@ -350,15 +371,13 @@ let lemma_dlist_mem_uniq (#a:Type)
     ~ (mem' (US.v hd) (US.v next) s (FS.insert (US.v hd) visited))
   ))
   =
-  let cur = Seq.index s (US.v hd) in
-  let next = cur.next in
-  if (next = null_ptr)
-  then ()
-  else begin
-    assert (next <> null_ptr);
-    admit ();
-    ()
-  end
+  if US.v hd = null then ()
+  else
+    let cur = Seq.index s (US.v hd) in
+    let next = cur.next in
+    assert (not (FS.mem (US.v hd) visited));
+    assert (is_dlist' (US.v next) s (US.v hd) (FS.insert (US.v hd) visited));
+    lemma_mem_not_in_visited s (US.v next) (US.v hd) (FS.insert (US.v hd) visited) (US.v hd)
 
 
 /// Functional correctness of the insert_spec function:
