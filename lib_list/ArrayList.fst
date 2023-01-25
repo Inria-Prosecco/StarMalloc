@@ -274,14 +274,36 @@ let lemma_dlist_upd (#a:Type)
     ~ (mem (US.v idx) (US.v hd) s')))
   = lemma_dlist_upd' s hd idx null FS.emptyset v
 
+/// If we have a finiteset of elements smaller than a given n,
+/// and one element is not in the set, then the cardinality is not n
+let lemma_finiteset_full_n (n:nat) (i:nat{i < n}) (s:FS.set nat)
+  : Lemma
+    (requires
+      (forall (i:nat). FS.mem i s ==> i < n) /\
+      ~ (FS.mem i s)
+    )
+    (ensures FS.cardinality s < n)
+ = let rec aux (k:nat) : Pure (FS.set nat)
+     (requires True)
+     (ensures fun s ->
+       FS.cardinality s == k /\
+       (forall i. FS.mem i s <==> i < k))
+   = if k = 0 then FS.emptyset else FS.singleton (k-1) `FS.union` aux (k-1)
+   in
+   let s_full = aux n in
+   assert (FS.(
+     cardinality (union s s_full) ==
+     cardinality (difference s s_full) + cardinality (difference s_full s) + cardinality (intersection s s_full)))
+
 let rec lemma_dlist_insert_visited (#a:Type)
   (s:Seq.seq (cell a))
   (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
   (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
   (prev: nat)
-  (visited: FS.set nat{Seq.length s > FS.cardinality visited})
+  (visited: FS.set nat{FS.cardinality visited < Seq.length s})
   : Lemma
   (requires
+    (forall i. FS.mem i visited ==> i < Seq.length s) /\
     is_dlist' (US.v hd) s prev visited /\
     ~ (mem' (US.v idx) (US.v hd) s visited))
   (ensures
@@ -296,15 +318,20 @@ let rec lemma_dlist_insert_visited (#a:Type)
     let next = cur.next in
     assert (is_dlist' (US.v next) s (US.v hd) (FS.insert (US.v hd) visited));
     assert (~ (mem' (US.v idx) (US.v hd) s (FS.insert (US.v hd) visited)));
-    // will likely be fixed when rewriting things with partition
-    assume (FS.cardinality (FS.insert (US.v hd) visited) < Seq.length s);
-    lemma_dlist_insert_visited s next idx (US.v hd) (FS.insert (US.v hd) visited);
-    // FS lemma
-    assume (
-      FS.insert (US.v hd) (FS.insert (US.v idx) visited)
-      ==
-      FS.insert (US.v idx) (FS.insert (US.v hd) visited)
+
+    if US.v next = null then (
+      lemma_finiteset_full_n (Seq.length s) (US.v hd) (FS.insert (US.v idx) visited)
     )
+    else begin
+      assert (FS.cardinality (FS.insert (US.v hd) visited) < Seq.length s);
+      lemma_dlist_insert_visited s next idx (US.v hd) (FS.insert (US.v hd) visited);
+      // Need to explicitly introduce Set extensionality
+      assert (
+        FS.insert (US.v hd) (FS.insert (US.v idx) visited)
+        `FS.equal`
+        FS.insert (US.v idx) (FS.insert (US.v hd) visited)
+      )
+    end
   end
 
 let lemma_dlist_mem_uniq (#a:Type)
@@ -354,16 +381,14 @@ let lemma_insert_spec (#a:Type)
     lemma_dlist_insert_visited s' hd idx null FS.emptyset;
     let fs1 = FS.singleton (US.v idx) in
     FS.all_finite_set_facts_lemma ();
-    // FS lemma
-    assume (fs1 == FS.insert (US.v idx) FS.emptyset);
+    assert (fs1 `FS.equal` FS.insert (US.v idx) FS.emptyset);
     assert (is_dlist' (US.v hd) s' null fs1);
     let cell = Seq.index s' (US.v hd) in
     let cell = {cell with prev = idx} in
     let cur = Seq.index s' (US.v hd) in
     let next = cur.next in
     let fs2 = FS.singleton (US.v hd) in
-    // FS lemma
-    assume (FS.insert (US.v hd) fs1 == FS.insert (US.v idx) fs2);
+    assert (FS.insert (US.v hd) fs1 `FS.equal` FS.insert (US.v idx) fs2);
     assert (is_dlist' (US.v next) s' (US.v hd) (FS.insert (US.v idx) fs2));
     // dedicated aux lemma
     lemma_dlist_mem_uniq s' hd null fs1;
