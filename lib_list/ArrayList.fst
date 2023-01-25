@@ -245,6 +245,31 @@ let remove_spec (#a:Type)
 
 (** Functional correctness lemmas for insert and remove *)
 
+assume val lemma_dlist_upd (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
+  (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
+  (v: cell a)
+  : Lemma
+  (requires
+    is_dlist (US.v hd) s /\
+    ~ (mem (US.v idx) (US.v hd) s))
+  (ensures
+    is_dlist (US.v idx) (Seq.upd s (US.v idx) v))
+
+assume val lemma_dlist_insert_visited (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
+  (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
+  (prev: nat)
+  (visited: FS.set nat{Seq.length s > FS.cardinality visited})
+  : Lemma
+  (requires
+    is_dlist' (US.v hd)  s prev visited /\
+    ~ (mem' (US.v idx) (US.v hd) s visited))
+  (ensures
+    is_dlist' (US.v hd) s prev (FS.insert (US.v idx) visited))
+
 /// Functional correctness of the insert_spec function:
 /// The resulting list is still a doubly linked list.
 /// Note, proving that the element was added is trivial, so we do not include it here
@@ -256,9 +281,22 @@ let lemma_insert_spec (#a:Type)
   : Lemma (requires is_dlist (US.v hd) s /\ ~ (mem (US.v idx) (US.v hd) s))
           (ensures is_dlist (US.v idx) (insert_spec s hd idx v))
   =
-  if hd <> null_ptr then
-    admit ()
-  else ()
+  assert (is_dlist' (US.v hd) s null FS.emptyset);
+  let cell = {data = v; prev = null_ptr; next = hd} in
+  let s' = Seq.upd s (US.v idx) cell in
+  lemma_dlist_upd s hd idx cell;
+  assert (is_dlist' (US.v hd) s' null FS.emptyset);
+  if hd <> null_ptr then begin
+    //assert (is_dlist' (US.v hd) s' null FS.emptyset);
+    lemma_dlist_insert_visited s' hd idx null FS.emptyset;
+    let cell = Seq.index s' (US.v hd) in
+    let cell = {cell with prev = idx} in
+    let s1 = Seq.upd s' (US.v hd) cell in
+    assert (is_dlist' (US.v hd) s1 (US.v idx) (FS.insert (US.v idx) FS.emptyset));
+    let s2 = insert_spec s hd idx v in
+    assert (s1 == s2);
+    ()
+  end else ()
 
 /// Functional correctness of the remove_spec function:
 /// The resulting list is still a doubly linked list, and
