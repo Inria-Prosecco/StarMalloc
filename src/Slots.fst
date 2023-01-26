@@ -514,7 +514,8 @@ let get_free_slot_aux
   assert_norm (3 <= FI.max_int U16.n);
   let i2 = STU.small_uint32_to_sizet i in
   let x = A.index bitmap i2 in
-  let r = ffs64 x in
+  admit ();
+  let r = ffs64_ x 64ul in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
   let idx1 = G.hide ((U32.v i) * 64) in
   let idx2 = G.hide ((U32.v i + 1) * 64) in
@@ -526,6 +527,43 @@ let get_free_slot_aux
   let r' = U32.mul i 64ul in
   let r'' = U32.add r r' in
   r''
+#pop-options
+
+#push-options "--z3rlimit 30 --split_queries"
+inline_for_extraction noextract
+let get_free_slot_aux2
+  (size_class: sc)
+  (bitmap: slab_metadata)
+  : Steel U32.t
+  (A.varray bitmap)
+  (fun _ -> A.varray bitmap)
+  (requires fun h0 ->
+    let bound2 = U32.rem (nb_slots size_class) 64ul in
+    let bound2 = modulo_64_not_null_guard bound2 in
+    U64.v (Seq.index (A.asel bitmap h0) 0) <> U64.v (full_n bound2))
+  (ensures fun h0 r h1 ->
+    A.asel bitmap h1 == A.asel bitmap h0 /\
+    U32.v r < U32.v (nb_slots size_class) /\
+    (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
+    let idx = Bitmap5.f #4 (U32.v r) in
+    Seq.index bm idx = false)
+  )
+  =
+  let h0 = get () in
+  let x = A.index bitmap 0sz in
+  let bound2 = U32.rem (nb_slots size_class) 64ul in
+  let bound2 = modulo_64_not_null_guard bound2 in
+  admit ();
+  let r = ffs64_ x bound2 in
+  let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
+  let idx1 = G.hide 0 in
+  let idx2 = G.hide 64 in
+  assert (x == Seq.index (A.asel bitmap h0) 0);
+  assert (FU.nth (U64.v x) (U64.n - 1 - U32.v r) = false);
+  array_to_bv_slice (A.asel bitmap h0) 0;
+  assert (FU.to_vec (U64.v x) == Seq.slice bm 0 64);
+  Seq.lemma_index_slice bm 0 64 (U32.v r);
+  r
 #pop-options
 
 let get_free_slot (size_class: sc) (bitmap: slab_metadata)
@@ -544,10 +582,14 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     Seq.index bm idx = false)
   )
   =
-  let bound = U32.div (nb_slots size_class) (U32.uint_to_t U64.n) in
+  let nb_slots_v = nb_slots size_class in
+  let bound = U32.div nb_slots_v 64ul in
+  let bound2 = U32.rem nb_slots_v 64ul in
+  let bound2 = modulo_64_not_null_guard bound2 in
+  let full = full_n bound2 in
   assert (U32.v bound == U32.v (nb_slots size_class) / 64);
   let x1 = A.index bitmap 0sz in
-  if (U64.eq x1 max64 && U32.gt bound 1ul) then (
+  if (U64.eq x1 full && U32.gt bound 1ul) then (
     let x2 = A.index bitmap 1sz in
     if (U64.eq x2 max64 && U32.gt bound 2ul) then (
       let x3 = A.index bitmap 2sz in
@@ -560,7 +602,7 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
       get_free_slot_aux size_class bitmap 1ul
     )
   ) else (
-    get_free_slot_aux size_class bitmap 0ul
+    get_free_slot_aux2 size_class bitmap
   )
 
 #push-options "--z3rlimit 30"

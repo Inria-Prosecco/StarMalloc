@@ -14,9 +14,6 @@ module A = Steel.Array
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
 
-// 1) ptrdiff
-// 2) ffs64/ffz64
-
 unfold let same_base_array (#a: Type) (arr1 arr2: array a)
   =
   A.base (A.ptr_of arr1) == A.base (A.ptr_of arr2)
@@ -37,7 +34,6 @@ let max_sc = 64
 //that require a subtle loop to read only possible
 //corresponding slots in the bitmap
 let sc = x:U32.t{min_sc <= U32.v x /\ U32.v x <= max_sc}
-
 
 let nb_slots (size_class: sc)
   : Pure U32.t
@@ -62,6 +58,40 @@ let max64_nat : nat = FStar.Int.max_int U64.n
 noextract inline_for_extraction
 let max64 : U64.t = U64.lognot 0UL
 
+let nth_is_zero (x: U64.t) (pos: U32.t{U32.v pos < 64})
+  : bool
+  = FU.nth (U64.v x) (U64.n - U32.v pos - 1) = false
+
+// CAUTION: assume val
+val ffs64 (x: U64.t)
+  : Pure U32.t
+  (requires U64.v x <> U64.v max64)
+  (ensures fun r ->
+    U32.v r < 64 /\
+    nth_is_zero x r
+  )
+
+val ffs64_ (x: U64.t) (bound: U32.t)
+  : Pure U32.t
+  (requires
+    U32.v bound < 64 /\
+    (exists (k:nat{k < U32.v bound}). nth_is_zero x (U32.uint_to_t k)))
+  (ensures fun r ->
+    U32.v r < U32.v bound /\
+    nth_is_zero x r /\
+    (forall (k:nat{k < U64.n /\ nth_is_zero x (U32.uint_to_t k)}).
+      U32.v r <= k
+    )
+  )
+
+val full_n (bound: U32.t)
+  : Pure U64.t
+  (requires
+    0 < U32.v bound /\ U32.v bound <= 64)
+  (ensures fun r ->
+    ~ (exists (k:nat{k < U32.v bound}). nth_is_zero r (U32.uint_to_t k))
+  )
+
 noextract
 let has_free_slot
   (size_class: sc)
@@ -69,11 +99,29 @@ let has_free_slot
   : bool
   =
   let max = U64.v max64 in
-  let bound = U32.v (nb_slots size_class) / 64 in
-  (U64.v (Seq.index s 0) <> max) ||
+  let nb_slots = U32.v (nb_slots size_class) in
+  let bound = nb_slots / 64 in
+  let bound2 = nb_slots % 64 in
+  let bound2 = if bound2 = 0 then 64 else bound2 in
+  //FStar.Math.Lemmas.lemma_mod_lt nb_slots U64.n;
+  assert (0 <= bound2 /\ bound2 <= 64);
+  let full = U64.v (full_n (U32.uint_to_t bound2)) in
+  (U64.v (Seq.index s 0) <> full) ||
   (bound > 1 && (U64.v (Seq.index s 1) <> max)) ||
   (bound > 2 && (U64.v (Seq.index s 2) <> max)) ||
   (bound > 3 && (U64.v (Seq.index s 3) <> max))
+
+noextract inline_for_extraction
+let modulo_64_not_null_guard (x: U32.t)
+  : Pure U32.t
+  (requires 0 <= U32.v x /\ U32.v x <= 64)
+  (ensures fun r ->
+    0 < U32.v r /\ U32.v r <= 64
+  )
+  =
+  if U32.eq x 0ul
+  then 64ul
+  else x
 
 let has_free_slot_s
   (size_class: sc)
@@ -86,12 +134,16 @@ let has_free_slot_s
     r == has_free_slot size_class (A.asel md h0)
   )
   =
-  let bound = U32.div (nb_slots size_class) 64ul in
+  let nb_slots_v = nb_slots size_class in
+  let bound = U32.div nb_slots_v 64ul in
+  let bound2 = U32.rem nb_slots_v 64ul in
+  let bound2 = modulo_64_not_null_guard bound2 in
+  let full = full_n bound2 in
   let v0 = A.index md 0sz in
   let v1 = A.index md 1sz in
   let v2 = A.index md 2sz in
   let v3 = A.index md 3sz in
-  (not (U64.eq v0 max64)) ||
+  (not (U64.eq v0 full)) ||
   (U32.gt bound 1ul && (not (U64.eq v1 max64))) ||
   (U32.gt bound 2ul && (not (U64.eq v2 max64))) ||
   (U32.gt bound 3ul && (not (U64.eq v3 max64)))
@@ -214,14 +266,6 @@ let zf_u8_slice
   =
   Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) 0z)
 
-//CAUTION: assume val
-val ffs64 (x: U64.t)
-  : Pure U32.t
-  (requires U64.v x <> U64.v max64)
-  (ensures fun r ->
-    U32.v r < 64 /\
-    FU.nth (U64.v x) (U64.n - U32.v r - 1) = false
-  )
 
 open FStar.Mul
 //TODO: FStar.Math.Lemmas.multiple_division_lemma
