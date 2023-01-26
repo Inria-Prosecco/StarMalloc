@@ -596,12 +596,30 @@ let get_free_slot_aux2
   r
 #pop-options
 
+let get_free_slot_zf_lemma
+  (size_class: sc)
+  (md: Seq.lseq U64.t 4)
+  : Lemma
+  (requires (
+    let bm = Bitmap4.array_to_bv2 md in
+    zf_b (Seq.slice bm (U32.v (nb_slots size_class)) 256)))
+  (ensures (
+    let bm = Bitmap4.array_to_bv2 md in
+    let nb_slots_v = nb_slots size_class in
+    let bound = U32.div nb_slots_v 64ul in
+    let bound2 = U32.rem nb_slots_v 64ul in
+    let bound2 = modulo_64_not_null_guard bound2 in
+    zf_b (Seq.slice bm (U32.v bound2) 64)))
+  = admit ()
+
 let get_free_slot (size_class: sc) (bitmap: slab_metadata)
   : Steel U32.t
   (A.varray bitmap)
   (fun _ -> A.varray bitmap)
   (requires fun h0 ->
     let s = A.asel bitmap h0 in
+    let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
+    zf_b (Seq.slice bm (U32.v (nb_slots size_class)) 256) /\
     has_free_slot size_class s
   )
   (ensures fun h0 r h1 ->
@@ -612,6 +630,8 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     Seq.index bm idx = false)
   )
   =
+  let h0 = get () in
+  let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
   let nb_slots_v = nb_slots size_class in
   let bound = U32.div nb_slots_v 64ul in
   let bound2 = U32.rem nb_slots_v 64ul in
@@ -632,6 +652,7 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
       get_free_slot_aux size_class bitmap 1ul
     )
   ) else (
+    get_free_slot_zf_lemma size_class (A.asel bitmap h0);
     get_free_slot_aux2 size_class bitmap
   )
 
@@ -705,6 +726,7 @@ let allocate_slot
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
   assert (has_free_slot size_class (G.reveal md_as_seq));
+  admit ();
   let pos = get_free_slot size_class md in
   let r = allocate_slot_aux
     size_class
