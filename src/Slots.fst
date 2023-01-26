@@ -552,7 +552,7 @@ let get_free_slot_aux
   r''
 #pop-options
 
-#push-options "--z3rlimit 30 --split_queries"
+#push-options "--z3rlimit 50 --split_queries"
 inline_for_extraction noextract
 let get_free_slot_aux2
   (size_class: sc)
@@ -561,8 +561,10 @@ let get_free_slot_aux2
   (A.varray bitmap)
   (fun _ -> A.varray bitmap)
   (requires fun h0 ->
+    let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
     let bound2 = U32.rem (nb_slots size_class) 64ul in
     let bound2 = modulo_64_not_null_guard bound2 in
+    zf_b (Seq.slice bm (U32.v bound2) 64) /\
     U64.v (Seq.index (A.asel bitmap h0) 0) <> U64.v (full_n bound2))
   (ensures fun h0 r h1 ->
     A.asel bitmap h1 == A.asel bitmap h0 /\
@@ -576,7 +578,12 @@ let get_free_slot_aux2
   let x = A.index bitmap 0sz in
   let bound2 = G.hide (U32.rem (nb_slots size_class) 64ul) in
   let bound2 = G.hide (modulo_64_not_null_guard (G.reveal bound2)) in
-  admit ();
+  let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
+  array_to_bv_slice (A.asel bitmap h0) 0;
+  assert (FU.to_vec (U64.v x) == Seq.slice bm 0 64);
+  Seq.slice_slice bm 0 64 0 (U32.v bound2);
+  assert (zf_b (Seq.slice (FU.to_vec #64 (U64.v x)) (U32.v bound2) 64));
+  full_n_lemma x bound2;
   let r = ffs64 x bound2 in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
   let idx1 = G.hide 0 in

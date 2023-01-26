@@ -53,6 +53,21 @@ let nb_slots_correct
   (ensures U32.v (U32.mul pos size_class) <= U32.v page_size)
   = ()
 
+let zf_b
+  (arr: Seq.seq bool)
+  : prop
+  = arr == (Seq.create (Seq.length arr) false)
+
+let zf_b_slice
+  (arr: Seq.seq bool)
+  (i:nat)
+  (j:nat{i <= j /\ j <= Seq.length arr})
+  : Lemma
+  (requires zf_b arr)
+  (ensures zf_b (Seq.slice arr i j))
+  =
+  Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) false)
+
 noextract
 let max64_nat : nat = FStar.Int.max_int U64.n
 noextract inline_for_extraction
@@ -190,6 +205,19 @@ let full_n (bound: U32.t)
   if U32.eq bound 64ul
   then max64
   else full_n_aux bound
+
+let full_n_lemma (x: U64.t) (bound: U32.t)
+  : Lemma
+  (requires
+    0 < U32.v bound /\ U32.v bound <= 64 /\
+    x <> full_n bound /\
+    zf_b (Seq.slice (FU.to_vec #64 (U64.v x)) (U32.v bound) 64)
+  )
+  (ensures (exists (k:nat{k < U32.v bound}).
+    nth_is_zero x (U32.uint_to_t k)
+  ))
+  =
+  admit ()
 
 noextract
 let has_free_slot
