@@ -78,13 +78,22 @@ val ffs64 (x: U64.t) (bound: G.erased U32.t)
     )
   )
 
-val full_n (bound: U32.t)
+let full_n (bound: U32.t)
   : Pure U64.t
   (requires
     0 < U32.v bound /\ U32.v bound <= 64)
   (ensures fun r ->
     ~ (exists (k:nat{k < U32.v bound}). nth_is_zero r (U32.uint_to_t k))
   )
+  =
+  admit ();
+  if U32.eq bound 64ul
+  then max64
+  else begin
+    let x1 = U64.shift_left 1UL bound in
+    let x2 = U64.sub x1 1UL in
+    x2
+  end
 
 noextract
 let has_free_slot
