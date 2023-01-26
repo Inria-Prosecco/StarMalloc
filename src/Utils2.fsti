@@ -87,8 +87,22 @@ let pow2_lemma (n: nat{n < 64}) (i: nat{i < n})
     FStar.Math.Lemmas.pow2_le_compat n 0;
     not (nth_is_zero (U64.uint_to_t (pow2 n - 1)) (U32.uint_to_t i) = true))
   =
-  //TODO: reuse Bitmap get spec lemma
-  admit ()
+  match n with
+  | 1 -> ()
+  | n ->
+    FStar.Math.Lemmas.pow2_lt_compat 64 n;
+    FStar.Math.Lemmas.pow2_le_compat n 0;
+    assert (pow2 n - 1 == pow2 (n-1) +  pow2 (n-1) - 1);
+    Classical.forall_intro_2 (Bitmap1.spec_bv_get #64);
+    if i < n -1
+    then begin
+      assert (
+        nth_is_zero (U64.uint_to_t (pow2 n - 1)) (U32.uint_to_t i)
+        ==
+        nth_is_zero (U64.uint_to_t (pow2 (n-1) - 1)) (U32.uint_to_t i))
+    end else begin
+      ()
+    end
 
 inline_for_extraction
 let full_n_aux (bound: U32.t)
