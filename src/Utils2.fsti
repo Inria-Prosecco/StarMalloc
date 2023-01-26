@@ -78,6 +78,36 @@ val ffs64 (x: U64.t) (bound: G.erased U32.t)
     )
   )
 
+module FBV = FStar.BitVector
+
+let pow2_lemma (n: nat{n < 64}) (i: nat{i < n})
+  : Lemma
+  (
+    FStar.Math.Lemmas.pow2_lt_compat 64 n;
+    FStar.Math.Lemmas.pow2_le_compat n 0;
+    not (nth_is_zero (U64.uint_to_t (pow2 n - 1)) (U32.uint_to_t i) = true))
+  =
+  //TODO: reuse Bitmap get spec lemma
+  admit ()
+
+inline_for_extraction
+let full_n_aux (bound: U32.t)
+  : Pure U64.t
+  (requires 0 < U32.v bound /\ U32.v bound < 64)
+  (ensures fun r ->
+    ~ (exists (k:nat{k < U32.v bound}). nth_is_zero r (U32.uint_to_t k))
+  )
+  =
+  let x1 = U64.shift_left 1UL bound in
+  FU.shift_left_value_lemma #64 (U64.v 1UL) (U32.v bound);
+  FStar.Math.Lemmas.pow2_lt_compat 64 (U32.v bound);
+  assert (U64.v x1 == pow2 (U32.v bound));
+  FStar.Math.Lemmas.pow2_le_compat (U32.v bound) 0;
+  assert (U64.v x1 >= 1);
+  let x2 = U64.sub x1 1UL in
+  Classical.forall_intro (pow2_lemma (U32.v bound));
+  x2
+
 let full_n (bound: U32.t)
   : Pure U64.t
   (requires
@@ -86,14 +116,9 @@ let full_n (bound: U32.t)
     ~ (exists (k:nat{k < U32.v bound}). nth_is_zero r (U32.uint_to_t k))
   )
   =
-  admit ();
   if U32.eq bound 64ul
   then max64
-  else begin
-    let x1 = U64.shift_left 1UL bound in
-    let x2 = U64.sub x1 1UL in
-    x2
-  end
+  else full_n_aux bound
 
 noextract
 let has_free_slot
