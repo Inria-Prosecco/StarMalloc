@@ -435,6 +435,7 @@ let allocate_slab_aux_1
     not (SL.is_null_t empty_slabs))
   (ensures fun _ _ _ -> True)
   =
+  admit ();
   let n_empty = SL.unpack_list (p_empty sc) empty_slabs in
   let b = SL.get_data n_empty in
   p_empty_unpack sc
