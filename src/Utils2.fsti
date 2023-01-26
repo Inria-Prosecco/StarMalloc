@@ -68,7 +68,7 @@ module G = FStar.Ghost
 val ffs64 (x: U64.t) (bound: G.erased U32.t)
   : Pure U32.t
   (requires
-    U32.v (G.reveal bound) < 64 /\
+    U32.v (G.reveal bound) <= 64 /\
     (exists (k:nat{k < U32.v (G.reveal bound)}). nth_is_zero x (U32.uint_to_t k)))
   (ensures fun r ->
     U32.v r < U32.v (G.reveal bound) /\
@@ -77,6 +77,18 @@ val ffs64 (x: U64.t) (bound: G.erased U32.t)
       U32.v r <= k
     )
   )
+
+let max64_lemma_aux (i:nat{i < 64})
+  : Lemma
+  (not (nth_is_zero max64 (U32.uint_to_t i)))
+  = ()
+
+let max64_lemma (x: U64.t)
+  : Lemma
+  (exists (k:nat{k < 64}). nth_is_zero x (U32.uint_to_t k)
+  <==>
+  x <> max64)
+  = admit ()
 
 module FBV = FStar.BitVector
 

@@ -489,7 +489,22 @@ let allocate_slot_aux
 //TODO: FIXME @SizeT lib
 //assert (US.fits 256): impossible?
 
-#push-options "--z3rlimit 30"
+let f_lemma (#n: nat)
+  (q:nat{q < n})
+  (r:nat{r < U64.n})
+  (r1:nat{r1 < n * U64.n})
+  (r2:nat{r2 < n * U64.n})
+  : Lemma
+  (requires
+    r1 == q * U64.n + r /\
+    r2 == q * U64.n + (U64.n - r - 1)
+  )
+  (ensures
+    r2 == Bitmap5.f #n r1
+  )
+  = ()
+
+#push-options "--z3rlimit 50"
 inline_for_extraction noextract
 let get_free_slot_aux
   (size_class: sc)
@@ -506,6 +521,7 @@ let get_free_slot_aux
     U32.v r < U32.v (nb_slots size_class) /\
     (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
     let idx = Bitmap5.f #4 (U32.v r) in
+    //True)
     Seq.index bm idx = false)
   )
   =
@@ -514,7 +530,7 @@ let get_free_slot_aux
   assert_norm (3 <= FI.max_int U16.n);
   let i2 = STU.small_uint32_to_sizet i in
   let x = A.index bitmap i2 in
-  admit ();
+  max64_lemma x;
   let r = ffs64 x (G.hide 64ul) in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
   let idx1 = G.hide ((U32.v i) * 64) in
@@ -523,9 +539,16 @@ let get_free_slot_aux
   assert (FU.nth (U64.v x) (U64.n - 1 - U32.v r) = false);
   array_to_bv_slice (A.asel bitmap h0) (U32.v i);
   assert (FU.to_vec (U64.v x) == Seq.slice bm ((U32.v i)*64) ((U32.v i + 1)*64));
+  assert (Seq.index (Seq.slice bm ((U32.v i)*64) ((U32.v i + 1)*64)) (U64.n - U32.v r - 1) = false);
   Seq.lemma_index_slice bm ((U32.v i)*64) ((U32.v i + 1)*64) (U32.v r);
+  let idx = G.hide ((U32.v i)*64 + (U64.n - U32.v r - 1)) in
+  assert (Seq.index bm (G.reveal idx) = false);
   let r' = U32.mul i 64ul in
   let r'' = U32.add r r' in
+  assert (U32.v r'' = U32.v i * 64 + U32.v r);
+  f_lemma #4 (U32.v i) (U32.v r) (U32.v r'') (G.reveal idx);
+  assert (G.reveal idx == Bitmap5.f #4 (U32.v r''));
+  assert (Seq.index bm (Bitmap5.f #4 (U32.v r'')) = false);
   r''
 #pop-options
 
