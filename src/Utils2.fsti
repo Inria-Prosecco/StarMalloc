@@ -83,15 +83,33 @@ let max64_lemma_aux (i:nat{i < 64})
   (not (nth_is_zero max64 (U32.uint_to_t i)))
   = ()
 
+// will likely requires to have the converse at some point
 let max64_lemma (x: U64.t)
   : Lemma
-  (exists (k:nat{k < 64}). nth_is_zero x (U32.uint_to_t k)
-  <==>
-  x <> max64)
-  = admit ()
+  (requires x <> max64)
+  (ensures (exists (k:nat{k < 64}).
+    nth_is_zero x (U32.uint_to_t k)))
+  =
+  let s1 = FU.to_vec #64 (U64.v x) in
+  let s2 = FU.to_vec #64 (U64.v max64) in
+  Classical.forall_intro_2 (Classical.move_requires_2 (
+    FU.to_vec_lemma_2 #64
+  ));
+  Classical.forall_intro_2 (Classical.move_requires_2 (
+    FU.to_vec_lemma_1 #64
+  ));
+  //FU.to_vec_lemma_2 (U64.v x) (U64.v max64);
+  assume (s1 =!= s2);
+  let k = 0 in
+  assume (exists (k:nat{k < 64}).
+    FU.nth (U64.v x) k <> FU.nth (U64.v max64) k
+  );
+  Classical.forall_intro (max64_lemma_aux);
+  assume (exists (k:nat{k < 64}).
+    nth_is_zero x (U32.uint_to_t k)
+  )
 
 module FBV = FStar.BitVector
-
 let pow2_lemma (n: nat{n < 64}) (i: nat{i < n})
   : Lemma
   (
