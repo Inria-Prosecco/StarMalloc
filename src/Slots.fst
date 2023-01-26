@@ -515,7 +515,7 @@ let get_free_slot_aux
   let i2 = STU.small_uint32_to_sizet i in
   let x = A.index bitmap i2 in
   admit ();
-  let r = ffs64_ x 64ul in
+  let r = ffs64 x (G.hide 64ul) in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
   let idx1 = G.hide ((U32.v i) * 64) in
   let idx2 = G.hide ((U32.v i + 1) * 64) in
@@ -551,10 +551,10 @@ let get_free_slot_aux2
   =
   let h0 = get () in
   let x = A.index bitmap 0sz in
-  let bound2 = U32.rem (nb_slots size_class) 64ul in
-  let bound2 = modulo_64_not_null_guard bound2 in
+  let bound2 = G.hide (U32.rem (nb_slots size_class) 64ul) in
+  let bound2 = G.hide (modulo_64_not_null_guard (G.reveal bound2)) in
   admit ();
-  let r = ffs64_ x bound2 in
+  let r = ffs64 x bound2 in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
   let idx1 = G.hide 0 in
   let idx2 = G.hide 64 in
