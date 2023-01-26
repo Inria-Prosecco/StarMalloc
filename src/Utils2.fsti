@@ -83,6 +83,36 @@ let max64_lemma_aux (i:nat{i < 64})
   (not (nth_is_zero max64 (U32.uint_to_t i)))
   = ()
 
+let max64_lemma_aux2 (x1 x2: U64.t) (k:nat{k < 64})
+  : Lemma
+  (requires
+    Seq.index (FU.to_vec #64 (U64.v x1)) (U64.n - k - 1)
+    <>
+    Seq.index (FU.to_vec #64 (U64.v x2)) (U64.n - k - 1)
+  )
+  (ensures
+    exists (k':nat{k' < 64}).
+    nth_is_zero x1 (U32.uint_to_t k')
+    <>
+    nth_is_zero x2 (U32.uint_to_t k')
+  )
+  = ()
+
+let max64_lemma_aux3 (x1 x2: U64.t) (k:nat{k < 64})
+  : Lemma
+  (requires
+    Seq.index (FU.to_vec #64 (U64.v x1)) k
+    <>
+    Seq.index (FU.to_vec #64 (U64.v x2)) k
+  )
+  (ensures
+    exists (k':nat{k' < 64}).
+    nth_is_zero x1 (U32.uint_to_t k')
+    <>
+    nth_is_zero x2 (U32.uint_to_t k')
+  )
+  = max64_lemma_aux2 x1 x2 (U64.n - k - 1)
+
 // will likely requires to have the converse at some point
 let max64_lemma (x: U64.t)
   : Lemma
@@ -92,22 +122,19 @@ let max64_lemma (x: U64.t)
   =
   let s1 = FU.to_vec #64 (U64.v x) in
   let s2 = FU.to_vec #64 (U64.v max64) in
-  Classical.forall_intro_2 (Classical.move_requires_2 (
-    FU.to_vec_lemma_2 #64
+  if (Seq.eq s1 s2)
+  then FU.to_vec_lemma_2 (U64.v x) (U64.v max64)
+  else ();
+  assert (s1 <> s2);
+  assert (Seq.length s1 == Seq.length s2);
+  assert (Seq.length s1 == 64);
+  assert (exists (k:nat{k < 64}). Seq.index s1 k <> Seq.index s2 k);
+  Classical.forall_intro (Classical.move_requires (
+    max64_lemma_aux3 x max64
   ));
-  Classical.forall_intro_2 (Classical.move_requires_2 (
-    FU.to_vec_lemma_1 #64
-  ));
-  //FU.to_vec_lemma_2 (U64.v x) (U64.v max64);
-  assume (s1 =!= s2);
-  let k = 0 in
-  assume (exists (k:nat{k < 64}).
-    FU.nth (U64.v x) k <> FU.nth (U64.v max64) k
-  );
-  Classical.forall_intro (max64_lemma_aux);
-  assume (exists (k:nat{k < 64}).
-    nth_is_zero x (U32.uint_to_t k)
-  )
+  assert (exists (k:nat{k < 64}).
+     nth_is_zero x (U32.uint_to_t k)
+  <> nth_is_zero max64 (U32.uint_to_t k))
 
 module FBV = FStar.BitVector
 let pow2_lemma (n: nat{n < 64}) (i: nat{i < n})
