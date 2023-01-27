@@ -70,10 +70,10 @@ let rec mem' (#a:Type0) (x:nat) (hd:nat) (s:Seq.seq (cell a))
   : Tot prop (decreases (Seq.length s - FS.cardinality visited)) =
   if x = null || x >= Seq.length s || hd = null then False
   else
-    if x = hd then True
+    // Ill-formed list
+    if FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s then False
     else
-      // Ill-formed list
-      if FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s then False
+      if x = hd then True
       else
         let next = US.v (Seq.index s hd).next in
         mem' x next s (FS.insert hd visited)
@@ -81,6 +81,50 @@ let rec mem' (#a:Type0) (x:nat) (hd:nat) (s:Seq.seq (cell a))
 /// Offset [x] belongs to the list starting at [hd]
 let mem (#a:Type0) (x:nat) (hd:nat) (s:Seq.seq (cell a)) : prop =
   mem' x hd s FS.emptyset
+
+/// An alternative specification for belonging to the list,
+/// `ptrs_in` returns the set of elements in the list starting
+/// at [hd]
+let rec ptrs_in' (#a:Type)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
+  : GTot (FS.set nat)
+        (decreases (Seq.length s - FS.cardinality visited)) =
+  if hd = null then FS.emptyset
+  else
+    // Ill-formed list
+    if FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s then
+      FS.emptyset
+    else
+      let next = US.v (Seq.index s hd).next in
+      FS.insert hd (ptrs_in' next s (FS.insert hd visited))
+
+let ptrs_in (#a:Type) (hd:nat) (s:Seq.seq (cell a)) = ptrs_in' hd s FS.emptyset
+
+/// Equivalence lemma between `mem` and membership in `ptrs_in`
+let rec lemma_mem_ptrs_in' (#a:Type)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
+  (x:nat)
+  : Lemma
+    (ensures mem' x hd s visited <==> FS.mem x (ptrs_in' hd s visited))
+    (decreases (Seq.length s - FS.cardinality visited))
+  = if hd = null then ()
+    else
+      if FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s then
+        ()
+      else
+        let next = US.v (Seq.index s hd).next in
+        lemma_mem_ptrs_in' next s (FS.insert hd visited) x
+
+let lemma_mem_ptrs_in (#a:Type)
+  (hd: nat)
+  (s: Seq.seq (cell a))
+  (x: nat)
+  : Lemma (mem x hd s <==> FS.mem x (ptrs_in hd s))
+  = lemma_mem_ptrs_in' hd s FS.emptyset x
 
 (** Some helpers to use cells *)
 
