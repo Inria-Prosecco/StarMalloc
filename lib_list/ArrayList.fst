@@ -148,7 +148,8 @@ val lemma_mem_valid_or_null_next_prev' (#a:Type0)
         (let cell = Seq.index s idx in
         null_or_valid (US.v cell.next) s /\
         null_or_valid (US.v cell.prev) s /\
-        True)
+//        True)
+        (US.v cell.next == null \/ mem' (US.v cell.next) hd s visited))
       )
       (decreases (Seq.length s - FS.cardinality visited))
 
@@ -183,6 +184,34 @@ val lemma_mem_valid_or_null_next_prev (#a:Type0)
 
 let lemma_mem_valid_or_null_next_prev #a hd s idx =
   lemma_mem_valid_or_null_next_prev' hd s null FS.emptyset idx
+
+/// If idx belongs to the dlist, then either it is the head of the dlist
+/// or its prev pointer does not belong to the visited set
+val lemma_dlist_head_or_prev_not_visited (#a:Type0)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (prev: nat)
+  (visited: FS.set nat{Seq.length s >= FS.cardinality visited})
+  (idx:nat)
+  : Lemma
+      (requires
+        is_dlist' hd s prev visited /\
+        mem' idx hd s visited /\
+        null_or_valid prev s /\
+        not (FS.mem idx visited))
+      (ensures
+        (let cell = Seq.index s idx in
+         idx == hd \/
+         ~ (FS.mem (US.v cell.prev) visited))
+      )
+      (decreases (Seq.length s - FS.cardinality visited))
+
+let rec lemma_dlist_head_or_prev_not_visited hd s prev visited idx =
+  if idx = hd || hd = null then ()
+  else
+    let cur = Seq.index s hd in
+    let next = US.v cur.next in
+    lemma_dlist_head_or_prev_not_visited next s hd (FS.insert hd visited) idx
 
 (** Functional specifications of the more complicated functions *)
 
@@ -519,7 +548,7 @@ val lemma_remove_spec' (#a:Type)
           ))
           (decreases (Seq.length s - FS.cardinality visited))
 
-let lemma_remove_spec' #a hd s prev idx visited =
+let rec lemma_remove_spec' #a hd s prev idx visited =
   if hd = null then ()
   else begin
 
@@ -564,7 +593,38 @@ let lemma_remove_spec' #a hd s prev idx visited =
         end
       end
     end
-    else admit()
+    else begin
+      if next = null then ()
+      else
+        let c = Seq.index s idx in
+        let hd' = if next = idx then US.v c.next else next in
+        let vis' = FS.insert hd visited in
+        lemma_remove_spec' next s hd idx vis';
+        assert (remove_spec hd s prev idx visited ==
+                remove_spec next s hd idx vis');
+
+        assert (is_dlist' hd' s' hd vis');
+        assert (~ (mem' idx hd' s' vis'));
+
+        let cur' = Seq.index s' hd in
+        if next = idx then begin
+          assert (US.v c.prev == hd);
+          assert (cur' == {cur with next = c.next});
+          assert (is_dlist' hd s' prev visited)
+        end else begin
+          lemma_mem_valid_or_null_next_prev' next s hd vis' idx;
+          lemma_mem_not_in_visited s next hd vis' hd;
+          assert (~ (mem' hd next s vis'));
+          assert (hd <> US.v c.next);
+
+          lemma_dlist_head_or_prev_not_visited next s hd vis' idx;
+          assert (hd <> US.v c.prev);
+
+          assert (cur' == cur);
+          assert (is_dlist' hd s' prev visited);
+          assert (~ (mem' idx hd s' visited))
+        end
+    end
   end
 
 val lemma_remove_spec (#a:Type)
