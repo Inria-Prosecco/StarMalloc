@@ -106,7 +106,29 @@ let max64_lemma_aux (i:nat{i < 64})
   (not (nth_is_zero max64 (U32.uint_to_t i)))
   = ()
 
-let max64_lemma_aux2 (x1 x2: U64.t) (k:nat{k < 64})
+//let max64_lemma_aux2'
+//  (n: nat)
+//  (s1 s2: Seq.lseq bool n)
+//  (k:nat{k < n})
+//  : Lemma
+//  (requires
+//    Seq.index s1 (n - k - 1)
+//    <>
+//    Seq.index s2 (n - k - 1)
+//  )
+//  (ensures
+//    exists (k':nat{k' < n}).
+//    Seq.index s1 k'
+//    <>
+//    Seq.index s2 k'
+//  )
+//  =
+//  ()
+
+let max64_lemma_aux2
+  (b: nat{b <= 64})
+  (x1 x2: U64.t)
+  (k:nat{k < b})
   : Lemma
   (requires
     Seq.index (FU.to_vec #64 (U64.v x1)) (U64.n - k - 1)
@@ -114,7 +136,7 @@ let max64_lemma_aux2 (x1 x2: U64.t) (k:nat{k < 64})
     Seq.index (FU.to_vec #64 (U64.v x2)) (U64.n - k - 1)
   )
   (ensures
-    exists (k':nat{k' < 64}).
+    exists (k':nat{k' < b}).
     nth_is_zero x1 (U32.uint_to_t k')
     <>
     nth_is_zero x2 (U32.uint_to_t k')
@@ -134,7 +156,7 @@ let max64_lemma_aux3 (x1 x2: U64.t) (k:nat{k < 64})
     <>
     nth_is_zero x2 (U32.uint_to_t k')
   )
-  = max64_lemma_aux2 x1 x2 (U64.n - k - 1)
+  = max64_lemma_aux2 64 x1 x2 (U64.n - k - 1)
 
 // will likely requires to have the converse at some point
 let max64_lemma (x: U64.t)
@@ -152,7 +174,7 @@ let max64_lemma (x: U64.t)
   assert (Seq.length s1 == Seq.length s2);
   assert (Seq.length s1 == 64);
   assert (exists (k:nat{k < 64}). Seq.index s1 k <> Seq.index s2 k);
-  Classical.forall_intro (Classical.move_requires (
+  Classical.forall_to_exists (Classical.move_requires (
     max64_lemma_aux3 x max64
   ));
   assert (exists (k:nat{k < 64}).
@@ -219,13 +241,39 @@ let full_n_lemma (x: U64.t) (bound: U32.t)
   (requires
     0 < U32.v bound /\ U32.v bound <= 64 /\
     x <> full_n bound /\
-    zf_b (Seq.slice (FU.to_vec #64 (U64.v x)) (U32.v bound) 64)
+    zf_b (Seq.slice (FU.to_vec #64 (U64.v x)) 0 (64 - U32.v bound))
   )
   (ensures (exists (k:nat{k < U32.v bound}).
     nth_is_zero x (U32.uint_to_t k)
   ))
   =
-  admit ()
+  let s1 = FU.to_vec #64 (U64.v x) in
+  let s2 = FU.to_vec #64 (U64.v (full_n bound)) in
+  let s11 = Seq.slice s1 0 (64 - U32.v bound) in
+  let s21 = Seq.slice s2 0 (64 - U32.v bound) in
+  let s12 = Seq.slice s1 (64 - U32.v bound) 64 in
+  let s22 = Seq.slice s2 (64 - U32.v bound) 64 in
+  assume (s11 == s21);
+  if (Seq.eq s12 s22)
+  then (
+    Seq.lemma_split s1 (64 - U32.v bound);
+    Seq.lemma_split s2 (64 - U32.v bound);
+    assert (s1 == s2);
+    FU.to_vec_lemma_2 (U64.v x) (U64.v (full_n bound))
+  ) else ();
+  assert (s12 <> s22);
+  assert (Seq.length s12 == Seq.length s22);
+  assert (Seq.length s12 == U32.v bound);
+  assert (exists (k:nat{k < U32.v bound}). Seq.index s12 k <> Seq.index s22 k);
+  Classical.forall_intro (
+    SeqUtils.lemma_index_slice s1 (64 - U32.v bound) 64);
+  Classical.forall_intro (
+    SeqUtils.lemma_index_slice s2 (64 - U32.v bound) 64);
+  assert (exists (k:nat{k >= 64 - U32.v bound /\ k < 64}). Seq.index s1 k <> Seq.index s2 k);
+  assume (exists (k:nat{k < U32.v bound}). Seq.index s1 (64 - k - 1) <> Seq.index s2 (64 - k - 1));
+  Classical.forall_intro (Classical.move_requires (
+    max64_lemma_aux2 (U32.v bound) x (full_n bound)
+  ))
 
 noextract
 let has_free_slot
