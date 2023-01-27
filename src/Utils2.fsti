@@ -211,6 +211,7 @@ let full_n_aux (bound: U32.t)
   : Pure U64.t
   (requires 0 < U32.v bound /\ U32.v bound < 64)
   (ensures fun r ->
+    U64.v r == pow2 (U32.v bound) - 1 /\
     ~ (exists (k:nat{k < U32.v bound}). nth_is_zero r (U32.uint_to_t k))
   )
   =
@@ -236,6 +237,64 @@ let full_n (bound: U32.t)
   then max64
   else full_n_aux bound
 
+let full_n_decomposition1 (bound: U32.t)
+  : Lemma
+  (requires 0 < U32.v bound /\ U32.v bound <= 64)
+  (ensures (
+    let bm = FU.to_vec #64 (U64.v (full_n bound)) in
+    Seq.slice bm (64 - U32.v bound) 64 == FBV.ones_vec #(U32.v bound)
+  ))
+  =
+  if U32.eq bound 64ul
+  then
+    Seq.lemma_eq_intro
+      (FU.to_vec #64 (U64.v max64))
+      (FBV.ones_vec #64)
+  else (
+    let x = full_n_aux bound in
+    assert (x == full_n bound);
+    assert (U64.v x == pow2 (U32.v bound) - 1);
+    Classical.forall_intro (pow2_lemma (U32.v bound));
+    let bm = FU.to_vec #64 (U64.v x) in
+    Seq.lemma_eq_intro
+      (Seq.slice bm (64 - U32.v bound) 64)
+      (FBV.ones_vec #(U32.v bound))
+  )
+
+#push-options "--fuel 0 --ifuel 0"
+let full_n_decomposition2 (bound: U32.t)
+  : Lemma
+  (requires 0 < U32.v bound /\ U32.v bound <= 64)
+  (ensures (
+    let bm = FU.to_vec #64 (U64.v (full_n bound)) in
+    zf_b (Seq.slice bm 0 (64 - U32.v bound))))
+  =
+  if U32.eq bound 64ul
+  then (
+    let bm = FU.to_vec #64 (U64.v max64) in
+    Seq.lemma_len_slice bm 0 (64 - U32.v bound);
+    Seq.lemma_empty (Seq.slice bm 0 (64 - U32.v bound));
+    assert (Seq.slice bm 0 (64 - U32.v bound) == Seq.empty);
+    Seq.lemma_eq_intro Seq.empty (Seq.create 0 false)
+  ) else (
+    let x = full_n_aux bound in
+    let bm = FU.to_vec #64 (U64.v x) in
+    assert (x == full_n bound);
+    assert (U64.v x == pow2 (U32.v bound) - 1);
+    FU.slice_left_lemma #64 bm (64 - U32.v bound);
+    let s = Seq.slice bm 0 (64 - U32.v bound) in
+    assert (FU.from_vec #(64 - U32.v bound) s = FU.from_vec bm / pow2 (U32.v bound));
+    FU.inverse_num_lemma #64 (U64.v x);
+    assert (FU.from_vec bm == (U64.v x));
+    assert (FU.from_vec #(64 - U32.v bound) s = 0);
+    assert (FU.from_vec #(64 - U32.v bound) s = FU.zero (64 - U32.v bound));
+    Seq.lemma_eq_intro
+      (Seq.slice bm 0 (64 - U32.v bound))
+      (Seq.create (64 - U32.v bound) false)
+  )
+#pop-options
+
+#push-options "--fuel 0 --ifuel 0"
 let full_n_lemma (x: U64.t) (bound: U32.t)
   : Lemma
   (requires
@@ -253,7 +312,8 @@ let full_n_lemma (x: U64.t) (bound: U32.t)
   let s21 = Seq.slice s2 0 (64 - U32.v bound) in
   let s12 = Seq.slice s1 (64 - U32.v bound) 64 in
   let s22 = Seq.slice s2 (64 - U32.v bound) 64 in
-  assume (s11 == s21);
+  full_n_decomposition2 bound;
+  assert (s11 == s21);
   if (Seq.eq s12 s22)
   then (
     Seq.lemma_split s1 (64 - U32.v bound);
@@ -274,6 +334,7 @@ let full_n_lemma (x: U64.t) (bound: U32.t)
   Classical.forall_intro (Classical.move_requires (
     max64_lemma_aux2 (U32.v bound) x (full_n bound)
   ))
+#pop-options
 
 noextract
 let has_free_slot
