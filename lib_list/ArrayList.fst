@@ -334,6 +334,38 @@ let rec lemma_dlist_insert_visited (#a:Type)
     end
   end
 
+let rec lemma_dlist_remove_visited (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:nat{hd == null \/ hd < Seq.length s})
+  (idx:nat{idx <> null /\ idx < Seq.length s})
+  (prev: nat)
+  (visited: FS.set nat{FS.cardinality visited < Seq.length s})
+  : Lemma
+  (requires
+    (forall i. FS.mem i visited ==> i < Seq.length s) /\
+    is_dlist' hd s prev (FS.insert idx visited) /\
+    ~ (mem' idx hd s (FS.insert idx visited)))
+  (ensures
+    is_dlist' hd s prev visited /\
+    ~ (mem' idx hd s visited))
+  (decreases (Seq.length s - FS.cardinality visited))
+  = if hd = null then ()
+    else begin
+      let cur = Seq.index s hd in
+      let next = cur.next in
+      if US.v next = null then (
+        lemma_finiteset_full_n (Seq.length s) hd (FS.insert idx visited)
+      )
+      else begin
+        assert (
+          FS.insert idx (FS.insert hd visited)
+            `FS.equal`
+          FS.insert hd (FS.insert idx visited)
+        );
+        lemma_dlist_remove_visited s (US.v next) idx hd (FS.insert hd visited)
+      end
+    end
+
 /// If an element belongs to the visited set, then it
 /// does not belong to the dlist
 let rec lemma_mem_not_in_visited (#a:Type)
@@ -358,26 +390,26 @@ let rec lemma_mem_not_in_visited (#a:Type)
 
 let lemma_dlist_mem_uniq (#a:Type)
   (s:Seq.seq (cell a))
-  (hd:US.t{hd <> null_ptr \/ US.v hd < Seq.length s})
+  (hd:nat{hd <> null \/ hd < Seq.length s})
   (prev: nat)
   (visited: FS.set nat{FS.cardinality visited < Seq.length s})
   : Lemma
   (requires
-    is_dlist' (US.v hd) s prev visited
+    is_dlist' hd s prev visited
   )
   (ensures (
-    let cur = Seq.index s (US.v hd) in
+    let cur = Seq.index s hd in
     let next = cur.next in
-    ~ (mem' (US.v hd) (US.v next) s (FS.insert (US.v hd) visited))
+    ~ (mem' hd (US.v next) s (FS.insert hd visited))
   ))
   =
-  if US.v hd = null then ()
+  if hd = null then ()
   else
-    let cur = Seq.index s (US.v hd) in
+    let cur = Seq.index s hd in
     let next = cur.next in
-    assert (not (FS.mem (US.v hd) visited));
-    assert (is_dlist' (US.v next) s (US.v hd) (FS.insert (US.v hd) visited));
-    lemma_mem_not_in_visited s (US.v next) (US.v hd) (FS.insert (US.v hd) visited) (US.v hd)
+    assert (not (FS.mem hd visited));
+    assert (is_dlist' (US.v next) s hd (FS.insert hd visited));
+    lemma_mem_not_in_visited s (US.v next) hd (FS.insert hd visited) hd
 
 
 /// Functional correctness of the insert_spec function:
@@ -410,7 +442,7 @@ let lemma_insert_spec (#a:Type)
     assert (FS.insert (US.v hd) fs1 `FS.equal` FS.insert (US.v idx) fs2);
     assert (is_dlist' (US.v next) s' (US.v hd) (FS.insert (US.v idx) fs2));
     // dedicated aux lemma
-    lemma_dlist_mem_uniq s' hd null fs1;
+    lemma_dlist_mem_uniq s' (US.v hd) null fs1;
     assert (~ (mem' (US.v hd) (US.v next) s' (FS.insert (US.v idx) fs2)));
     lemma_dlist_upd' s' (US.v next) (US.v hd) (US.v hd) (FS.insert (US.v idx) fs2) cell;
     let s1 = Seq.upd s' (US.v hd) cell in
@@ -452,13 +484,28 @@ let lemma_remove_spec #a hd s idx =
     assert (cur.prev = null_ptr);
     if next = null then ()
     else begin
-      assert (is_dlist' next s hd (FS.insert hd FS.emptyset));
-      lemma_dlist_insert_visited s (cur.next) hd hd FS.emptyset;
-      assume (is_dlist next s');
-      assume (~ (mem idx next s'))
-//      admit()
+      let nc0 = Seq.index s next in
+      let nc = {nc0 with prev = cur.prev} in
+      assert (s' == Seq.upd s next nc);
+
+      let fs = FS.insert hd FS.emptyset in
+      assert (is_dlist' next s hd fs);
+      assert (next <> null);
+
+      let next2 = US.v nc0.next in
+      assert (is_dlist' next2 s next (FS.insert next fs));
+      lemma_dlist_mem_uniq s next hd fs;
+      lemma_dlist_upd' s next2 next next (FS.insert next fs) nc;
+      assert (is_dlist' next2 s' next (FS.insert next fs));
+      assert (is_dlist' next s' null fs);
+
+      lemma_mem_not_in_visited s' next null fs hd;
+      assert (~ (mem' hd next s' fs));
+
+      lemma_dlist_remove_visited s' next hd null FS.emptyset;
+      assert (is_dlist next s');
+      assert (~ (mem idx next s'))
     end
-//    assert (is_dlist' next s
   end else admit()
 
 (** Steel functions and vprops *)
