@@ -42,7 +42,11 @@ let rec is_dlist' (#a:Type0) (hd:nat) (s:Seq.seq (cell a)) (prev:nat)
   if hd = null then True
   else
     // Forbid cycles, ensure well-formedness of the "pointers"
-    if FS.cardinality visited = Seq.length s || FS.mem hd visited || hd >= Seq.length s then False
+    if FS.cardinality visited = Seq.length s ||
+       FS.mem hd visited ||
+       // If the prev pointer is not null, it should be in the visited set
+       not (prev = null || FS.mem prev visited) ||
+       hd >= Seq.length s then False
     else
       let cur = Seq.index s hd in
       let next = US.v cur.next in
@@ -204,21 +208,19 @@ let insert_spec (#a:Type)
 let remove_spec (#a:Type)
   (hd:nat)
   (s:Seq.seq (cell a))
+  (prev:nat)
   (idx:nat{idx < Seq.length s})
+  (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
   : Ghost (Seq.seq (cell a))
-         (requires is_dlist hd s /\ mem idx hd s)
-         (ensures fun _ -> True)
+         (requires
+           is_dlist' hd s prev visited /\
+           mem' idx hd s visited /\
+           null_or_valid prev s /\
+           not (FS.mem idx visited))
+         (ensures fun s' -> Seq.length s == Seq.length s')
          =
   let cell = Seq.index s idx in
-  lemma_mem_valid_or_null_next_prev hd s idx;
-  let s =
-    if cell.prev <> null_ptr then
-      let prev = Seq.index s (US.v cell.prev) in
-      let prev = {prev with next = cell.next} in
-      Seq.upd s (US.v cell.prev) prev
-    else s
-  in
-
+  lemma_mem_valid_or_null_next_prev' hd s prev visited idx;
   let s =
     if cell.next <> null_ptr then
       // Next is not null, we need to update it
@@ -226,7 +228,16 @@ let remove_spec (#a:Type)
       let next = {next with prev = cell.prev} in
       Seq.upd s (US.v cell.next) next
     else s
+  in
+
+  let s =
+    if cell.prev <> null_ptr then
+      let prev = Seq.index s (US.v cell.prev) in
+      let prev = {prev with next = cell.next} in
+      Seq.upd s (US.v cell.prev) prev
+    else s
   in s
+
 
 (** Functional correctness lemmas for insert and remove *)
 
@@ -235,16 +246,20 @@ let rec lemma_dlist_upd' (#a:Type)
   (hd:nat{hd == null \/ hd < Seq.length s})
   (idx:nat{idx <> null /\ idx < Seq.length s})
   (prev: nat)
+  (other:nat{other <> null /\ other < Seq.length s})
   (visited: FS.set nat{Seq.length s >= FS.cardinality visited})
   (v: cell a)
   : Lemma
   (requires
     is_dlist' hd s prev visited /\
-    ~ (mem' idx hd s visited))
+    ~ (mem' idx hd s visited) /\
+    ~ (mem' other hd s visited))
   (ensures (
     let s' = Seq.upd s idx v in
     is_dlist' hd s' prev visited /\
-    ~ (mem' idx hd s' visited)))
+    ~ (mem' idx hd s' visited) /\
+    ~ (mem' other hd s' visited))
+    )
   (decreases (Seq.length s - FS.cardinality visited))
   =
   let s' = Seq.upd s idx v in
@@ -256,23 +271,28 @@ let rec lemma_dlist_upd' (#a:Type)
     let next = cur.next in
     assert (is_dlist' (US.v next) s hd (FS.insert hd visited));
     assert (~ (mem' idx hd s (FS.insert hd visited)));
-    lemma_dlist_upd' s (US.v next) idx hd (FS.insert hd visited) v
+    lemma_dlist_upd' s (US.v next) idx hd other (FS.insert hd visited) v
   end
 
 let lemma_dlist_upd (#a:Type)
   (s:Seq.seq (cell a))
   (hd:nat{hd == null \/ hd < Seq.length s})
   (idx:nat{idx <> null /\ idx < Seq.length s})
+  (other:nat{other <> null /\ other < Seq.length s})
   (v: cell a)
   : Lemma
   (requires
     is_dlist hd s /\
-    ~ (mem idx hd s))
+    ~ (mem idx hd s) /\
+    ~ (mem other hd s)
+    )
   (ensures (
     let s' = Seq.upd s idx v in
     is_dlist hd s' /\
-    ~ (mem idx hd s')))
-  = lemma_dlist_upd' s hd idx null FS.emptyset v
+    ~ (mem idx hd s') /\
+    ~ (mem other hd s')
+    ))
+  = lemma_dlist_upd' s hd idx null other FS.emptyset v
 
 /// If we have a finiteset of elements smaller than a given n,
 /// and one element is not in the set, then the cardinality is not n
@@ -338,7 +358,7 @@ let rec lemma_dlist_remove_visited (#a:Type)
   (s:Seq.seq (cell a))
   (hd:nat{hd == null \/ hd < Seq.length s})
   (idx:nat{idx <> null /\ idx < Seq.length s})
-  (prev: nat)
+  (prev: nat{prev <> idx})
   (visited: FS.set nat{FS.cardinality visited < Seq.length s})
   : Lemma
   (requires
@@ -358,7 +378,7 @@ let rec lemma_dlist_remove_visited (#a:Type)
       )
       else begin
         assert (
-          FS.insert idx (FS.insert hd visited)
+          FS.insert idx (FS.insert hd  visited)
             `FS.equal`
           FS.insert hd (FS.insert idx visited)
         );
@@ -411,6 +431,22 @@ let lemma_dlist_mem_uniq (#a:Type)
     assert (is_dlist' (US.v next) s hd (FS.insert hd visited));
     lemma_mem_not_in_visited s (US.v next) hd (FS.insert hd visited) hd
 
+/// If a dlist is well-formed, the prev element does not belong to
+/// the list
+let lemma_dlist_prev_not_mem (#a:Type)
+  (s:Seq.seq (cell a))
+  (hd:nat)
+  (prev:nat)
+  (visited:FS.set nat{FS.cardinality visited <= Seq.length s})
+  : Lemma
+  (requires
+    is_dlist' hd s prev visited
+  )
+  (ensures
+    ~ (mem' prev hd s visited))
+  (decreases (Seq.length s - FS.cardinality visited))
+  = if hd = null || prev = null then ()
+    else lemma_mem_not_in_visited s hd prev visited prev
 
 /// Functional correctness of the insert_spec function:
 /// The resulting list is still a doubly linked list.
@@ -426,7 +462,7 @@ let lemma_insert_spec (#a:Type)
   assert (is_dlist' (US.v hd) s null FS.emptyset);
   let cell = {data = v; prev = null_ptr; next = hd} in
   let s' = Seq.upd s (US.v idx) cell in
-  lemma_dlist_upd s (US.v hd) (US.v idx) cell;
+  lemma_dlist_upd s (US.v hd) (US.v idx) (US.v idx) cell;
   assert (is_dlist' (US.v hd) s' null FS.emptyset);
   if hd <> null_ptr then begin
     lemma_dlist_insert_visited s' (US.v hd) (US.v idx) null FS.emptyset;
@@ -444,7 +480,7 @@ let lemma_insert_spec (#a:Type)
     // dedicated aux lemma
     lemma_dlist_mem_uniq s' (US.v hd) null fs1;
     assert (~ (mem' (US.v hd) (US.v next) s' (FS.insert (US.v idx) fs2)));
-    lemma_dlist_upd' s' (US.v next) (US.v hd) (US.v hd) (FS.insert (US.v idx) fs2) cell;
+    lemma_dlist_upd' s' (US.v next) (US.v hd) (US.v hd) (US.v hd) (FS.insert (US.v idx) fs2) cell;
     let s1 = Seq.upd s' (US.v hd) cell in
     assert (is_dlist' (US.v next) s1 (US.v hd) (FS.insert (US.v idx) fs2));
     assert (is_dlist' (US.v hd) s1 (US.v idx) fs1
@@ -458,9 +494,79 @@ let lemma_insert_spec (#a:Type)
     ()
   end else ()
 
+
 /// Functional correctness of the remove_spec function:
 /// The resulting list is still a doubly linked list, and
 /// the element pointed to by [idx] was successfully removed
+val lemma_remove_spec' (#a:Type)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (prev:nat)
+  (idx:nat{idx < Seq.length s})
+  (visited:FS.set nat{FS.cardinality visited <= Seq.length s})
+  : Lemma (requires
+            (forall i. FS.mem i visited ==> i < Seq.length s) /\
+            is_dlist' hd s prev visited /\
+            mem' idx hd s visited /\
+            null_or_valid prev s /\
+            not (FS.mem idx visited))
+          (ensures (
+            let c = Seq.index s idx in
+            let hd' = if hd = idx then US.v c.next else hd in
+            let s' = remove_spec hd s prev idx visited in
+            is_dlist' hd' s' prev visited /\
+            ~ (mem' idx hd' s' visited)
+          ))
+          (decreases (Seq.length s - FS.cardinality visited))
+
+let lemma_remove_spec' #a hd s prev idx visited =
+  if hd = null then ()
+  else begin
+
+    let cur = Seq.index s hd in
+    let next = US.v cur.next in
+    let s' = remove_spec hd s prev idx visited in
+
+    // Base case, we are at the head of the list
+    if hd = idx then begin
+      if next = null then ()
+      else begin
+        let nc0 = Seq.index s next in
+        let nc = {nc0 with prev = cur.prev} in
+        let sint = Seq.upd s next nc in
+
+        let fs = FS.insert hd visited in
+        assert (is_dlist' next s hd fs);
+        assert (next <> null);
+
+        let next2 = US.v nc0.next in
+        assert (is_dlist' next2 s next (FS.insert next fs));
+        lemma_dlist_mem_uniq s next hd fs;
+        lemma_dlist_upd' s next2 next next next (FS.insert next fs) nc;
+        assert (is_dlist' next2 sint next (FS.insert next fs));
+        assert (is_dlist' next sint (US.v cur.prev) fs);
+
+        lemma_mem_not_in_visited sint next (US.v cur.prev) fs hd;
+        assert (~ (mem' hd next sint fs));
+
+        lemma_dlist_remove_visited sint next hd (US.v cur.prev) visited;
+        assert (is_dlist' next sint (US.v cur.prev) visited);
+        assert (~ (mem' idx next sint visited));
+
+        if US.v cur.prev = null then ()
+        else begin
+          lemma_dlist_prev_not_mem sint next (US.v cur.prev) visited;
+          assert (~ (mem' (US.v cur.prev) next sint visited));
+          let pc0 = Seq.index s (US.v cur.prev) in
+          let pc = {pc0 with next = cur.next} in
+          assert (s' == Seq.upd sint (US.v cur.prev) pc);
+          lemma_dlist_upd' sint next (US.v cur.prev) (US.v cur.prev) idx visited pc
+        end
+      end
+    end
+    else admit()
+  end
+
 val lemma_remove_spec (#a:Type)
   (hd:nat)
   (s:Seq.seq (cell a))
@@ -469,44 +575,11 @@ val lemma_remove_spec (#a:Type)
           (ensures (
             let c = Seq.index s idx in
             let hd' = if hd = idx then US.v c.next else hd in
-            let s' = remove_spec hd s idx in
+            let s' = remove_spec hd s null idx FS.emptyset in
             is_dlist hd' s' /\ ~ (mem idx hd' s')
           ))
 
-let lemma_remove_spec #a hd s idx =
-  // Derived trivially from the mem precondition
-  assert (hd <> null);
-  let cur = Seq.index s hd in
-  let next = US.v cur.next in
-  let s' = remove_spec hd s idx in
-
-  if hd = idx then begin
-    assert (cur.prev = null_ptr);
-    if next = null then ()
-    else begin
-      let nc0 = Seq.index s next in
-      let nc = {nc0 with prev = cur.prev} in
-      assert (s' == Seq.upd s next nc);
-
-      let fs = FS.insert hd FS.emptyset in
-      assert (is_dlist' next s hd fs);
-      assert (next <> null);
-
-      let next2 = US.v nc0.next in
-      assert (is_dlist' next2 s next (FS.insert next fs));
-      lemma_dlist_mem_uniq s next hd fs;
-      lemma_dlist_upd' s next2 next next (FS.insert next fs) nc;
-      assert (is_dlist' next2 s' next (FS.insert next fs));
-      assert (is_dlist' next s' null fs);
-
-      lemma_mem_not_in_visited s' next null fs hd;
-      assert (~ (mem' hd next s' fs));
-
-      lemma_dlist_remove_visited s' next hd null FS.emptyset;
-      assert (is_dlist next s');
-      assert (~ (mem idx next s'))
-    end
-  end else admit()
+let lemma_remove_spec #a hd s idx = lemma_remove_spec' hd s null idx FS.emptyset
 
 (** Steel functions and vprops *)
 
@@ -582,18 +655,18 @@ let remove #a r hd idx =
   let cell = A.index r idx in
   (**) lemma_mem_valid_or_null_next_prev hd gs0 (US.v idx);
 
-  if cell.prev <> null_ptr then
-    // Prev is not null, we need to update it
-    let prev = A.index r cell.prev in
-    let prev = {prev with next = cell.next} in
-    A.upd r cell.prev prev
-  else noop ();
-
   if cell.next <> null_ptr then
     // Next is not null, we need to update it
     let next = A.index r cell.next in
     let next = {next with prev = cell.prev} in
     A.upd r cell.next next
+  else noop ();
+
+  if cell.prev <> null_ptr then
+    // Prev is not null, we need to update it
+    let prev = A.index r cell.prev in
+    let prev = {prev with next = cell.next} in
+    A.upd r cell.prev prev
   else noop ();
 
   (**) let gs1 = gget (A.varray r) in
