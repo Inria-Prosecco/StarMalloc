@@ -596,6 +596,7 @@ let get_free_slot_aux2
   r
 #pop-options
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
 let get_free_slot_zf_lemma
   (size_class: sc)
   (md: Seq.lseq U64.t 4)
@@ -610,7 +611,28 @@ let get_free_slot_zf_lemma
     let bound2 = U32.rem nb_slots_v 64ul in
     let bound2 = modulo_64_not_null_guard bound2 in
     zf_b (Seq.slice bm (U32.v bound2) 64)))
-  = admit ()
+  =
+  let bm = Bitmap4.array_to_bv2 md in
+  let nb_slots_v = nb_slots size_class in
+  let bound2 = U32.rem nb_slots_v 64ul in
+  let bound2 = modulo_64_not_null_guard bound2 in
+  if (U32.eq size_class 16ul || U32.eq size_class 32ul || U32.eq size_class 64ul)
+  then (
+    Seq.lemma_len_slice bm (U32.v bound2) 64;
+    Seq.lemma_empty (Seq.slice bm (U32.v bound2) 64);
+    assert (Seq.slice bm (U32.v bound2) 64 == Seq.empty);
+    Seq.lemma_eq_intro Seq.empty (Seq.create 0 false)
+  ) else (
+    assert (U32.gt size_class 64ul);
+    assert (U32.lt (nb_slots size_class) 64ul);
+    assert (U32.eq bound2 (nb_slots size_class));
+    assert (U32.v bound2 == U32.v (nb_slots size_class));
+    zf_b_slice (Seq.slice bm (U32.v bound2) 256) 0 (64 - U32.v bound2);
+    assert (zf_b (Seq.slice (Seq.slice bm (U32.v bound2) 256) 0 (64 - U32.v bound2)));
+    Seq.slice_slice bm (U32.v bound2) 256 0 (64 - (U32.v bound2));
+    assert (zf_b (Seq.slice bm (U32.v bound2) 64))
+  )
+#pop-options
 
 let get_free_slot (size_class: sc) (bitmap: slab_metadata)
   : Steel U32.t

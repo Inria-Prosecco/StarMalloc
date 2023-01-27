@@ -25,15 +25,23 @@ let page_size = 4096ul
 let metadata_max = 131072ul
 
 noextract
-let min_sc = 16
+let min_sc = 64
 noextract
-let max_sc = 64
+let max_sc = U32.v page_size
 
-//TODO: second constraint should be relaxed
-//currently does not support size classes with <64 slots
-//that require a subtle loop to read only possible
-//corresponding slots in the bitmap
-let sc = x:U32.t{min_sc <= U32.v x /\ U32.v x <= max_sc}
+// TODO: this could be improved
+// currently does not support size classes
+// such that:
+// - sc < 64, thus nb_slot sc > 64
+// and
+// - (nb_slots sc) % 64 <> 0
+// this allows to only have a particular mechanism
+// for the first u64 of the bitmap
+// note: this mechanism does not rely on any loop!
+let sc = x:U32.t{
+  U32.eq x 16ul \/
+  U32.eq x 32ul \/
+  (min_sc <= U32.v x /\ U32.v x <= max_sc)}
 
 let nb_slots (size_class: sc)
   : Pure U32.t
