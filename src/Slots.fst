@@ -741,6 +741,15 @@ let elim_slab_vprop (#opened:_)
     (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq2));
   md_as_seq2
 
+let bound2_inv
+  (size_class: sc)
+  (md_as_seq: Seq.lseq U64.t 4)
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Lemma
+  (requires slab_vprop_aux2 size_class md_as_seq)
+  (ensures slab_vprop_aux2 size_class (Bitmap4.set md_as_seq pos))
+  = admit ()
+
 let allocate_slot
   (size_class: sc)
   (md: slab_metadata)
@@ -780,7 +789,7 @@ let allocate_slot
     (A.split_r arr 0sz)
     pos in
   set_lemma_nonzero size_class (G.reveal md_as_seq) (Bitmap4.set (G.reveal md_as_seq) pos) pos;
-  admit ();
+  bound2_inv size_class (G.reveal md_as_seq) pos;
   intro_slab_vprop size_class md (G.hide (Bitmap4.set (G.reveal md_as_seq) pos)) arr;
   return r
 #pop-options
