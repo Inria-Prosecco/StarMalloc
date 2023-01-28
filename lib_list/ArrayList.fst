@@ -285,7 +285,7 @@ val lemma_dlist_head_or_prev_not_visited (#a:Type0)
       (ensures
         (let cell = Seq.index s idx in
          idx == hd \/
-         ~ (FS.mem (US.v cell.prev) visited))
+         (mem' (US.v cell.prev) hd s visited /\ (~ (FS.mem (US.v cell.prev) visited))))
       )
       (decreases (Seq.length s - FS.cardinality visited))
 
@@ -798,6 +798,63 @@ val lemma_remove_spec (#a:Type)
 
 let lemma_remove_spec #a pred hd s idx = lemma_remove_spec' pred hd s null idx FS.emptyset
 
+/// Removing an element from a list does not impact a disjoint list
+val lemma_remove_spec_frame (#a:Type)
+  (pred pred': a -> prop)
+  (hd hd':nat)
+  (s:Seq.seq (cell a))
+  (idx:nat{idx < Seq.length s})
+  : Lemma (requires
+            is_dlist pred hd s /\ mem idx hd s /\
+            is_dlist pred' hd' s /\ disjoint s hd hd')
+          (ensures (
+            let s' = remove_spec pred hd s null idx FS.emptyset in
+            is_dlist pred' hd' s' /\
+            ptrs_in hd' s' == ptrs_in hd' s
+          ))
+
+let lemma_remove_spec_frame pred pred' hd hd' s idx =
+  let cell = Seq.index s idx in
+  let s' = remove_spec pred hd s null idx FS.emptyset in
+
+  lemma_mem_valid_or_null_next_prev' pred hd s null FS.emptyset idx;
+  let sint =
+    if cell.next <> null_ptr then
+      // Next is not null, we need to update it
+      let next = Seq.index s (US.v cell.next) in
+      let next = {next with prev = cell.prev} in
+      assert (mem (US.v cell.next) hd s);
+      lemma_mem_ptrs_in hd s (US.v cell.next);
+      lemma_mem_ptrs_in hd' s (US.v cell.next);
+
+      lemma_dlist_frame pred' s hd' (US.v cell.next) next;
+      Seq.upd s (US.v cell.next) next
+    else s
+  in
+
+  assert (is_dlist pred' hd' sint);
+  assert (ptrs_in hd' sint == ptrs_in hd' s);
+
+  let sf =
+    if cell.prev <> null_ptr then begin
+      let prev = Seq.index sint (US.v cell.prev) in
+      let prev = {prev with next = cell.next} in
+      lemma_dlist_head_or_prev_not_visited pred hd s null FS.emptyset idx;
+      assert (mem (US.v cell.prev) hd s);
+
+      lemma_mem_ptrs_in hd s (US.v cell.prev);
+      lemma_mem_ptrs_in hd' sint (US.v cell.prev);
+      assert (~ (mem (US.v cell.prev) hd' sint));
+
+      lemma_dlist_frame pred' sint hd' (US.v cell.prev) prev;
+      Seq.upd sint (US.v cell.prev) prev
+  end else sint
+  in
+  assert (sf == s');
+  assert (is_dlist pred' hd' sf);
+  assert (ptrs_in hd' sf == ptrs_in hd' sint)
+
+
 (** Steel functions and vprops *)
 
 /// The refinement predicate for varraylist, stating that the sequence contains
@@ -970,11 +1027,8 @@ let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) let gs1 = gget (A.varray r) in
   let hd' = if hd1 = US.v idx then US.v cell.next else hd1 in
   (**) lemma_remove_spec pred1 hd1 gs0 (US.v idx);
-
-  assume (is_dlist pred2 hd2 gs1);
-  assume (is_dlist pred3 hd3 gs1);
-  assume (ptrs_in hd2 gs1 == ptrs_in hd2 gs0);
-  assume (ptrs_in hd3 gs1 == ptrs_in hd3 gs0);
+  (**) lemma_remove_spec_frame pred1 pred2 hd1 hd2 gs0 (US.v idx);
+  (**) lemma_remove_spec_frame pred1 pred3 hd1 hd3 gs0 (US.v idx);
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd' hd2 hd3);
   return hd'
