@@ -690,6 +690,8 @@ let intro_slab_vprop (#opened:_)
     (fun x y -> x == y)
     (fun _ -> admit ())
 
+// otherwise, fails in lax mode
+#push-options "--compat_pre_typed_indexed_effects"
 let elim_slab_vprop (#opened:_)
   (size_class: sc)
   (md: slab_metadata)
@@ -740,6 +742,7 @@ let elim_slab_vprop (#opened:_)
     (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq))
     (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq2));
   md_as_seq2
+#pop-options
 
 let bound2_inv
   (size_class: sc)
