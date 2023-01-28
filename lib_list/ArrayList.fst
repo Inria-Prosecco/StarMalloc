@@ -678,6 +678,42 @@ let lemma_insert_spec (#a:Type)
     ()
   end else ()
 
+/// Inserting an element in list1 that was not in list2 does not impact list2
+val lemma_insert_spec_frame (#a:Type)
+  (pred pred': a -> prop)
+  (s:Seq.seq (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
+  (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
+  (hd':nat)
+  (v:a)
+  : Lemma (requires
+            is_dlist pred (US.v hd) s /\ (~ (mem (US.v idx) (US.v hd) s)) /\
+            is_dlist pred' hd' s /\ (~ (FS.mem (US.v idx) (ptrs_in hd' s))) /\
+            disjoint s (US.v hd) hd')
+          (ensures (
+            let s' = insert_spec pred s hd idx v in
+            is_dlist pred' hd' s' /\
+            ptrs_in hd' s' == ptrs_in hd' s
+          ))
+
+let lemma_insert_spec_frame pred pred' s hd idx hd' v =
+  let cell = {data = v; prev = null_ptr; next = hd} in
+  let s1 = Seq.upd s (US.v idx) cell in
+  lemma_mem_ptrs_in hd' s (US.v idx);
+  lemma_dlist_frame pred' s hd' (US.v idx) cell;
+  assert (is_dlist pred' hd' s1);
+  assert (ptrs_in hd' s1 == ptrs_in hd' s);
+
+  if hd <> null_ptr then begin
+    let cell = Seq.index s1 (US.v hd) in
+    let cell = {cell with prev = idx} in
+    assert (mem (US.v hd) (US.v hd) s);
+    lemma_mem_ptrs_in (US.v hd) s (US.v hd);
+    lemma_mem_ptrs_in hd' s1 (US.v hd);
+    assert (~ (mem (US.v hd) hd' s1));
+    lemma_dlist_frame pred' s1 hd' (US.v hd) cell
+  end else ()
+
 
 /// Functional correctness of the remove_spec function:
 /// The resulting list is still a doubly linked list, and
@@ -1150,8 +1186,8 @@ let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   return hd'
 
 
-/// Assuming the element at offset [idx] does not belong to the dlist,
-/// insert it at the head
+/// Requires that the element at offset [idx] does not belong to any dlist.
+/// If so, insert it at the head of list [hd1]
 val insert (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1185,9 +1221,7 @@ let insert #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
 
   (**) lemma_mem_ptrs_in (US.v hd) gs0 (US.v idx);
   (**) lemma_insert_spec pred1 gs0 hd idx v;
+  (**) lemma_insert_spec_frame pred1 pred2 gs0 hd idx hd2 v;
+  (**) lemma_insert_spec_frame pred1 pred3 gs0 hd idx hd3 v;
 
-  assume (is_dlist pred2 hd2 gs1);
-  assume (ptrs_in hd2 gs0 == ptrs_in hd2 gs1);
-  assume (is_dlist pred3 hd3 gs1);
-  assume (ptrs_in hd3 gs0 == ptrs_in hd3 gs1);
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v idx) hd2 hd3)
