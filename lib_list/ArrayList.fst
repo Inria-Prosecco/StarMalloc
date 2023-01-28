@@ -152,6 +152,9 @@ let disjoint (#a:Type)
 let disjoint3 (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3: nat) =
   disjoint s hd1 hd2 /\ disjoint s hd1 hd3 /\ disjoint s hd2 hd3
 
+/// The array is partitioned exactly between the three lists
+let partition (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3: nat) =
+  forall (i:nat{i < Seq.length s}). i == null \/ (FS.mem i (ptrs_all hd1 hd2 hd3 s))
 
 (** Some helpers to use cells *)
 
