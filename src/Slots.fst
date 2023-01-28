@@ -22,7 +22,7 @@ open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
 
-#push-options "--z3rlimit 30"
+#push-options "--fuel 1 --ifuel 0 --z3rlimit 30"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   : Pure (array U8.t)
   (requires
@@ -102,15 +102,29 @@ let slab_vprop_aux
     (slab_vprop_aux_f_lemma size_class md_as_seq arr)
     incr_seq
 
+let slab_vprop_aux2
+  (size_class: sc)
+  (md_as_seq: Seq.lseq U64.t 4)
+  : prop
+  =
+  let bm = Bitmap4.array_to_bv2 md_as_seq in
+  let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
+  zf_b (Seq.slice bm 0 (64 - U32.v bound2))
+
 //unfold
 //[@@__steel_reduce__]
+open SteelVRefineDep
+
+
 let slab_vprop
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md: slab_metadata)
   =
-  A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-    slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+  vrefinedep
+    (A.varray md)
+    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
   `star`
   A.varray (A.split_l arr 0sz)
 
@@ -552,7 +566,7 @@ let get_free_slot_aux
   r''
 #pop-options
 
-#push-options "--z3rlimit 50 --split_queries"
+#push-options "--z3rlimit 50"
 inline_for_extraction noextract
 let get_free_slot_aux2
   (size_class: sc)
@@ -562,9 +576,8 @@ let get_free_slot_aux2
   (fun _ -> A.varray bitmap)
   (requires fun h0 ->
     let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
-    let bound2 = U32.rem (nb_slots size_class) 64ul in
-    let bound2 = modulo_64_not_null_guard bound2 in
-    zf_b (Seq.slice bm (U32.v bound2) 64) /\
+    let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
+    zf_b (Seq.slice bm 0 (64 - U32.v bound2)) /\
     U64.v (Seq.index (A.asel bitmap h0) 0) <> U64.v (full_n bound2))
   (ensures fun h0 r h1 ->
     A.asel bitmap h1 == A.asel bitmap h0 /\
@@ -576,62 +589,22 @@ let get_free_slot_aux2
   =
   let h0 = get () in
   let x = A.index bitmap 0sz in
-  let bound2 = G.hide (U32.rem (nb_slots size_class) 64ul) in
-  let bound2 = G.hide (modulo_64_not_null_guard (G.reveal bound2)) in
+  let bound2 = G.hide (bound2_gen (nb_slots size_class) (G.hide size_class)) in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
   array_to_bv_slice (A.asel bitmap h0) 0;
   assert (FU.to_vec (U64.v x) == Seq.slice bm 0 64);
-  Seq.slice_slice bm 0 64 0 (U32.v bound2);
-  assert (zf_b (Seq.slice (FU.to_vec #64 (U64.v x)) (U32.v bound2) 64));
+  Seq.slice_slice bm 0 64 0 (64 - U32.v bound2);
+  assert (zf_b (Seq.slice (FU.to_vec #64 (U64.v x)) 0 (64 - U32.v bound2)));
   full_n_lemma x bound2;
+  assert (U32.lte bound2 (nb_slots size_class));
   let r = ffs64 x bound2 in
-  let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
-  let idx1 = G.hide 0 in
-  let idx2 = G.hide 64 in
   assert (x == Seq.index (A.asel bitmap h0) 0);
   assert (FU.nth (U64.v x) (U64.n - 1 - U32.v r) = false);
-  array_to_bv_slice (A.asel bitmap h0) 0;
-  assert (FU.to_vec (U64.v x) == Seq.slice bm 0 64);
+  assert (Seq.index (Seq.slice bm 0 64) (U64.n - 1 - U32.v r) = false);
   Seq.lemma_index_slice bm 0 64 (U32.v r);
+  assert (Seq.index bm (U64.n - 1 - U32.v r) = false);
+  f_lemma #4 0 (U32.v r) (U32.v r) (U64.n - 1 - U32.v r);
   r
-#pop-options
-
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
-let get_free_slot_zf_lemma
-  (size_class: sc)
-  (md: Seq.lseq U64.t 4)
-  : Lemma
-  (requires (
-    let bm = Bitmap4.array_to_bv2 md in
-    zf_b (Seq.slice bm (U32.v (nb_slots size_class)) 256)))
-  (ensures (
-    let bm = Bitmap4.array_to_bv2 md in
-    let nb_slots_v = nb_slots size_class in
-    let bound = U32.div nb_slots_v 64ul in
-    let bound2 = U32.rem nb_slots_v 64ul in
-    let bound2 = modulo_64_not_null_guard bound2 in
-    zf_b (Seq.slice bm (U32.v bound2) 64)))
-  =
-  let bm = Bitmap4.array_to_bv2 md in
-  let nb_slots_v = nb_slots size_class in
-  let bound2 = U32.rem nb_slots_v 64ul in
-  let bound2 = modulo_64_not_null_guard bound2 in
-  if (U32.eq size_class 16ul || U32.eq size_class 32ul || U32.eq size_class 64ul)
-  then (
-    Seq.lemma_len_slice bm (U32.v bound2) 64;
-    Seq.lemma_empty (Seq.slice bm (U32.v bound2) 64);
-    assert (Seq.slice bm (U32.v bound2) 64 == Seq.empty);
-    Seq.lemma_eq_intro Seq.empty (Seq.create 0 false)
-  ) else (
-    assert (U32.gt size_class 64ul);
-    assert (U32.lt (nb_slots size_class) 64ul);
-    assert (U32.eq bound2 (nb_slots size_class));
-    assert (U32.v bound2 == U32.v (nb_slots size_class));
-    zf_b_slice (Seq.slice bm (U32.v bound2) 256) 0 (64 - U32.v bound2);
-    assert (zf_b (Seq.slice (Seq.slice bm (U32.v bound2) 256) 0 (64 - U32.v bound2)));
-    Seq.slice_slice bm (U32.v bound2) 256 0 (64 - (U32.v bound2));
-    assert (zf_b (Seq.slice bm (U32.v bound2) 64))
-  )
 #pop-options
 
 let get_free_slot (size_class: sc) (bitmap: slab_metadata)
@@ -640,8 +613,9 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
   (fun _ -> A.varray bitmap)
   (requires fun h0 ->
     let s = A.asel bitmap h0 in
-    let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
-    zf_b (Seq.slice bm (U32.v (nb_slots size_class)) 256) /\
+    let bm = Bitmap4.array_to_bv2 s in
+    let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
+    zf_b (Seq.slice bm 0 (64 - U32.v bound2)) /\
     has_free_slot size_class s
   )
   (ensures fun h0 r h1 ->
@@ -656,8 +630,7 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
   let nb_slots_v = nb_slots size_class in
   let bound = U32.div nb_slots_v 64ul in
-  let bound2 = U32.rem nb_slots_v 64ul in
-  let bound2 = modulo_64_not_null_guard bound2 in
+  let bound2 = bound2_gen nb_slots_v (G.hide size_class) in
   let full = full_n bound2 in
   assert (U32.v bound == U32.v (nb_slots size_class) / 64);
   let x1 = A.index bitmap 0sz in
@@ -674,7 +647,6 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
       get_free_slot_aux size_class bitmap 1ul
     )
   ) else (
-    get_free_slot_zf_lemma size_class (A.asel bitmap h0);
     get_free_slot_aux2 size_class bitmap
   )
 
@@ -691,27 +663,41 @@ let elim_slab_vprop (#opened:_)
     slab_vprop_aux size_class (A.split_r arr 0sz) r)
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
+    let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
     let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
     let x0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let bm = Bitmap4.array_to_bv2 r in
     G.reveal r == x0 /\
     G.reveal r == A.asel md h1 /\
     dsnd (fst blob0) == h1 (slab_vprop_aux size_class (A.split_r arr 0sz) r) /\
-    snd blob0 == A.asel (A.split_l arr 0sz) h1
+    snd blob0 == A.asel (A.split_l arr 0sz) h1 /\
+    zf_b (Seq.slice bm 0 (64 - U32.v bound2))
   )
   =
-  change_equal_slprop
+  change_slprop_rel
     (slab_vprop size_class arr md)
-    (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+    (vrefinedep
+      (A.varray md)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
     `star`
-    A.varray (A.split_l arr 0sz));
-  let md_as_seq : G.erased (t_of (A.varray md)) = elim_vdep
-    (A.varray md)
-    (fun (x: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r arr 0sz) x) in
-  assert (t_of (A.varray md) == Seq.lseq U64.t 4);
-  let md_as_seq2 = G.hide ((G.reveal md_as_seq) <: Seq.lseq U64.t 4) in
+    A.varray (A.split_l arr 0sz))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  let md_as_seq
+    : G.erased (t_of (vrefine
+      (A.varray md)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+    ))
+    = elim_vrefinedep
+      (A.varray md)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+  in
+  let md_as_seq2
+    : G.erased (Seq.lseq U64.t 4)
+    = G.hide (G.reveal md_as_seq <: Seq.lseq U64.t 4) in
   change_equal_slprop
     (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq))
     (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq2));
@@ -748,7 +734,6 @@ let allocate_slot
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
   assert (has_free_slot size_class (G.reveal md_as_seq));
-  admit ();
   let pos = get_free_slot size_class md in
   let r = allocate_slot_aux
     size_class
@@ -756,18 +741,25 @@ let allocate_slot
     md_as_seq
     (A.split_r arr 0sz)
     pos in
-  let md_as_seq3 = gget (A.varray md) in
+  let md_as_seq3// : G.erased (Seq.lseq U64.t 4)
+    = gget (A.varray md) in
   set_lemma_nonzero size_class (G.reveal md_as_seq) (G.reveal md_as_seq3) pos;
-  intro_vdep
-    (A.varray md)
-    (slab_vprop_aux size_class (A.split_r arr 0sz) (Bitmap4.set md_as_seq pos))
-    (fun (x: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r arr 0sz) x);
-  change_equal_slprop
-    (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-    `star`
-    A.varray (A.split_l arr 0sz))
-    (slab_vprop size_class arr md);
+  slassert (A.varray md);
+  //intro_vrefinedep
+  //  (A.varray md)
+  //  (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+  //  (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+  //  (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq3));
+  sladmit  ();
+  //change_slprop_rel
+  //  (vrefinedep
+  //    (A.varray md)
+  //    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+  //    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+  //  `star`
+  //  A.varray (A.split_l arr 0sz))
+  //  (slab_vprop size_class arr md)
+  //  (fun x y -> x == y)
+  //  (fun _ -> admit ());
   return r
 #pop-options
