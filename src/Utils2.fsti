@@ -336,6 +336,20 @@ let full_n_lemma (x: U64.t) (bound: U32.t)
   ))
 #pop-options
 
+noextract inline_for_extraction
+let bound2_gen (v: U32.t) (size_class: G.erased sc)
+  : Pure U32.t
+  (requires v == nb_slots (G.reveal size_class))
+  (ensures fun r ->
+    0 < U32.v r /\
+    U32.v r <= 64 /\
+    U32.v r <= U32.v (nb_slots size_class))
+  =
+  let nb_slots_v_rem = U32.rem v 64ul in
+  if U32.eq nb_slots_v_rem 0ul
+  then 64ul
+  else nb_slots_v_rem
+
 noextract
 let has_free_slot
   (size_class: sc)
@@ -343,10 +357,9 @@ let has_free_slot
   : bool
   =
   let max = U64.v max64 in
-  let nb_slots = U32.v (nb_slots size_class) in
-  let bound = nb_slots / 64 in
-  let bound2 = nb_slots % 64 in
-  let bound2 = if bound2 = 0 then 64 else bound2 in
+  let nb_slots_v = nb_slots size_class in
+  let bound = (U32.v nb_slots_v) / 64 in
+  let bound2 = U32.v (bound2_gen nb_slots_v (G.hide size_class)) in
   //FStar.Math.Lemmas.lemma_mod_lt nb_slots U64.n;
   assert (0 <= bound2 /\ bound2 <= 64);
   let full = U64.v (full_n (U32.uint_to_t bound2)) in
@@ -354,18 +367,6 @@ let has_free_slot
   (bound > 1 && (U64.v (Seq.index s 1) <> max)) ||
   (bound > 2 && (U64.v (Seq.index s 2) <> max)) ||
   (bound > 3 && (U64.v (Seq.index s 3) <> max))
-
-noextract inline_for_extraction
-let modulo_64_not_null_guard (x: U32.t)
-  : Pure U32.t
-  (requires 0 <= U32.v x /\ U32.v x <= 64)
-  (ensures fun r ->
-    0 < U32.v r /\ U32.v r <= 64
-  )
-  =
-  if U32.eq x 0ul
-  then 64ul
-  else x
 
 let has_free_slot_s
   (size_class: sc)
@@ -380,8 +381,7 @@ let has_free_slot_s
   =
   let nb_slots_v = nb_slots size_class in
   let bound = U32.div nb_slots_v 64ul in
-  let bound2 = U32.rem nb_slots_v 64ul in
-  let bound2 = modulo_64_not_null_guard bound2 in
+  let bound2 = bound2_gen nb_slots_v (G.hide size_class) in
   let full = full_n bound2 in
   let v0 = A.index md 0sz in
   let v1 = A.index md 1sz in
