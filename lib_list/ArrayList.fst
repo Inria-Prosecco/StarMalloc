@@ -126,6 +126,25 @@ let lemma_mem_ptrs_in (#a:Type)
   : Lemma (mem x hd s <==> FS.mem x (ptrs_in hd s))
   = lemma_mem_ptrs_in' hd s FS.emptyset x
 
+/// Disjointness between two lists, specified directly on the sets of pointers
+/// to alleviate the need for recursive reasoning
+let disjoint' (#a:Type)
+  (s: Seq.seq (cell a))
+  (hd1 hd2:nat)
+  (visited1: FS.set nat{FS.cardinality visited1 <= Seq.length s})
+  (visited2: FS.set nat{FS.cardinality visited2 <= Seq.length s})
+  = ptrs_in' hd1 s visited1 `FS.disjoint` ptrs_in' hd2 s visited2
+
+let disjoint (#a:Type)
+  (s: Seq.seq (cell a))
+  (hd1 hd2: nat)
+  = disjoint' s hd1 hd2 FS.emptyset FS.emptyset
+
+/// Mutual exclusiveness for three dlists
+let disjoint3 (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3: nat) =
+  disjoint s hd1 hd2 /\ disjoint s hd1 hd3 /\ disjoint s hd2 hd3
+
+
 (** Some helpers to use cells *)
 
 let read_data (#a:Type) (c:cell a) : a = c.data
@@ -160,7 +179,11 @@ let rec lemma_write_data_frame' (#a:Type0)
   (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
   : Lemma
       (requires is_dlist' pred hd s prev visited /\ pred v)
-      (ensures is_dlist' pred hd (Seq.upd s idx (write_data (Seq.index s idx) v)) prev visited)
+      (ensures (
+        let s' = Seq.upd s idx (write_data (Seq.index s idx) v) in
+        is_dlist' pred hd s' prev visited /\
+        ptrs_in' hd s visited == ptrs_in' hd s' visited)
+      )
       (decreases (Seq.length s - FS.cardinality visited))
   = let s' = Seq.upd s idx (write_data (Seq.index s idx) v) in
     if hd = null then ()
@@ -180,7 +203,10 @@ val lemma_write_data_frame (#a:Type0)
   (v:a)
   : Lemma
       (requires is_dlist pred hd s /\ pred v)
-      (ensures is_dlist pred hd (Seq.upd s idx (write_data (Seq.index s idx) v)))
+      (ensures (
+        let s' = Seq.upd s idx (write_data (Seq.index s idx) v) in
+        is_dlist pred hd s' /\
+        ptrs_in hd s == ptrs_in hd s'))
 
 let lemma_write_data_frame #a pred hd s idx v =
   lemma_write_data_frame' pred hd s null idx v FS.emptyset
@@ -383,6 +409,52 @@ let lemma_dlist_upd (#a:Type)
     ~ (mem other hd s')
     ))
   = lemma_dlist_upd' pred s hd idx null other FS.emptyset v
+
+/// Framing lemma about dlists: Updating any element outside the dlist
+/// does not change any of the characteristics of the dlist
+let rec lemma_dlist_frame' (#a:Type)
+  (pred: a -> prop)
+  (s:Seq.seq (cell a))
+  (hd:nat{hd == null \/ hd < Seq.length s})
+  (idx:nat{idx <> null /\ idx < Seq.length s})
+  (prev: nat)
+  (visited: FS.set nat{Seq.length s >= FS.cardinality visited})
+  (v: cell a)
+  : Lemma
+  (requires
+    is_dlist' pred hd s prev visited /\
+    ~ (mem' idx hd s visited))
+  (ensures (
+    let s' = Seq.upd s idx v in
+    is_dlist' pred hd s' prev visited /\
+    ptrs_in' hd s visited `FS.equal` ptrs_in' hd s' visited)
+    )
+  (decreases (Seq.length s - FS.cardinality visited))
+  = let s' = Seq.upd s idx v in
+    if hd = null then ()
+    else begin
+      let cur = Seq.index s hd in
+      let next = cur.next in
+      lemma_dlist_frame' pred s (US.v next) idx hd (FS.insert hd visited) v
+    end
+
+let lemma_dlist_frame (#a:Type)
+  (pred: a -> prop)
+  (s:Seq.seq (cell a))
+  (hd:nat{hd == null \/ hd < Seq.length s})
+  (idx:nat{idx <> null /\ idx < Seq.length s})
+  (v:cell a)
+  : Lemma
+  (requires
+    is_dlist pred hd s /\
+    ~ (mem idx hd s)
+  )
+  (ensures (
+    let s' = Seq.upd s idx v in
+    is_dlist pred hd s' /\
+    ptrs_in hd s == ptrs_in hd s'
+  ))
+  = lemma_dlist_frame' pred s hd idx null FS.emptyset v
 
 /// If we have a finiteset of elements smaller than a given n,
 /// and one element is not in the set, then the cardinality is not n
@@ -712,12 +784,21 @@ let lemma_remove_spec #a pred hd s idx = lemma_remove_spec' pred hd s null idx F
 
 (** Steel functions and vprops *)
 
+/// The refinement predicate for varraylist, stating that the sequence contains
+/// three mutually exclusive doubly linked lists
+let varraylist_refine (#a:Type)
+  (pred1 pred2 pred3: a -> prop)
+  (hd1 hd2 hd3:nat)
+  (s:Seq.seq (cell a)) : prop
+  = is_dlist pred1 hd1 s /\ is_dlist pred2 hd2 s /\ is_dlist pred3 hd3 s /\ disjoint3 s hd1 hd2 hd3
+
 /// The main vprop of this module.
-/// We have access to an array, such that the array contains a doubly linked list
-/// when starting at offset [hd]
+/// We have access to an array, such that the array contains three mutually
+/// exclusive doubly linked list, starting at offsets [hd1] [hd2] and [hd3]
+/// respectively
 [@@__steel_reduce__]
-let varraylist (#a:Type) (pred: a -> prop) (r:A.array (cell a)) (hd:nat) : vprop
-  = A.varray r `vrefine` (is_dlist pred hd)
+let varraylist (#a:Type) (pred1 pred2 pred3: a -> prop) (r:A.array (cell a)) (hd1 hd2 hd3:nat) : vprop
+  = A.varray r `vrefine` (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
 
 /// AF: The regular noop does not seem to pick the equality of selectors, not sure why
 val noop (#opened:inames) (#p:vprop) (_:unit)
@@ -727,44 +808,113 @@ let noop () = noop ()
 /// Reads at index [idx] in the array.
 /// TODO: The hd pointer should be ghost
 val read_in_place (#a:Type)
-  (#pred: a -> prop)
+  (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
-  (hd:nat)
+  (hd1 hd2 hd3:nat)
   (idx:US.t{US.v idx < A.length r})
   : Steel a
-          (varraylist pred r hd)
-          (fun _ -> varraylist pred r hd)
+          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
           (requires fun _ -> True)
-          (ensures fun h0 _ h1 -> h0 (varraylist pred r hd) == h1 (varraylist pred r hd))
+          (ensures fun h0 _ h1 ->
+            h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) ==
+            h1 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))
 
-let read_in_place #a #pred r hd idx =
-  (**) elim_vrefine (A.varray r) (is_dlist pred hd);
+let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
   let res = A.index r idx in
-  (**) intro_vrefine (A.varray r) (is_dlist pred hd);
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
   (**) return res.data
 
-
 /// Updates the `data` field of the cell at index [idx] in the array [r] with [v]
+/// We define three different functions, depending on which list the element
+/// belongs to. In all three cases, we require [v] to satisfy the predicate
+/// corresponding to a given list
 /// TODO: The hd pointer should be ghost
-val write_in_place (#a:Type)
-  (#pred: a -> prop)
+val write_in_place1 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
-  (hd:nat)
+  (hd1 hd2 hd3:nat)
   (idx:US.t{US.v idx < A.length r})
   (v:a)
    : Steel unit
-          (varraylist pred r hd)
-          (fun _ -> varraylist pred r hd)
-          (requires fun _ -> pred v)
+          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (requires fun h -> pred1 v /\ mem (US.v idx) hd1 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
           (ensures fun h0 _ h1 -> True) // TODO
 
-let write_in_place #a #pred r hd idx v =
-  (**) elim_vrefine (A.varray r) (is_dlist pred hd);
+let write_in_place1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
   let c = A.index r idx in
   (**) let gs = gget (A.varray r) in
   A.upd r idx (write_data c v);
-  (**) lemma_write_data_frame pred hd gs (US.v idx) v;
-  (**) intro_vrefine (A.varray r) (is_dlist pred hd)
+  (**) lemma_write_data_frame pred1 hd1 gs (US.v idx) v;
+  // The three lemmas below in conjunction with disjoint3 enable to infer
+  // that idx does not belong to the hd2 or hd3 dlists
+  (**) lemma_mem_ptrs_in hd1 gs (US.v idx);
+  (**) lemma_mem_ptrs_in hd2 gs (US.v idx);
+  (**) lemma_mem_ptrs_in hd3 gs (US.v idx);
+  // Framing of the hd2 and hd3 dlists
+  (**) lemma_dlist_frame pred2 gs hd2 (US.v idx) (write_data c v);
+  (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
+
+val write_in_place2 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:nat)
+  (idx:US.t{US.v idx < A.length r})
+  (v:a)
+   : Steel unit
+          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (requires fun h -> pred2 v /\ mem (US.v idx) hd2 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
+          (ensures fun h0 _ h1 -> True) // TODO
+
+let write_in_place2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+  let c = A.index r idx in
+  (**) let gs = gget (A.varray r) in
+  A.upd r idx (write_data c v);
+  (**) lemma_write_data_frame pred2 hd2 gs (US.v idx) v;
+  // The three lemmas below in conjunction with disjoint3 enable to infer
+  // that idx does not belong to the hd1 or hd3 dlists
+  (**) lemma_mem_ptrs_in hd1 gs (US.v idx);
+  (**) lemma_mem_ptrs_in hd2 gs (US.v idx);
+  (**) lemma_mem_ptrs_in hd3 gs (US.v idx);
+  // Framing of the hd1 and hd3 dlists
+  (**) lemma_dlist_frame pred1 gs hd1 (US.v idx) (write_data c v);
+  (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
+
+val write_in_place3 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:nat)
+  (idx:US.t{US.v idx < A.length r})
+  (v:a)
+   : Steel unit
+          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (requires fun h -> pred3 v /\ mem (US.v idx) hd3 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
+          (ensures fun h0 _ h1 -> True) // TODO
+
+let write_in_place3  #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+  let c = A.index r idx in
+  (**) let gs = gget (A.varray r) in
+  A.upd r idx (write_data c v);
+  (**) lemma_write_data_frame pred3 hd3 gs (US.v idx) v;
+  // The three lemmas below in conjunction with disjoint3 enable to infer
+  // that idx does not belong to the hd1 or hd2 dlists
+  (**) lemma_mem_ptrs_in hd1 gs (US.v idx);
+  (**) lemma_mem_ptrs_in hd2 gs (US.v idx);
+  (**) lemma_mem_ptrs_in hd3 gs (US.v idx);
+  // Framing of the hd1 and hd2 dlists
+  (**) lemma_dlist_frame pred2 gs hd2 (US.v idx) (write_data c v);
+  (**) lemma_dlist_frame pred1 gs hd1 (US.v idx) (write_data c v);
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
+
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd]
 val remove (#a:Type)
