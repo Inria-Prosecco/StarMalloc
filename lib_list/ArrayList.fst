@@ -102,6 +102,14 @@ let rec ptrs_in' (#a:Type)
 
 let ptrs_in (#a:Type) (hd:nat) (s:Seq.seq (cell a)) = ptrs_in' hd s FS.emptyset
 
+/// Set of all pointers contained in the three doubly linked lists
+let ptrs_all (#a:Type) (hd1 hd2 hd3:nat) (s:Seq.seq (cell a)) =
+  FS.union (ptrs_in hd1 s) (FS.union (ptrs_in hd2 s) (ptrs_in hd3 s))
+
+/// Membership of element [x] in any of the dlist pointed to by [hd1], [hd2], or [hd3]
+let mem_all (#a:Type0) (x:nat) (hd1 hd2 hd3:nat) (s:Seq.seq (cell a)) =
+  FS.mem x (ptrs_all hd1 hd2 hd3 s)
+
 /// Equivalence lemma between `mem` and membership in `ptrs_in`
 let rec lemma_mem_ptrs_in' (#a:Type)
   (hd:nat)
@@ -491,7 +499,7 @@ let rec lemma_dlist_insert_visited (#a:Type)
     ~ (mem' idx hd s visited))
   (ensures
     is_dlist' pred hd s prev (FS.insert idx visited) /\
-    ~ (mem' idx hd s (FS.insert idx visited)))
+    ptrs_in' hd s visited == ptrs_in' hd s (FS.insert idx visited))
   (decreases (Seq.length s - FS.cardinality visited))
   =
   if hd = null
@@ -616,8 +624,8 @@ let lemma_dlist_prev_not_mem (#a:Type)
     else lemma_mem_not_in_visited pred s hd prev visited prev
 
 /// Functional correctness of the insert_spec function:
-/// The resulting list is still a doubly linked list.
-/// Note, proving that the element was added is trivial, so we do not include it here
+/// The resulting list is still a doubly linked list, and it contains
+/// the newly added element in addition to all the previous ones
 let lemma_insert_spec (#a:Type)
   (pred: a -> prop)
   (s:Seq.seq (cell a))
@@ -625,19 +633,26 @@ let lemma_insert_spec (#a:Type)
   (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
   (v:a)
   : Lemma (requires pred v /\ is_dlist pred (US.v hd) s /\ (~ (mem (US.v idx) (US.v hd) s)))
-          (ensures is_dlist pred (US.v idx) (insert_spec pred s hd idx v))
+          (ensures (
+            let s' = insert_spec pred s hd idx v in
+            is_dlist pred (US.v idx) s' /\
+            ptrs_in (US.v idx) s' `FS.equal` FS.insert (US.v idx) (ptrs_in (US.v hd) s))
+          )
   =
   assert (is_dlist' pred (US.v hd) s null FS.emptyset);
   let cell = {data = v; prev = null_ptr; next = hd} in
   let s' = Seq.upd s (US.v idx) cell in
   lemma_dlist_upd pred s (US.v hd) (US.v idx) (US.v idx) cell;
+  lemma_dlist_frame pred s (US.v hd) (US.v idx) cell;
   assert (is_dlist' pred (US.v hd) s' null FS.emptyset);
+  assert (ptrs_in (US.v hd) s == ptrs_in (US.v hd) s');
+
   if hd <> null_ptr then begin
     lemma_dlist_insert_visited pred s' (US.v hd) (US.v idx) null FS.emptyset;
     let fs1 = FS.singleton (US.v idx) in
-    FS.all_finite_set_facts_lemma ();
     assert (fs1 `FS.equal` FS.insert (US.v idx) FS.emptyset);
     assert (is_dlist' pred (US.v hd) s' null fs1);
+    assert (ptrs_in (US.v idx) s' == FS.insert (US.v idx) (ptrs_in (US.v hd) s));
     let cell = Seq.index s' (US.v hd) in
     let cell = {cell with prev = idx} in
     let cur = Seq.index s' (US.v hd) in
@@ -649,6 +664,7 @@ let lemma_insert_spec (#a:Type)
     lemma_dlist_mem_uniq pred s' (US.v hd) null fs1;
     assert (~ (mem' (US.v hd) (US.v next) s' (FS.insert (US.v idx) fs2)));
     lemma_dlist_upd' pred s' (US.v next) (US.v hd) (US.v hd) (US.v hd) (FS.insert (US.v idx) fs2) cell;
+    lemma_dlist_frame' pred s' (US.v next) (US.v hd) (US.v hd) (FS.insert (US.v idx) fs2) cell;
     let s1 = Seq.upd s' (US.v hd) cell in
     assert (is_dlist' pred (US.v next) s1 (US.v hd) (FS.insert (US.v idx) fs2));
     assert (is_dlist' pred (US.v hd) s1 (US.v idx) fs1
@@ -1137,20 +1153,24 @@ let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
 /// Assuming the element at offset [idx] does not belong to the dlist,
 /// insert it at the head
 val insert (#a:Type)
-  (#pred: a -> prop)
+  (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
   (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (hd2 hd3:nat)
   (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
   (v: a)
    : Steel unit
-          (varraylist pred r (US.v hd))
-          (fun _ -> varraylist pred r (US.v idx))
-          (requires fun h -> pred v /\ (~ (mem (US.v idx) (US.v hd) (h (varraylist pred r (US.v hd))))))
+          (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)
+          (requires fun h -> pred1 v /\
+            (~ (mem_all (US.v idx) (US.v hd) hd2 hd3 (h (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)))))
           (ensures fun h0 hd' h1 ->
-            mem (US.v idx) (US.v idx) (h1 (varraylist pred r (US.v idx)))) // TODO
+            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
+            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)))
+          ) // TODO
 
-let insert #a #pred r hd idx v =
-  (**) elim_vrefine (A.varray r) (is_dlist pred (US.v hd));
+let insert #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
 
   let cell = {data = v; prev = null_ptr; next = hd} in
@@ -1161,5 +1181,13 @@ let insert #a #pred r hd idx v =
     A.upd r hd cell
   else noop ();
 
-  (**) lemma_insert_spec pred gs0 hd idx v;
-  (**) intro_vrefine (A.varray r) (is_dlist pred (US.v idx))
+  let gs1 = gget (A.varray r) in
+
+  (**) lemma_mem_ptrs_in (US.v hd) gs0 (US.v idx);
+  (**) lemma_insert_spec pred1 gs0 hd idx v;
+
+  assume (is_dlist pred2 hd2 gs1);
+  assume (ptrs_in hd2 gs0 == ptrs_in hd2 gs1);
+  assume (is_dlist pred3 hd3 gs1);
+  assume (ptrs_in hd3 gs0 == ptrs_in hd3 gs1);
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v idx) hd2 hd3)
