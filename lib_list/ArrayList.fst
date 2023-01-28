@@ -1188,7 +1188,7 @@ let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
 /// If so, insert it at the head of list [hd1]
-val insert (#a:Type)
+val insert1 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
   (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
@@ -1202,10 +1202,14 @@ val insert (#a:Type)
             (~ (mem_all (US.v idx) (US.v hd) hd2 hd3 (h (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)))))
           (ensures fun h0 hd' h1 ->
             ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)))
-          ) // TODO
+            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) /\
+            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
+            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
+            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
+            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))
+          )
 
-let insert #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
+let insert1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
 
@@ -1225,3 +1229,93 @@ let insert #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
   (**) lemma_insert_spec_frame pred1 pred3 gs0 hd idx hd3 v;
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v idx) hd2 hd3)
+
+
+/// Requires that the element at offset [idx] does not belong to any dlist.
+/// If so, insert it at the head of list [hd2]
+val insert2 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (hd1 hd3:nat)
+  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
+  (v: a)
+   : Steel unit
+          (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)
+          (requires fun h -> pred2 v /\
+            (~ (mem_all (US.v idx) hd1 (US.v hd) hd3 (h (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)))))
+          (ensures fun h0 hd' h1 ->
+            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
+            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))) /\
+            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
+            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
+            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
+            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))
+          )
+
+let insert2 #a #pred1 #pred2 #pred3 r hd hd1 hd3 idx v =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v hd) hd3);
+  (**) let gs0 = gget (A.varray r) in
+
+  let cell = {data = v; prev = null_ptr; next = hd} in
+  A.upd r idx cell;
+  if hd <> null_ptr then
+    let cell = A.index r hd in
+    let cell = {cell with prev = idx} in
+    A.upd r hd cell
+  else noop ();
+
+  let gs1 = gget (A.varray r) in
+
+  (**) lemma_mem_ptrs_in (US.v hd) gs0 (US.v idx);
+  (**) lemma_insert_spec pred2 gs0 hd idx v;
+  (**) lemma_insert_spec_frame pred2 pred1 gs0 hd idx hd1 v;
+  (**) lemma_insert_spec_frame pred2 pred3 gs0 hd idx hd3 v;
+
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v idx) hd3)
+
+
+/// Requires that the element at offset [idx] does not belong to any dlist.
+/// If so, insert it at the head of list [hd3]
+val insert3 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (hd1 hd2:nat)
+  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
+  (v: a)
+   : Steel unit
+          (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))
+          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))
+          (requires fun h -> pred3 v /\
+            (~ (mem_all (US.v idx) hd1 hd2 (US.v hd) (h (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))))))
+          (ensures fun h0 hd' h1 ->
+            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
+            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) /\
+            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
+            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
+            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
+            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))
+          )
+
+let insert3 #a #pred1 #pred2 #pred3 r hd hd1 hd2 idx v =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd));
+  (**) let gs0 = gget (A.varray r) in
+
+  let cell = {data = v; prev = null_ptr; next = hd} in
+  A.upd r idx cell;
+  if hd <> null_ptr then
+    let cell = A.index r hd in
+    let cell = {cell with prev = idx} in
+    A.upd r hd cell
+  else noop ();
+
+  let gs1 = gget (A.varray r) in
+
+  (**) lemma_mem_ptrs_in (US.v hd) gs0 (US.v idx);
+  (**) lemma_insert_spec pred3 gs0 hd idx v;
+  (**) lemma_insert_spec_frame pred3 pred2 gs0 hd idx hd2 v;
+  (**) lemma_insert_spec_frame pred3 pred1 gs0 hd idx hd1 v;
+
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v idx))
