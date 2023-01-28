@@ -531,7 +531,7 @@ let rec lemma_dlist_remove_visited (#a:Type)
     ~ (mem' idx hd s (FS.insert idx visited)))
   (ensures
     is_dlist' pred hd s prev visited /\
-    ~ (mem' idx hd s visited))
+    ptrs_in' hd s visited == ptrs_in' hd s (FS.insert idx visited))
   (decreases (Seq.length s - FS.cardinality visited))
   = if hd = null then ()
     else begin
@@ -684,10 +684,11 @@ val lemma_remove_spec' (#a:Type)
             let hd' = if hd = idx then US.v c.next else hd in
             let s' = remove_spec pred hd s prev idx visited in
             is_dlist' pred hd' s' prev visited /\
-            ~ (mem' idx hd' s' visited)
+            FS.remove idx (ptrs_in' hd s visited) `FS.equal` ptrs_in' hd' s' visited
           ))
           (decreases (Seq.length s - FS.cardinality visited))
 
+#push-options "--z3rlimit 20"
 let rec lemma_remove_spec' #a pred hd s prev idx visited =
   if hd = null then ()
   else begin
@@ -715,12 +716,23 @@ let rec lemma_remove_spec' #a pred hd s prev idx visited =
         assert (is_dlist' pred next2 sint next (FS.insert next fs));
         assert (is_dlist' pred next sint (US.v cur.prev) fs);
 
+        lemma_dlist_frame' pred s next2 next next (FS.insert next fs) nc;
+        // Direct conclusion of lemma above
+        assert (ptrs_in' next2 s (FS.insert next fs) == ptrs_in' next2 sint (FS.insert next fs));
+        // By definition
+        assert (ptrs_in' next sint fs == FS.insert next (ptrs_in' next2 s (FS.insert next fs))) ;
+
         lemma_mem_not_in_visited pred sint next (US.v cur.prev) fs hd;
         assert (~ (mem' hd next sint fs));
+        lemma_mem_ptrs_in' next sint fs hd;
+        assert (not (FS.mem hd (ptrs_in' next sint fs)));
 
         lemma_dlist_remove_visited pred sint next hd (US.v cur.prev) visited;
         assert (is_dlist' pred next sint (US.v cur.prev) visited);
-        assert (~ (mem' idx next sint visited));
+        assert (ptrs_in' next sint fs == ptrs_in' next sint visited);
+
+        // Allows us to conclude the following
+        assert (FS.remove idx (ptrs_in' hd s visited) `FS.equal` ptrs_in' next sint visited);
 
         if US.v cur.prev = null then ()
         else begin
@@ -729,6 +741,9 @@ let rec lemma_remove_spec' #a pred hd s prev idx visited =
           let pc0 = Seq.index s (US.v cur.prev) in
           let pc = {pc0 with next = cur.next} in
           assert (s' == Seq.upd sint (US.v cur.prev) pc);
+          lemma_dlist_frame' pred sint next (US.v cur.prev) (US.v cur.prev) visited pc;
+          lemma_mem_ptrs_in' next sint visited idx;
+          assert (~ (mem' idx next sint visited));
           lemma_dlist_upd' pred sint next (US.v cur.prev) (US.v cur.prev) idx visited pc
         end
       end
@@ -744,7 +759,7 @@ let rec lemma_remove_spec' #a pred hd s prev idx visited =
                 remove_spec pred next s hd idx vis');
 
         assert (is_dlist' pred hd' s' hd vis');
-        assert (~ (mem' idx hd' s' vis'));
+        assert (FS.remove idx (ptrs_in' next s vis') == ptrs_in' hd' s' vis');
 
         let cur' = Seq.index s' hd in
         if next = idx then begin
@@ -761,11 +776,11 @@ let rec lemma_remove_spec' #a pred hd s prev idx visited =
           assert (hd <> US.v c.prev);
 
           assert (cur' == cur);
-          assert (is_dlist' pred hd s' prev visited);
-          assert (~ (mem' idx hd s' visited))
+          assert (is_dlist' pred hd s' prev visited)
         end
     end
   end
+#pop-options
 
 val lemma_remove_spec (#a:Type)
   (pred: a -> prop)
@@ -777,7 +792,8 @@ val lemma_remove_spec (#a:Type)
             let c = Seq.index s idx in
             let hd' = if hd = idx then US.v c.next else hd in
             let s' = remove_spec pred hd s null idx FS.emptyset in
-            is_dlist pred hd' s' /\ ~ (mem idx hd' s')
+            is_dlist pred hd' s' /\
+            ptrs_in hd' s' == FS.remove idx (ptrs_in hd s)
           ))
 
 let lemma_remove_spec #a pred hd s idx = lemma_remove_spec' pred hd s null idx FS.emptyset
@@ -916,24 +932,26 @@ let write_in_place3  #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
 
 
-/// Removes the element at offset [idx] from the dlist pointed to by [hd]
-val remove (#a:Type)
-  (#pred: a -> prop)
+/// Removes the element at offset [idx] from the dlist pointed to by [hd1]
+val remove1 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
-  (hd:nat)
+  (hd1 hd2 hd3:nat)
   (idx:US.t{US.v idx < A.length r})
    : Steel nat
-          (varraylist pred r hd)
-          (fun hd' -> varraylist pred r hd')
-          (requires fun h -> mem (US.v idx) hd (h (varraylist pred r hd)))
+          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (fun hd' -> varraylist pred1 pred2 pred3 r hd' hd2 hd3)
+          (requires fun h -> mem (US.v idx) hd1 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
           (ensures fun h0 hd' h1 ->
-            ~ (mem (US.v idx) hd' (h1 (varraylist pred r hd')))) // TODO
+            ptrs_in hd' (h1 (varraylist pred1 pred2 pred3 r hd' hd2 hd3)) ==
+            FS.remove (US.v idx) (ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
+          )
 
-let remove #a #pred r hd idx =
-  (**) elim_vrefine (A.varray r) (is_dlist pred hd);
+let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
   let cell = A.index r idx in
-  (**) lemma_mem_valid_or_null_next_prev pred hd gs0 (US.v idx);
+  (**) lemma_mem_valid_or_null_next_prev pred1 hd1 gs0 (US.v idx);
 
   if cell.next <> null_ptr then
     // Next is not null, we need to update it
@@ -950,10 +968,15 @@ let remove #a #pred r hd idx =
   else noop ();
 
   (**) let gs1 = gget (A.varray r) in
-  let hd' = if hd = US.v idx then US.v cell.next else hd in
-  (**) lemma_remove_spec pred hd gs0 (US.v idx);
+  let hd' = if hd1 = US.v idx then US.v cell.next else hd1 in
+  (**) lemma_remove_spec pred1 hd1 gs0 (US.v idx);
 
-  (**) intro_vrefine (A.varray r) (is_dlist pred hd');
+  assume (is_dlist pred2 hd2 gs1);
+  assume (is_dlist pred3 hd3 gs1);
+  assume (ptrs_in hd2 gs1 == ptrs_in hd2 gs0);
+  assume (ptrs_in hd3 gs1 == ptrs_in hd3 gs0);
+
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd' hd2 hd3);
   return hd'
 
 
