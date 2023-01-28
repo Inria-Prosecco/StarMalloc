@@ -1001,7 +1001,11 @@ val remove1 (#a:Type)
           (requires fun h -> mem (US.v idx) hd1 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
           (ensures fun h0 hd' h1 ->
             ptrs_in hd' (h1 (varraylist pred1 pred2 pred3 r hd' hd2 hd3)) ==
-            FS.remove (US.v idx) (ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
+            FS.remove (US.v idx) (ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))) /\
+            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd' hd2 hd3)) ==
+            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)) /\
+            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd' hd2 hd3)) ==
+            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))
           )
 
 let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
@@ -1031,6 +1035,102 @@ let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) lemma_remove_spec_frame pred1 pred3 hd1 hd3 gs0 (US.v idx);
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd' hd2 hd3);
+  return hd'
+
+/// Removes the element at offset [idx] from the dlist pointed to by [hd2]
+val remove2 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:nat)
+  (idx:US.t{US.v idx < A.length r})
+   : Steel nat
+          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (fun hd' -> varraylist pred1 pred2 pred3 r hd1 hd' hd3)
+          (requires fun h -> mem (US.v idx) hd2 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
+          (ensures fun h0 hd' h1 ->
+            ptrs_in hd' (h1 (varraylist pred1 pred2 pred3 r hd1 hd' hd3)) ==
+            FS.remove (US.v idx) (ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))) /\
+            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd' hd3)) ==
+            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)) /\
+            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 hd' hd3)) ==
+            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))
+          )
+
+let remove2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+  (**) let gs0 = gget (A.varray r) in
+  let cell = A.index r idx in
+  (**) lemma_mem_valid_or_null_next_prev pred2 hd2 gs0 (US.v idx);
+
+  if cell.next <> null_ptr then
+    // Next is not null, we need to update it
+    let next = A.index r cell.next in
+    let next = {next with prev = cell.prev} in
+    A.upd r cell.next next
+  else noop ();
+
+  if cell.prev <> null_ptr then
+    // Prev is not null, we need to update it
+    let prev = A.index r cell.prev in
+    let prev = {prev with next = cell.next} in
+    A.upd r cell.prev prev
+  else noop ();
+
+  (**) let gs1 = gget (A.varray r) in
+  let hd' = if hd2 = US.v idx then US.v cell.next else hd2 in
+  (**) lemma_remove_spec pred2 hd2 gs0 (US.v idx);
+  (**) lemma_remove_spec_frame pred2 pred1 hd2 hd1 gs0 (US.v idx);
+  (**) lemma_remove_spec_frame pred2 pred3 hd2 hd3 gs0 (US.v idx);
+
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd' hd3);
+  return hd'
+
+/// Removes the element at offset [idx] from the dlist pointed to by [hd3]
+val remove3 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:nat)
+  (idx:US.t{US.v idx < A.length r})
+   : Steel nat
+          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (fun hd' -> varraylist pred1 pred2 pred3 r hd1 hd2 hd')
+          (requires fun h -> mem (US.v idx) hd3 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
+          (ensures fun h0 hd' h1 ->
+            ptrs_in hd' (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 hd')) ==
+            FS.remove (US.v idx) (ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))) /\
+            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 hd')) ==
+            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)) /\
+            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 hd')) ==
+            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))
+          )
+
+let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+  (**) let gs0 = gget (A.varray r) in
+  let cell = A.index r idx in
+  (**) lemma_mem_valid_or_null_next_prev pred3 hd3 gs0 (US.v idx);
+
+  if cell.next <> null_ptr then
+    // Next is not null, we need to update it
+    let next = A.index r cell.next in
+    let next = {next with prev = cell.prev} in
+    A.upd r cell.next next
+  else noop ();
+
+  if cell.prev <> null_ptr then
+    // Prev is not null, we need to update it
+    let prev = A.index r cell.prev in
+    let prev = {prev with next = cell.next} in
+    A.upd r cell.prev prev
+  else noop ();
+
+  (**) let gs1 = gget (A.varray r) in
+  let hd' = if hd3 = US.v idx then US.v cell.next else hd3 in
+  (**) lemma_remove_spec pred3 hd3 gs0 (US.v idx);
+  (**) lemma_remove_spec_frame pred3 pred2 hd3 hd2 gs0 (US.v idx);
+  (**) lemma_remove_spec_frame pred3 pred1 hd3 hd1 gs0 (US.v idx);
+
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd');
   return hd'
 
 
