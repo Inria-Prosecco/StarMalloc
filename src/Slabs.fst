@@ -393,17 +393,7 @@ let allocate_slab_aux_cond
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
   let r = is_full_s size_class md in
-  intro_vdep
-    (A.varray md)
-    (slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-    (fun (x: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r arr 0sz) x);
-  change_equal_slprop
-    (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-    `star`
-    A.varray (A.split_l arr 0sz))
-    (slab_vprop size_class arr md);
+  intro_slab_vprop size_class md md_as_seq arr;
   return r
 #pop-options
 #pop-options
@@ -435,7 +425,6 @@ let allocate_slab_aux_1
     not (SL.is_null_t empty_slabs))
   (ensures fun _ _ _ -> True)
   =
-  admit ();
   let n_empty = SL.unpack_list (p_empty sc) empty_slabs in
   let b = SL.get_data n_empty in
   p_empty_unpack sc
@@ -749,39 +738,11 @@ let alloc_metadata_aux
   return b
 #pop-options
 
-let lemma_sl_aux
+let empty_md_is_properly_zeroed
   (size_class: sc)
-  (b: SL.blob)
-  (m: SM.mem)
   : Lemma
-  (requires
-    SM.interp (hp_of (
-      A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-        slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
-      `star`
-      A.varray (A.split_l (snd b) 0sz)
-    )) m)
-  (ensures
-    SM.interp (hp_of (
-      slab_vprop size_class (snd b) (fst b)
-    )) m /\
-    sel_of (slab_vprop size_class (snd b) (fst b)) m
-    ==
-    sel_of (
-      A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-        slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
-      `star`
-      A.varray (A.split_l (snd b) 0sz)) m
-  )
-  =
-  assert_norm (
-    (A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
-    `star`
-    A.varray (A.split_l (snd b) 0sz))
-    ==
-    (slab_vprop size_class (snd b) (fst b))
-  )
+  (slab_vprop_aux2 size_class (Seq.create 4 0UL))
+  = admit ()
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let alloc_metadata_aux2
@@ -815,28 +776,9 @@ let alloc_metadata_aux2
   )
   =
   let b : SL.blob = alloc_metadata_aux md_count size_class slab_region md_bm_region md_region in
-  let v0 : G.erased (Seq.lseq U64.t 4) = gget (A.varray (fst b)) in
-  assert (G.reveal v0 == Seq.create 4 0UL);
-  intro_vdep
-    (A.varray (fst b))
-    (slab_vprop_aux size_class (A.split_r (snd b) 0sz) (Seq.create 4 0UL))
-    (fun (md_as_seq: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq);
-  change_slprop_rel
-    (A.varray (fst b) `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-      slab_vprop_aux size_class (A.split_r (snd b) 0sz) md_as_seq)
-    `star`
-    A.varray (A.split_l (snd b) 0sz))
-    (slab_vprop size_class (snd b) (fst b))
-    (fun x y -> x == y)
-    (fun m -> lemma_sl_aux size_class b m);
-  let blob1
-    : G.erased (t_of (slab_vprop size_class (snd b) (fst b)))
-    = gget (slab_vprop size_class (snd b) (fst b)) in
-  let v1 : G.erased (Seq.lseq U64.t 4)
-    = G.hide (dfst (fst (G.reveal blob1))) in
-  assert (G.reveal v1 == G.reveal v0);
-  zeroes_impl_empty size_class (G.reveal v1);
+  empty_md_is_properly_zeroed size_class;
+  intro_slab_vprop size_class (fst b) (Seq.create 4 0UL) (snd b);
+  zeroes_impl_empty size_class (Seq.create 4 0UL);
   p_empty_pack size_class b b;
   SAR.intro_vptr (md_array md_region md_count);
   SL.intro_singleton_llist_no_alloc (p_empty size_class) (md_array md_region md_count) b;
