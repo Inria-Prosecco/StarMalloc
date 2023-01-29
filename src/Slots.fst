@@ -22,7 +22,7 @@ open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
 
-#push-options "--fuel 1 --ifuel 0 --z3rlimit 30"
+#push-options "--z3rlimit 50"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   : Pure (array U8.t)
   (requires
@@ -33,6 +33,7 @@ let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
     same_base_array r arr /\
     True)
   =
+  admit ();
   let ptr = A.ptr_of arr in
   let shift = U32.mul pos size_class in
   nb_slots_correct size_class pos;
@@ -650,7 +651,36 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     get_free_slot_aux2 size_class bitmap
   )
 
-#push-options "--z3rlimit 30"
+let elim_slab_vprop_aux
+  (size_class: sc)
+  (md: slab_metadata)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (m: SM.mem)
+  : Lemma
+  (requires SM.interp (hp_of (
+    slab_vprop size_class arr md
+  )) m)
+  (ensures SM.interp (hp_of (
+    vrefinedep
+      (A.varray md)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+    `star`
+    A.varray (A.split_l arr 0sz)
+  )) m /\
+  sel_of (
+    vrefinedep
+      (A.varray md)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+    `star`
+    A.varray (A.split_l arr 0sz)
+  ) m
+  ==
+  sel_of (slab_vprop size_class arr md) m)
+  = ()
+
+#push-options "--z3rlimit 30 --compat_pre_typed_indexed_effects"
 let intro_slab_vprop (#opened:_)
   (size_class: sc)
   (md: slab_metadata)
@@ -679,7 +709,7 @@ let intro_slab_vprop (#opened:_)
     (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
     (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
     (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq));
-  change_slprop_rel
+  change_equal_slprop
     (vrefinedep
       (A.varray md)
       (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
@@ -687,11 +717,9 @@ let intro_slab_vprop (#opened:_)
     `star`
     A.varray (A.split_l arr 0sz))
     (slab_vprop size_class arr md)
-    (fun x y -> x == y)
-    (fun _ -> admit ())
 
-// otherwise, fails in lax mode
-#push-options "--compat_pre_typed_indexed_effects"
+// without compat_pre_typed_indexed_effects
+// this fails in lax mode
 let elim_slab_vprop (#opened:_)
   (size_class: sc)
   (md: slab_metadata)
@@ -724,7 +752,7 @@ let elim_slab_vprop (#opened:_)
     `star`
     A.varray (A.split_l arr 0sz))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun m -> elim_slab_vprop_aux size_class md arr m);
   let md_as_seq
     : G.erased (t_of (vrefine
       (A.varray md)
@@ -751,6 +779,7 @@ let bound2_inv
   : Lemma
   (requires slab_vprop_aux2 size_class md_as_seq)
   (ensures slab_vprop_aux2 size_class (Bitmap4.set md_as_seq pos))
+  //TODO: refactor Bitmap5, move pure lemmas outside Steel functions
   = admit ()
 
 let allocate_slot
