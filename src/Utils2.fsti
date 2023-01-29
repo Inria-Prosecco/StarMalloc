@@ -330,7 +330,13 @@ let full_n_lemma (x: U64.t) (bound: U32.t)
   Classical.forall_intro (
     SeqUtils.lemma_index_slice s2 (64 - U32.v bound) 64);
   assert (exists (k:nat{k >= 64 - U32.v bound /\ k < 64}). Seq.index s1 k <> Seq.index s2 k);
-  assume (exists (k:nat{k < U32.v bound}). Seq.index s1 (64 - k - 1) <> Seq.index s2 (64 - k - 1));
+  eliminate exists (k:nat{k >= 64 - U32.v bound /\ k < 64}). Seq.index s1 k <> Seq.index s2 k
+    returns exists (k:nat{k < U32.v bound}). Seq.index s1 (64 - k - 1) <> Seq.index s2 (64 - k - 1)
+    with _.
+      introduce exists (k:nat{k < U32.v bound}). Seq.index s1 (64 - k - 1) <> Seq.index s2 (64 - k - 1)
+      with (64 -k - 1)
+      and ();
+  assert (exists (k:nat{k < U32.v bound}). Seq.index s1 (64 - k - 1) <> Seq.index s2 (64 - k - 1));
   Classical.forall_intro (Classical.move_requires (
     max64_lemma_aux2 (U32.v bound) x (full_n bound)
   ))
