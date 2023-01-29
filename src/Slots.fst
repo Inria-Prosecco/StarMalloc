@@ -22,7 +22,7 @@ open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
 
-#push-options "--z3rlimit 50"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   : Pure (array U8.t)
   (requires
@@ -30,10 +30,8 @@ let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
     A.length arr = U32.v page_size)
   (ensures fun r ->
     A.length r == U32.v size_class /\
-    same_base_array r arr /\
-    True)
+    same_base_array r arr)
   =
-  admit ();
   let ptr = A.ptr_of arr in
   let shift = U32.mul pos size_class in
   nb_slots_correct size_class pos;
