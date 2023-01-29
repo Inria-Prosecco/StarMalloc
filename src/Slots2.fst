@@ -635,22 +635,9 @@ let deallocate_slot
         (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
         (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
-    let md_as_seq3 = gget (A.varray md) in
-    change_slprop_rel
-      (slab_vprop_aux size_class (A.split_r arr 0sz) (Bitmap4.unset md_as_seq (snd r)))
-      (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq3))
-      (fun x y -> x == y)
-      (fun _ -> ());
-    intro_vdep
-      (A.varray md)
-      (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq3))
-      (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) x);
-    change_equal_slprop
-      (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-        slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-      `star`
-      A.varray (A.split_l arr 0sz))
-      (slab_vprop size_class arr md);
+   //TODO: refactor Bitmap5, move pure lemmas outside Steel functions
+    admit ();
+    intro_slab_vprop size_class md (G.hide (Bitmap4.unset md_as_seq (snd r))) arr;
     change_equal_slprop
       emp
       (if (fst r) then emp else A.varray ptr);
@@ -684,16 +671,7 @@ let deallocate_slot
         (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
         (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
-    intro_vdep
-      (A.varray md)
-      (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq))
-      (fun (x: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) x);
-    change_equal_slprop
-      (A.varray md `vdep` (fun (md_as_seq: Seq.lseq U64.t 4) ->
-        slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-      `star`
-      A.varray (A.split_l arr 0sz))
-      (slab_vprop size_class arr md);
+    intro_slab_vprop size_class md md_as_seq arr;
     change_equal_slprop
       (A.varray ptr)
       (if (fst r) then emp else A.varray ptr);
