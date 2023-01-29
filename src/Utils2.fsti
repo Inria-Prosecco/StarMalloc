@@ -53,13 +53,17 @@ let nb_slots (size_class: sc)
   =
   U32.div page_size size_class
 
+open FStar.Mul
 let nb_slots_correct
   (size_class: sc)
   (pos: U32.t)
   : Lemma
   (requires U32.v pos < U32.v (nb_slots size_class))
-  (ensures U32.v (U32.mul pos size_class) <= U32.v page_size)
-  = ()
+  (ensures U32.v (U32.mul pos size_class) <= U32.v page_size - U32.v size_class)
+  =
+  assert (U32.v pos <= U32.v (nb_slots size_class) - 1);
+  assert (U32.v pos * U32.v size_class <= U32.v (U32.mul (nb_slots size_class) size_class) - U32.v size_class);
+  assert (U32.v (U32.mul (nb_slots size_class) size_class) <= U32.v page_size)
 
 let zf_b
   (arr: Seq.seq bool)
