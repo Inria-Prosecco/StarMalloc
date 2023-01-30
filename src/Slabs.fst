@@ -789,7 +789,7 @@ let a = 42
 //  let idx1 = read r1 in
 //  //let v1 = AL.read_in_place
 
-
+#push-options "--print_implicits"
 
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
 let allocate_slab_aux_1
@@ -828,8 +828,15 @@ let allocate_slab_aux_1
   )
   (ensures fun _ _ _ -> True)
   =
-  let idx1 = read r1 in
-  assume (US.v idx1 < U32.v md_count);
+  let idx1' : US.t = read r1 in
+  change_equal_slprop
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count))
+      (US.v idx1) (US.v idx2) (US.v idx3))
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count))
+      (US.v idx1') (US.v idx2) (US.v idx3));
+  assume (US.v idx1' < U32.v md_count);
   starseq_unpack_s
     #_
     #(pos:U32.t{U32.v pos < U32.v md_count})
@@ -837,31 +844,33 @@ let allocate_slab_aux_1
     (f size_class slab_region md_bm_region md_count md_region_lv)
     (f_lemma size_class slab_region md_bm_region md_count md_region_lv)
     (SeqUtils.init_u32_refined (U32.v md_count))
-    (US.v idx1);
-  assume (Seq.index md_region_lv (US.v idx1) == 0ul);
-  SeqUtils.init_u32_refined_index (U32.v md_count) (US.v idx1);
+    (US.v idx1');
+  assume (Seq.index md_region_lv (US.v idx1') == 0ul);
+  SeqUtils.init_u32_refined_index (U32.v md_count) (US.v idx1');
   change_slprop_rel
-     (f size_class slab_region md_bm_region md_count md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count)) (US.v idx1)))
-     (p_empty size_class (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1)), slab_array slab_region (U32.uint_to_t (US.v idx1))))
+     (f size_class slab_region md_bm_region md_count md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count)) (US.v idx1')))
+     (p_empty size_class (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1'))))
      (fun x y -> x == y)
      (fun _ -> admit ());
   p_empty_unpack size_class 
-     (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1)), slab_array slab_region (U32.uint_to_t (US.v idx1)))
-     (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1)), slab_array slab_region (U32.uint_to_t (US.v idx1)));
+     (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1')))
+     (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1')));
   let r = allocate_slot size_class
-    (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1)))
-    (slab_array slab_region (U32.uint_to_t (US.v idx1)))
+    (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')))
+    (slab_array slab_region (U32.uint_to_t (US.v idx1')))
   in
   let cond = allocate_slab_aux_cond size_class
-    (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1)))
-    (slab_array slab_region (U32.uint_to_t (US.v idx1)))
+    (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')))
+    (slab_array slab_region (U32.uint_to_t (US.v idx1')))
   in
   if cond then (
    change_slprop_rel
       (slab_vprop size_class
-        (slab_array slab_region (U32.uint_to_t (US.v idx1)))
-        (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1))))
-      (f size_class slab_region md_bm_region md_count (Seq.upd md_region_lv (US.v idx1) 2ul) (Seq.index (SeqUtils.init_u32_refined (U32.v md_count)) (US.v idx1)))
+        (slab_array slab_region (U32.uint_to_t (US.v idx1')))
+        (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1'))))
+      (f size_class slab_region md_bm_region md_count
+        (Seq.upd md_region_lv (US.v idx1') 2ul)
+        (Seq.index (SeqUtils.init_u32_refined (U32.v md_count)) (US.v idx1')))
       (fun x y -> x == y)
       (fun _ -> admit ());
     admit ();
@@ -869,14 +878,13 @@ let allocate_slab_aux_1
       #_
       #(pos:U32.t{U32.v pos < U32.v md_count})
       #(t size_class)
-      (f size_class slab_region md_bm_region md_count (G.reveal md_region_lv))
-      (f size_class slab_region md_bm_region md_count (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
-      (f_lemma size_class slab_region md_bm_region md_count (G.reveal md_region_lv))
-      (f_lemma size_class slab_region md_bm_region md_count (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
+      (f size_class slab_region md_bm_region md_count md_region_lv)
+      (f size_class slab_region md_bm_region md_count (Seq.upd (G.reveal md_region_lv) (US.v idx1') 2ul))
+      (f_lemma size_class slab_region md_bm_region md_count md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count (Seq.upd (G.reveal md_region_lv) (US.v idx1') 2ul))
       (SeqUtils.init_u32_refined (U32.v md_count))
       (SeqUtils.init_u32_refined (U32.v md_count))
-      (US.v idx1);
-    sladmit ();
+      (US.v idx1');
     allocate_slab_aux_1_full
       size_class
       slab_region
@@ -884,7 +892,7 @@ let allocate_slab_aux_1
       md_region
       md_count
       md_region_lv
-      idx1 idx2 idx3
+      idx1' idx2 idx3
       r1 r2 r3;
     return r
   ) else (
@@ -892,135 +900,50 @@ let allocate_slab_aux_1
     return r
   )
 
-(*)
-  change_equal_slprop
-     (f size_class slab_region md_bm_region md_count s (U32.uint_to_t (US.v idx1)))
-     (f size_class slab_region md_bm_region md_count s (Seq.index (SeqUtils.init_u32_refined (U32.v md_count)) (US.v idx1)));
-  starseq_pack_s
-    #_
-    #(pos:U32.t{U32.v pos < U32.v md_count})
-    #(t size_class)
-    (f size_class slab_region md_bm_region md_count s)
-    (f_lemma size_class slab_region md_bm_region md_count s)
-    (SeqUtils.init_u32_refined (U32.v md_count))
-    (US.v idx1)
-
-  //if cond then (
-  //  sladmit ()
-  //) else (
-  //  sladmit ()
-  //)
-
-
-
-
-
-let x = 42
-(*)
-#push-options "--z3rlimit 75"
-inline_for_extraction noextract
-let allocate_slab_aux_1
-  (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
-  (partial_slabs empty_slabs full_slabs: SL.t)
-  : Steel (array U8.t)
-  (
-  vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) empty_slabs `star`
-  vptr partial_slabs_ptr `star`
-  SL.llist (p_partial sc) partial_slabs `star`
-  vptr full_slabs_ptr `star`
-  SL.llist (p_full sc) full_slabs)
-  (fun r ->
-  A.varray r `star`
-  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
-  SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
-  SL.ind_llist (p_full sc) full_slabs_ptr)
-  (requires fun h0 ->
-    sel partial_slabs_ptr h0 == partial_slabs /\
-    sel empty_slabs_ptr h0 == empty_slabs /\
-    sel full_slabs_ptr h0 == full_slabs /\
-    not (SL.is_null_t empty_slabs))
-  (ensures fun _ _ _ -> True)
-  =
-  let n_empty = SL.unpack_list (p_empty sc) empty_slabs in
-  let b = SL.get_data n_empty in
-  p_empty_unpack sc
-    (SL.get_data n_empty)
-    b;
-  let r = allocate_slot sc (fst b) (snd b) in
-  let cond = allocate_slab_aux_cond sc (fst b) (snd b) in
-  if cond then (
-    allocate_slab_aux_1_full
-      sc
-      full_slabs_ptr
-      empty_slabs_ptr
-      full_slabs
-      (SL.get_next n_empty)
-      empty_slabs
-      n_empty
-      b;
-    SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
-    return r
-  ) else (
-    allocate_slab_aux_1_partial
-      sc
-      partial_slabs_ptr
-      empty_slabs_ptr
-      partial_slabs
-      (SL.get_next n_empty)
-      empty_slabs
-      n_empty
-      b;
-    SL.pack_ind (p_full sc) full_slabs_ptr full_slabs;
-    return r
-  )
-#pop-options
-
-inline_for_extraction noextract
-let allocate_slab_aux_2
-  (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref SL.t)
-  (partial_slabs empty_slabs: SL.t)
-  : Steel (array U8.t)
-  (
-  vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) empty_slabs `star`
-  vptr partial_slabs_ptr `star`
-  SL.llist (p_partial sc) partial_slabs)
-  (fun r ->
-  A.varray r `star`
-  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
-  SL.ind_llist (p_partial sc) partial_slabs_ptr)
-  (requires fun h0 ->
-    sel partial_slabs_ptr h0 == partial_slabs /\
-    sel empty_slabs_ptr h0 == empty_slabs /\
-    not (SL.is_null_t partial_slabs))
-  (ensures fun _ _ _ -> True)
-  =
-  let n_partial = SL.unpack_list (p_partial sc) partial_slabs in
-  let b = SL.get_data n_partial in
-  p_partial_unpack sc
-    (SL.get_data n_partial)
-    b;
-  let r = allocate_slot sc (fst b) (snd b) in
-  let blob0
-    : G.erased (t_of (slab_vprop sc (snd b) (fst b)))
-    = gget (slab_vprop sc (snd b) (fst b)) in
-  let v0 : G.erased (Seq.lseq U64.t 4) = dfst (fst blob0) in
-  // TODO: false, but ok for now as nb_slots size_class > 1
-  assume (is_partial sc v0);
-  p_partial_pack sc
-    b
-    (SL.get_data n_partial);
-  SL.pack_list (p_partial sc)
-    partial_slabs
-    (SL.get_next n_partial)
-    (SL.get_data n_partial);
-  SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
-  SL.pack_ind (p_empty sc) empty_slabs_ptr empty_slabs;
-  return r
-#pop-options
+//inline_for_extraction noextract
+//let allocate_slab_aux_2
+//  (sc: sc)
+//  (partial_slabs_ptr empty_slabs_ptr: ref SL.t)
+//  (partial_slabs empty_slabs: SL.t)
+//  : Steel (array U8.t)
+//  (
+//  vptr empty_slabs_ptr `star`
+//  SL.llist (p_empty sc) empty_slabs `star`
+//  vptr partial_slabs_ptr `star`
+//  SL.llist (p_partial sc) partial_slabs)
+//  (fun r ->
+//  A.varray r `star`
+//  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+//  SL.ind_llist (p_partial sc) partial_slabs_ptr)
+//  (requires fun h0 ->
+//    sel partial_slabs_ptr h0 == partial_slabs /\
+//    sel empty_slabs_ptr h0 == empty_slabs /\
+//    not (SL.is_null_t partial_slabs))
+//  (ensures fun _ _ _ -> True)
+//  =
+//  let n_partial = SL.unpack_list (p_partial sc) partial_slabs in
+//  let b = SL.get_data n_partial in
+//  p_partial_unpack sc
+//    (SL.get_data n_partial)
+//    b;
+//  let r = allocate_slot sc (fst b) (snd b) in
+//  let blob0
+//    : G.erased (t_of (slab_vprop sc (snd b) (fst b)))
+//    = gget (slab_vprop sc (snd b) (fst b)) in
+//  let v0 : G.erased (Seq.lseq U64.t 4) = dfst (fst blob0) in
+//  // TODO: false, but ok for now as nb_slots size_class > 1
+//  assume (is_partial sc v0);
+//  p_partial_pack sc
+//    b
+//    (SL.get_data n_partial);
+//  SL.pack_list (p_partial sc)
+//    partial_slabs
+//    (SL.get_next n_partial)
+//    (SL.get_data n_partial);
+//  SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
+//  SL.pack_ind (p_empty sc) empty_slabs_ptr empty_slabs;
+//  return r
+//#pop-options
 
 #push-options "--z3rlimit 30"
 let alloc_metadata_aux
