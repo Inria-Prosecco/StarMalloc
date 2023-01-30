@@ -101,6 +101,24 @@ let slab_vprop_aux
     (slab_vprop_aux_f_lemma size_class md_as_seq arr)
     incr_seq
 
+let slab_vprop_aux_lemma
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (md_as_seq: Seq.lseq U64.t 4)
+  : Lemma
+  (t_of (slab_vprop_aux size_class arr md_as_seq)
+  ==
+  Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class))
+  )
+  =
+  assert (Seq.length (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) == U32.v (nb_slots size_class));
+  ()
+  //assert (
+  //t_of (slab_vprop_aux size_class arr md_as_seq)
+  //==
+  //Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class))
+  //)
+
 let slab_vprop_aux2
   (size_class: sc)
   (md_as_seq: Seq.lseq U64.t 4)
@@ -110,10 +128,7 @@ let slab_vprop_aux2
   let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
   zf_b (Seq.slice bm 0 (64 - U32.v bound2))
 
-//unfold
-//[@@__steel_reduce__]
 open SteelVRefineDep
-
 
 let slab_vprop
   (size_class: sc)
@@ -126,6 +141,20 @@ let slab_vprop
     (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
   `star`
   A.varray (A.split_l arr 0sz)
+
+let slab_vprop_lemma
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (md: slab_metadata)
+  : Lemma
+  (t_of (slab_vprop size_class arr md)
+  ==
+  dtuple2
+    (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
+    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
+  & Seq.lseq U8.t 0)
+  = admit ()
+
 
 #push-options "--print_implicits"
 

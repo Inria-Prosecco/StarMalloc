@@ -399,112 +399,8 @@ let allocate_slab_aux_cond
 #pop-options
 #pop-options
 
-#push-options "--z3rlimit 75"
-inline_for_extraction noextract
-let allocate_slab_aux_1
-  (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
-  (partial_slabs empty_slabs full_slabs: SL.t)
-  : Steel (array U8.t)
-  (
-  vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) empty_slabs `star`
-  vptr partial_slabs_ptr `star`
-  SL.llist (p_partial sc) partial_slabs `star`
-  vptr full_slabs_ptr `star`
-  SL.llist (p_full sc) full_slabs)
-  (fun r ->
-  A.varray r `star`
-  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
-  SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
-  SL.ind_llist (p_full sc) full_slabs_ptr)
-  (requires fun h0 ->
-    sel partial_slabs_ptr h0 == partial_slabs /\
-    sel empty_slabs_ptr h0 == empty_slabs /\
-    sel full_slabs_ptr h0 == full_slabs /\
-    not (SL.is_null_t empty_slabs))
-  (ensures fun _ _ _ -> True)
-  =
-  let n_empty = SL.unpack_list (p_empty sc) empty_slabs in
-  let b = SL.get_data n_empty in
-  p_empty_unpack sc
-    (SL.get_data n_empty)
-    b;
-  let r = allocate_slot sc (fst b) (snd b) in
-  let cond = allocate_slab_aux_cond sc (fst b) (snd b) in
-  if cond then (
-    allocate_slab_aux_1_full
-      sc
-      full_slabs_ptr
-      empty_slabs_ptr
-      full_slabs
-      (SL.get_next n_empty)
-      empty_slabs
-      n_empty
-      b;
-    SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
-    return r
-  ) else (
-    allocate_slab_aux_1_partial
-      sc
-      partial_slabs_ptr
-      empty_slabs_ptr
-      partial_slabs
-      (SL.get_next n_empty)
-      empty_slabs
-      n_empty
-      b;
-    SL.pack_ind (p_full sc) full_slabs_ptr full_slabs;
-    return r
-  )
-#pop-options
+module AL = ArrayList
 
-inline_for_extraction noextract
-let allocate_slab_aux_2
-  (sc: sc)
-  (partial_slabs_ptr empty_slabs_ptr: ref SL.t)
-  (partial_slabs empty_slabs: SL.t)
-  : Steel (array U8.t)
-  (
-  vptr empty_slabs_ptr `star`
-  SL.llist (p_empty sc) empty_slabs `star`
-  vptr partial_slabs_ptr `star`
-  SL.llist (p_partial sc) partial_slabs)
-  (fun r ->
-  A.varray r `star`
-  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
-  SL.ind_llist (p_partial sc) partial_slabs_ptr)
-  (requires fun h0 ->
-    sel partial_slabs_ptr h0 == partial_slabs /\
-    sel empty_slabs_ptr h0 == empty_slabs /\
-    not (SL.is_null_t partial_slabs))
-  (ensures fun _ _ _ -> True)
-  =
-  let n_partial = SL.unpack_list (p_partial sc) partial_slabs in
-  let b = SL.get_data n_partial in
-  p_partial_unpack sc
-    (SL.get_data n_partial)
-    b;
-  let r = allocate_slot sc (fst b) (snd b) in
-  let blob0
-    : G.erased (t_of (slab_vprop sc (snd b) (fst b)))
-    = gget (slab_vprop sc (snd b) (fst b)) in
-  let v0 : G.erased (Seq.lseq U64.t 4) = dfst (fst blob0) in
-  // TODO: false, but ok for now as nb_slots size_class > 1
-  assume (is_partial sc v0);
-  p_partial_pack sc
-    b
-    (SL.get_data n_partial);
-  SL.pack_list (p_partial sc)
-    partial_slabs
-    (SL.get_next n_partial)
-    (SL.get_data n_partial);
-  SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
-  SL.pack_ind (p_empty sc) empty_slabs_ptr empty_slabs;
-  return r
-#pop-options
-
-open FStar.Mul
 
 // TODO: to be removed/move apart ; use stdlib
 // discussion
@@ -518,6 +414,9 @@ let u32_to_sz
   assume (US.fits_u32);
   US.uint32_to_sizet x
 
+open FStar.Mul
+
+#push-options "--z3rlimit 30"
 let slab_array
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -680,6 +579,192 @@ let md_region_mon_split
     (A.varray (A.split_r (A.split_r md_region (u32_to_sz (md_count))) (u32_to_sz 1ul)))
     (A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul))))
     (fun _ -> ())
+
+
+
+let pred1 (x: U32.t) : prop = U32.eq x 0ul == true
+let pred2 (x: U32.t) : prop = U32.eq x 1ul == true
+let pred3 (x: U32.t) : prop = U32.eq x 2ul == true
+
+
+open SteelStarSeqUtils
+
+
+let f
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  (i: U32.t{U32.v i <= U32.v md_count})
+  : vprop
+  =
+  slab_vprop size_class
+    (slab_array slab_region i)
+    (md_bm_array md_bm_region i)
+
+let f_lemma
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  (i: U32.t{U32.v i <= U32.v md_count})
+  : Lemma
+  (t_of (f size_class slab_region md_bm_region md_count i)
+  ==
+  dtuple2
+    (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
+    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
+  & Seq.lseq U8.t 0)
+  =
+  slab_vprop_lemma size_class
+    (slab_array slab_region i)
+    (md_bm_array md_bm_region i)
+
+let t
+  (size_class: sc)
+  : Type0
+  =
+  dtuple2
+    (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
+    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
+  & Seq.lseq U8.t 0
+
+#push-options "--z3rlimit 30"
+let vprop_test
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count: U32.t{0 < U32.v md_count /\ U32.v md_count < U32.v metadata_max})
+  (md_region: array (AL.cell U32.t){A.length md_region = U32.v metadata_max})
+  (idx1 idx2 idx3: nat)
+  =
+  AL.varraylist pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count))
+    idx1 idx2 idx3
+  `vdep`
+  (fun (x: Seq.lseq (AL.cell U32.t) (U32.v md_count)) ->
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count)
+      (f_lemma size_class slab_region md_bm_region md_count)
+      (SeqUtils.init_u32_refined (U32.v md_count)))
+
+(*)
+let allocate_slab_aux_1
+  (size_class: sc)
+  (md_region: array (AL.cell U32.t))
+  (idx1 idx2 idx3: nat)
+
+
+
+
+let x = 42
+(*)
+#push-options "--z3rlimit 75"
+inline_for_extraction noextract
+let allocate_slab_aux_1
+  (sc: sc)
+  (partial_slabs_ptr empty_slabs_ptr full_slabs_ptr: ref SL.t)
+  (partial_slabs empty_slabs full_slabs: SL.t)
+  : Steel (array U8.t)
+  (
+  vptr empty_slabs_ptr `star`
+  SL.llist (p_empty sc) empty_slabs `star`
+  vptr partial_slabs_ptr `star`
+  SL.llist (p_partial sc) partial_slabs `star`
+  vptr full_slabs_ptr `star`
+  SL.llist (p_full sc) full_slabs)
+  (fun r ->
+  A.varray r `star`
+  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+  SL.ind_llist (p_partial sc) partial_slabs_ptr `star`
+  SL.ind_llist (p_full sc) full_slabs_ptr)
+  (requires fun h0 ->
+    sel partial_slabs_ptr h0 == partial_slabs /\
+    sel empty_slabs_ptr h0 == empty_slabs /\
+    sel full_slabs_ptr h0 == full_slabs /\
+    not (SL.is_null_t empty_slabs))
+  (ensures fun _ _ _ -> True)
+  =
+  let n_empty = SL.unpack_list (p_empty sc) empty_slabs in
+  let b = SL.get_data n_empty in
+  p_empty_unpack sc
+    (SL.get_data n_empty)
+    b;
+  let r = allocate_slot sc (fst b) (snd b) in
+  let cond = allocate_slab_aux_cond sc (fst b) (snd b) in
+  if cond then (
+    allocate_slab_aux_1_full
+      sc
+      full_slabs_ptr
+      empty_slabs_ptr
+      full_slabs
+      (SL.get_next n_empty)
+      empty_slabs
+      n_empty
+      b;
+    SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
+    return r
+  ) else (
+    allocate_slab_aux_1_partial
+      sc
+      partial_slabs_ptr
+      empty_slabs_ptr
+      partial_slabs
+      (SL.get_next n_empty)
+      empty_slabs
+      n_empty
+      b;
+    SL.pack_ind (p_full sc) full_slabs_ptr full_slabs;
+    return r
+  )
+#pop-options
+
+inline_for_extraction noextract
+let allocate_slab_aux_2
+  (sc: sc)
+  (partial_slabs_ptr empty_slabs_ptr: ref SL.t)
+  (partial_slabs empty_slabs: SL.t)
+  : Steel (array U8.t)
+  (
+  vptr empty_slabs_ptr `star`
+  SL.llist (p_empty sc) empty_slabs `star`
+  vptr partial_slabs_ptr `star`
+  SL.llist (p_partial sc) partial_slabs)
+  (fun r ->
+  A.varray r `star`
+  SL.ind_llist (p_empty sc) empty_slabs_ptr `star`
+  SL.ind_llist (p_partial sc) partial_slabs_ptr)
+  (requires fun h0 ->
+    sel partial_slabs_ptr h0 == partial_slabs /\
+    sel empty_slabs_ptr h0 == empty_slabs /\
+    not (SL.is_null_t partial_slabs))
+  (ensures fun _ _ _ -> True)
+  =
+  let n_partial = SL.unpack_list (p_partial sc) partial_slabs in
+  let b = SL.get_data n_partial in
+  p_partial_unpack sc
+    (SL.get_data n_partial)
+    b;
+  let r = allocate_slot sc (fst b) (snd b) in
+  let blob0
+    : G.erased (t_of (slab_vprop sc (snd b) (fst b)))
+    = gget (slab_vprop sc (snd b) (fst b)) in
+  let v0 : G.erased (Seq.lseq U64.t 4) = dfst (fst blob0) in
+  // TODO: false, but ok for now as nb_slots size_class > 1
+  assume (is_partial sc v0);
+  p_partial_pack sc
+    b
+    (SL.get_data n_partial);
+  SL.pack_list (p_partial sc)
+    partial_slabs
+    (SL.get_next n_partial)
+    (SL.get_data n_partial);
+  SL.pack_ind (p_partial sc) partial_slabs_ptr partial_slabs;
+  SL.pack_ind (p_empty sc) empty_slabs_ptr empty_slabs;
+  return r
+#pop-options
 
 #push-options "--z3rlimit 30"
 let alloc_metadata_aux
@@ -1096,6 +1181,7 @@ let vp_aux_equal_lemma
   )
   = ()
 
+(*)
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let alloc_metadata2
   (size_class: sc)
