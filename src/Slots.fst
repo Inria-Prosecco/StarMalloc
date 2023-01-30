@@ -20,7 +20,6 @@ module SM = Steel.Memory
 open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
-open FStar.Mul
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
@@ -153,8 +152,33 @@ let slab_vprop_lemma
     (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
     (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
   & Seq.lseq U8.t 0)
-  = admit ()
-
+  = let aux (n1 n2:nat) (p:Seq.lseq U64.t n1 -> prop) : Lemma
+      (requires n1 == n2)
+      (ensures (x:Seq.lseq U64.t n1{p x}) == (x:Seq.lseq U64.t n2{p x}))
+    = () in
+    let aux2 (a a':Type) (b c:Type) : Lemma
+      (requires a == a' /\ b == c)
+      (ensures dtuple2 a (fun _ -> b) == dtuple2 a' (fun _ -> c))
+    = () in
+    // The SMT solver needs some help to prove type equality, with rewritings deep in the terms.
+    // In particular, it does not seem to be able to apply the rewritings for aux and aux2 without
+    // explicit calls to the lemmas when they occur under dtuple2
+    assert_norm (
+      t_of (slab_vprop size_class arr md)
+      ==
+      dtuple2
+        (x:Seq.lseq U64.t (A.length md){slab_vprop_aux2 size_class x})
+        (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
+          (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class)))))
+      & Seq.lseq U8.t (A.length (A.split_l arr 0sz)));
+    aux (A.length md) 4 (slab_vprop_aux2 size_class);
+    aux2
+      (x:Seq.lseq U64.t (A.length md){slab_vprop_aux2 size_class x})
+      (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
+      (Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
+        (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class)))))
+      (Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
+        (U32.v (nb_slots size_class)))
 
 #push-options "--print_implicits"
 
