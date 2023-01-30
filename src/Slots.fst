@@ -187,6 +187,7 @@ let a2bv = Bitmap4.array_to_bv2 #4
 //noextract
 //let f = Bitmap5.f #4
 
+open FStar.Mul
 //TODO: move to Bitmap5/BitmapUtils
 let f_invol (#n: nat)
   (k:nat{k < n * U64.n})
