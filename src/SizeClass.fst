@@ -7,7 +7,7 @@ module US = FStar.SizeT
 
 module G = FStar.Ghost
 
-module SL = BlobList
+module AL = ArrayList
 
 module P = Steel.FractionalPermission
 module SM = Steel.Memory
@@ -27,30 +27,39 @@ open Slabs
 
 open FStar.Mul
 noeq
-type size_class_struct = {
+type size_class_struct' = {
   size: sc;
-  partial_slabs: ref SL.t;
-  empty_slabs: ref SL.t;
-  full_slabs: ref SL.t;
+  // empty
+  r1: ref US.t;
+  // partial
+  r2: ref US.t;
+  // full
+  r3: ref US.t;
   md_count: ref U32.t;
-  slab_region: slab_region:array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size};
-  //TODO: duplicata due to karamel extraction issue
-  md_bm_region: md_bm_region:array U64.t{A.length md_bm_region = U32.v metadata_max * 4};
-  md_region: md_region:array SL.cell{A.length md_region = U32.v metadata_max};
+  slab_region: array U8.t;
+  //TODO: due to karamel extraction issue + sl proof workaround
+  md_bm_region: array U64.t;
+  md_region: array (AL.cell status);
   //lock: ref bool;
+}
+
+type size_class_struct = s:size_class_struct'{
+  A.length s.slab_region == U32.v metadata_max * U32.v page_size /\
+  A.length s.md_bm_region == U32.v metadata_max * 4 /\
+  A.length s.md_region == U32.v metadata_max
 }
 
 [@@erasable]
 noeq
 type blob2 = {
   scs_v: size_class_struct;
-  partial_slabs_v: list SL.blob;
-  empty_slabs_v: list SL.blob;
-  full_slabs_v: list SL.blob;
+  partial_slabs_v: US.t;
+  empty_slabs_v: US.t;
+  full_slabs_v: US.t;
   md_count_v: U32.t;
   slab_region_v: Seq.seq U8.t;
   md_bm_region_v: Seq.seq U64.t;
-  md_region_v: Seq.seq SL.cell;
+  md_region_v: Seq.seq (AL.cell status);
 }
 
 open SteelVRefineDep
@@ -59,14 +68,14 @@ let size_class_vprop_aux
   (scs: size_class_struct)
   : vprop
   =
-  SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-  SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
-  SL.ind_llist (p_full scs.size) scs.full_slabs `star`
   vrefinedep
     (vptr scs.md_count)
-    //TODO: hideous coercion
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
+    (fun v ->
+       // left part
+       s_vprop' scs.size scs.slab_region scs.md_bm_region v scs.md_region scs.r1 scs.r2 scs.r3 `star`
+       // right part
+       vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
 
 let size_class_vprop
   (r: ref size_class_struct)
@@ -76,6 +85,7 @@ let size_class_vprop
     (vptr r)
     (fun scs -> size_class_vprop_aux scs)
 
+(*)
 let size_class_vprop_test
   (r: ref size_class_struct)
   : Steel unit

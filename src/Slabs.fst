@@ -1558,7 +1558,7 @@ assume val allocate_slab_aux_3
 //  assert (dsnd x0 == dsnd x1);
 //  return (U32.lt r metadata_max)
 #push-options "--z3rlimit 30"
-assume val allocate_slab'
+let allocate_slab'
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -1568,7 +1568,7 @@ assume val allocate_slab'
   (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   (r1 r2 r3: ref US.t)
-  : SteelT (array U8.t)
+  : Steel (array U8.t)
   (
     vptr md_count `star`
     vptr r1 `star`
@@ -1592,6 +1592,47 @@ assume val allocate_slab'
     vp_aux slab_region md_bm_region md_region md_count_v `star`
     // left part of arrays + ref
     s_vprop' size_class slab_region md_bm_region md_count_v md_region r1 r2 r3
+  )
+  (requires fun h0 ->
+    sel r1 h0 == idx1 /\
+    sel r2 h0 == idx2 /\
+    sel r3 h0 == idx3 /\
+    md_count_v == sel md_count h0
+  )
+  (ensures fun _ _ _ -> True)
+  =
+  if (idx2 <> AL.null_ptr) then (
+    assume (0 < U32.v md_count_v);
+    let r = allocate_slab_aux_2 size_class
+      slab_region md_bm_region md_region md_count_v
+      md_region_lv idx1 idx2 idx3
+      r1 r2 r3 in
+    return r
+  ) else if (idx1 <> AL.null_ptr) then (
+    assume (0 < U32.v md_count_v);
+    let r = allocate_slab_aux_1 size_class
+      slab_region md_bm_region md_region md_count_v
+      md_region_lv idx1 idx2 idx3
+      r1 r2 r3 in
+    return r
+  ) else (
+    let md_count_v' = read md_count in
+    let b = U32.lt md_count_v' metadata_max in
+    if b then (
+      let idx1' = allocate_slab_aux_3 size_class
+        slab_region md_bm_region md_region md_count_v
+        md_region_lv idx1 idx2 idx3
+        r1 r2 r3 in
+      sladmit ();
+      let r = allocate_slab_aux_1 size_class
+        slab_region md_bm_region md_region md_count_v
+        md_region_lv idx1' idx2 idx3
+        r1 r2 r3 in
+      return r
+    ) else (
+      sladmit ();
+      return (A.null #U8.t)
+    )
   )
 
 #push-options "--z3rlimit 30"
