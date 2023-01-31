@@ -66,7 +66,7 @@ let size_class_vprop
     (vptr scs.md_count)
     //TODO: hideous coercion
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
+    (vp_aux scs.slab_region scs.md_bm_region scs.md_region)
 
 let allocate_size_class_sl_lemma1
   (scs: size_class_struct)
