@@ -62,10 +62,11 @@ assume val mmap_ptr_slt (_:unit)
     (fun r -> R.vptr r)
 
 //TODO: move to utils
+inline_for_extraction noextract
 let u32_to_sz = Slabs.u32_to_sz
 
 #restart-solver
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
 let init (sc:U32.t)
   : SteelT size_class_struct
   emp
@@ -112,7 +113,7 @@ let init (sc:U32.t)
   SteelVRefineDep.intro_vrefinedep
     (R.vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (Slabs.vp_aux slab_region md_bm_region md_region)
+    (fun v -> Slabs.vp_aux slab_region md_bm_region md_region v)
     (Slabs.vp_aux slab_region md_bm_region md_region v);
 
   let ptr_partial = mmap_ptr_slt () in
@@ -151,7 +152,7 @@ let init (sc:U32.t)
     (R.vptr md_count)
     //TODO: hideous coercion
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (Slabs.vp_aux slab_region md_bm_region md_region))
+    (fun v -> Slabs.vp_aux slab_region md_bm_region md_region v))
   (size_class_vprop scs);
 
   return scs
