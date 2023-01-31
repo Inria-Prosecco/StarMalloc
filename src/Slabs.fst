@@ -1421,8 +1421,8 @@ assume val allocate_slab_aux_3
   (fun idx1' ->
     vptr r1 `star`
     vptr r2 `star`
-    vp_aux slab_region md_bm_region md_region (U32.add md_count 1ul) `star`
     vptr r3 `star`
+    vp_aux slab_region md_bm_region md_region (U32.add md_count 1ul) `star`
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz (U32.add md_count 1ul)))
       (US.v idx1') (US.v idx2) (US.v idx3)) `star`
@@ -1435,10 +1435,15 @@ assume val allocate_slab_aux_3
       (f_lemma size_class slab_region md_bm_region
         (U32.add md_count 1ul)
         (Seq.append md_region_lv (Seq.create 1 0ul)))
-      (SeqUtils.init_u32_refined (U32.v md_count + 1))
+      (SeqUtils.init_u32_refined (U32.v (U32.add md_count 1ul)))
   )
   (requires fun h0 -> U32.v md_count < U32.v metadata_max)
-  (ensures fun _ idx1' _ -> idx1' <> AL.null_ptr)
+  (ensures fun h0 idx1' h1 ->
+    idx1' <> AL.null_ptr /\
+    sel r1 h1 == idx1' /\
+    sel r2 h1 == sel r2 h0 /\
+    sel r3 h1 == sel r3 h0
+  )
 
 
 //#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
@@ -1623,11 +1628,12 @@ let allocate_slab'
         slab_region md_bm_region md_region md_count_v
         md_region_lv idx1 idx2 idx3
         r1 r2 r3 in
-      sladmit ();
       let r = allocate_slab_aux_1 size_class
-        slab_region md_bm_region md_region md_count_v
-        md_region_lv idx1' idx2 idx3
+        slab_region md_bm_region md_region (U32.add md_count_v 1ul)
+        (G.hide (Seq.append (G.reveal md_region_lv) (Seq.create 1 0ul)))
+        idx1' idx2 idx3
         r1 r2 r3 in
+      sladmit ();
       return r
     ) else (
       sladmit ();
