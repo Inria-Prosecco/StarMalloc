@@ -30,11 +30,11 @@ noeq
 type size_class_struct' = {
   size: sc;
   // empty
-  r1: ref US.t;
+  empty_slabs: ref US.t;
   // partial
-  r2: ref US.t;
+  partial_slabs: ref US.t;
   // full
-  r3: ref US.t;
+  full_slabs: ref US.t;
   md_count: ref U32.t;
   slab_region: array U8.t;
   //TODO: due to karamel extraction issue + sl proof workaround
@@ -73,9 +73,10 @@ let size_class_vprop_aux
     (fun x -> U32.v x <= U32.v metadata_max == true)
     (fun v ->
        // left part
-       s_vprop' scs.size scs.slab_region scs.md_bm_region v scs.md_region scs.r1 scs.r2 scs.r3 `star`
+       left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
+         scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
        // right part
-       vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
+       right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
 
 let size_class_vprop
   (r: ref size_class_struct)
@@ -85,7 +86,6 @@ let size_class_vprop
     (vptr r)
     (fun scs -> size_class_vprop_aux scs)
 
-(*)
 let size_class_vprop_test
   (r: ref size_class_struct)
   : Steel unit
@@ -105,7 +105,6 @@ let size_class_vprop_test
     (fun scs -> size_class_vprop_aux scs);
   admit ()
 
-
 let allocate_size_class_sl_lemma1
   (scs: size_class_struct)
   (m: SM.mem)
@@ -115,26 +114,28 @@ let allocate_size_class_sl_lemma1
   )
   (ensures
     SM.interp (hp_of (
-      SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-      SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
-      SL.ind_llist (p_full scs.size) scs.full_slabs `star`
       vrefinedep
         (vptr scs.md_count)
-        //TODO: hideous coercion
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
+        (fun v ->
+           // left part
+           left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
+             scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
+           // right part
+           right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
     )) m /\
     sel_of (size_class_vprop_aux scs) m
     ==
     sel_of (
-      SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-      SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
-      SL.ind_llist (p_full scs.size) scs.full_slabs `star`
       vrefinedep
         (vptr scs.md_count)
-        //TODO: hideous coercion
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
+        (fun v ->
+           // left part
+           left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
+             scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
+           // right part
+           right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
     ) m
   )
   = ()
@@ -145,14 +146,15 @@ let allocate_size_class_sl_lemma2
   : Lemma
   (requires
     SM.interp (hp_of (
-      SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-      SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
-      SL.ind_llist (p_full scs.size) scs.full_slabs `star`
       vrefinedep
         (vptr scs.md_count)
-        //TODO: hideous coercion
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
+        (fun v ->
+           // left part
+           left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
+             scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
+           // right part
+           right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
     )) m
   )
   (ensures
@@ -160,19 +162,20 @@ let allocate_size_class_sl_lemma2
     sel_of (size_class_vprop_aux scs) m
     ==
     sel_of (
-      SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-      SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
-      SL.ind_llist (p_full scs.size) scs.full_slabs `star`
       vrefinedep
         (vptr scs.md_count)
-        //TODO: hideous coercion
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
+        (fun v ->
+           // left part
+           left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
+             scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
+           // right part
+           right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
     ) m
   )
   = ()
 
-#push-options "--z3rlimit 100 --query_stats --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let allocate_size_class
   (ptr: ref size_class_struct)
   : Steel (array U8.t & G.erased bool)
@@ -192,32 +195,33 @@ let allocate_size_class
     (size_class_vprop_aux scs);
   change_slprop_rel
     (size_class_vprop_aux scs)
-    (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-    SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
-    SL.ind_llist (p_full scs.size) scs.full_slabs `star`
-    vrefinedep
+    (vrefinedep
       (vptr scs.md_count)
-      //TODO: hideous coercion
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
-    )
+      (fun v ->
+         // left part
+         left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
+           scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
+         // right part
+         right_vprop scs.slab_region scs.md_bm_region scs.md_region v))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   assume ((U32.v page_size) % (U32.v scs.size) == 0);
   let result = allocate_slab
-    scs.size scs.partial_slabs scs.empty_slabs scs.full_slabs
+    scs.size
     scs.slab_region scs.md_bm_region scs.md_region
-    scs.md_count in
+    scs.md_count
+    scs.empty_slabs scs.partial_slabs scs.full_slabs in
   change_slprop_rel
-    (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
-    SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
-    SL.ind_llist (p_full scs.size) scs.full_slabs `star`
-    vrefinedep
+    (vrefinedep
       (vptr scs.md_count)
-      //TODO: hideous coercion
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
-    )
+      (fun v ->
+         // left part
+         left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
+           scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
+         // right part
+         right_vprop scs.slab_region scs.md_bm_region scs.md_region v))
     (size_class_vprop_aux scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);
@@ -225,4 +229,5 @@ let allocate_size_class
     (vptr ptr)
     (size_class_vprop_aux scs)
     (fun scs -> size_class_vprop_aux scs);
-  return result
+  sladmit ();
+  return (result, G.hide true)

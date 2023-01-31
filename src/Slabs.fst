@@ -18,44 +18,39 @@ module A = Steel.Array
 module SM = Steel.Memory
 
 module VR2 = SteelVRefine2
-//module Temp = TempLock
+module AL = ArrayList
 
 open Utils2
 open Slots
+open SteelStarSeqUtils
+open FStar.Mul
 
-//let slab_region_len : U32.t = normalize_term (U32.mul page_size slab_max_number)
-//unfold let slab_region
-//  = r:array U8.t{A.length r = U32.v slab_region_len}
-//
-//let slab_md_region_len : U32.t = normalize_term (U32.mul 40ul slab_max_number)
-//unfold let slab_md_region
-//  = r:array U8.t{A.length r = U32.v slab_md_region_len}
-
-//// C binding, no top-level Steel initialization
-//val get_slab_region (_:unit)
-//  : slab_region
-//
-//// C binding, no top-level Steel initialization
-//val get_slab_md_region (_:unit)
-//  : slab_md_region
-
-////TODO
-//noextract
-//let slab_md_bitmap_length = nb_slots (U32.uint_to_t min_sc)
+// TODO: to be removed/move apart ; use stdlib
+// discussion
+let u32_to_sz
+  (x:U32.t)
+  : Tot (y:US.t{US.v y == U32.v x})
+  //: Pure US.t
+  //(requires True)
+  //(ensures fun y -> US.v y == U32.v x)
+  =
+  assume (US.fits_u32);
+  US.uint32_to_sizet x
 
 #push-options "--print_implicits --print_universes"
-
 #set-options "--ide_id_info_off"
+
+let status = v:U32.t{U32.v v < 3}
+
+let pred1 (x: U32.t) : prop = U32.eq x 0ul == true
+let pred2 (x: U32.t) : prop = U32.eq x 1ul == true
+let pred3 (x: U32.t) : prop = U32.eq x 2ul == true
 
 unfold
 let blob
   = slab_metadata &
     (arr:array U8.t{A.length arr = U32.v page_size})
 
-
-
-//[@@__steel_reduce__]
-//unfold
 let p_empty (size_class: sc)
   =
   fun (b:blob) ->
@@ -305,23 +300,6 @@ let allocate_slab_aux_cond
 #pop-options
 #pop-options
 
-module AL = ArrayList
-
-
-// TODO: to be removed/move apart ; use stdlib
-// discussion
-let u32_to_sz
-  (x:U32.t)
-  : Tot (y:US.t{US.v y == U32.v x})
-  //: Pure US.t
-  //(requires True)
-  //(ensures fun y -> US.v y == U32.v x)
-  =
-  assume (US.fits_u32);
-  US.uint32_to_sizet x
-
-open FStar.Mul
-
 #push-options "--z3rlimit 30"
 let slab_array
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -439,9 +417,6 @@ let md_bm_region_mon_split
     (fun x y -> x == y)
     (fun _ -> ())
 
-
-let status = v:U32.t{U32.v v < 3}
-
 let md_array
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -488,15 +463,6 @@ let md_region_mon_split
     (A.varray (A.split_r (A.split_r md_region (u32_to_sz (md_count))) (u32_to_sz 1ul)))
     (A.varray (A.split_r md_region (u32_to_sz (U32.add md_count 1ul))))
     (fun _ -> ())
-
-
-let pred1 (x: U32.t) : prop = U32.eq x 0ul == true
-let pred2 (x: U32.t) : prop = U32.eq x 1ul == true
-let pred3 (x: U32.t) : prop = U32.eq x 2ul == true
-
-
-open SteelStarSeqUtils
-
 
 let f
   (size_class: sc)
@@ -562,7 +528,7 @@ let ind_varraylist (#a: Type)
     (US.v (snd idxs))
   )
 
-let s_vprop
+let left_vprop_deprecated
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -582,7 +548,7 @@ let s_vprop
       (f_lemma size_class slab_region md_bm_region md_count (dataify x))
       (SeqUtils.init_u32_refined (U32.v md_count)))
 
-let s_vprop'
+let left_vprop
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -630,7 +596,7 @@ assume val allocate_slab_aux_1_partial
       (SeqUtils.init_u32_refined (U32.v md_count))
   )
   (fun idxs ->
-    s_vprop' size_class slab_region md_bm_region md_count md_region r1 r2 r3
+    left_vprop size_class slab_region md_bm_region md_count md_region r1 r2 r3
   )
 
 assume val allocate_slab_aux_1_full
@@ -660,7 +626,7 @@ assume val allocate_slab_aux_1_full
       (SeqUtils.init_u32_refined (U32.v md_count))
   )
   (fun idxs ->
-    s_vprop' size_class slab_region md_bm_region md_count md_region r1 r2 r3
+    left_vprop size_class slab_region md_bm_region md_count md_region r1 r2 r3
   )
   //=
   //let idx1' = AL.remove1
@@ -749,7 +715,7 @@ let allocate_slab_aux_1
   )
   (fun r ->
     A.varray r `star`
-    s_vprop' size_class slab_region md_bm_region md_count md_region r1 r2 r3
+    left_vprop size_class slab_region md_bm_region md_count md_region r1 r2 r3
   )
   (requires fun h0 ->
     sel r1 h0 == idx1 /\
@@ -886,7 +852,7 @@ assume val allocate_slab_aux_2
   )
   (fun r ->
     A.varray r `star`
-    s_vprop' size_class slab_region md_bm_region md_count md_region r1 r2 r3
+    left_vprop size_class slab_region md_bm_region md_count md_region r1 r2 r3
   )
   (requires fun h0 ->
     sel r1 h0 == idx1 /\
@@ -1230,7 +1196,7 @@ let alloc_metadata_sl2
 
 open SteelVRefineDep
 
-let vp_aux
+let right_vprop
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
@@ -1243,7 +1209,7 @@ let vp_aux
     `vrefine` zf_u64) `star`
   A.varray (A.split_r md_region (u32_to_sz v))
 
-let vp_aux_lt
+let right_vprop_lt
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
@@ -1256,7 +1222,7 @@ let vp_aux_lt
     `vrefine` zf_u64) `star`
   A.varray (A.split_r md_region (u32_to_sz v))
 
-let vp_aux_lt_equal_lemma
+let right_vprop_lt_equal_lemma
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
@@ -1264,7 +1230,7 @@ let vp_aux_lt_equal_lemma
   (m: SM.mem)
   : Lemma
   (requires SM.interp (hp_of (
-    vp_aux_lt slab_region md_bm_region md_region v
+    right_vprop_lt slab_region md_bm_region md_region v
   )) m)
   (ensures SM.interp (hp_of (
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
@@ -1281,11 +1247,11 @@ let vp_aux_lt_equal_lemma
     A.varray (A.split_r md_region (u32_to_sz v))
   ) m
   ==
-  sel_of (vp_aux_lt slab_region md_bm_region md_region v) m
+  sel_of (right_vprop_lt slab_region md_bm_region md_region v) m
   )
   = ()
 
-let vp_aux_equal_lemma
+let right_vprop_equal_lemma
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
@@ -1300,7 +1266,7 @@ let vp_aux_equal_lemma
     A.varray (A.split_r md_region (u32_to_sz v))
   )) m)
   (ensures SM.interp (hp_of (
-    vp_aux slab_region md_bm_region md_region v
+    right_vprop slab_region md_bm_region md_region v
   )) m /\
   sel_of (
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
@@ -1310,7 +1276,7 @@ let vp_aux_equal_lemma
     A.varray (A.split_r md_region (u32_to_sz v))
   ) m
   ==
-  sel_of (vp_aux slab_region md_bm_region md_region v) m
+  sel_of (right_vprop slab_region md_bm_region md_region v) m
   )
   = ()
 
@@ -1407,7 +1373,7 @@ assume val allocate_slab_aux_3
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
-    vp_aux slab_region md_bm_region md_region md_count `star`
+    right_vprop slab_region md_bm_region md_region md_count `star`
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count))
       (US.v idx1) (US.v idx2) (US.v idx3)) `star`
@@ -1422,7 +1388,7 @@ assume val allocate_slab_aux_3
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
-    vp_aux slab_region md_bm_region md_region (U32.add md_count 1ul) `star`
+    right_vprop slab_region md_bm_region md_region (U32.add md_count 1ul) `star`
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz (U32.add md_count 1ul)))
       (US.v idx1') (US.v idx2) (US.v idx3)) `star`
@@ -1579,7 +1545,7 @@ let allocate_slab'
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
-    vp_aux slab_region md_bm_region md_region md_count_v `star`
+    right_vprop slab_region md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
       (US.v idx1) (US.v idx2) (US.v idx3)) `star`
@@ -1594,9 +1560,9 @@ let allocate_slab'
     A.varray r `star`
     vptr md_count `star`
     // right part of arrays
-    vp_aux slab_region md_bm_region md_region md_count_v `star`
+    right_vprop slab_region md_bm_region md_region md_count_v `star`
     // left part of arrays + ref
-    s_vprop' size_class slab_region md_bm_region md_count_v md_region r1 r2 r3
+    left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3
   )
   (requires fun h0 ->
     sel r1 h0 == idx1 /\
@@ -1656,9 +1622,9 @@ assume val allocate_slab
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v ->
          // left part
-         s_vprop' size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
+         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
          // right part
-         vp_aux slab_region md_bm_region md_region v)
+         right_vprop slab_region md_bm_region md_region v)
   )
   (fun r ->
     A.varray r `star`
@@ -1667,9 +1633,9 @@ assume val allocate_slab
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v ->
          // left part
-         s_vprop' size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
+         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
          // right part
-         vp_aux slab_region md_bm_region md_region v)
+         right_vprop slab_region md_bm_region md_region v)
   )
 
 
