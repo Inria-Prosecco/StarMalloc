@@ -55,7 +55,7 @@ type blob2 = {
 
 open SteelVRefineDep
 
-let size_class_vprop_aux
+let size_class_vprop
   (scs: size_class_struct)
   : vprop
   =
@@ -68,40 +68,12 @@ let size_class_vprop_aux
     (fun x -> U32.v x <= U32.v metadata_max == true)
     (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
 
-let size_class_vprop
-  (r: ref size_class_struct)
-  : vprop
-  =
-  vdep
-    (vptr r)
-    (fun scs -> size_class_vprop_aux scs)
-
-let size_class_vprop_test
-  (r: ref size_class_struct)
-  : Steel unit
-  (size_class_vprop r)
-  (fun _ -> size_class_vprop r)
-  (requires fun h0 -> True)
-  (ensures fun h0 _ h1 ->
-    h0 (size_class_vprop r)
-    ==
-    h1 (size_class_vprop r)
-  )
-  =
-  let x = elim_vdep (vptr r) (fun scs -> size_class_vprop_aux scs) in
-  intro_vdep
-    (vptr r)
-    (size_class_vprop_aux (G.reveal x))
-    (fun scs -> size_class_vprop_aux scs);
-  admit ()
-
-
 let allocate_size_class_sl_lemma1
   (scs: size_class_struct)
   (m: SM.mem)
   : Lemma
   (requires
-    SM.interp (hp_of (size_class_vprop_aux scs)) m
+    SM.interp (hp_of (size_class_vprop scs)) m
   )
   (ensures
     SM.interp (hp_of (
@@ -114,7 +86,7 @@ let allocate_size_class_sl_lemma1
         (fun x -> U32.v x <= U32.v metadata_max == true)
         (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
     )) m /\
-    sel_of (size_class_vprop_aux scs) m
+    sel_of (size_class_vprop scs) m
     ==
     sel_of (
       SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
@@ -146,8 +118,8 @@ let allocate_size_class_sl_lemma2
     )) m
   )
   (ensures
-    SM.interp (hp_of (size_class_vprop_aux scs)) m /\
-    sel_of (size_class_vprop_aux scs) m
+    SM.interp (hp_of (size_class_vprop scs)) m /\
+    sel_of (size_class_vprop scs) m
     ==
     sel_of (
       SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
@@ -164,24 +136,17 @@ let allocate_size_class_sl_lemma2
 
 #push-options "--z3rlimit 100 --query_stats --compat_pre_typed_indexed_effects"
 let allocate_size_class
-  (ptr: ref size_class_struct)
+  (scs: size_class_struct)
   : Steel (array U8.t & G.erased bool)
-  (size_class_vprop ptr)
+  (size_class_vprop scs)
   (fun r ->
     (if (G.reveal (snd r)) then A.varray (fst r) else emp) `star`
-    size_class_vprop ptr)
+    size_class_vprop scs)
   (requires fun h0 -> True)
   (ensures fun h0 _ h1 -> True)
   =
-  let scs' = elim_vdep
-    (vptr ptr)
-    (fun scs -> size_class_vprop_aux scs) in
-  let scs : size_class_struct = read ptr in
-  change_equal_slprop
-    (size_class_vprop_aux (G.reveal scs'))
-    (size_class_vprop_aux scs);
   change_slprop_rel
-    (size_class_vprop_aux scs)
+    (size_class_vprop scs)
     (SL.ind_llist (p_partial scs.size) scs.partial_slabs `star`
     SL.ind_llist (p_empty scs.size) scs.empty_slabs `star`
     SL.ind_llist (p_full scs.size) scs.full_slabs `star`
@@ -208,11 +173,7 @@ let allocate_size_class
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v -> vp_aux scs.slab_region scs.md_bm_region scs.md_region v)
     )
-    (size_class_vprop_aux scs)
+    (size_class_vprop scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);
-  intro_vdep
-    (vptr ptr)
-    (size_class_vprop_aux scs)
-    (fun scs -> size_class_vprop_aux scs);
   return result
