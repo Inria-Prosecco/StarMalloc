@@ -1627,7 +1627,7 @@ assume val allocate_slab
          right_vprop slab_region md_bm_region md_region v)
   )
   (fun r ->
-    A.varray r `star`
+    (if (A.is_null r) then A.varray r else emp) `star`
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)

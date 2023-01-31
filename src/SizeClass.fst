@@ -178,10 +178,10 @@ let allocate_size_class_sl_lemma2
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let allocate_size_class
   (ptr: ref size_class_struct)
-  : Steel (array U8.t & G.erased bool)
+  : Steel (array U8.t)
   (size_class_vprop ptr)
   (fun r ->
-    (if (G.reveal (snd r)) then A.varray (fst r) else emp) `star`
+    (if (A.is_null r) then A.varray r else emp) `star`
     size_class_vprop ptr)
   (requires fun h0 -> True)
   (ensures fun h0 _ h1 -> True)
@@ -229,5 +229,4 @@ let allocate_size_class
     (vptr ptr)
     (size_class_vprop_aux scs)
     (fun scs -> size_class_vprop_aux scs);
-  sladmit ();
-  return (result, G.hide true)
+  return result
