@@ -599,7 +599,7 @@ assume val allocate_slab_aux_1_partial
   (idx1: US.t{US.v idx1 < U32.v md_count_v})
   (idx2 idx3: US.t)
   //: Steel (array U8.t)
-  : SteelT unit
+  : Steel unit
   (
     vptr md_count `star`
     vptr r1 `star`
@@ -621,6 +621,14 @@ assume val allocate_slab_aux_1_partial
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
   )
+  (requires fun h0 ->
+    sel md_count h0 == md_count_v /\
+    sel r1 h0 == idx1 /\
+    sel r2 h0 == idx2 /\
+    sel r3 h0 == idx3 /\
+    idx1 <> AL.null_ptr
+  )
+  (ensures fun _ _ _ -> True)
 
 #push-options "--compat_pre_typed_indexed_effects"
 let allocate_slab_aux_1_full
@@ -715,55 +723,6 @@ let allocate_slab_aux_1_full
     (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
     (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3)
 
-//#push-options "--z3rlimit 50"
-//let allocate_slab_aux_1
-//  (size_class: sc)
-//  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-//  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-//  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
-//  (md_count: U32.t{0 < U32.v md_count /\ U32.v md_count < U32.v metadata_max})
-//  (idx1 idx2 idx3: US.t)
-//  (r1 r2 r3: ref US.t)
-//  //: Steel (array U8.t)
-//  : Steel unit
-//  (
-//    vptr r1 `star`
-//    vptr r2 `star`
-//    vptr r3 `star`
-//    s_vprop size_class slab_region md_bm_region md_count md_region (US.v idx1) (US.v idx2) (US.v idx3)
-//  )
-//  (fun r ->
-//    //A.varray r `star`
-//    vptr r1 `star`
-//    vptr r2 `star`
-//    vptr r3 `star`
-//    s_vprop size_class slab_region md_bm_region md_count md_region (US.v idx1) (US.v idx2) (US.v idx3)
-//  )
-//  (requires fun h0 ->
-//    sel r1 h0 == idx1 /\
-//    sel r2 h0 == idx2 /\
-//    sel r3 h0 == idx3 /\
-//    idx1 <> AL.null_ptr
-//  )
-//  (ensures fun _ _ _ -> True)
-//  =
-//  let s = elim_vdep
-//    (AL.varraylist pred1 pred2 pred3
-//      (A.split_l md_region (u32_to_sz md_count))
-//      (US.v idx1) (US.v idx2) (US.v idx3))
-//    (fun (x: Seq.lseq (AL.cell status) (U32.v md_count)) ->
-//      starseq
-//        #(pos:U32.t{U32.v pos < U32.v md_count})
-//        #(t size_class)
-//        (f size_class slab_region md_bm_region md_count x)
-//        (f_lemma size_class slab_region md_bm_region md_count x)
-//       (SeqUtils.init_u32_refined (U32.v md_count)))
-//  in
-//  let idx1 = read r1 in
-//  //let v1 = AL.read_in_place
-
-let _ = 42
-
 #push-options "--print_implicits"
 
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
@@ -807,7 +766,14 @@ let allocate_slab_aux_1
     sel r3 h0 == idx3 /\
     idx1 <> AL.null_ptr
   )
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ _ h1 ->
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
+    ) in
+    md_count_v == dfst blob1)
   =
   let idx1' : US.t = read r1 in
   change_equal_slprop
@@ -952,7 +918,14 @@ assume val allocate_slab_aux_2
     sel r3 h0 == idx3 /\
     idx2 <> AL.null_ptr
   )
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ _ h1 ->
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
+    ) in
+    md_count_v == dfst blob1)
 
 //#push-options "--z3rlimit 30"
 //let alloc_metadata_aux
@@ -1628,7 +1601,7 @@ assume val allocate_slab_aux_3
 //  assert (dsnd x0 == dsnd x1);
 //  return (U32.lt r metadata_max)
 
-assume val pack_right_and_refactor_vrefine_dep
+let pack_right_and_refactor_vrefine_dep
   (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1637,7 +1610,7 @@ assume val pack_right_and_refactor_vrefine_dep
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  : SteelGhostT unit opened
+  : SteelGhost unit opened
   (
     vrefinedep
       (vptr md_count)
@@ -1654,6 +1627,48 @@ assume val pack_right_and_refactor_vrefine_dep
          left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
          right_vprop slab_region md_bm_region md_region v)
   )
+  (requires fun h0 ->
+    let blob0
+      = h0 (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
+    ) in
+    md_count_v == dfst blob0)
+  (ensures fun h0 _ h1 ->
+    let blob0
+      = h0 (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
+    ) in
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
+         right_vprop slab_region md_bm_region md_region v)
+    ) in
+    dfst blob0 == dfst blob1
+  )
+  =
+  let md_count_v' = elim_vrefinedep
+    (vptr md_count)
+    (fun x -> U32.v x <= U32.v metadata_max == true)
+    (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3) in
+  assert (G.reveal md_count_v' == md_count_v);
+  change_equal_slprop
+    (right_vprop slab_region md_bm_region md_region md_count_v)
+    (right_vprop slab_region md_bm_region md_region (G.reveal md_count_v'));
+  intro_vrefinedep
+    (vptr md_count)
+    (fun x -> U32.v x <= U32.v metadata_max == true)
+    (fun v ->
+       left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
+       right_vprop slab_region md_bm_region md_region v)
+    (left_vprop size_class slab_region md_bm_region (G.reveal md_count_v') md_region r1 r2 r3 `star`
+    right_vprop slab_region md_bm_region md_region (G.reveal md_count_v'))
 
 module P = Steel.FractionalPermission
 
