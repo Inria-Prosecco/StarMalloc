@@ -105,13 +105,14 @@ let intro_ind_varraylist_nil pred1 pred2 pred3 r r1 r2 r3 =
     (ind_aux pred1 pred2 pred3 r)
 
 val intro_left_vprop_empty (#opened:_)
+  (sc:sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
   (r1 r2 r3: R.ref US.t)
   : SteelGhost unit opened
       (A.varray (split_l md_region 0sz) `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
-      (fun _ -> Slabs.left_vprop 16ul slab_region md_bm_region 0ul md_region r1 r2 r3)
+      (fun _ -> Slabs.left_vprop sc slab_region md_bm_region 0ul md_region r1 r2 r3)
       (requires fun h ->
         R.sel r1 h == 0sz /\
         R.sel r2 h == 0sz /\
@@ -120,7 +121,7 @@ val intro_left_vprop_empty (#opened:_)
       (ensures fun _ _ _ -> True)
 
 #push-options "--z3rlimit 30"
-let intro_left_vprop_empty slab_region md_bm_region md_region r1 r2 r3 =
+let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 =
   change_equal_slprop
     (A.varray (split_l md_region 0sz))
     (A.varray (split_l md_region (u32_to_sz 0ul)));
@@ -135,38 +136,38 @@ let intro_left_vprop_empty slab_region md_bm_region md_region r1 r2 r3 =
 
   starseq_intro_empty #_
       #(pos:U32.t{U32.v pos < U32.v 0ul})
-      #(Slabs.t 16ul)
-      (Slabs.f 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
-      (Slabs.f_lemma 16ul slab_region md_bm_region 0ul (dataify (dsnd s)));
+      #(Slabs.t sc)
+      (Slabs.f sc slab_region md_bm_region 0ul (dataify (dsnd s)))
+      (Slabs.f_lemma sc slab_region md_bm_region 0ul (dataify (dsnd s)));
 
   assert (SeqUtils.init_u32_refined (U32.v 0ul) `Seq.equal` Seq.empty);
 
   let open FStar.Tactics in
   assert ((starseq
       #(pos:U32.t{U32.v pos < U32.v 0ul})
-      #(t 16ul)
-      (f 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
-      (f_lemma 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
+      #(t sc)
+      (f sc slab_region md_bm_region 0ul (dataify (dsnd s)))
+      (f_lemma sc slab_region md_bm_region 0ul (dataify (dsnd s)))
       Seq.empty) ==
-    (left_vprop_aux 16ul slab_region md_bm_region 0ul md_region r1 r2 r3 s))
+    (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3 s))
   by (norm [delta_only [`%left_vprop_aux]]);
 
 
   change_equal_slprop
     (starseq
       #(pos:U32.t{U32.v pos < U32.v 0ul})
-      #(t 16ul)
-      (f 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
-      (f_lemma 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
+      #(t sc)
+      (f sc slab_region md_bm_region 0ul (dataify (dsnd s)))
+      (f_lemma sc slab_region md_bm_region 0ul (dataify (dsnd s)))
       Seq.empty)
-    (left_vprop_aux 16ul slab_region md_bm_region 0ul md_region r1 r2 r3 s);
+    (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3 s);
 
   intro_vdep
     (ind_varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz 0ul))
       r1 r2 r3)
-    (left_vprop_aux 16ul slab_region md_bm_region 0ul md_region r1 r2 r3 s)
-    (left_vprop_aux 16ul slab_region md_bm_region 0ul md_region r1 r2 r3)
+    (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3 s)
+    (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3)
 
 val intro_right_vprop_empty (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -243,7 +244,7 @@ let init (sc:U32.t)
   R.write ptr_empty 0sz;
   R.write ptr_full 0sz;
 
-  intro_left_vprop_empty slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full;
+  intro_left_vprop_empty sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full;
 
 
 
@@ -252,14 +253,14 @@ let init (sc:U32.t)
   intro_vrefinedep
     (R.vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (size_class_vprop_aux 16ul slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full)
-    (left_vprop 16ul slab_region md_bm_region 0ul md_region
+    (size_class_vprop_aux sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full)
+    (left_vprop sc slab_region md_bm_region 0ul md_region
          ptr_empty ptr_partial ptr_full `star`
      right_vprop slab_region md_bm_region md_region 0ul);
 
   [@inline_let]
   let scs = {
-    size = 16ul;
+    size = sc;
     partial_slabs = ptr_partial;
     empty_slabs = ptr_empty;
     full_slabs = ptr_full;
@@ -273,7 +274,7 @@ let init (sc:U32.t)
     (vrefinedep
       (R.vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (size_class_vprop_aux 16ul slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full))
+      (size_class_vprop_aux sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full))
      (size_class_vprop scs)
     (fun _ _ -> True)
     (fun _ ->
