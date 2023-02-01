@@ -9,7 +9,7 @@ void krmlinit_globals(void);
 static uint32_t init_status = 0UL;
 
 void* smalloc(size_t size) {
-  if (!init_status) { krmlinit_globals(); init_status=1ul; }
+  if (!init_status) { krmlinit_globals(); init_status=1UL; }
   return slab_malloc((uint32_t)size);
 }
 
