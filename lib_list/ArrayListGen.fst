@@ -902,6 +902,23 @@ let intro_arraylist_nil #a #opened pred1 pred2 pred3 r hd1 hd2 hd3 =
     (A.varray r)
     (varraylist_refine pred1 pred2 pred3 (US.v hd1) (US.v hd2) (US.v hd3))
 
+let intro_head1_not_null_mem (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:US.t) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (requires fun _ -> hd1 <> null_ptr)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
+      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
+      // Inferred property
+      mem (US.v hd1) (US.v hd1) (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)))
+    )
+  = noop ()
+
 /// Reads at index [idx] in the array.
 let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);

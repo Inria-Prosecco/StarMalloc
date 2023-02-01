@@ -95,7 +95,7 @@ let varraylist_refine (#a:Type)
 let varraylist (#a:Type) (pred1 pred2 pred3: a -> prop) (r:A.array (cell a)) (hd1 hd2 hd3:nat) : vprop
   = A.varray r `vrefine` (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
 
-/// Create an arraylist with
+/// Create an arraylist with an empty sequence
 val intro_arraylist_nil (#a:Type) (#opened:inames)
   (pred1 pred2 pred3: a -> prop)
   (r:A.array (cell a))
@@ -110,6 +110,23 @@ val intro_arraylist_nil (#a:Type) (#opened:inames)
       hd3 == null_ptr)
     (ensures fun _ _ h1 ->
       h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) `Seq.equal` Seq.empty
+    )
+
+/// If the head of one of the lists is not null, then it is in the list
+val intro_head1_not_null_mem (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:US.t) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (requires fun _ -> hd1 <> null_ptr)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
+      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
+      // Functional property
+      mem (US.v hd1) (US.v hd1) (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)))
     )
 
 /// Reads at index [idx] in the array.
