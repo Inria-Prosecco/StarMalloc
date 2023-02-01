@@ -514,6 +514,14 @@ let dataify
   Seq.map_seq_len f s;
   Seq.map_seq f s
 
+let ind_varraylist_aux
+  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
+  (idxs: (US.t & US.t) & US.t)
+  = AL.varraylist pred1 pred2 pred3 r
+      (US.v (fst (fst idxs)))
+      (US.v (snd (fst idxs)))
+      (US.v (snd idxs))
+
 #push-options "--z3rlimit 30"
 let ind_varraylist
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
@@ -521,12 +529,7 @@ let ind_varraylist
   //(hd1 hd2 hd3: nat)
   =
   (vptr r1 `star` vptr r2 `star` vptr r3) `vdep`
-  (fun (idxs: (US.t & US.t) & US.t) ->
-    AL.varraylist pred1 pred2 pred3 r
-    (US.v (fst (fst idxs)))
-    (US.v (snd (fst idxs)))
-    (US.v (snd idxs))
-  )
+  ind_varraylist_aux pred1 pred2 pred3 r
 
 let left_vprop_deprecated
   (size_class: sc)
@@ -600,7 +603,7 @@ let left_vprop
 
 open SteelVRefineDep
 
-#push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let allocate_slab_aux_1_partial
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -652,36 +655,28 @@ let allocate_slab_aux_1_partial
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) idx1 in
 
-//  admit();
-  //TODO @Aymeric: refine insert3 spec
   AL.insert2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx2 (Ghost.hide (US.v idx1')) (Ghost.hide (US.v idx3)) idx1 1ul;
   write r1 idx1';
   write r2 idx1;
 
-  admit ();
   intro_vdep
     (vptr r1 `star` vptr r2 `star` vptr r3)
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz md_count_v))
-      (US.v idx1') (US.v idx1) (US.v idx3))
-    (fun (idxs: (US.t & US.t) & US.t) ->
-      AL.varraylist pred1 pred2 pred3
-        (A.split_l md_region (u32_to_sz md_count_v))
+    (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1', idx1), idx3))
+    (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)));
 
-      (US.v (fst (fst idxs)))
-      (US.v (snd (fst idxs)))
-      (US.v (snd idxs))
-    );
   slassert (left_vprop1 md_region md_count_v r1 r2 r3);
   slassert (left_vprop2 size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul));
+
+  let ds = gget (left_vprop1 md_region md_count_v r1 r2 r3) in
+  assume (dataify (dsnd (G.reveal ds)) == Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul);
+
   intro_vdep
     (left_vprop1 md_region md_count_v r1 r2 r3)
     (left_vprop2 size_class slab_region md_bm_region md_count_v
       (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
-
-    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (dataify (dsnd x)));
+    (left_vprop_aux size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
   slassert (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
   intro_vrefinedep
     (vptr md_count)
