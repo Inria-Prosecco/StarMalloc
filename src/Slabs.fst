@@ -686,11 +686,13 @@ let allocate_slab_aux_1_full
   //    (A.split_l md_region (u32_to_sz md_count))
   //    (US.v idx1) (US.v idx2) (US.v idx3)
   //) in
+  //TODO @Aymeric: deduce mem x x::_
   //assume (AL.mem (US.v idx1) (US.v idx1) (G.reveal l));
   admit ();
   let idx1' = AL.remove1 #_ #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     (US.v idx1) (US.v idx2) (US.v idx3) idx1 in
+  //TODO @Aymeric: refine insert3 spec
   AL.insert3 #_ #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx3 idx1' (US.v idx2) idx1 2ul;
@@ -783,6 +785,8 @@ let allocate_slab_aux_1
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
       (US.v idx1') (US.v idx2) (US.v idx3));
+  //TODO @Aymeric: here idx1' == idx1,
+  //deduce heads are < len of the varraylist
   assume (US.v idx1' < U32.v md_count_v);
   starseq_unpack_s
     #_
@@ -792,6 +796,7 @@ let allocate_slab_aux_1
     (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
     (SeqUtils.init_u32_refined (U32.v md_count_v))
     (US.v idx1');
+  //TODO @Aymeric: x \in dlist hd1 ==> pred1 x
   assume (Seq.index md_region_lv (US.v idx1') == 0ul);
   SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx1');
   change_slprop_rel
@@ -820,6 +825,7 @@ let allocate_slab_aux_1
         (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1')))
       (fun x y -> x == y)
       (fun _ -> admit ());
+    //TODO: starseq aux lemma
     admit ();
     starseq_upd_pack
       #_
@@ -853,6 +859,7 @@ let allocate_slab_aux_1
         (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1')))
       (fun x y -> x == y)
       (fun _ -> admit ());
+    //TODO: starseq aux lemma
     admit ();
     starseq_upd_pack
       #_
@@ -1424,6 +1431,7 @@ let right_vprop_equal_lemma
 //  return r
 //#pop-options
 
+//TODO: @Antonin, yapluka
 assume val allocate_slab_aux_3
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1718,6 +1726,8 @@ let allocate_slab'
   (ensures fun _ _ _ -> True)
   =
   if (idx2 <> AL.null_ptr) then (
+    //TODO @Aymeric: varraylist hd2, hd2 <> null_ptr
+    //==> len varraylist > 0
     assume (0 < U32.v md_count_v);
     let r = allocate_slab_aux_2 size_class
       slab_region md_bm_region md_region
@@ -1732,6 +1742,8 @@ let allocate_slab'
       (if (A.is_null r) then emp else A.varray r);
     return r
   ) else if (idx1 <> AL.null_ptr) then (
+    //TODO @Aymeric: varraylist hd1, hd1 <> null_ptr
+    //==> len varraylist > 0
     assume (0 < U32.v md_count_v);
     let r = allocate_slab_aux_1 size_class
       slab_region md_bm_region md_region
