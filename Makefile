@@ -71,7 +71,7 @@ extract: $(ALL_KRML_FILES)
 	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 		-warn-error +9 \
-		-add-include 'Steel:"krml/steel_types.h"' $^
+		-add-include 'Steel_SpinLock:"krml/steel_types.h"' $^
 
 # test classic AVL trees
 test: verify extract
@@ -79,6 +79,7 @@ test: verify extract
 	-o bench/a.out dist/Impl_Test.c
 
 FILES = \
+$(KRML_HOME)/krmllib/c/steel_spinlock.c \
 dist/Aux.h \
 dist/BlobList.h \
 dist/Map_M.h \
@@ -90,10 +91,12 @@ dist/Impl_Trees_Rotate3_M.h \
 dist/Impl_Trees_Rotate2_M.h \
 dist/Impl_Trees_Rotate_M.h \
 dist/LargeAlloc.h \
+dist/Main.h \
 dist/SmallAlloc.h \
 dist/SizeClass.h \
 dist/Slabs.h \
 dist/Slots.h \
+dist/Steel_SpinLock.h \
 dist/Bitmap5.h \
 dist/Utils2.h \
 dist/Mman.h \
@@ -107,6 +110,7 @@ dist/Impl_Trees_Rotate3_M.c \
 dist/Impl_Trees_Rotate2_M.c \
 dist/Impl_Trees_Rotate_M.c \
 dist/LargeAlloc.c \
+dist/Main.c \
 dist/SmallAlloc.c \
 dist/SizeClass.c \
 dist/Slabs.c \
@@ -115,8 +119,8 @@ dist/Bitmap5.c \
 dist/Utils2.c \
 src/utils.c \
 src/lib-alloc0.c \
-src/slab-alloc.c \
-src/slab-alloc.h
+#src/slab-alloc.c \
+#src/slab-alloc.h
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)
 test-tree: verify extract

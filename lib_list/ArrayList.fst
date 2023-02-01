@@ -25,6 +25,7 @@ type cell (a:Type0) = {
 }
 
 /// As a convention, we represent NULL as 0
+noextract inline_for_extraction
 let null : nat = 0
 noextract inline_for_extraction
 let null_ptr : US.t = 0sz
