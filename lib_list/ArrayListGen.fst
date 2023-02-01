@@ -902,7 +902,7 @@ let intro_arraylist_nil #a #opened pred1 pred2 pred3 r hd1 hd2 hd3 =
     (A.varray r)
     (varraylist_refine pred1 pred2 pred3 (US.v hd1) (US.v hd2) (US.v hd3))
 
-let intro_head1_not_null_mem (#a:Type) (#opened:inames)
+let lemma_head1_not_null_mem (#a:Type) (#opened:inames)
   (pred1 pred2 pred3: a -> prop)
   (r:A.array (cell a))
   (hd1 hd2 hd3:US.t) :
@@ -918,6 +918,41 @@ let intro_head1_not_null_mem (#a:Type) (#opened:inames)
       mem (US.v hd1) (US.v hd1) (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)))
     )
   = noop ()
+
+let lemma_head1_in_bounds (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:US.t) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (requires fun _ -> hd1 <> null_ptr)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
+      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
+      // Functional property
+      US.v hd1 < A.length r
+    )
+   = noop ()
+
+let lemma_head1_implies_pred1 (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1:US.t{US.v hd1 < A.length r})
+  (hd2 hd3:US.t) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (requires fun h -> hd1 <> null_ptr)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
+      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
+      // Functional property
+      pred1 (get_data (Seq.index (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))) (US.v hd1)))
+    )
+    = noop ()
 
 /// Reads at index [idx] in the array.
 let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =

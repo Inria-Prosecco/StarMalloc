@@ -648,7 +648,7 @@ let allocate_slab_aux_1_partial
   )
   (ensures fun _ _ _ -> True)
   =
-  ALG.intro_head1_not_null_mem pred1 pred2 pred3
+  ALG.lemma_head1_not_null_mem pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 idx2 idx3;
   let idx1' = AL.remove1 #pred1 #pred2 #pred3
@@ -695,8 +695,8 @@ let allocate_slab_aux_1_full
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1: US.t{US.v idx1 < U32.v md_count_v})
-  (idx2: US.t{US.v idx2 < U32.v md_count_v})
-  (idx3: US.t)
+  (idx2: US.t)
+  (idx3: US.t{US.v idx3 < U32.v md_count_v})
   //: Steel (array U8.t)
   : Steel unit
   (
@@ -729,45 +729,31 @@ let allocate_slab_aux_1_full
   )
   (ensures fun _ _ _ -> True)
   =
-  //assume (t_of (
-  //  AL.varraylist pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count))
-  //    (US.v idx1) (US.v idx2) (US.v idx3))
-  //  ==
-  //  v:Seq.seq (AL.cell status){AL.varraylist_refine pred1 pred2 pred3 (US.v idx1) (US.v idx2) (US.v idx3) v});
-  //let l
-  //  = gget (
-  //  AL.varraylist pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count))
-  //    (US.v idx1) (US.v idx2) (US.v idx3)
-  //) in
-  //TODO @Aymeric: deduce mem x x::_
-  //assume (AL.mem (US.v idx1) (US.v idx1) (G.reveal l));
-  admit ();
+  ALG.lemma_head1_not_null_mem pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    idx1 idx2 idx3;
+
   let idx1' = AL.remove1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) idx1 in
-  //TODO @Aymeric: refine insert3 spec
+
   AL.insert3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx3 (Ghost.hide (US.v idx1')) (Ghost.hide (US.v idx2)) idx1 2ul;
   write r1 idx1';
   write r3 idx1;
+
   intro_vdep
     (vptr r1 `star` vptr r2 `star` vptr r3)
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz md_count_v))
-      (US.v idx1') (US.v idx2) (US.v idx1))
-    (fun (idxs: (US.t & US.t) & US.t) ->
-      AL.varraylist pred1 pred2 pred3
-        (A.split_l md_region (u32_to_sz md_count_v))
+    (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1', idx2), idx1))
+    (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)));
 
-      (US.v (fst (fst idxs)))
-      (US.v (snd (fst idxs)))
-      (US.v (snd idxs))
-    );
   slassert (left_vprop1 md_region md_count_v r1 r2 r3);
   slassert (left_vprop2 size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul));
+
+  let ds = gget (left_vprop1 md_region md_count_v r1 r2 r3) in
+  assume (dataify (dsnd (G.reveal ds)) == Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul);
+
   intro_vdep
     (left_vprop1 md_region md_count_v r1 r2 r3)
     (left_vprop2 size_class slab_region md_bm_region md_count_v
@@ -833,17 +819,7 @@ let allocate_slab_aux_1
     ) in
     md_count_v == dfst blob1)
   =
-  let idx1' : US.t = read r1 in
-  change_equal_slprop
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz md_count_v))
-      (US.v idx1) (US.v idx2) (US.v idx3))
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz md_count_v))
-      (US.v idx1') (US.v idx2) (US.v idx3));
-  //TODO @Aymeric: here idx1' == idx1,
-  //deduce heads are < len of the varraylist
-  assume (US.v idx1' < U32.v md_count_v);
+  ALG.lemma_head1_in_bounds pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) idx1 idx2 idx3;
   starseq_unpack_s
     #_
     #(pos:U32.t{U32.v pos < U32.v md_count_v})
@@ -851,36 +827,44 @@ let allocate_slab_aux_1
     (f size_class slab_region md_bm_region md_count_v md_region_lv)
     (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
     (SeqUtils.init_u32_refined (U32.v md_count_v))
-    (US.v idx1');
-  //TODO @Aymeric: x \in dlist hd1 ==> pred1 x
-  assume (Seq.index md_region_lv (US.v idx1') == 0ul);
-  SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx1');
+    (US.v idx1);
+
+  ALG.lemma_head1_implies_pred1 pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) idx1 idx2 idx3;
+
+  let gs0 = gget (AL.varraylist pred1 pred2 pred3
+                                (A.split_l md_region (u32_to_sz md_count_v))
+                                (US.v idx1) (US.v idx2) (US.v idx3)) in
+
+  assume (Seq.index md_region_lv (US.v idx1) == ALG.get_data (Seq.index gs0 (US.v idx1)));
+
+  SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx1);
   change_slprop_rel
-     (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1')))
-     (p_empty size_class (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'), slab_array slab_region (US.sizet_to_uint32 idx1')))
+     (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1)))
+     (p_empty size_class (md_bm_array md_bm_region (US.sizet_to_uint32 idx1), slab_array slab_region (US.sizet_to_uint32 idx1)))
      (fun x y -> x == y)
-     (fun _ -> admit ());
+     (fun _ -> ());
+
   p_empty_unpack size_class
-     (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'), slab_array slab_region (US.sizet_to_uint32 idx1'))
-     (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'), slab_array slab_region (US.sizet_to_uint32 idx1'));
+     (md_bm_array md_bm_region (US.sizet_to_uint32 idx1), slab_array slab_region (US.sizet_to_uint32 idx1))
+     (md_bm_array md_bm_region (US.sizet_to_uint32 idx1), slab_array slab_region (US.sizet_to_uint32 idx1));
   let r = allocate_slot size_class
-    (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'))
-    (slab_array slab_region (US.sizet_to_uint32 idx1'))
+    (md_bm_array md_bm_region (US.sizet_to_uint32 idx1))
+    (slab_array slab_region (US.sizet_to_uint32 idx1))
   in
   let cond = allocate_slab_aux_cond size_class
-    (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'))
-    (slab_array slab_region (US.sizet_to_uint32 idx1'))
+    (md_bm_array md_bm_region (US.sizet_to_uint32 idx1))
+    (slab_array slab_region (US.sizet_to_uint32 idx1))
   in
   if cond then (
    change_slprop_rel
       (slab_vprop size_class
-        (slab_array slab_region (US.sizet_to_uint32 idx1'))
-        (md_bm_array md_bm_region (US.sizet_to_uint32 idx1')))
+        (slab_array slab_region (US.sizet_to_uint32 idx1))
+        (md_bm_array md_bm_region (US.sizet_to_uint32 idx1)))
       (f size_class slab_region md_bm_region md_count_v
-        (Seq.upd md_region_lv (US.v idx1') 2ul)
-        (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1')))
+        (Seq.upd md_region_lv (US.v idx1) 2ul)
+        (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1)))
       (fun x y -> x == y)
-      (fun _ -> admit ());
+      (fun _ -> admit());
     //TODO: starseq aux lemma
     admit ();
     starseq_upd_pack
@@ -888,12 +872,12 @@ let allocate_slab_aux_1
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1') 2ul))
+      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1') 2ul))
+      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
       (SeqUtils.init_u32_refined (U32.v md_count_v))
       (SeqUtils.init_u32_refined (U32.v md_count_v))
-      (US.v idx1');
+      (US.v idx1);
     allocate_slab_aux_1_full
       size_class
       slab_region
@@ -903,16 +887,16 @@ let allocate_slab_aux_1
       r1 r2 r3
       md_count_v
       md_region_lv
-      idx1' idx2 idx3;
+      idx1 idx2 idx3;
     return r
   ) else (
     change_slprop_rel
       (slab_vprop size_class
-        (slab_array slab_region (US.sizet_to_uint32 idx1'))
-        (md_bm_array md_bm_region (US.sizet_to_uint32 idx1')))
+        (slab_array slab_region (US.sizet_to_uint32 idx1))
+        (md_bm_array md_bm_region (US.sizet_to_uint32 idx1)))
       (f size_class slab_region md_bm_region md_count_v
-        (Seq.upd md_region_lv (US.v idx1') 1ul)
-        (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1')))
+        (Seq.upd md_region_lv (US.v idx1) 1ul)
+        (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1)))
       (fun x y -> x == y)
       (fun _ -> admit ());
     //TODO: starseq aux lemma
@@ -922,12 +906,12 @@ let allocate_slab_aux_1
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1') 1ul))
+      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1') 1ul))
+      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
       (SeqUtils.init_u32_refined (U32.v md_count_v))
       (SeqUtils.init_u32_refined (U32.v md_count_v))
-      (US.v idx1');
+      (US.v idx1);
     allocate_slab_aux_1_partial
       size_class
       slab_region
@@ -937,7 +921,7 @@ let allocate_slab_aux_1
       r1 r2 r3
       md_count_v
       md_region_lv
-      idx1' idx2 idx3;
+      idx1 idx2 idx3;
     return r
   )
 
