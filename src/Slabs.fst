@@ -652,13 +652,15 @@ let allocate_slab_aux_1_partial
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) idx1 in
 
-  admit();
+//  admit();
   //TODO @Aymeric: refine insert3 spec
   AL.insert2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx2 (Ghost.hide (US.v idx1')) (Ghost.hide (US.v idx3)) idx1 1ul;
   write r1 idx1';
   write r2 idx1;
+
+  admit ();
   intro_vdep
     (vptr r1 `star` vptr r2 `star` vptr r3)
     (AL.varraylist pred1 pred2 pred3
