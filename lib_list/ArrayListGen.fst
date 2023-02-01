@@ -983,6 +983,13 @@ let write_in_place3  #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
 let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd1) hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
+
+  // Derive that idx is not in the two other lists, through disjointness and belonging to
+  // the first list
+  (**) lemma_mem_ptrs_in (US.v hd1) gs0 (US.v idx);
+  (**) lemma_mem_ptrs_in hd2 gs0 (US.v idx);
+  (**) lemma_mem_ptrs_in hd3 gs0 (US.v idx);
+
   let cell = A.index r idx in
   (**) lemma_mem_valid_or_null_next_prev pred1 (US.v hd1) gs0 (US.v idx);
 
@@ -1016,6 +1023,12 @@ let remove2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   let cell = A.index r idx in
   (**) lemma_mem_valid_or_null_next_prev pred2 (US.v hd2) gs0 (US.v idx);
 
+  // Derive that idx is not in the two other lists, through disjointness and belonging to
+  // the first list
+  (**) lemma_mem_ptrs_in (US.v hd2) gs0 (US.v idx);
+  (**) lemma_mem_ptrs_in hd1 gs0 (US.v idx);
+  (**) lemma_mem_ptrs_in hd3 gs0 (US.v idx);
+
   if cell.next <> null_ptr then
     // Next is not null, we need to update it
     let next = A.index r cell.next in
@@ -1045,6 +1058,13 @@ let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) let gs0 = gget (A.varray r) in
   let cell = A.index r idx in
   (**) lemma_mem_valid_or_null_next_prev pred3 (US.v hd3) gs0 (US.v idx);
+
+  // Derive that idx is not in the two other lists, through disjointness and belonging to
+  // the first list
+  (**) lemma_mem_ptrs_in (US.v hd3) gs0 (US.v idx);
+  (**) lemma_mem_ptrs_in hd2 gs0 (US.v idx);
+  (**) lemma_mem_ptrs_in hd1 gs0 (US.v idx);
+
 
   if cell.next <> null_ptr then
     // Next is not null, we need to update it
