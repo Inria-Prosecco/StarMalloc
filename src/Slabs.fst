@@ -816,25 +816,25 @@ let allocate_slab_aux_1
   SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx1');
   change_slprop_rel
      (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1')))
-     (p_empty size_class (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1'))))
+     (p_empty size_class (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'), slab_array slab_region (US.sizet_to_uint32 idx1')))
      (fun x y -> x == y)
      (fun _ -> admit ());
   p_empty_unpack size_class
-     (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1')))
-     (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1')));
+     (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'), slab_array slab_region (US.sizet_to_uint32 idx1'))
+     (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'), slab_array slab_region (US.sizet_to_uint32 idx1'));
   let r = allocate_slot size_class
-    (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')))
-    (slab_array slab_region (U32.uint_to_t (US.v idx1')))
+    (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'))
+    (slab_array slab_region (US.sizet_to_uint32 idx1'))
   in
   let cond = allocate_slab_aux_cond size_class
-    (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')))
-    (slab_array slab_region (U32.uint_to_t (US.v idx1')))
+    (md_bm_array md_bm_region (US.sizet_to_uint32 idx1'))
+    (slab_array slab_region (US.sizet_to_uint32 idx1'))
   in
   if cond then (
    change_slprop_rel
       (slab_vprop size_class
-        (slab_array slab_region (U32.uint_to_t (US.v idx1')))
-        (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1'))))
+        (slab_array slab_region (US.sizet_to_uint32 idx1'))
+        (md_bm_array md_bm_region (US.sizet_to_uint32 idx1')))
       (f size_class slab_region md_bm_region md_count_v
         (Seq.upd md_region_lv (US.v idx1') 2ul)
         (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1')))
@@ -867,8 +867,8 @@ let allocate_slab_aux_1
   ) else (
     change_slprop_rel
       (slab_vprop size_class
-        (slab_array slab_region (U32.uint_to_t (US.v idx1')))
-        (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1'))))
+        (slab_array slab_region (US.sizet_to_uint32 idx1'))
+        (md_bm_array md_bm_region (US.sizet_to_uint32 idx1')))
       (f size_class slab_region md_bm_region md_count_v
         (Seq.upd md_region_lv (US.v idx1') 1ul)
         (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1')))
@@ -1350,7 +1350,7 @@ let allocate_slab_aux_3
     idx1 idx2 idx3;
   let idx1' = allocate_slab_aux_3_2 size_class
     slab_region md_bm_region md_region md_count_v md_region_lv
-    (US.uint_to_t (U32.v md_count_v)) idx2 idx3 in
+    (u32_to_sz md_count_v) idx2 idx3 in
   let v = read md_count in
   write md_count (U32.add v 1ul);
   write r1 idx1';
