@@ -17,6 +17,7 @@ open Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
+open Prelude
 open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
@@ -33,7 +34,6 @@ let u32_to_sz
   //(requires True)
   //(ensures fun y -> US.v y == U32.v x)
   =
-  assume (US.fits_u32);
   US.uint32_to_sizet x
 
 open FStar.Mul

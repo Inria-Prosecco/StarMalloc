@@ -20,6 +20,7 @@ module SM = Steel.Memory
 module VR2 = SteelVRefine2
 module AL = ArrayList
 
+open Prelude
 open Utils2
 open Slots
 open SteelStarSeqUtils
@@ -34,7 +35,6 @@ let u32_to_sz
   //(requires True)
   //(ensures fun y -> US.v y == U32.v x)
   =
-  assume (US.fits_u32);
   US.uint32_to_sizet x
 
 #push-options "--print_implicits --print_universes"

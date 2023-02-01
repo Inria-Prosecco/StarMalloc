@@ -15,6 +15,7 @@ module R = Steel.Reference
 module L = Steel.SpinLock
 module AL = ArrayList
 
+open Prelude
 open SizeClass
 open Slabs
 open SteelVRefineDep
@@ -226,7 +227,6 @@ let init_struct (sc:sc)
   emp
   (fun scs -> size_class_vprop scs)
   =
-  assume (US.fits_u32);
   [@inline_let]
   let v : v:U32.t{U32.v v <= U32.v metadata_max == true}
     = 0ul in
