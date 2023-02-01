@@ -14,6 +14,7 @@ module AR = Steel.ArrayRef
 module R = Steel.Reference
 module L = Steel.SpinLock
 module AL = ArrayList
+module ALG = ArrayListGen
 
 open Prelude
 open SizeClass
@@ -36,8 +37,8 @@ let ind_aux pred1 pred2 pred3 r idxs : vprop =
         (US.v (snd idxs))
 
 
-val intro_ind_varraylist_nil (#a: Type) (#opened:_)
-  (pred1 pred2 pred3: a -> prop) (r: A.array (AL.cell a))
+val intro_ind_varraylist_nil (#opened:_)
+  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
   (r1 r2 r3: R.ref US.t)
   : SteelGhost unit opened
       (A.varray r `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
@@ -50,7 +51,7 @@ val intro_ind_varraylist_nil (#a: Type) (#opened:_)
       (ensures fun _ _ _ -> True)
 
 let intro_ind_varraylist_nil pred1 pred2 pred3 r r1 r2 r3 =
-  AL.intro_arraylist_nil
+  ALG.intro_arraylist_nil
     pred1 pred2 pred3
     r
     0sz 0sz 0sz;
@@ -68,7 +69,7 @@ val intro_left_vprop_empty (#opened:_)
   (sc:sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (r1 r2 r3: R.ref US.t)
   : SteelGhost unit opened
       (A.varray (split_l md_region 0sz) `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
@@ -132,7 +133,7 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 =
 val intro_right_vprop_empty (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell Slabs.status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   : SteelGhost unit opened
      (A.varray (split_r slab_region 0sz) `star`
       A.varray (split_r md_bm_region 0sz) `star`

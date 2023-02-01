@@ -34,7 +34,7 @@ assume val mmap_u64 (len: US.t)
     )
 
 assume val mmap_cell_status (len: US.t)
-  : Steel (array (AL.cell Slabs.status))
+  : Steel (array AL.cell)
      emp
     (fun a -> A.varray a)
     (fun _ -> True)
