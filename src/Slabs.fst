@@ -705,18 +705,18 @@ let allocate_slab_aux_1_full
   admit ();
   let idx1' = AL.remove1 #_ #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
-    (US.v idx1) (US.v idx2) (US.v idx3) idx1 in
+    idx1 (US.v idx2) (US.v idx3) idx1 in
   //TODO @Aymeric: refine insert3 spec
   AL.insert3 #_ #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
-    idx3 idx1' (US.v idx2) idx1 2ul;
-  write r1 (US.uint_to_t idx1');
+    idx3 (US.v idx1') (US.v idx2) idx1 2ul;
+  write r1 idx1';
   write r2 idx1;
   intro_vdep
     (vptr r1 `star` vptr r2 `star` vptr r3)
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
-      idx1' (US.v idx2) (US.v idx1))
+      (US.v idx1') (US.v idx2) (US.v idx1))
     (fun (idxs: (US.t & US.t) & US.t) ->
       AL.varraylist pred1 pred2 pred3
         (A.split_l md_region (u32_to_sz md_count_v))
