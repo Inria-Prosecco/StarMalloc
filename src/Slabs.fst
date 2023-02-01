@@ -548,6 +548,22 @@ let left_vprop_deprecated
       (f_lemma size_class slab_region md_bm_region md_count (dataify x))
       (SeqUtils.init_u32_refined (U32.v md_count)))
 
+let left_vprop_aux
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
+  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (r1 r2 r3: ref US.t)
+  (x: t_of (ind_varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count)) r1 r2 r3))
+
+  = starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count (dataify (dsnd x)))
+      (f_lemma size_class slab_region md_bm_region md_count (dataify (dsnd x)))
+      (SeqUtils.init_u32_refined (U32.v md_count))
+
 let left_vprop
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -560,13 +576,7 @@ let left_vprop
     (A.split_l md_region (u32_to_sz md_count))
     r1 r2 r3
   `vdep`
-  (fun x ->
-    starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count (dataify (dsnd x)))
-      (f_lemma size_class slab_region md_bm_region md_count (dataify (dsnd x)))
-      (SeqUtils.init_u32_refined (U32.v md_count)))
+  left_vprop_aux size_class slab_region md_bm_region md_count md_region r1 r2 r3
 
 #push-options "--z3rlimit 75"
 assume val allocate_slab_aux_1_partial

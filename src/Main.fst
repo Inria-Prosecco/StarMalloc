@@ -16,7 +16,11 @@ module L = Steel.SpinLock
 module AL = ArrayList
 
 open SizeClass
+open Slabs
+open SteelVRefineDep
+open SteelStarSeqUtils
 open Utils2
+
 
 noeq
 type size_class =
@@ -45,7 +49,7 @@ assume val mmap_u64 (len: US.t)
     )
 
 assume val mmap_cell_status (len: US.t)
-  : Steel (array (AL.cell Slabs.status))
+  : Steel (array (AL.cell status))
      emp
     (fun a -> A.varray a)
     (fun _ -> True)
@@ -77,7 +81,7 @@ val intro_ind_varraylist_nil (#a: Type) (#opened:_)
   (r1 r2 r3: R.ref US.t)
   : SteelGhost unit opened
       (A.varray r `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
-      (fun _ -> Slabs.ind_varraylist pred1 pred2 pred3 r r1 r2 r3)
+      (fun _ -> ind_varraylist pred1 pred2 pred3 r r1 r2 r3)
       (requires fun h -> A.length r == 0 /\
         R.sel r1 h == 0sz /\
         R.sel r2 h == 0sz /\
@@ -103,7 +107,7 @@ let intro_ind_varraylist_nil pred1 pred2 pred3 r r1 r2 r3 =
 val intro_left_vprop_empty (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell Slabs.status){A.length md_region = U32.v metadata_max})
+  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
   (r1 r2 r3: R.ref US.t)
   : SteelGhost unit opened
       (A.varray (split_l md_region 0sz) `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
@@ -115,54 +119,96 @@ val intro_left_vprop_empty (#opened:_)
       )
       (ensures fun _ _ _ -> True)
 
+#push-options "--z3rlimit 30"
 let intro_left_vprop_empty slab_region md_bm_region md_region r1 r2 r3 =
-  sladmit()
+  change_equal_slprop
+    (A.varray (split_l md_region 0sz))
+    (A.varray (split_l md_region (u32_to_sz 0ul)));
+  intro_ind_varraylist_nil pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz 0ul))
+    r1 r2 r3;
+
+  let s = gget (ind_varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz 0ul))
+      r1 r2 r3) in
+
+
+  starseq_intro_empty #_
+      #(pos:U32.t{U32.v pos < U32.v 0ul})
+      #(Slabs.t 16ul)
+      (Slabs.f 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
+      (Slabs.f_lemma 16ul slab_region md_bm_region 0ul (dataify (dsnd s)));
+
+  assert (SeqUtils.init_u32_refined (U32.v 0ul) `Seq.equal` Seq.empty);
+
+  let open FStar.Tactics in
+  assert ((starseq
+      #(pos:U32.t{U32.v pos < U32.v 0ul})
+      #(t 16ul)
+      (f 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
+      (f_lemma 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
+      Seq.empty) ==
+    (left_vprop_aux 16ul slab_region md_bm_region 0ul md_region r1 r2 r3 s))
+  by (norm [delta_only [`%left_vprop_aux]]);
+
+
+  change_equal_slprop
+    (starseq
+      #(pos:U32.t{U32.v pos < U32.v 0ul})
+      #(t 16ul)
+      (f 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
+      (f_lemma 16ul slab_region md_bm_region 0ul (dataify (dsnd s)))
+      Seq.empty)
+    (left_vprop_aux 16ul slab_region md_bm_region 0ul md_region r1 r2 r3 s);
+
+  intro_vdep
+    (ind_varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz 0ul))
+      r1 r2 r3)
+    (left_vprop_aux 16ul slab_region md_bm_region 0ul md_region r1 r2 r3 s)
+    (left_vprop_aux 16ul slab_region md_bm_region 0ul md_region r1 r2 r3)
 
 val intro_right_vprop_empty (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell Slabs.status){A.length md_region = U32.v metadata_max})
-  : SteelGhostT unit opened
+  : SteelGhost unit opened
      (A.varray (split_r slab_region 0sz) `star`
       A.varray (split_r md_bm_region 0sz) `star`
       A.varray (split_r md_region 0sz))
     (fun _ -> Slabs.right_vprop slab_region md_bm_region md_region 0ul)
+    (requires fun h ->
+      A.asel (split_r slab_region 0sz) h `Seq.equal` Seq.create (A.length slab_region) U8.zero /\
+      A.asel (split_r md_bm_region 0sz) h `Seq.equal` Seq.create (A.length md_bm_region) U64.zero)
+    (ensures fun _ _ _ -> True)
 
 let intro_right_vprop_empty slab_region md_bm_region md_region =
-  sladmit()
- // change_equal_slprop
- //    (A.varray (A.split_r slab_region 0sz))
- //    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))));
- //  change_equal_slprop
- //    (A.varray (A.split_r md_bm_region 0sz))
- //    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))));
- //  change_equal_slprop
- //    (A.varray (A.split_r md_region 0sz))
- //    (A.varray (A.split_r md_region (u32_to_sz v)));
- //  intro_vrefine
- //    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))) zf_u8;
- //  intro_vrefine
- //    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))) zf_u64;
- //  assert_norm ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
- //      `vrefine` zf_u8) `star`
- //    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
- //      `vrefine` zf_u64) `star`
- //    A.varray (A.split_r md_region (u32_to_sz v)) ==
- //    (Slabs.right_vprop slab_region md_bm_region md_region v));
- //  change_equal_slprop
- //    ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
- //      `vrefine` zf_u8) `star`
- //    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
- //      `vrefine` zf_u64) `star`
- //    A.varray (A.split_r md_region (u32_to_sz v)))
- //    (Slabs.right_vprop slab_region md_bm_region md_region v);
-
-
-//TODO: move to utils
-inline_for_extraction noextract
-let u32_to_sz = Slabs.u32_to_sz
-
-open SteelVRefineDep
+ change_equal_slprop
+    (A.varray (A.split_r slab_region 0sz))
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul 0ul page_size))));
+  change_equal_slprop
+    (A.varray (A.split_r md_bm_region 0sz))
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul 0ul 4ul))));
+  change_equal_slprop
+    (A.varray (A.split_r md_region 0sz))
+    (A.varray (A.split_r md_region (u32_to_sz 0ul)));
+  intro_vrefine
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul 0ul page_size)))) zf_u8;
+  intro_vrefine
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul 0ul 4ul)))) zf_u64;
+  assert_norm ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul 0ul page_size)))
+      `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul 0ul 4ul)))
+      `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region (u32_to_sz 0ul)) ==
+    (right_vprop slab_region md_bm_region md_region 0ul));
+  change_equal_slprop
+    ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul 0ul page_size)))
+      `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul 0ul 4ul)))
+      `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region (u32_to_sz 0ul)))
+    (right_vprop slab_region md_bm_region md_region 0ul)
 
 #restart-solver
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
@@ -191,84 +237,20 @@ let init (sc:U32.t)
 
   intro_right_vprop_empty slab_region md_bm_region md_region;
 
-(*
-  // That works
-  // drop (A.varray (A.split_l slab_region 0sz));
-  // drop (A.varray (A.split_l md_bm_region 0sz));
-  // drop (A.varray (A.split_l md_region 0sz));
-  change_equal_slprop
-    (A.varray (A.split_r slab_region 0sz))
-    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size))));
-  change_equal_slprop
-    (A.varray (A.split_r md_bm_region 0sz))
-    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul))));
-  change_equal_slprop
-    (A.varray (A.split_r md_region 0sz))
-    (A.varray (A.split_r md_region (u32_to_sz v)));
-  intro_vrefine
-    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))) zf_u8;
-  intro_vrefine
-    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))) zf_u64;
-  assert_norm ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-      `vrefine` zf_u8) `star`
-    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-      `vrefine` zf_u64) `star`
-    A.varray (A.split_r md_region (u32_to_sz v)) ==
-    (Slabs.right_vprop slab_region md_bm_region md_region v));
-  change_equal_slprop
-    ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-      `vrefine` zf_u8) `star`
-    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-      `vrefine` zf_u64) `star`
-    A.varray (A.split_r md_region (u32_to_sz v)))
-    (Slabs.right_vprop slab_region md_bm_region md_region v);
-*)
-
   R.write ptr_partial 0sz;
   R.write ptr_empty 0sz;
   R.write ptr_full 0sz;
 
   intro_left_vprop_empty slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full;
 
-  // intro_ind_varraylist_nil Slabs.pred1 Slabs.pred2 Slabs.pred3
-  //   (A.split_l md_region 0sz)
-  //   ptr_partial ptr_empty ptr_full;
-
-  // // AL.intro_arraylist_nil
-  // //   Slabs.pred1 Slabs.pred2 Slabs.pred3
-  // //   (A.split_l md_region 0sz)
-  // //   0sz 0sz 0sz;
-
-  // // intro_vdep
-  // //   (R.vptr ptr_partial `star` R.vptr ptr_empty `star` R.vptr ptr_full)
-  // //   (AL.varraylist Slabs.pred1 Slabs.pred2 Slabs.pred3 (A.split_l md_region 0sz) 0 0 0)
-  // //   (fun (idxs: (US.t & US.t) & US.t) ->
-  // //     AL.varraylist Slabs.pred1 Slabs.pred2 Slabs.pred3 (A.split_l md_region 0sz)
-  // //       (US.v (fst (fst idxs)))
-  // //       (US.v (snd (fst idxs)))
-  // //       (US.v (snd idxs))
-  // //   );
-
-  // SteelStarSeqUtils.starseq_intro_empty #_
-  //     #(pos:U32.t{U32.v pos < U32.v 0ul})
-  //     #(Slabs.t 16ul)
-  //     (Slabs.f 16ul slab_region md_bm_region 0ul (Slabs.dataify Seq.empty))
-  //     (Slabs.f_lemma 16ul slab_region md_bm_region 0ul (Slabs.dataify Seq.empty));
-
-  // intro_vdep
-  //   (ind_varraylist pred1 pred2 pred3
-  //     (A.split_l md_region 0sz)
-  //     ptr_partial ptr_empty ptr_full)
-
   R.write md_count 0ul;
-  SteelVRefineDep.intro_vrefinedep
+  intro_vrefinedep
     (R.vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
     (size_class_vprop_aux 16ul slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full)
-    (Slabs.left_vprop 16ul slab_region md_bm_region 0ul md_region
+    (left_vprop 16ul slab_region md_bm_region 0ul md_region
          ptr_empty ptr_partial ptr_full `star`
-       // right part
-       Slabs.right_vprop slab_region md_bm_region md_region 0ul);
+     right_vprop slab_region md_bm_region md_region 0ul);
 
 
   let scs = {
@@ -286,23 +268,11 @@ let init (sc:U32.t)
   let open FStar.Tactics in
   assert (
     size_class_vprop scs ==
-    SteelVRefineDep.vrefinedep
+    vrefinedep
       (R.vptr scs.md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
-
-      // (fun v ->
-      //   // left part
-      //   Slabs.left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-      //    scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-      //   // right part
-      //   Slabs.right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
      ) by (norm [delta_only [`%size_class_vprop]]);
-
-  // vrefinedep_ext (R.vptr scs.md_count) (R.vptr md_count)
-  //     (fun x -> U32.v x <= U32.v metadata_max == true)
-  //     (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
-  //     (size_class_vprop_aux 16ul slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full);
 
   change_equal_slprop
     (SteelVRefineDep.vrefinedep
@@ -311,78 +281,10 @@ let init (sc:U32.t)
       (size_class_vprop_aux 16ul slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full))
      (size_class_vprop scs);
 
-
-     //  (fun v ->
-     //    // left part
-     //    Slabs.left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-     //     scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-     //    // right part
-     //    Slabs.right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
-     // (fun v ->
-     //    // left part
-     //    Slabs.left_vprop 16ul slab_region md_bm_region v md_region
-     //     ptr_empty ptr_partial ptr_full `star`
-     //    // right part
-     //    Slabs.right_vprop slab_region md_bm_region md_region v);
-
   drop (A.varray (A.split_l slab_region 0sz));
   drop (A.varray (A.split_l md_bm_region 0sz));
 
   return scs
-
-
-(*
-
-
-  return scs
-
-
-
-  R.write md_count v;
-  SteelVRefineDep.intro_vrefinedep
-    (R.vptr md_count)
-    (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v -> Slabs.right_vprop slab_region md_bm_region md_region v)
-    (Slabs.right_vprop slab_region md_bm_region md_region v);
-
-
-  R.write ptr_partial SL.null_t;
-  R.write ptr_empty SL.null_t;
-  R.write ptr_full SL.null_t;
-
-  SL.intro_llist_nil (Slabs.p_partial 16ul);
-  SL.intro_llist_nil (Slabs.p_empty 16ul);
-  SL.intro_llist_nil (Slabs.p_full 16ul);
-
-  SL.pack_ind (Slabs.p_partial 16ul) ptr_partial SL.null_t;
-  SL.pack_ind (Slabs.p_empty 16ul) ptr_empty SL.null_t;
-  SL.pack_ind (Slabs.p_full 16ul) ptr_full SL.null_t;
-
-
-  let scs = {
-    size = 16ul;
-    partial_slabs = ptr_partial;
-    empty_slabs = ptr_empty;
-    full_slabs = ptr_full;
-    slab_region = slab_region;
-    md_bm_region = md_bm_region;
-    md_region = md_region;
-    md_count = md_count;
-  } in
-
-  change_equal_slprop
-   (SL.ind_llist (Slabs.p_partial 16ul) ptr_partial `star`
-    SL.ind_llist (Slabs.p_empty 16ul) ptr_empty `star`
-    SL.ind_llist (Slabs.p_full 16ul) ptr_full `star`
-  SteelVRefineDep.vrefinedep
-    (R.vptr md_count)
-    //TODO: hideous coercion
-    (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v -> Slabs.right_vprop slab_region md_bm_region md_region v))
-  (size_class_vprop scs);
-
-  return scs
-*)
 
 assume
 val size_class16 : size_class
