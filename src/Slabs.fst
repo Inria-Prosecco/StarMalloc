@@ -1431,8 +1431,129 @@ let right_vprop_equal_lemma
 //  return r
 //#pop-options
 
+//TODO: Aymeric, varraylist
+let allocate_slab_aux_3_1_varraylist
+  (#opened:_)
+  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
+  (idx1 idx2 idx3: US.t)
+  : SteelGhost unit opened
+  (AL.varraylist pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    (US.v idx1) (US.v idx2) (US.v idx3) `star`
+  A.varray (md_array md_region md_count_v))
+  (fun _ -> AL.varraylist pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+    (U32.v md_count_v) (US.v idx2) (US.v idx3))
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  = sladmit ()
+
+let allocate_slab_aux_3_1
+  (#opened:_)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
+  (idx1 idx2 idx3: US.t)
+  : SteelGhost unit opened
+  (
+    right_vprop slab_region md_bm_region md_region md_count_v `star`
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v))
+      (US.v idx1) (US.v idx2) (US.v idx3))
+  )
+  (fun _ ->
+    right_vprop slab_region md_bm_region md_region (U32.add md_count_v 1ul) `star`
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+      (U32.v md_count_v) (US.v idx2) (US.v idx3)) `star`
+    A.varray (slab_array slab_region md_count_v) `star`
+    A.varray (md_bm_array md_bm_region md_count_v)
+  )
+  (requires fun h0 -> True)
+  (ensures fun h0 _ h1 -> True)
+  =
+  change_slprop_rel
+    (right_vprop slab_region md_bm_region md_region md_count_v)
+    ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul md_count_v page_size)))
+     `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul md_count_v 4ul)))
+     `vrefine` zf_u64) `star`
+   A.varray (A.split_r md_region (u32_to_sz md_count_v)))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  elim_vrefine
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))))
+    zf_u8;
+  elim_vrefine
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (G.reveal md_count_v) 4ul))))
+    zf_u64;
+  slab_region_mon_split slab_region md_count_v;
+  md_bm_region_mon_split md_bm_region md_count_v;
+  md_region_mon_split md_region md_count_v;
+  intro_vrefine
+    (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count_v 1ul) page_size))))
+    zf_u8;
+  intro_vrefine
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count_v 1ul) 4ul))))
+    zf_u64;
+  change_slprop_rel
+    ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count_v 1ul) page_size)))
+     `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count_v 1ul) 4ul)))
+     `vrefine` zf_u64) `star`
+   A.varray (A.split_r md_region (u32_to_sz (U32.add md_count_v 1ul))))
+    (right_vprop slab_region md_bm_region md_region (U32.add md_count_v 1ul))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  allocate_slab_aux_3_1_varraylist
+    md_region md_count_v idx1 idx2 idx3
+
+assume val allocate_slab_aux_3_2
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
+  (idx1 idx2 idx3: US.t)
+  : Steel US.t
+  (
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+      (U32.v md_count_v) (US.v idx2) (US.v idx3)) `star`
+    A.varray (slab_array slab_region md_count_v) `star`
+    A.varray (md_bm_array md_bm_region md_count_v) `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_u32_refined (U32.v md_count_v))
+  )
+  (fun idx1' ->
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+      (US.v idx1') (US.v idx2) (US.v idx3)) `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v (U32.add md_count_v 1ul)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (U32.add md_count_v 1ul)
+        (Seq.append md_region_lv (Seq.create 1 0ul)))
+      (f_lemma size_class slab_region md_bm_region
+        (U32.add md_count_v 1ul)
+        (Seq.append md_region_lv (Seq.create 1 0ul)))
+      (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul)))
+  )
+  (requires fun h0 -> True)
+  (ensures fun h0 idx1' h1 ->
+    idx1' <> AL.null_ptr
+  )
+
 //TODO: @Antonin, yapluka
-assume val allocate_slab_aux_3
+let allocate_slab_aux_3
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -1490,6 +1611,17 @@ assume val allocate_slab_aux_3
     md_count_v == sel md_count h0 /\
     sel md_count h1 = U32.add (sel md_count h0) 1ul
   )
+  =
+  allocate_slab_aux_3_1
+    slab_region md_bm_region md_region md_count_v
+    idx1 idx2 idx3;
+  let idx1' = allocate_slab_aux_3_2 size_class
+    slab_region md_bm_region md_region md_count_v md_region_lv
+    idx1 idx2 idx3 in
+  let v = read md_count in
+  write md_count (U32.add v 1ul);
+  write r1 idx1';
+  return idx1'
 
 
 //#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
