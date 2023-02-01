@@ -24,11 +24,7 @@ type cell (a:Type0) = {
   data: a;
 }
 
-/// As a convention, we represent NULL as 0
-noextract inline_for_extraction
-let null : nat = 0
-noextract inline_for_extraction
-let null_ptr : US.t = 0sz
+let get_data c = c.data
 
 /// The core logical predicate: For a sequence of cells [s], corresponding to the contents of an array,
 /// there is a doubly linked list starting at s.[idx].
@@ -103,14 +99,6 @@ let rec ptrs_in' (#a:Type)
 
 let ptrs_in (#a:Type) (hd:nat) (s:Seq.seq (cell a)) = ptrs_in' hd s FS.emptyset
 
-/// Set of all pointers contained in the three doubly linked lists
-let ptrs_all (#a:Type) (hd1 hd2 hd3:nat) (s:Seq.seq (cell a)) =
-  FS.union (ptrs_in hd1 s) (FS.union (ptrs_in hd2 s) (ptrs_in hd3 s))
-
-/// Membership of element [x] in any of the dlist pointed to by [hd1], [hd2], or [hd3]
-let mem_all (#a:Type0) (x:nat) (hd1 hd2 hd3:nat) (s:Seq.seq (cell a)) =
-  FS.mem x (ptrs_all hd1 hd2 hd3 s)
-
 /// Equivalence lemma between `mem` and membership in `ptrs_in`
 let rec lemma_mem_ptrs_in' (#a:Type)
   (hd:nat)
@@ -147,15 +135,7 @@ let disjoint' (#a:Type)
 let disjoint (#a:Type)
   (s: Seq.seq (cell a))
   (hd1 hd2: nat)
-  = disjoint' s hd1 hd2 FS.emptyset FS.emptyset
-
-/// Mutual exclusiveness for three dlists
-let disjoint3 (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3: nat) =
-  disjoint s hd1 hd2 /\ disjoint s hd1 hd3 /\ disjoint s hd2 hd3
-
-/// The array is partitioned exactly between the three lists
-let partition (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3: nat) =
-  forall (i:nat{i < Seq.length s}). i == null \/ (FS.mem i (ptrs_all hd1 hd2 hd3 s))
+  = disjoint' s hd1 hd2 FS.emptyset FS.emptyset /\ True
 
 (** Some helpers to use cells *)
 
@@ -911,66 +891,18 @@ let lemma_remove_spec_frame pred pred' hd hd' s idx =
   assert (ptrs_in hd' sf == ptrs_in hd' sint)
 
 
-(** Steel functions and vprops *)
-
-/// The refinement predicate for varraylist, stating that the sequence contains
-/// three mutually exclusive doubly linked lists
-let varraylist_refine (#a:Type)
-  (pred1 pred2 pred3: a -> prop)
-  (hd1 hd2 hd3:nat)
-  (s:Seq.seq (cell a)) : prop
-  = is_dlist pred1 hd1 s /\ is_dlist pred2 hd2 s /\ is_dlist pred3 hd3 s /\ disjoint3 s hd1 hd2 hd3
-
-/// The main vprop of this module.
-/// We have access to an array, such that the array contains three mutually
-/// exclusive doubly linked list, starting at offsets [hd1] [hd2] and [hd3]
-/// respectively
-[@@__steel_reduce__]
-let varraylist (#a:Type) (pred1 pred2 pred3: a -> prop) (r:A.array (cell a)) (hd1 hd2 hd3:nat) : vprop
-  = A.varray r `vrefine` (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
-
 /// AF: The regular noop does not seem to pick the equality of selectors, not sure why
 val noop (#opened:inames) (#p:vprop) (_:unit)
   : SteelGhostF unit opened p (fun _ -> p) (requires fun _ -> True) (ensures fun h0 _ h1 -> h0 p == h1 p)
 let noop () = noop ()
 
 /// Create an arraylist with
-val intro_arraylist_nil (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:US.t) :
-  SteelGhost unit opened
-    (A.varray r)
-    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (requires fun _ ->
-      A.length r == 0 /\
-      hd1 == null_ptr /\
-      hd2 == null_ptr /\
-      hd3 == null_ptr)
-    (ensures fun _ _ h1 ->
-      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) `Seq.equal` Seq.empty
-    )
-
 let intro_arraylist_nil #a #opened pred1 pred2 pred3 r hd1 hd2 hd3 =
   intro_vrefine
     (A.varray r)
     (varraylist_refine pred1 pred2 pred3 (US.v hd1) (US.v hd2) (US.v hd3))
 
 /// Reads at index [idx] in the array.
-inline_for_extraction noextract
-val read_in_place (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-  : Steel a
-          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (requires fun _ -> True)
-          (ensures fun h0 _ h1 ->
-            h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) ==
-            h1 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))
-
 let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
   let res = A.index r idx in
@@ -981,19 +913,6 @@ let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
 /// We define three different functions, depending on which list the element
 /// belongs to. In all three cases, we require [v] to satisfy the predicate
 /// corresponding to a given list
-inline_for_extraction noextract
-val write_in_place1 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-  (v:a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (requires fun h -> pred1 v /\ mem (US.v idx) hd1 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
-          (ensures fun h0 _ h1 -> True) // TODO
-
 let write_in_place1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
   let c = A.index r idx in
@@ -1010,19 +929,6 @@ let write_in_place1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
 
-inline_for_extraction noextract
-val write_in_place2 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-  (v:a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (requires fun h -> pred2 v /\ mem (US.v idx) hd2 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
-          (ensures fun h0 _ h1 -> True) // TODO
-
 let write_in_place2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
   let c = A.index r idx in
@@ -1038,19 +944,6 @@ let write_in_place2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) lemma_dlist_frame pred1 gs hd1 (US.v idx) (write_data c v);
   (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
-
-inline_for_extraction noextract
-val write_in_place3 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-  (v:a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (requires fun h -> pred3 v /\ mem (US.v idx) hd3 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
-          (ensures fun h0 _ h1 -> True) // TODO
 
 let write_in_place3  #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
@@ -1070,26 +963,6 @@ let write_in_place3  #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
 
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
-inline_for_extraction noextract
-val remove1 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1:US.t)
-  (hd2 hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-   : Steel US.t
-          (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)
-          (fun hd' -> varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)
-          (requires fun h -> mem (US.v idx) (US.v hd1) (h (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            FS.remove (US.v idx) (ptrs_in (US.v hd1) (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))) /\
-            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
-            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))
-          )
-
 let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd1) hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
@@ -1120,27 +993,6 @@ let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   return hd'
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd2]
-inline_for_extraction noextract
-val remove2 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1:Ghost.erased nat)
-  (hd2:US.t)
-  (hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-   : Steel US.t
-          (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)
-          (fun hd' -> varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)
-          (requires fun h -> mem (US.v idx) (US.v hd2) (h (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            FS.remove (US.v idx) (ptrs_in (US.v hd2) (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))) /\
-            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
-            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))
-          )
-
 let remove2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v hd2) hd3);
   (**) let gs0 = gget (A.varray r) in
@@ -1171,26 +1023,6 @@ let remove2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   return hd'
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd3]
-inline_for_extraction noextract
-val remove3 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2:Ghost.erased nat)
-  (hd3:US.t)
-  (idx:US.t{US.v idx < A.length r})
-   : Steel US.t
-          (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))
-          (fun hd' -> varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))
-          (requires fun h -> mem (US.v idx) (US.v hd3) (h (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            FS.remove (US.v idx) (ptrs_in (US.v hd3) (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))) /\
-            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
-            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))
-          )
-
 let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd3));
   (**) let gs0 = gget (A.varray r) in
@@ -1220,31 +1052,6 @@ let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd'));
   return hd'
 
-
-/// Requires that the element at offset [idx] does not belong to any dlist.
-/// If so, insert it at the head of list [hd1]
-inline_for_extraction noextract
-val insert1 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
-  (hd2 hd3:Ghost.erased nat)
-  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
-  (v: a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)
-          (requires fun h -> pred1 v /\
-            (~ (mem_all (US.v idx) (US.v hd) hd2 hd3 (h (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)))))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) /\
-            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
-            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))
-          )
-
 let insert1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
@@ -1265,31 +1072,6 @@ let insert1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
   (**) lemma_insert_spec_frame pred1 pred3 gs0 hd idx hd3 v;
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v idx) hd2 hd3)
-
-
-/// Requires that the element at offset [idx] does not belong to any dlist.
-/// If so, insert it at the head of list [hd2]
-inline_for_extraction noextract
-val insert2 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
-  (hd1 hd3:Ghost.erased nat)
-  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
-  (v: a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)
-          (requires fun h -> pred2 v /\
-            (~ (mem_all (US.v idx) hd1 (US.v hd) hd3 (h (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)))))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))) /\
-            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
-            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))
-          )
 
 let insert2 #a #pred1 #pred2 #pred3 r hd hd1 hd3 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v hd) hd3);
@@ -1312,30 +1094,6 @@ let insert2 #a #pred1 #pred2 #pred3 r hd hd1 hd3 idx v =
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v idx) hd3)
 
-
-/// Requires that the element at offset [idx] does not belong to any dlist.
-/// If so, insert it at the head of list [hd3]
-inline_for_extraction noextract
-val insert3 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
-  (hd1 hd2:Ghost.erased nat)
-  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
-  (v: a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))
-          (requires fun h -> pred3 v /\
-            (~ (mem_all (US.v idx) hd1 hd2 (US.v hd) (h (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))))))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) /\
-            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
-            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))
-          )
 
 let insert3 #a #pred1 #pred2 #pred3 r hd hd1 hd2 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd));
