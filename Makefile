@@ -70,6 +70,7 @@ extract: $(ALL_KRML_FILES)
 	mkdir -p dist
 	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
+		-warn-error +9 \
 		-add-include 'Steel:"krml/steel_types.h"' $^
 
 # test classic AVL trees
