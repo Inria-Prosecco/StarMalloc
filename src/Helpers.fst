@@ -27,6 +27,7 @@ open Slots
 
 // TODO: to be removed/move apart ; use stdlib
 // discussion
+inline_for_extraction noextract
 let u32_to_sz
   (x:U32.t)
   : Tot (y:US.t{US.v y == U32.v x})
