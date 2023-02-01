@@ -957,7 +957,7 @@ let intro_arraylist_nil #a #opened pred1 pred2 pred3 r hd1 hd2 hd3 =
     (varraylist_refine pred1 pred2 pred3 (US.v hd1) (US.v hd2) (US.v hd3))
 
 /// Reads at index [idx] in the array.
-/// TODO: The hd pointer should be ghost
+inline_for_extraction noextract
 val read_in_place (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -981,7 +981,7 @@ let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
 /// We define three different functions, depending on which list the element
 /// belongs to. In all three cases, we require [v] to satisfy the predicate
 /// corresponding to a given list
-/// TODO: The hd pointer should be ghost
+inline_for_extraction noextract
 val write_in_place1 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1010,6 +1010,7 @@ let write_in_place1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
 
+inline_for_extraction noextract
 val write_in_place2 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1038,6 +1039,7 @@ let write_in_place2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
 
+inline_for_extraction noextract
 val write_in_place3 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1068,6 +1070,7 @@ let write_in_place3  #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
 
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
+inline_for_extraction noextract
 val remove1 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1117,6 +1120,7 @@ let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   return hd'
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd2]
+inline_for_extraction noextract
 val remove2 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1167,6 +1171,7 @@ let remove2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   return hd'
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd3]
+inline_for_extraction noextract
 val remove3 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1218,6 +1223,7 @@ let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
 /// If so, insert it at the head of list [hd1]
+inline_for_extraction noextract
 val insert1 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1263,6 +1269,7 @@ let insert1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
 /// If so, insert it at the head of list [hd2]
+inline_for_extraction noextract
 val insert2 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
@@ -1308,6 +1315,7 @@ let insert2 #a #pred1 #pred2 #pred3 r hd hd1 hd3 idx v =
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
 /// If so, insert it at the head of list [hd3]
+inline_for_extraction noextract
 val insert3 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
