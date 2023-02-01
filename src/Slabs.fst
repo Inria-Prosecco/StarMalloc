@@ -508,7 +508,7 @@ let t
 
 let dataify
   (s: Seq.seq (AL.cell status))
-  : Seq.lseq status (Seq.length s)
+  : GTot (Seq.lseq status (Seq.length s))
   =
   let f = fun (c: AL.cell status) -> c.data in
   Seq.map_seq_len f s;
