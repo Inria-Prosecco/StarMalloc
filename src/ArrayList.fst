@@ -51,6 +51,27 @@ let remove1
           )
   = AL.remove1 r hd1 hd2 hd3 idx
 
+let remove2
+  (#pred1 #pred2 #pred3: status -> prop)
+  (r:A.array cell)
+  (hd1:Ghost.erased nat)
+  (hd2:US.t)
+  (hd3:Ghost.erased nat)
+  (idx:US.t{US.v idx < A.length r})
+   : Steel US.t
+          (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)
+          (fun hd' -> varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)
+          (requires fun h -> AL.mem (US.v idx) (US.v hd2) (h (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)))
+          (ensures fun h0 hd' h1 ->
+            AL.ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
+            FS.remove (US.v idx) (AL.ptrs_in (US.v hd2) (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))) /\
+            AL.ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
+            AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
+            AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
+            AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))
+          )
+  = AL.remove2 r hd1 hd2 hd3 idx
+
 let insert2
   (#pred1 #pred2 #pred3: status -> prop)
   (r:A.array cell)
