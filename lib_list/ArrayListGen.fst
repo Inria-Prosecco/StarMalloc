@@ -1,4 +1,4 @@
-module ArrayList
+module ArrayListGen
 
 open Steel.Memory
 open Steel.Effect.Atomic

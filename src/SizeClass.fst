@@ -39,7 +39,7 @@ type size_class_struct' = {
   slab_region: array U8.t;
   //TODO: due to karamel extraction issue + sl proof workaround
   md_bm_region: array U64.t;
-  md_region: array (AL.cell status);
+  md_region: array AL.cell;
   //lock: ref bool;
 }
 
@@ -59,7 +59,7 @@ type blob2 = {
   md_count_v: U32.t;
   slab_region_v: Seq.seq U8.t;
   md_bm_region_v: Seq.seq U64.t;
-  md_region_v: Seq.seq (AL.cell status);
+  md_region_v: Seq.seq AL.cell;
 }
 
 open SteelVRefineDep

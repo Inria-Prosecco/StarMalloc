@@ -41,8 +41,6 @@ let u32_to_sz
 #push-options "--print_implicits --print_universes"
 #set-options "--ide_id_info_off"
 
-let status = v:U32.t{U32.v v < 3}
-
 let pred1 (x: U32.t) : prop = U32.eq x 0ul == true
 let pred2 (x: U32.t) : prop = U32.eq x 1ul == true
 let pred3 (x: U32.t) : prop = U32.eq x 2ul == true
@@ -419,9 +417,9 @@ let md_bm_region_mon_split
     (fun _ -> ())
 
 let md_array
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
-  : Pure (array (AL.cell status))
+  : Pure (array AL.cell)
   (requires
     A.length md_region = U32.v metadata_max /\
     U32.v md_count < U32.v metadata_max)
@@ -438,7 +436,7 @@ let md_array
 
 let md_region_mon_split
   (#opened:_)
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
   : SteelGhostT unit opened
   (A.varray (A.split_r md_region (u32_to_sz md_count)))
@@ -470,7 +468,7 @@ let f
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
-  (md_region_lv: Seq.lseq status (U32.v md_count))
+  (md_region_lv: Seq.lseq AL.status (U32.v md_count))
   (i: U32.t{U32.v i < U32.v md_count})
   : vprop
   =
@@ -484,7 +482,7 @@ let f_lemma
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
-  (md_region_lv: Seq.lseq status (U32.v md_count))
+  (md_region_lv: Seq.lseq AL.status (U32.v md_count))
   (i: U32.t{U32.v i < U32.v md_count})
   : Lemma
   (t_of (f size_class slab_region md_bm_region md_count md_region_lv i)
@@ -508,16 +506,16 @@ let t
   & Seq.lseq U8.t 0
 
 let dataify
-  (s: Seq.seq (AL.cell status))
-  : GTot (Seq.lseq status (Seq.length s))
+  (s: Seq.seq AL.cell)
+  : GTot (Seq.lseq AL.status (Seq.length s))
   =
-  let f = fun (c: AL.cell status) -> c.data in
+  let f = fun (c: AL.cell) -> c.data in
   Seq.map_seq_len f s;
   Seq.map_seq f s
 
 #push-options "--z3rlimit 30"
-let ind_varraylist (#a: Type)
-  (pred1 pred2 pred3: a -> prop) (r: A.array (AL.cell a))
+let ind_varraylist
+  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
   (r1 r2 r3: ref US.t)
   //(hd1 hd2 hd3: nat)
   =
@@ -534,14 +532,14 @@ let left_vprop_deprecated
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (idx1 idx2 idx3: nat)
   =
   AL.varraylist pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count))
     idx1 idx2 idx3
   `vdep`
-  (fun (x: Seq.lseq (AL.cell status) (U32.v md_count)) ->
+  (fun (x: Seq.lseq AL.cell (U32.v md_count)) ->
     starseq
       #(pos:U32.t{U32.v pos < U32.v md_count})
       #(t size_class)
@@ -550,7 +548,7 @@ let left_vprop_deprecated
       (SeqUtils.init_u32_refined (U32.v md_count)))
 
 let left_vprop1
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
   (r1 r2 r3: ref US.t)
   =
@@ -563,7 +561,7 @@ let left_vprop2
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
-  (x: Seq.lseq status (U32.v md_count))
+  (x: Seq.lseq AL.status (U32.v md_count))
   =
   starseq
     #(pos:U32.t{U32.v pos < U32.v md_count})
@@ -577,7 +575,7 @@ let left_vprop_aux
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (r1 r2 r3: ref US.t)
   (x: t_of (ind_varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count)) r1 r2 r3))
   = starseq
@@ -592,7 +590,7 @@ let left_vprop
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (r1 r2 r3: ref US.t)
   =
   left_vprop1 md_region md_count r1 r2 r3
@@ -606,11 +604,11 @@ assume val allocate_slab_aux_1_partial
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1: US.t{US.v idx1 < U32.v md_count_v})
   (idx2 idx3: US.t)
   //: Steel (array U8.t)
@@ -650,11 +648,11 @@ let allocate_slab_aux_1_full
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1: US.t{US.v idx1 < U32.v md_count_v})
   (idx2 idx3: US.t)
   //: Steel (array U8.t)
@@ -704,11 +702,11 @@ let allocate_slab_aux_1_full
   //TODO @Aymeric: deduce mem x x::_
   //assume (AL.mem (US.v idx1) (US.v idx1) (G.reveal l));
   admit ();
-  let idx1' = AL.remove1 #_ #pred1 #pred2 #pred3
+  let idx1' = AL.remove1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) idx1 in
   //TODO @Aymeric: refine insert3 spec
-  AL.insert3 #_ #pred1 #pred2 #pred3
+  AL.insert3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx3 (Ghost.hide (US.v idx1')) (Ghost.hide (US.v idx2)) idx1 2ul;
   write r1 idx1';
@@ -748,11 +746,11 @@ let allocate_slab_aux_1
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   : Steel (array U8.t)
   (
@@ -905,11 +903,11 @@ assume val allocate_slab_aux_2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   : Steel (array U8.t)
   (
@@ -974,7 +972,7 @@ let empty_md_is_properly_zeroed
 let alloc_metadata_sl1
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
   (md_count_v0: U32.t{U32.v md_count_v0 < U32.v metadata_max})
   (m: SM.mem)
@@ -1011,7 +1009,7 @@ let alloc_metadata_sl1
 let alloc_metadata_sl2
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: G.erased (v:U32.t{U32.v v < U32.v metadata_max}))
   (md_count_v0: U32.t{U32.v md_count_v0 < U32.v metadata_max})
   (m: SM.mem)
@@ -1050,7 +1048,7 @@ open SteelVRefineDep
 let right_vprop
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (v: U32.t{U32.v v <= U32.v metadata_max})
   : vprop
   =
@@ -1063,7 +1061,7 @@ let right_vprop
 let right_vprop_sl_lemma1
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (v: U32.t{U32.v v < U32.v metadata_max == true})
   (m: SM.mem)
   : Lemma
@@ -1092,7 +1090,7 @@ let right_vprop_sl_lemma1
 let right_vprop_sl_lemma2
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (v: U32.t{U32.v v <= U32.v metadata_max == true})
   (m: SM.mem)
   : Lemma
@@ -1121,7 +1119,7 @@ let right_vprop_sl_lemma2
 //TODO: Aymeric, varraylist
 let allocate_slab_aux_3_1_varraylist
   (#opened:_)
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
   (idx1 idx2 idx3: US.t)
   : SteelGhost unit opened
@@ -1141,7 +1139,7 @@ let allocate_slab_aux_3_1
   (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
   (idx1 idx2 idx3: US.t)
   : SteelGhost unit opened
@@ -1203,9 +1201,9 @@ let allocate_slab_aux_3_2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   : Steel US.t
   (
@@ -1291,11 +1289,11 @@ let allocate_slab_aux_3
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   : Steel US.t
   (
@@ -1362,7 +1360,7 @@ let pack_right_and_refactor_vrefine_dep
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
@@ -1433,11 +1431,11 @@ let allocate_slab'
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq status (U32.v md_count_v)))
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   : Steel (array U8.t)
   (
@@ -1548,7 +1546,7 @@ assume val allocate_slab
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
   : SteelT (array U8.t)
