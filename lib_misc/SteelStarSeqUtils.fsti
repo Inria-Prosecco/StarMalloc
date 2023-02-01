@@ -372,7 +372,7 @@ val starseq_upd3 (#opened:_) (#a #b: Type0)
     v1 == Seq.upd v0 n None
   )
 
-let starseq_upd4 (#opened:_) (#a #b: Type0)
+val starseq_upd4 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
   (f2_lemma: (x:a -> Lemma (t_of (f2 x) == option b)))
@@ -398,4 +398,3 @@ let starseq_upd4 (#opened:_) (#a #b: Type0)
     let x : normal (t_of (f2 (Seq.index s2 n))) = h0 (f2 (Seq.index s2 n)) in
     v1 == Seq.upd v0 n x
   )
-  = sladmit ()
