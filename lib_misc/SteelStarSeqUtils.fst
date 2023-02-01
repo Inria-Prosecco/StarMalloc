@@ -907,6 +907,13 @@ let starseq_singleton_equiv (#a #b: Type)
   Seq.lemma_index_is_nth (Seq.map_seq f s) 0;
   assert (hp_of (starseq #a #b f f_lemma s) == hp_of (f (Seq.index s 0) `star` emp))
 
+let starseq_intro_empty #opened #a #b f f_lemma =
+  change_slprop_rel
+    emp
+    (starseq #a #b f f_lemma Seq.empty)
+    (fun _ _ -> True)
+    (fun _ -> starseq_empty_equiv_emp #a #b f f_lemma Seq.empty)
+
 let starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))

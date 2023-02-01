@@ -749,7 +749,7 @@ let allocate_slab_aux_1
      (p_empty size_class (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1'))))
      (fun x y -> x == y)
      (fun _ -> admit ());
-  p_empty_unpack size_class 
+  p_empty_unpack size_class
      (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1')))
      (md_bm_array md_bm_region (U32.uint_to_t (US.v idx1')), slab_array slab_region (U32.uint_to_t (US.v idx1')));
   let r = allocate_slot size_class
@@ -1607,6 +1607,15 @@ let allocate_slab'
     )
   )
 
+
+let size_class_vprop_aux
+  size slab_region md_bm_region md_region empty_slabs partial_slabs full_slabs
+  (v: U32.t{U32.v v <= U32.v metadata_max == true}) : vprop =
+  left_vprop size slab_region md_bm_region v md_region
+    empty_slabs partial_slabs full_slabs `star`
+  right_vprop slab_region md_bm_region md_region v
+
+
 #push-options "--z3rlimit 30"
 assume val allocate_slab
   (size_class: sc)
@@ -1620,22 +1629,14 @@ assume val allocate_slab
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-         // left part
-         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
-         // right part
-         right_vprop slab_region md_bm_region md_region v)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (fun r ->
     (if (A.is_null r) then A.varray r else emp) `star`
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-         // left part
-         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
-         // right part
-         right_vprop slab_region md_bm_region md_region v)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
 
 

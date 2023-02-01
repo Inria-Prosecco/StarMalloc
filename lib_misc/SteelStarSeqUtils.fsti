@@ -127,6 +127,13 @@ let v_starseq_len (#a #b: Type)
   =
   ()
 
+val starseq_intro_empty (#opened:_) (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  : SteelGhostT unit opened
+    emp
+    (fun _ -> starseq #a #b f f_lemma Seq.empty)
+
 val starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))

@@ -933,6 +933,28 @@ val noop (#opened:inames) (#p:vprop) (_:unit)
   : SteelGhostF unit opened p (fun _ -> p) (requires fun _ -> True) (ensures fun h0 _ h1 -> h0 p == h1 p)
 let noop () = noop ()
 
+/// Create an arraylist with
+val intro_arraylist_nil (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:US.t) :
+  SteelGhost unit opened
+    (A.varray r)
+    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (requires fun _ ->
+      A.length r == 0 /\
+      hd1 == null_ptr /\
+      hd2 == null_ptr /\
+      hd3 == null_ptr)
+    (ensures fun _ _ h1 ->
+      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) `Seq.equal` Seq.empty
+    )
+
+let intro_arraylist_nil #a #opened pred1 pred2 pred3 r hd1 hd2 hd3 =
+  intro_vrefine
+    (A.varray r)
+    (varraylist_refine pred1 pred2 pred3 (US.v hd1) (US.v hd2) (US.v hd3))
+
 /// Reads at index [idx] in the array.
 /// TODO: The hd pointer should be ghost
 val read_in_place (#a:Type)

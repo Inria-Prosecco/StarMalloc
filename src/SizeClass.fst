@@ -64,6 +64,14 @@ type blob2 = {
 
 open SteelVRefineDep
 
+
+let size_class_vprop_aux
+  size slab_region md_bm_region md_region empty_slabs partial_slabs full_slabs
+  (v: U32.t{U32.v v <= U32.v metadata_max == true}) : vprop =
+  Slabs.left_vprop size slab_region md_bm_region v md_region
+    empty_slabs partial_slabs full_slabs `star`
+  Slabs.right_vprop slab_region md_bm_region md_region v
+
 let size_class_vprop
   (scs: size_class_struct)
   : vprop
@@ -71,12 +79,8 @@ let size_class_vprop
   vrefinedep
     (vptr scs.md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v ->
-       // left part
-       left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-         scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-       // right part
-       right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
+    (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
+
 
 let allocate_size_class_sl_lemma1
   (scs: size_class_struct)
@@ -90,12 +94,7 @@ let allocate_size_class_sl_lemma1
       vrefinedep
         (vptr scs.md_count)
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v ->
-           // left part
-           left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-             scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-           // right part
-           right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
+        (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
     )) m /\
     sel_of (size_class_vprop scs) m
     ==
@@ -103,12 +102,7 @@ let allocate_size_class_sl_lemma1
       vrefinedep
         (vptr scs.md_count)
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v ->
-           // left part
-           left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-             scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-           // right part
-           right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
+        (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
     ) m
   )
   = ()
@@ -122,12 +116,7 @@ let allocate_size_class_sl_lemma2
       vrefinedep
         (vptr scs.md_count)
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v ->
-           // left part
-           left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-             scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-           // right part
-           right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
+        (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
     )) m
   )
   (ensures
@@ -138,12 +127,7 @@ let allocate_size_class_sl_lemma2
       vrefinedep
         (vptr scs.md_count)
         (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v ->
-           // left part
-           left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-             scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-           // right part
-           right_vprop scs.slab_region scs.md_bm_region scs.md_region v)
+        (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
     ) m
   )
   = ()
@@ -160,16 +144,11 @@ let allocate_size_class
   (ensures fun h0 _ h1 -> True)
   =
   change_slprop_rel
-    (size_class_vprop_aux scs)
+    (size_class_vprop scs)
     (vrefinedep
       (vptr scs.md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-         // left part
-         left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-           scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-         // right part
-         right_vprop scs.slab_region scs.md_bm_region scs.md_region v))
+      (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   assume ((U32.v page_size) % (U32.v scs.size) == 0);
@@ -182,13 +161,8 @@ let allocate_size_class
     (vrefinedep
       (vptr scs.md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-         // left part
-         left_vprop scs.size scs.slab_region scs.md_bm_region v scs.md_region
-           scs.empty_slabs scs.partial_slabs scs.full_slabs `star`
-         // right part
-         right_vprop scs.slab_region scs.md_bm_region scs.md_region v))
-    (size_class_vprop_aux scs)
+      (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs))
+    (size_class_vprop scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);
   return result
