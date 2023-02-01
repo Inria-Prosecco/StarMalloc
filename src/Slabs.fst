@@ -1510,7 +1510,8 @@ let allocate_slab_aux_3_1
   allocate_slab_aux_3_1_varraylist
     md_region md_count_v idx1 idx2 idx3
 
-assume val allocate_slab_aux_3_2
+open Helpers
+let allocate_slab_aux_3_2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -1551,6 +1552,51 @@ assume val allocate_slab_aux_3_2
   (ensures fun h0 idx1' h1 ->
     idx1' <> AL.null_ptr
   )
+  =
+  admit ();
+  starseq_weakening_ref
+    #_
+    #(pos:U32.t{U32.v pos < U32.v md_count_v})
+    #(pos:U32.t{U32.v pos < U32.v (U32.add md_count_v 1ul)})
+    #(t size_class)
+    (f size_class slab_region md_bm_region md_count_v md_region_lv)
+    (f size_class slab_region md_bm_region
+      (U32.add md_count_v 1ul)
+      (Seq.append md_region_lv (Seq.create 1 0ul)))
+    (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+    (f_lemma size_class slab_region md_bm_region
+      (U32.add md_count_v 1ul)
+      (Seq.append md_region_lv (Seq.create 1 0ul)))
+    (SeqUtils.init_u32_refined (U32.v md_count_v))
+    (Seq.slice (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) 0 (U32.v md_count_v));
+  rewrite_slprop
+    (A.varray (slab_array slab_region md_count_v) `star`
+    A.varray (md_bm_array md_bm_region md_count_v))
+    (f size_class slab_region md_bm_region
+      (U32.add md_count_v 1ul)
+      (Seq.append md_region_lv (Seq.create 1 0ul))
+      (Seq.index (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) (U32.v md_count_v)))
+    (fun _ -> admit ());
+  starseq_add_singleton_s
+    #_
+    #(pos:U32.t{U32.v pos < U32.v (U32.add md_count_v 1ul)})
+    #(t size_class)
+    (f size_class slab_region md_bm_region
+      (U32.add md_count_v 1ul)
+      (Seq.append md_region_lv (Seq.create 1 0ul)))
+    (f_lemma size_class slab_region md_bm_region
+      (U32.add md_count_v 1ul)
+      (Seq.append md_region_lv (Seq.create 1 0ul)))
+    (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul)))
+    (U32.v md_count_v);
+  change_equal_slprop
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+      (U32.v md_count_v) (US.v idx2) (US.v idx3))
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+      (US.v (u32_to_sz md_count_v)) (US.v idx2) (US.v idx3));
+  return (u32_to_sz md_count_v)
 
 //TODO: @Antonin, yapluka
 let allocate_slab_aux_3
@@ -1617,7 +1663,7 @@ let allocate_slab_aux_3
     idx1 idx2 idx3;
   let idx1' = allocate_slab_aux_3_2 size_class
     slab_region md_bm_region md_region md_count_v md_region_lv
-    idx1 idx2 idx3 in
+    (US.uint_to_t (U32.v md_count_v)) idx2 idx3 in
   let v = read md_count in
   write md_count (U32.add v 1ul);
   write r1 idx1';
