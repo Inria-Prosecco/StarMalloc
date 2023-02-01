@@ -1035,7 +1035,7 @@ let right_vprop
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
-  (v: U32.t{U32.v v <= U32.v metadata_max == true})
+  (v: U32.t{U32.v v <= U32.v metadata_max})
   : vprop
   =
   (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
@@ -1044,20 +1044,7 @@ let right_vprop
     `vrefine` zf_u64) `star`
   A.varray (A.split_r md_region (u32_to_sz v))
 
-let right_vprop_lt
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
-  (v: U32.t{U32.v v < U32.v metadata_max == true})
-  : vprop
-  =
-  (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
-    `vrefine` zf_u8) `star`
-  (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul v 4ul)))
-    `vrefine` zf_u64) `star`
-  A.varray (A.split_r md_region (u32_to_sz v))
-
-let right_vprop_lt_equal_lemma
+let right_vprop_sl_lemma1
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
@@ -1065,7 +1052,7 @@ let right_vprop_lt_equal_lemma
   (m: SM.mem)
   : Lemma
   (requires SM.interp (hp_of (
-    right_vprop_lt slab_region md_bm_region md_region v
+    right_vprop slab_region md_bm_region md_region v
   )) m)
   (ensures SM.interp (hp_of (
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul v page_size)))
@@ -1082,11 +1069,11 @@ let right_vprop_lt_equal_lemma
     A.varray (A.split_r md_region (u32_to_sz v))
   ) m
   ==
-  sel_of (right_vprop_lt slab_region md_bm_region md_region v) m
+  sel_of (right_vprop slab_region md_bm_region md_region v) m
   )
   = ()
 
-let right_vprop_equal_lemma
+let right_vprop_sl_lemma2
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array (AL.cell status){A.length md_region = U32.v metadata_max})
@@ -1133,6 +1120,7 @@ let allocate_slab_aux_3_1_varraylist
   (ensures fun _ _ _ -> True)
   = sladmit ()
 
+
 let allocate_slab_aux_3_1
   (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1166,7 +1154,7 @@ let allocate_slab_aux_3_1
      `vrefine` zf_u64) `star`
    A.varray (A.split_r md_region (u32_to_sz md_count_v)))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun m -> right_vprop_sl_lemma1 slab_region md_bm_region md_region md_count_v m);
   elim_vrefine
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (G.reveal md_count_v) page_size))))
     zf_u8;
@@ -1190,7 +1178,7 @@ let allocate_slab_aux_3_1
    A.varray (A.split_r md_region (u32_to_sz (U32.add md_count_v 1ul))))
     (right_vprop slab_region md_bm_region md_region (U32.add md_count_v 1ul))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun m -> right_vprop_sl_lemma2 slab_region md_bm_region md_region (U32.add md_count_v 1ul) m);
   allocate_slab_aux_3_1_varraylist
     md_region md_count_v idx1 idx2 idx3
 
