@@ -220,7 +220,8 @@ let vrefinedep_ext
 
 #restart-solver
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
-let init (sc:sc)
+noextract inline_for_extraction
+let init_struct (sc:sc)
   : SteelT size_class_struct
   emp
   (fun scs -> size_class_vprop scs)
@@ -294,13 +295,19 @@ let init (sc:sc)
 
   return scs
 
-assume
-val size_class16 : size_class
-assume
-val size_class32 : size_class
-assume
-val size_class64 : size_class
+noextract inline_for_extraction
+let init (sc:sc) : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) =
+  let data = init_struct sc in
+  let lock = L.new_lock (size_class_vprop data) in
+  {data; lock}
 
+let init16 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 16ul
+let init32 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 32ul
+let init64 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 64ul
+
+let size_class16 : size_class = init16 ()
+let size_class32 : size_class = init32 ()
+let size_class64 : size_class = init64 ()
 
 let null_or_varray (#a:Type) (r:array a) : vprop = if is_null r then emp else varray r
 
