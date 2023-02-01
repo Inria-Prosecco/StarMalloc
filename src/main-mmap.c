@@ -16,9 +16,9 @@ uint64_t *mmap_u64(size_t len) {
   return (uint64_t*) mmap_s(len * sizeof(uint64_t));
 }
 
-//static ArrayListGen_cell__int32_t *mmap_cell_status(size_t len) {
-//  return (ArrayListGen_cell__int32_t*) mmap_s(len * sizeof(ArrayLisGent_cell__int32_t));
-//}
+ArrayList_cell *mmap_cell_status(size_t len) {
+  return (ArrayList_cell*) mmap_s(len * sizeof(ArrayList_cell));
+}
 
 uint32_t *mmap_ptr_u32() {
   return (uint32_t*) mmap_s(sizeof(uint32_t));

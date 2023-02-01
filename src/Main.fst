@@ -22,7 +22,44 @@ open Slabs
 open SteelVRefineDep
 open SteelStarSeqUtils
 open Utils2
-open MainMMap
+
+(**  Handwritten mmap functions to allocate basic data structures *)
+
+assume
+val mmap_u8 (len: US.t)
+  : Steel (array U8.t)
+    emp
+    (fun a -> A.varray a)
+    (fun _ -> True)
+    (fun _ a h1 ->
+      A.length a == US.v len /\
+      A.is_full_array a /\
+      A.asel a h1 == Seq.create (US.v len) U8.zero
+    )
+
+assume
+val mmap_u64 (len: US.t)
+  : Steel (array U64.t)
+    emp
+    (fun a -> A.varray a)
+    (fun _ -> True)
+    (fun _ a h1 ->
+      A.length a == US.v len /\
+      A.is_full_array a /\
+      A.asel a h1 == Seq.create (US.v len) U64.zero
+    )
+
+assume
+val mmap_ptr_u32 (_:unit)
+  : SteelT (R.ref U32.t)
+    emp
+    (fun r -> R.vptr r)
+
+assume
+val mmap_ptr_us (_:unit)
+  : SteelT (R.ref US.t)
+    emp
+    (fun r -> R.vptr r)
 
 assume
 val mmap_cell_status (len: US.t)
