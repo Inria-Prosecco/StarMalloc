@@ -30,6 +30,12 @@ unfold
 let varraylist (pred1 pred2 pred3: status -> prop) (r:A.array cell) (hd1 hd2 hd3:nat) : vprop =
   AL.varraylist pred1 pred2 pred3 r hd1 hd2 hd3
 
+[@@ __steel_reduce__]
+let v_arraylist (#p2:vprop) (pred1 pred2 pred3: status -> prop) (r:A.array cell) (hd1 hd2 hd3:nat)
+  (h:rmem p2{FStar.Tactics.with_tactic selector_tactic
+    (can_be_split p2 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) /\ True)}) : GTot (Seq.seq cell)
+  = h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
 let remove1
   (#pred1 #pred2 #pred3: status -> prop)

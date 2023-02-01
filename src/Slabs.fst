@@ -611,7 +611,8 @@ let allocate_slab_aux_1_partial
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1: US.t{US.v idx1 < U32.v md_count_v})
-  (idx2 idx3: US.t)
+  (idx2: US.t{US.v idx2 < U32.v md_count_v})
+  (idx3: US.t)
   //: Steel (array U8.t)
   : Steel unit
   (
@@ -644,25 +645,14 @@ let allocate_slab_aux_1_partial
   )
   (ensures fun _ _ _ -> True)
   =
-  //assume (t_of (
-  //  AL.varraylist pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count))
-  //    (US.v idx1) (US.v idx2) (US.v idx3))
-  //  ==
-  //  v:Seq.seq (AL.cell status){AL.varraylist_refine pred1 pred2 pred3 (US.v idx1) (US.v idx2) (US.v idx3) v});
-  //let l
-  //  = gget (
-  //  AL.varraylist pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count))
-  //    (US.v idx1) (US.v idx2) (US.v idx3)
-  //) in
-  //TODO @Aymeric: deduce mem x x::_
-  //assume (AL.mem (US.v idx1) (US.v idx1) (G.reveal l));
-  admit ();
+  ALG.intro_head1_not_null_mem pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    idx1 idx2 idx3;
   let idx1' = AL.remove1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) idx1 in
 
+  admit();
   //TODO @Aymeric: refine insert3 spec
   AL.insert2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -708,7 +698,8 @@ let allocate_slab_aux_1_full
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1: US.t{US.v idx1 < U32.v md_count_v})
-  (idx2 idx3: US.t)
+  (idx2: US.t{US.v idx2 < U32.v md_count_v})
+  (idx3: US.t)
   //: Steel (array U8.t)
   : Steel unit
   (
