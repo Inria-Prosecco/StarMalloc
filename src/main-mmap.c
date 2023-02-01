@@ -1,5 +1,4 @@
 #include "main-mmap.h"
-
 #include "MMan.h"
 
 static const size_t page_size = 4096UL;
