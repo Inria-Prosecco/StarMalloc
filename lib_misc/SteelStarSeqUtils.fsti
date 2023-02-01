@@ -305,8 +305,6 @@ val starseq_upd_pack (#opened:_) (#a #b: Type0)
       == Seq.slice v (n+1) (Seq.length s1)
   )
 
-
-
 val starseq_upd2 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
