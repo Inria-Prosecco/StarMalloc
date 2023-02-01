@@ -1866,54 +1866,76 @@ let allocate_slab
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3) in
-  change_slprop_rel
+
+  let md_count_v_ = read md_count in
+  change_equal_slprop
     (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 (G.reveal md_count_v))
-    (left_vprop size_class slab_region md_bm_region (G.reveal md_count_v) md_region
+    (left_vprop size_class slab_region md_bm_region md_count_v_ md_region
       r1 r2 r3 `star`
-    right_vprop slab_region md_bm_region md_region (G.reveal md_count_v))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+    right_vprop slab_region md_bm_region md_region md_count_v_);
+
+
   let x
     : G.erased _
     = elim_vdep
-    (left_vprop1 md_region (G.reveal md_count_v) r1 r2 r3)
-    (left_vprop_aux size_class slab_region md_bm_region (G.reveal md_count_v) md_region r1 r2 r3) in
+    (left_vprop1 md_region md_count_v_ r1 r2 r3)
+    (left_vprop_aux size_class slab_region md_bm_region md_count_v_ md_region r1 r2 r3) in
+
   change_equal_slprop
-    (left_vprop1 md_region (G.reveal md_count_v) r1 r2 r3)
+    (left_vprop1 md_region md_count_v_ r1 r2 r3)
     (ind_varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz (G.reveal md_count_v)))
+      (A.split_l md_region (u32_to_sz md_count_v_))
        r1 r2 r3);
   let idxs
     : G.erased _
     = elim_vdep
-  (vptr r1 `star` vptr r2 `star` vptr r3)
-  (fun (idxs: (US.t & US.t) & US.t) ->
-    AL.varraylist pred1 pred2 pred3
-    (A.split_l md_region (u32_to_sz (G.reveal md_count_v)))
-    (US.v (fst (fst idxs)))
-    (US.v (snd (fst idxs)))
-    (US.v (snd idxs))
-  ) in
+      (vptr r1 `star` vptr r2 `star` vptr r3)
+      (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v_)))
+  in
   let idx1_ = read r1 in
   let idx2_ = read r2 in
   let idx3_ = read r3 in
-  let md_count_v_ = read md_count in
-  admit ();
-  change_equal_slprop
+
+  change_slprop_rel
     (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz (G.reveal md_count_v)))
+      (A.split_l md_region (u32_to_sz md_count_v_))
       (US.v (fst (fst (G.reveal idxs))))
       (US.v (snd (fst (G.reveal idxs))))
       (US.v (snd (G.reveal idxs))))
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v_))
-      (US.v idx1_) (US.v idx2_) (US.v idx3_));
-  sladmit ();
+      (US.v idx1_) (US.v idx2_) (US.v idx3_))
+    (fun _ _ -> True)
+    (fun _ ->
+      assert (fst (fst (G.reveal idxs)) == idx1_);
+      assert (snd (fst (G.reveal idxs)) == idx2_);
+      assert (snd (G.reveal idxs) = idx3_)
+    );
+
+
+  assume (Steel.Effect.Common.t_of (Slabs.left_vprop1 md_region
+                  md_count_v_
+                  r1
+                  r2
+                  r3) ==
+         FStar.Seq.Properties.lseq ArrayList.status (FStar.UInt32.v md_count_v_));
+
+  let x' : Ghost.erased (Seq.lseq AL.status (U32.v md_count_v_)) = x in
+  change_equal_slprop
+    (left_vprop_aux size_class slab_region md_bm_region md_count_v_ md_region r1 r2 r3 x)
+    (starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v_})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v_ x')
+      (f_lemma size_class slab_region md_bm_region md_count_v_ x')
+      (SeqUtils.init_u32_refined (U32.v md_count_v_)));
+
   let r = allocate_slab' size_class
     slab_region md_bm_region md_region md_count r1 r2 r3
-    md_count_v_ x idx1_ idx2_ idx3_
+    md_count_v_ x' idx1_ idx2_ idx3_
   in
-  change_slprop_rel
+
+  change_equal_slprop
     (vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
@@ -1923,7 +1945,5 @@ let allocate_slab
     (vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3));
   return r
