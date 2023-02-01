@@ -21,54 +21,13 @@ open Slabs
 open SteelVRefineDep
 open SteelStarSeqUtils
 open Utils2
+open MainMMap
 
 
 noeq
 type size_class =
   { data : size_class_struct;
     lock : L.lock (size_class_vprop data) }
-
-assume val mmap_u8 (len: US.t)
-  : Steel (array U8.t)
-    emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v len) U8.zero
-    )
-assume val mmap_u64 (len: US.t)
-  : Steel (array U64.t)
-    emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v len) U64.zero
-    )
-
-assume val mmap_cell_status (len: US.t)
-  : Steel (array (AL.cell status))
-     emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a
-    )
-
-assume val mmap_ptr_u32 (_:unit)
-  : SteelT (R.ref U32.t)
-    emp
-    (fun r -> R.vptr r)
-
-assume val mmap_ptr_us (_:unit)
-  : SteelT (R.ref US.t)
-    emp
-    (fun r -> R.vptr r)
-
 
 let ind_aux pred1 pred2 pred3 r idxs : vprop =
       AL.varraylist pred1 pred2 pred3 r
