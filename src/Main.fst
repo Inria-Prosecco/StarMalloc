@@ -210,32 +210,34 @@ let intro_right_vprop_empty slab_region md_bm_region md_region =
     A.varray (A.split_r md_region (u32_to_sz 0ul)))
     (right_vprop slab_region md_bm_region md_region 0ul)
 
+
 #restart-solver
-#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 300 --compat_pre_typed_indexed_effects"
 let init (sc:U32.t)
   : SteelT size_class_struct
   emp
   (fun scs -> size_class_vprop scs)
-
   =
-  let open Utils2 in
   assume (US.fits_u32);
+  [@inline_let]
   let v : v:U32.t{U32.v v <= U32.v metadata_max == true}
     = 0ul in
   let slab_region = mmap_u8 (u32_to_sz (U32.mul metadata_max page_size)) in
   let md_bm_region = mmap_u64 (u32_to_sz (U32.mul metadata_max 4ul)) in
   let md_region = mmap_cell_status (u32_to_sz metadata_max) in
 
-  let md_count = mmap_ptr_u32 () in
-  let ptr_partial = mmap_ptr_us () in
-  let ptr_empty = mmap_ptr_us () in
-  let ptr_full = mmap_ptr_us () in
-
   A.ghost_split slab_region 0sz;
   A.ghost_split md_bm_region 0sz;
   A.ghost_split md_region 0sz;
 
+  drop (A.varray (A.split_l slab_region 0sz));
+  drop (A.varray (A.split_l md_bm_region 0sz));
+
   intro_right_vprop_empty slab_region md_bm_region md_region;
+
+  let ptr_partial = mmap_ptr_us () in
+  let ptr_empty = mmap_ptr_us () in
+  let ptr_full = mmap_ptr_us () in
 
   R.write ptr_partial 0sz;
   R.write ptr_empty 0sz;
@@ -243,6 +245,9 @@ let init (sc:U32.t)
 
   intro_left_vprop_empty slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full;
 
+
+
+  let md_count = mmap_ptr_u32 () in
   R.write md_count 0ul;
   intro_vrefinedep
     (R.vptr md_count)
@@ -252,7 +257,7 @@ let init (sc:U32.t)
          ptr_empty ptr_partial ptr_full `star`
      right_vprop slab_region md_bm_region md_region 0ul);
 
-
+  [@inline_let]
   let scs = {
     size = 16ul;
     partial_slabs = ptr_partial;
@@ -264,25 +269,23 @@ let init (sc:U32.t)
     md_count = md_count;
   } in
 
-
-  let open FStar.Tactics in
-  assert (
-    size_class_vprop scs ==
-    vrefinedep
-      (R.vptr scs.md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
-     ) by (norm [delta_only [`%size_class_vprop]]);
-
-  change_equal_slprop
-    (SteelVRefineDep.vrefinedep
+  change_slprop_rel
+    (vrefinedep
       (R.vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (size_class_vprop_aux 16ul slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full))
-     (size_class_vprop scs);
-
-  drop (A.varray (A.split_l slab_region 0sz));
-  drop (A.varray (A.split_l md_bm_region 0sz));
+     (size_class_vprop scs)
+    (fun _ _ -> True)
+    (fun _ ->
+      let open FStar.Tactics in
+      assert (
+        size_class_vprop scs ==
+        vrefinedep
+          (R.vptr scs.md_count)
+          (fun x -> U32.v x <= U32.v metadata_max == true)
+          (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
+         ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
+    );
 
   return scs
 
