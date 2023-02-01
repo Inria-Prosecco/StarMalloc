@@ -1743,6 +1743,14 @@ let pack_right_and_refactor_vrefine_dep
 
 module P = Steel.FractionalPermission
 
+
+let size_class_vprop_aux
+  size slab_region md_bm_region md_region empty_slabs partial_slabs full_slabs
+  (v: U32.t{U32.v v <= U32.v metadata_max == true}) : vprop =
+  left_vprop size slab_region md_bm_region v md_region
+    empty_slabs partial_slabs full_slabs `star`
+  right_vprop slab_region md_bm_region md_region v
+
 #push-options "--z3rlimit 30"
 let allocate_slab'
   (size_class: sc)
@@ -1849,17 +1857,9 @@ let allocate_slab'
     )
   )
 
-
-let size_class_vprop_aux
-  size slab_region md_bm_region md_region empty_slabs partial_slabs full_slabs
-  (v: U32.t{U32.v v <= U32.v metadata_max == true}) : vprop =
-  left_vprop size slab_region md_bm_region v md_region
-    empty_slabs partial_slabs full_slabs `star`
-  right_vprop slab_region md_bm_region md_region v
-
-
-#push-options "--z3rlimit 30"
-assume val allocate_slab
+#restart-solver
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+let allocate_slab
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -1880,3 +1880,71 @@ assume val allocate_slab
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
+  =
+  let md_count_v
+    : G.erased _
+    = elim_vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3) in
+  change_slprop_rel
+    (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 (G.reveal md_count_v))
+    (left_vprop size_class slab_region md_bm_region (G.reveal md_count_v) md_region
+      r1 r2 r3 `star`
+    right_vprop slab_region md_bm_region md_region (G.reveal md_count_v))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  let x
+    : G.erased _
+    = elim_vdep
+    (left_vprop1 md_region (G.reveal md_count_v) r1 r2 r3)
+    (left_vprop_aux size_class slab_region md_bm_region (G.reveal md_count_v) md_region r1 r2 r3) in
+  change_equal_slprop
+    (left_vprop1 md_region (G.reveal md_count_v) r1 r2 r3)
+    (ind_varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (G.reveal md_count_v)))
+       r1 r2 r3);
+  let idxs
+    : G.erased _
+    = elim_vdep
+  (vptr r1 `star` vptr r2 `star` vptr r3)
+  (fun (idxs: (US.t & US.t) & US.t) ->
+    AL.varraylist pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz (G.reveal md_count_v)))
+    (US.v (fst (fst idxs)))
+    (US.v (snd (fst idxs)))
+    (US.v (snd idxs))
+  ) in
+  let idx1_ = read r1 in
+  let idx2_ = read r2 in
+  let idx3_ = read r3 in
+  let md_count_v_ = read md_count in
+  admit ();
+  change_equal_slprop
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (G.reveal md_count_v)))
+      (US.v (fst (fst (G.reveal idxs))))
+      (US.v (snd (fst (G.reveal idxs))))
+      (US.v (snd (G.reveal idxs))))
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v_))
+      (US.v idx1_) (US.v idx2_) (US.v idx3_));
+  sladmit ();
+  let r = allocate_slab' size_class
+    slab_region md_bm_region md_region md_count r1 r2 r3
+    md_count_v_ x idx1_ idx2_ idx3_
+  in
+  change_slprop_rel
+    (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v ->
+         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
+         right_vprop slab_region md_bm_region md_region v))
+    (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  return r
