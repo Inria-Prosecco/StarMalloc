@@ -70,8 +70,7 @@ extract: $(ALL_KRML_FILES)
 	mkdir -p dist
 	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
-    -no-prefix MainMMap -no-prefix Main \
-		-static-header MainMMap \
+    -no-prefix MainMMap -static-header MainMMap -no-prefix Main \
 		-warn-error +9 \
 		-add-include 'Steel_SpinLock:"krml/steel_types.h"' $^
 

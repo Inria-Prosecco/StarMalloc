@@ -13,14 +13,13 @@ module US = FStar.SizeT
 module FS = FStar.FiniteSet.Base
 module AL = ArrayListGen
 
-
 (** A monomorphized version of ArrayListGen, specialized for cells of statuses, i.e., 0ul, 1ul, or 2ul.
     We only expose the computationally relevant functions here, all the lemmas remain in ArrayListGen *)
 
-unfold
+inline_for_extraction noextract
 let status = v:U32.t{U32.v v < 3}
 
-let cell = AL.cell status
+let cell : Type0 = AL.cell status
 
 inline_for_extraction noextract
 let null = AL.null

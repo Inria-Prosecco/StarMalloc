@@ -225,7 +225,7 @@ let deallocate_slot_aux
 // with an additional condition on the offset,
 // then it means it is a valid pointer that *could* be allocated
 // proper alignment means also one can recover the pos of the slot within the slab
-#push-options "--z3rlimit 50 --fuel 0 --ifuel 0"
+#push-options "--z3rlimit 100 --fuel 0 --ifuel 0"
 //TODO: check for spec
 let deallocate_slot_aux0
   (size_class: sc)

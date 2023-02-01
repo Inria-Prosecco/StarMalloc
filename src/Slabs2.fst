@@ -80,7 +80,7 @@ open FStar.Mul
 
 unfold
 let blob = Slabs.blob
-
+(*
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let deallocate_slab
   (size_class: sc)
@@ -152,3 +152,4 @@ let deallocate_slab
   ) else (
     return false
   )
+*)

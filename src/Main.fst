@@ -24,6 +24,16 @@ open SteelStarSeqUtils
 open Utils2
 open MainMMap
 
+assume
+val mmap_cell_status (len: US.t)
+  : Steel (array AL.cell)
+     emp
+    (fun a -> A.varray a)
+    (fun _ -> True)
+    (fun _ a h1 ->
+      A.length a == US.v len /\
+      A.is_full_array a
+    )
 
 noeq
 type size_class =

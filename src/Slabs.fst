@@ -19,6 +19,7 @@ module SM = Steel.Memory
 
 module VR2 = SteelVRefine2
 module AL = ArrayList
+module ALG = ArrayListGen
 
 open Prelude
 open Utils2
@@ -509,7 +510,7 @@ let dataify
   (s: Seq.seq AL.cell)
   : GTot (Seq.lseq AL.status (Seq.length s))
   =
-  let f = fun (c: AL.cell) -> c.data in
+  let f = fun (c: AL.cell) -> ALG.get_data c in
   Seq.map_seq_len f s;
   Seq.map_seq f s
 
