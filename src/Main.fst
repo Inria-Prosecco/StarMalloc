@@ -211,10 +211,16 @@ let intro_right_vprop_empty slab_region md_bm_region md_region =
     A.varray (A.split_r md_region (u32_to_sz 0ul)))
     (right_vprop slab_region md_bm_region md_region 0ul)
 
+let vrefinedep_ext
+  (v: vprop)
+  (p: ( (t_of v) -> Tot prop))
+  (f f': ( (t_of (vrefine v p)) -> Tot vprop))
+  : Lemma (requires f == f') (ensures vrefinedep v p f == vrefinedep v p f')
+  = ()
 
 #restart-solver
-#push-options "--z3rlimit 300 --compat_pre_typed_indexed_effects"
-let init (sc:U32.t)
+#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
+let init (sc:sc)
   : SteelT size_class_struct
   emp
   (fun scs -> size_class_vprop scs)
@@ -245,8 +251,6 @@ let init (sc:U32.t)
   R.write ptr_full 0sz;
 
   intro_left_vprop_empty sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full;
-
-
 
   let md_count = mmap_ptr_u32 () in
   R.write md_count 0ul;
@@ -281,10 +285,10 @@ let init (sc:U32.t)
       let open FStar.Tactics in
       assert (
         size_class_vprop scs ==
-        vrefinedep
-          (R.vptr scs.md_count)
-          (fun x -> U32.v x <= U32.v metadata_max == true)
-          (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
+    vrefinedep
+      (R.vptr scs.md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
          ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
     );
 
@@ -319,11 +323,8 @@ val allocate_size_class
 
 let allocate_size_class scs =
   let r = SizeClass.allocate_size_class scs in
-  rewrite_slprop
-    (if (Ghost.reveal (snd r)) then varray (fst r) else emp)
-    (null_or_varray (fst r))
-    (fun _ -> admit());
-  return (fst r)
+  change_equal_slprop (if is_null r then emp else varray r) (null_or_varray r);
+  return r
 
 val slab_malloc (bytes:U32.t) : SteelT (array U8.t) emp (fun r -> if is_null r then emp else varray r)
 

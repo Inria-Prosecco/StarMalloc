@@ -1642,7 +1642,7 @@ assume val allocate_slab
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (fun r ->
-    (if (A.is_null r) then A.varray r else emp) `star`
+    (if (A.is_null r) then emp else A.varray r) `star`
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)

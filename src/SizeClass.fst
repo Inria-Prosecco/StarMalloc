@@ -138,7 +138,7 @@ let allocate_size_class
   : Steel (array U8.t)
   (size_class_vprop scs)
   (fun r ->
-    (if (A.is_null r) then A.varray r else emp) `star`
+    (if (A.is_null r) then emp else A.varray r) `star`
     size_class_vprop scs)
   (requires fun h0 -> True)
   (ensures fun h0 _ h1 -> True)
