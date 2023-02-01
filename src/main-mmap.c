@@ -1,11 +1,11 @@
 #include "main-mmap.h"
-#include "MMan.h"
+#include "Mman.h"
 
 static const size_t page_size = 4096UL;
 static const size_t max_slabs = 1024UL;
 
 uint8_t *mmap_s(uint64_t len) {
-  return mmap((uint64_t)0U, len, 3l, (int32_t)32, (int32_t)-1, (uint32_t)0U);
+  return mmap((uint64_t)0U, len, 3l, (int32_t)34, (int32_t)-1, (uint32_t)0U);
 }
 
 uint8_t *mmap_u8(size_t len) {
