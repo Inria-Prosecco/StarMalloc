@@ -510,9 +510,8 @@ let dataify
   (s: Seq.seq AL.cell)
   : GTot (Seq.lseq AL.status (Seq.length s))
   =
-  let f = fun (c: AL.cell) -> ALG.get_data c in
-  Seq.map_seq_len f s;
-  Seq.map_seq f s
+  Seq.map_seq_len ALG.get_data s;
+  Seq.map_seq ALG.get_data s
 
 let ind_varraylist_aux
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
@@ -1764,7 +1763,8 @@ let allocate_slab'
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    md_count_v == sel md_count h0
+    md_count_v == sel md_count h0 /\
+    dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
   (ensures fun _ _ _ -> True)
   =
@@ -1841,7 +1841,7 @@ let allocate_slab'
 
 
       let ds = gget (left_vprop1 md_region md_count_v r1 r2 r3) in
-      assume (dataify (dsnd (G.reveal ds)) == Ghost.reveal md_region_lv);
+      assert (dataify (dsnd (G.reveal ds)) == Ghost.reveal md_region_lv);
 
       intro_vdep
         (left_vprop1 md_region md_count_v r1 r2 r3)
@@ -1874,6 +1874,8 @@ let allocate_slab'
       return (A.null #U8.t)
     )
   )
+
+let _ = ()
 
 #restart-solver
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
@@ -1946,13 +1948,12 @@ let allocate_slab
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v_))
       (US.v idx1_) (US.v idx2_) (US.v idx3_))
-    (fun _ _ -> True)
+    (fun x y -> x == y)
     (fun _ ->
       assert (fst (fst (G.reveal idxs)) == idx1_);
       assert (snd (fst (G.reveal idxs)) == idx2_);
       assert (snd (G.reveal idxs) = idx3_)
     );
-
 
   let x' : Ghost.erased (Seq.lseq AL.status (U32.v md_count_v_)) = dataify (dsnd x) in
 
