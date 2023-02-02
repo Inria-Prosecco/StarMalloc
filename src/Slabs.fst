@@ -506,13 +506,6 @@ let t
     (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
   & Seq.lseq U8.t 0
 
-let dataify
-  (s: Seq.seq AL.cell)
-  : GTot (Seq.lseq AL.status (Seq.length s))
-  =
-  Seq.map_seq_len ALG.get_data s;
-  Seq.map_seq ALG.get_data s
-
 let ind_varraylist_aux
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
   (idxs: (US.t & US.t) & US.t)
@@ -525,30 +518,9 @@ let ind_varraylist_aux
 let ind_varraylist
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
   (r1 r2 r3: ref US.t)
-  //(hd1 hd2 hd3: nat)
   =
   (vptr r1 `star` vptr r2 `star` vptr r3) `vdep`
   ind_varraylist_aux pred1 pred2 pred3 r
-
-let left_vprop_deprecated
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_count: U32.t{U32.v md_count <= U32.v metadata_max})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (idx1 idx2 idx3: nat)
-  =
-  AL.varraylist pred1 pred2 pred3
-    (A.split_l md_region (u32_to_sz md_count))
-    idx1 idx2 idx3
-  `vdep`
-  (fun (x: Seq.lseq AL.cell (U32.v md_count)) ->
-    starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count (dataify x))
-      (f_lemma size_class slab_region md_bm_region md_count (dataify x))
-      (SeqUtils.init_u32_refined (U32.v md_count)))
 
 let left_vprop1
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
@@ -584,8 +556,8 @@ let left_vprop_aux
   = starseq
       #(pos:U32.t{U32.v pos < U32.v md_count})
       #(t size_class)
-      (f size_class slab_region md_bm_region md_count (dataify (dsnd x)))
-      (f_lemma size_class slab_region md_bm_region md_count (dataify (dsnd x)))
+      (f size_class slab_region md_bm_region md_count (ALG.dataify (dsnd x)))
+      (f_lemma size_class slab_region md_bm_region md_count (ALG.dataify (dsnd x)))
       (SeqUtils.init_u32_refined (U32.v md_count))
 
 let left_vprop
@@ -643,13 +615,18 @@ let allocate_slab_aux_1_partial
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    idx1 <> AL.null_ptr
+    idx1 <> AL.null_ptr /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
   (ensures fun _ _ _ -> True)
   =
   ALG.lemma_head1_not_null_mem pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 idx2 idx3;
+
+  // Not sure why, but we need this gget for the equalities on dataify needed for the last intro_vdep to be propagated
+  let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
+
   let idx1' = AL.remove1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) idx1 in
@@ -665,18 +642,12 @@ let allocate_slab_aux_1_partial
     (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1', idx1), idx3))
     (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)));
 
-  slassert (left_vprop1 md_region md_count_v r1 r2 r3);
-  slassert (left_vprop2 size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul));
-
-  let ds = gget (left_vprop1 md_region md_count_v r1 r2 r3) in
-  assume (dataify (dsnd (G.reveal ds)) == Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul);
-
   intro_vdep
     (left_vprop1 md_region md_count_v r1 r2 r3)
     (left_vprop2 size_class slab_region md_bm_region md_count_v
       (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
     (left_vprop_aux size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
-  slassert (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
+
   intro_vrefinedep
     (vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
@@ -724,13 +695,17 @@ let allocate_slab_aux_1_full
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    idx1 <> AL.null_ptr
+    idx1 <> AL.null_ptr /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
   (ensures fun _ _ _ -> True)
   =
   ALG.lemma_head1_not_null_mem pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 idx2 idx3;
+
+  // Not sure why, but we need this gget for the equalities on dataify needed for the last intro_vdep to be propagated
+  let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
 
   let idx1' = AL.remove1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -747,19 +722,13 @@ let allocate_slab_aux_1_full
     (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1', idx2), idx1))
     (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)));
 
-  slassert (left_vprop1 md_region md_count_v r1 r2 r3);
-  slassert (left_vprop2 size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul));
-
-  let ds = gget (left_vprop1 md_region md_count_v r1 r2 r3) in
-  assume (dataify (dsnd (G.reveal ds)) == Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul);
-
   intro_vdep
     (left_vprop1 md_region md_count_v r1 r2 r3)
     (left_vprop2 size_class slab_region md_bm_region md_count_v
       (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
 
-    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (dataify (dsnd x)));
-  slassert (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
+    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)));
+
   intro_vrefinedep
     (vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
@@ -807,7 +776,8 @@ let allocate_slab_aux_1
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    idx1 <> AL.null_ptr
+    idx1 <> AL.null_ptr /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
   (ensures fun _ _ h1 ->
     let blob1
@@ -1012,7 +982,7 @@ let allocate_slab_aux_2_full
     (left_vprop1 md_region md_count_v r1 r2 r3)
     (left_vprop2 size_class slab_region md_bm_region md_count_v
       (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul))
-    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (dataify (dsnd x)));
+    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)));
   slassert (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
   intro_vrefinedep
     (vptr md_count)
@@ -1083,7 +1053,7 @@ let allocate_slab_aux_2_partial
   intro_vdep
     (left_vprop1 md_region md_count_v r1 r2 r3)
     (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
-    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (dataify (dsnd x)));
+    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)));
   slassert (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
   intro_vrefinedep
     (vptr md_count)
@@ -1629,14 +1599,19 @@ let allocate_slab_aux_3
   )
   (requires fun h0 ->
     md_count_v == sel md_count h0 /\
-    U32.v md_count_v < U32.v metadata_max)
+    U32.v md_count_v < U32.v metadata_max /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
+    )
   (ensures fun h0 idx1' h1 ->
     idx1' <> AL.null_ptr /\
     sel r1 h1 == idx1' /\
     sel r2 h1 == sel r2 h0 /\
     sel r3 h1 == sel r3 h0 /\
     md_count_v == sel md_count h0 /\
-    sel md_count h1 = U32.add (sel md_count h0) 1ul
+    sel md_count h1 = U32.add (sel md_count h0) 1ul /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul))) (US.v idx1') (US.v idx2) (US.v idx3) h1)
+      `Seq.equal`
+    Seq.append (Ghost.reveal md_region_lv) (Seq.create 1 0ul)
   )
   =
   allocate_slab_aux_3_1
@@ -1648,8 +1623,11 @@ let allocate_slab_aux_3
   let v = read md_count in
   write md_count (U32.add v 1ul);
   write r1 idx1';
-  return idx1'
 
+  let gs1 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul))) (US.v idx1') (US.v idx2) (US.v idx3)) in
+  assume (ALG.dataify (Ghost.reveal gs1) `Seq.equal` Seq.append (Ghost.reveal md_region_lv) (Seq.create 1 0ul));
+
+  return idx1'
 
 let size_class_vprop_aux
   size slab_region md_bm_region md_region empty_slabs partial_slabs full_slabs
@@ -1657,7 +1635,6 @@ let size_class_vprop_aux
   left_vprop size slab_region md_bm_region v md_region
     empty_slabs partial_slabs full_slabs `star`
   right_vprop slab_region md_bm_region md_region v
-
 
 let pack_right_and_refactor_vrefine_dep
   (#opened:_)
@@ -1724,7 +1701,8 @@ let pack_right_and_refactor_vrefine_dep
 
 module P = Steel.FractionalPermission
 
-#push-options "--z3rlimit 70 --compat_pre_typed_indexed_effects"
+#restart-solver
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let allocate_slab'
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1764,7 +1742,7 @@ let allocate_slab'
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
     md_count_v == sel md_count h0 /\
-    dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
   (ensures fun _ _ _ -> True)
   =
@@ -1772,7 +1750,7 @@ let allocate_slab'
     ALG.lemma_head2_in_bounds pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
       idx1 idx2 idx3;
-    // Lemma above to derive
+    // Lemma above used to derive
     assert (0 < U32.v md_count_v);
 
     let r = allocate_slab_aux_2 size_class
@@ -1791,7 +1769,7 @@ let allocate_slab'
     ALG.lemma_head1_in_bounds pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
       idx1 idx2 idx3;
-    // Lemma above to derive
+    // Lemma above used to derive
     assert (0 < U32.v md_count_v);
 
     let r = allocate_slab_aux_1 size_class
@@ -1807,6 +1785,7 @@ let allocate_slab'
       (if (A.is_null r) then emp else A.varray r);
     return r
   ) else (
+
     let md_count_v' = read md_count in
     let b = U32.lt md_count_v' metadata_max in
     if b then (
@@ -1838,10 +1817,8 @@ let allocate_slab'
       change_equal_slprop
         (ind_varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) r1 r2 r3)
         (left_vprop1 md_region md_count_v r1 r2 r3);
-
-
       let ds = gget (left_vprop1 md_region md_count_v r1 r2 r3) in
-      assert (dataify (dsnd (G.reveal ds)) == Ghost.reveal md_region_lv);
+      assert (ALG.dataify (dsnd (G.reveal ds)) == Ghost.reveal md_region_lv);
 
       intro_vdep
         (left_vprop1 md_region md_count_v r1 r2 r3)
@@ -1874,8 +1851,6 @@ let allocate_slab'
       return (A.null #U8.t)
     )
   )
-
-let _ = ()
 
 #restart-solver
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
@@ -1955,7 +1930,7 @@ let allocate_slab
       assert (snd (G.reveal idxs) = idx3_)
     );
 
-  let x' : Ghost.erased (Seq.lseq AL.status (U32.v md_count_v_)) = dataify (dsnd x) in
+  let x' : Ghost.erased (Seq.lseq AL.status (U32.v md_count_v_)) = ALG.dataify (dsnd x) in
 
   change_equal_slprop
     (left_vprop_aux size_class slab_region md_bm_region md_count_v_ md_region r1 r2 r3 x)
