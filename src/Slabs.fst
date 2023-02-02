@@ -1725,8 +1725,7 @@ let pack_right_and_refactor_vrefine_dep
 
 module P = Steel.FractionalPermission
 
-
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 70 --compat_pre_typed_indexed_effects"
 let allocate_slab'
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1831,7 +1830,47 @@ let allocate_slab'
         (if (A.is_null r) then emp else A.varray r);
       return r
     ) else (
-      sladmit ();
+      intro_vdep
+        (vptr r1 `star` vptr r2 `star` vptr r3)
+        (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3))
+        (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)));
+
+      change_equal_slprop
+        (ind_varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) r1 r2 r3)
+        (left_vprop1 md_region md_count_v r1 r2 r3);
+
+
+      let ds = gget (left_vprop1 md_region md_count_v r1 r2 r3) in
+      assume (dataify (dsnd (G.reveal ds)) == Ghost.reveal md_region_lv);
+
+      intro_vdep
+        (left_vprop1 md_region md_count_v r1 r2 r3)
+        (starseq
+          #(pos:U32.t{U32.v pos < U32.v md_count_v})
+          #(t size_class)
+          (f size_class slab_region md_bm_region md_count_v md_region_lv)
+          (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+          (SeqUtils.init_u32_refined (U32.v md_count_v)))
+        (left_vprop_aux size_class slab_region md_bm_region md_count_v
+          md_region r1 r2 r3);
+
+      intro_vrefinedep
+        (vptr md_count)
+        (fun x -> U32.v x <= U32.v metadata_max == true)
+        (fun v -> left_vprop size_class slab_region md_bm_region v md_region
+          r1 r2 r3)
+        (left_vprop size_class slab_region md_bm_region md_count_v
+          md_region r1 r2 r3);
+
+      pack_right_and_refactor_vrefine_dep
+          size_class slab_region md_bm_region md_region
+          md_count
+          r1 r2 r3 md_count_v;
+
+      change_equal_slprop
+        emp
+        (if A.is_null A.null then emp else A.varray A.null);
+
       return (A.null #U8.t)
     )
   )
@@ -1868,22 +1907,6 @@ let allocate_slab
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3) in
 
   let md_count_v_ = read md_count in
-
-  // let open FStar.Tactics in
-  // assert (Steel.Effect.Common.t_of (Slabs.left_vprop1 md_region
-  //                 md_count_v_
-  //                 r1
-  //                 r2
-  //                 r3) ==
-  //        FStar.Seq.Properties.lseq ArrayList.status (FStar.UInt32.v md_count_v_))
-  //  by (norm [
-  //    delta_attr [`%__steel_reduce__];
-  //    delta_only [`%left_vprop1; `%ind_varraylist]; zeta; iota]; dump "here")
-
-  //        ;
-
-  // sladmit ();
-  // return A.null
 
   change_equal_slprop
     (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 (G.reveal md_count_v))
