@@ -585,7 +585,7 @@ let allocate_slab_aux_1_partial
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1: US.t{US.v idx1 < U32.v md_count_v})
-  (idx2: US.t{US.v idx2 < U32.v md_count_v})
+  (idx2: US.t)
   (idx3: US.t)
   //: Steel (array U8.t)
   : Steel unit
@@ -618,7 +618,14 @@ let allocate_slab_aux_1_partial
     idx1 <> AL.null_ptr /\
     ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ _ h1 ->
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
+    ) in
+    md_count_v == dfst blob1)
   =
   ALG.lemma_head_not_null_mem pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -698,7 +705,7 @@ let allocate_slab_aux_1_full
     idx1 <> AL.null_ptr /\
     ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
-  (ensures fun h0 _ h1 ->
+  (ensures fun _ _ h1 ->
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
@@ -898,8 +905,8 @@ let allocate_slab_aux_1
         (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1)))
       (fun x y -> x == y)
       (fun _ -> admit ());
-    //TODO: starseq aux lemma
-    admit ();
+
+    lemma_slab_aux_1_starseq size_class slab_region md_bm_region md_region md_count_v md_region_lv (US.v idx1) 1ul;
     starseq_upd_pack
       #_
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
@@ -987,6 +994,7 @@ let allocate_slab_aux_2_full
   admit ();
   let idx2' = AL.remove2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
+    //TODO: To check, is it really idx passed as an index?
     (Ghost.hide (US.v idx1)) idx2 (Ghost.hide (US.v idx3)) idx1 in
   //TODO @Aymeric: refine insert3 spec
   AL.insert3 #pred1 #pred2 #pred3
