@@ -54,7 +54,9 @@ let remove1
             AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
             AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
             AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
-            (~ (AL.mem_all (US.v idx) (US.v hd') hd2 hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3))))
+            (~ (AL.mem_all (US.v idx) (US.v hd') hd2 hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)))) /\
+            AL.dataify (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
+            AL.dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))
           )
   = AL.remove1 r hd1 hd2 hd3 idx
 
@@ -76,7 +78,9 @@ let remove2
             AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
             AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
             AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
-            (~ (AL.mem_all (US.v idx) hd1 (US.v hd') hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3))))
+            (~ (AL.mem_all (US.v idx) hd1 (US.v hd') hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)))) /\
+            AL.dataify (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
+            AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))
           )
   = AL.remove2 r hd1 hd2 hd3 idx
 
@@ -98,7 +102,9 @@ let insert2
             AL.ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
             AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
             AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))
+            AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
+            AL.dataify (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
+            Seq.upd (AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))) (US.v idx) v
           )
   = AL.insert2 r hd hd1 hd3 idx v
 
@@ -120,6 +126,8 @@ let insert3
             AL.ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
             AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
             AL.ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))
+            AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
+            AL.dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
+            Seq.upd (AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) (US.v idx) v
           )
   = AL.insert3 r hd  hd1 hd2 idx v

@@ -28,6 +28,14 @@ let null : nat = 0
 noextract inline_for_extraction
 let null_ptr : US.t = 0sz
 
+/// Erases the next and prev field to return a sequence of data
+let dataify (#a:Type)
+  (s: Seq.seq (cell a))
+  : GTot (Seq.lseq a (Seq.length s))
+  =
+  Seq.map_seq_len get_data s;
+  Seq.map_seq get_data s
+
 /// The toplevel specification of being a list
 /// When [hd] is the head pointer of the list, the set of visited nodes
 /// is initially empty, and the prev "pointer" should be "NULL"
@@ -260,7 +268,9 @@ val remove1 (#a:Type)
             ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
             ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
             ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
-            (~ (mem_all (US.v idx) (US.v hd') hd2 hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3))))
+            (~ (mem_all (US.v idx) (US.v hd') hd2 hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)))) /\
+            dataify (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
+            dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))
           )
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd2]
@@ -283,7 +293,9 @@ val remove2 (#a:Type)
             ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
             ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
             ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
-            (~ (mem_all (US.v idx) hd1 (US.v hd') hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3))))
+            (~ (mem_all (US.v idx) hd1 (US.v hd') hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)))) /\
+            dataify (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
+            dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))
           )
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd3]
@@ -305,7 +317,9 @@ val remove3 (#a:Type)
             ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
             ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
             ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
-            (~ (mem_all (US.v idx) hd1 hd2 (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd')))))
+            (~ (mem_all (US.v idx) hd1 hd2 (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))))) /\
+            dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
+            dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))
           )
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
@@ -329,9 +343,10 @@ val insert1 (#a:Type)
             ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
             ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
             ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))
+            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
+            dataify (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
+            Seq.upd (dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) (US.v idx) v
           )
-
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
 /// If so, insert it at the head of list [hd2]
@@ -354,7 +369,9 @@ val insert2 (#a:Type)
             ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
             ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
             ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))
+            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
+            dataify (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
+            Seq.upd (dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))) (US.v idx) v
           )
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
@@ -378,5 +395,7 @@ val insert3 (#a:Type)
             ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
             ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
             ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))
+            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
+            dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
+            Seq.upd (dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) (US.v idx) v
           )

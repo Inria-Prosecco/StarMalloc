@@ -698,6 +698,29 @@ let lemma_insert_spec_frame pred pred' s hd idx hd' v =
     lemma_dlist_frame pred' s1 hd' (US.v hd) cell
   end else ()
 
+/// Functional correctness on data of inserting an element
+val lemma_insert_spec_dataify (#a:Type)
+  (pred: a -> prop)
+  (s:Seq.seq (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < Seq.length s})
+  (idx:US.t{idx <> null_ptr /\ US.v idx < Seq.length s})
+  (v:a)
+  : Lemma (requires pred v /\ is_dlist pred (US.v hd) s /\ (~ (mem (US.v idx) (US.v hd) s)))
+          (ensures (
+            let s' = insert_spec pred s hd idx v in
+            dataify s' `Seq.equal` Seq.upd (dataify s) (US.v idx) v
+          ))
+
+let lemma_insert_spec_dataify pred s hd idx v =
+  let s' = insert_spec pred s hd idx v in
+  let aux (i:nat{i < Seq.length s /\ i <> US.v idx}) : Lemma (Seq.index (dataify s) i == Seq.index (dataify s') i) =
+    Seq.map_seq_index get_data s i;
+    Seq.map_seq_index get_data s' i
+  in
+  Seq.map_seq_index get_data s (US.v idx);
+  Seq.map_seq_index get_data s' (US.v idx);
+
+  Classical.forall_intro aux
 
 /// Functional correctness of the remove_spec function:
 /// The resulting list is still a doubly linked list, and
@@ -890,6 +913,29 @@ let lemma_remove_spec_frame pred pred' hd hd' s idx =
   assert (is_dlist pred' hd' sf);
   assert (ptrs_in hd' sf == ptrs_in hd' sint)
 
+/// Removing an element from the list does not change the data fields
+val lemma_remove_spec_dataify (#a:Type)
+  (pred: a -> prop)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (idx:nat{idx < Seq.length s})
+  : Lemma (requires is_dlist pred hd s /\ mem idx hd s)
+          (ensures (
+            let c = Seq.index s idx in
+            let s' = remove_spec pred hd s null idx FS.emptyset in
+            dataify s `Seq.equal` dataify s'
+          ))
+
+let lemma_remove_spec_dataify pred hd s idx =
+  let s' = remove_spec pred hd s null idx FS.emptyset in
+  lemma_mem_valid_or_null_next_prev' pred hd s null FS.emptyset idx;
+
+  let aux (i:nat{i < Seq.length s}) : Lemma (Seq.index (dataify s) i == Seq.index (dataify s') i) =
+    Seq.map_seq_index get_data s i;
+    Seq.map_seq_index get_data s' i
+  in
+  Classical.forall_intro aux
+
 
 /// AF: The regular noop does not seem to pick the equality of selectors, not sure why
 val noop (#opened:inames) (#p:vprop) (_:unit)
@@ -1065,6 +1111,8 @@ let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) lemma_remove_spec_frame pred1 pred2 (US.v hd1) hd2 gs0 (US.v idx);
   (**) lemma_remove_spec_frame pred1 pred3 (US.v hd1) hd3 gs0 (US.v idx);
 
+  (**) lemma_remove_spec_dataify pred1 (US.v hd1) gs0 (US.v idx);
+
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd') hd2 hd3);
   return hd'
 
@@ -1101,6 +1149,8 @@ let remove2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) lemma_remove_spec_frame pred2 pred1 (US.v hd2) hd1 gs0 (US.v idx);
   (**) lemma_remove_spec_frame pred2 pred3 (US.v hd2) hd3 gs0 (US.v idx);
 
+  (**) lemma_remove_spec_dataify pred2 (US.v hd2) gs0 (US.v idx);
+
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v hd') hd3);
   return hd'
 
@@ -1116,7 +1166,6 @@ let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) lemma_mem_ptrs_in (US.v hd3) gs0 (US.v idx);
   (**) lemma_mem_ptrs_in hd2 gs0 (US.v idx);
   (**) lemma_mem_ptrs_in hd1 gs0 (US.v idx);
-
 
   if cell.next <> null_ptr then
     // Next is not null, we need to update it
@@ -1137,6 +1186,8 @@ let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) lemma_remove_spec pred3 (US.v hd3) gs0 (US.v idx);
   (**) lemma_remove_spec_frame pred3 pred2 (US.v hd3) hd2 gs0 (US.v idx);
   (**) lemma_remove_spec_frame pred3 pred1 (US.v hd3) hd1 gs0 (US.v idx);
+
+  (**) lemma_remove_spec_dataify pred3 (US.v hd3) gs0 (US.v idx);
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd'));
   return hd'
@@ -1160,6 +1211,8 @@ let insert1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
   (**) lemma_insert_spec_frame pred1 pred2 gs0 hd idx hd2 v;
   (**) lemma_insert_spec_frame pred1 pred3 gs0 hd idx hd3 v;
 
+  (**) lemma_insert_spec_dataify pred1 gs0 hd idx v;
+
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v idx) hd2 hd3)
 
 let insert2 #a #pred1 #pred2 #pred3 r hd hd1 hd3 idx v =
@@ -1181,8 +1234,9 @@ let insert2 #a #pred1 #pred2 #pred3 r hd hd1 hd3 idx v =
   (**) lemma_insert_spec_frame pred2 pred1 gs0 hd idx hd1 v;
   (**) lemma_insert_spec_frame pred2 pred3 gs0 hd idx hd3 v;
 
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v idx) hd3)
+  (**) lemma_insert_spec_dataify pred2 gs0 hd idx v;
 
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v idx) hd3)
 
 let insert3 #a #pred1 #pred2 #pred3 r hd hd1 hd2 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd));
@@ -1202,5 +1256,7 @@ let insert3 #a #pred1 #pred2 #pred3 r hd hd1 hd2 idx v =
   (**) lemma_insert_spec pred3 gs0 hd idx v;
   (**) lemma_insert_spec_frame pred3 pred2 gs0 hd idx hd2 v;
   (**) lemma_insert_spec_frame pred3 pred1 gs0 hd idx hd1 v;
+
+  (**) lemma_insert_spec_dataify pred3 gs0 hd idx v;
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v idx))
