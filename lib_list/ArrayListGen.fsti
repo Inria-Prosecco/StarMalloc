@@ -33,6 +33,13 @@ val dataify (#a:Type)
   (s: Seq.seq (cell a))
   : GTot (Seq.lseq a (Seq.length s))
 
+/// Accessing index [i] of dataify is the same as calling `get_data` on
+/// the underlying array
+val lemma_dataify_index (#a:Type)
+  (s:Seq.seq (cell a))
+  (i:nat{i < Seq.length s})
+  : Lemma (Seq.index (dataify s) i == get_data (Seq.index s i))
+
 /// The toplevel specification of being a list
 /// When [hd] is the head pointer of the list, the set of visited nodes
 /// is initially empty, and the prev "pointer" should be "NULL"

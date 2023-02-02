@@ -33,6 +33,9 @@ let dataify (#a:Type)
   Seq.map_seq_len get_data s;
   Seq.map_seq get_data s
 
+let lemma_dataify_index s i =
+  Seq.map_seq_index get_data s i
+
 /// The core logical predicate: For a sequence of cells [s], corresponding to the contents of an array,
 /// there is a doubly linked list starting at s.[idx].
 /// The [visited] argument is needed to ensure termination, it corresponds to the set of cells

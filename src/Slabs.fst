@@ -804,8 +804,7 @@ let allocate_slab_aux_1
                                 (A.split_l md_region (u32_to_sz md_count_v))
                                 (US.v idx1) (US.v idx2) (US.v idx3)) in
 
-  assume (Seq.index md_region_lv (US.v idx1) == ALG.get_data (Seq.index gs0 (US.v idx1)));
-
+  ALG.lemma_dataify_index #AL.status gs0 (US.v idx1);
   SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx1);
   change_slprop_rel
      (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1)))
