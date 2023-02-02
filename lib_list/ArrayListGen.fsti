@@ -29,12 +29,9 @@ noextract inline_for_extraction
 let null_ptr : US.t = 0sz
 
 /// Erases the next and prev field to return a sequence of data
-let dataify (#a:Type)
+val dataify (#a:Type)
   (s: Seq.seq (cell a))
   : GTot (Seq.lseq a (Seq.length s))
-  =
-  Seq.map_seq_len get_data s;
-  Seq.map_seq get_data s
 
 /// The toplevel specification of being a list
 /// When [hd] is the head pointer of the list, the set of visited nodes
@@ -146,13 +143,13 @@ val lemma_head1_in_bounds (#a:Type) (#opened:inames)
   SteelGhost unit opened
     (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
     (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (requires fun _ -> hd1 <> null_ptr)
+    (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
       // Framing
       h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
       h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
       // Functional property
-      US.v hd1 < A.length r
+      (hd1 == null_ptr \/ US.v hd1 < A.length r)
     )
 
 /// If the head of one of the lists is not null, then it is smaller than the length
@@ -164,13 +161,13 @@ val lemma_head2_in_bounds (#a:Type) (#opened:inames)
   SteelGhost unit opened
     (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
     (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (requires fun _ -> hd2 <> null_ptr)
+    (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
       // Framing
       h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
       h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
       // Functional property
-      US.v hd2 < A.length r
+      (hd2 == null_ptr \/ US.v hd2 < A.length r)
     )
 
 /// If the head of one of the lists is not null, then it satisfies the corresponding predicate
@@ -398,4 +395,28 @@ val insert3 (#a:Type)
             ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
             dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
             Seq.upd (dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) (US.v idx) v
+          )
+
+
+/// If the doubly linked lists fit in the first [k] elements of the array, then
+/// they also fit in the [k] + 1 first elements of the array, and we inserted
+/// element [k] in the first list
+inline_for_extraction noextract
+val extend1 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (hd2 hd3:Ghost.erased nat)
+  (k:US.t{US.v k + 1 <= A.length r /\ US.fits (US.v k + 1)})
+  (v:a)
+  : Steel unit
+          (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3 `star`
+            A.varray (A.split_l (A.split_r r k) 1sz))
+          (fun _ -> varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3)
+          (requires fun _ ->
+            k <> null_ptr /\ pred1 v)
+          (ensures fun h0 _ h1 ->
+            dataify (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3))
+              `Seq.equal`
+            Seq.append (dataify (h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3))) (Seq.create 1 v)
           )

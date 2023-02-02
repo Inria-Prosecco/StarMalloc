@@ -131,3 +131,25 @@ let insert3
             Seq.upd (AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) (US.v idx) v
           )
   = AL.insert3 r hd  hd1 hd2 idx v
+
+let extend1
+  (#pred1 #pred2 #pred3: status -> prop)
+  (r:A.array cell)
+  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (hd2 hd3:Ghost.erased nat)
+  (k:US.t{US.v k + 1 <= A.length r /\ US.fits (US.v k + 1)})
+  (v: status)
+  : Steel unit
+          (AL.varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3 `star`
+            A.varray (A.split_l (A.split_r r k) 1sz))
+          (fun _ ->
+            AL.varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3)
+          (requires fun _ ->
+            k <> null_ptr /\ pred1 v)
+          (ensures fun h0 _ h1 ->
+            A.length_fits r;
+            AL.dataify (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3))
+              `Seq.equal`
+            Seq.append (AL.dataify (h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3))) (Seq.create 1 v)
+          )
+  = AL.extend1 r hd hd2 hd3 k v

@@ -1381,7 +1381,6 @@ let right_vprop_sl_lemma2
   )
   = ()
 
-//TODO: Aymeric, varraylist
 let allocate_slab_aux_3_1_varraylist
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
@@ -1394,7 +1393,7 @@ let allocate_slab_aux_3_1_varraylist
   (fun _ -> AL.varraylist pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
     (U32.v md_count_v) (US.v idx2) (US.v idx3))
-  (requires fun _ -> True)
+  (requires fun _ -> U32.v md_count_v <> AL.null)
   (ensures fun h0 _ h1 ->
     ALG.dataify
       (AL.v_arraylist pred1 pred2 pred3
@@ -1406,7 +1405,21 @@ let allocate_slab_aux_3_1_varraylist
         (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0))
       (Seq.create 1 0ul)
   )
-  = sladmit ()
+  = change_equal_slprop
+      (A.varray (md_array md_region md_count_v))
+      (A.varray (A.split_l (A.split_r md_region (u32_to_sz md_count_v)) 1sz));
+    ALG.lemma_head1_in_bounds pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) idx1 idx2 idx3;
+    A.length_fits md_region;
+    AL.extend1 md_region idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) (u32_to_sz md_count_v) 0ul;
+    change_slprop_rel
+      (AL.varraylist pred1 pred2 pred3
+        (A.split_l md_region (u32_to_sz md_count_v `US.add` 1sz))
+        (US.v (u32_to_sz md_count_v)) (US.v idx2) (US.v idx3))
+      (AL.varraylist pred1 pred2 pred3
+        (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+        (U32.v md_count_v) (US.v idx2) (US.v idx3))
+      (fun x y -> x == y)
+      (fun _ -> assert (u32_to_sz (U32.add md_count_v 1ul) == u32_to_sz md_count_v `US.add` 1sz))
 
 let allocate_slab_aux_3_1
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1429,7 +1442,7 @@ let allocate_slab_aux_3_1
     A.varray (slab_array slab_region md_count_v) `star`
     A.varray (md_bm_array md_bm_region md_count_v)
   )
-  (requires fun h0 -> True)
+  (requires fun h0 -> U32.v md_count_v <> AL.null)
   (ensures fun h0 _ h1 ->
     ALG.dataify
       (AL.v_arraylist pred1 pred2 pred3
@@ -1617,6 +1630,9 @@ let allocate_slab_aux_3
   =
   let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
 
+  // AF: Need to better think about how to model null to handle the case md_count == 0
+  assume (U32.v md_count_v <> AL.null);
+
   allocate_slab_aux_3_1
     slab_region md_bm_region md_region md_count_v
     idx1 idx2 idx3;
@@ -1639,8 +1655,6 @@ let allocate_slab_aux_3
   let v = read md_count in
   write md_count (U32.add v 1ul);
   write r1 idx1';
-
-  assume (idx1' <> AL.null_ptr);
 
   return idx1'
 #pop-options

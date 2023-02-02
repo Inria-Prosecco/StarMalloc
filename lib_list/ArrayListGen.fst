@@ -26,6 +26,13 @@ type cell (a:Type0) = {
 
 let get_data c = c.data
 
+let dataify (#a:Type)
+  (s: Seq.seq (cell a))
+  : GTot (Seq.lseq a (Seq.length s))
+  =
+  Seq.map_seq_len get_data s;
+  Seq.map_seq get_data s
+
 /// The core logical predicate: For a sequence of cells [s], corresponding to the contents of an array,
 /// there is a doubly linked list starting at s.[idx].
 /// The [visited] argument is needed to ensure termination, it corresponds to the set of cells
@@ -948,74 +955,13 @@ let intro_arraylist_nil #a #opened pred1 pred2 pred3 r hd1 hd2 hd3 =
     (A.varray r)
     (varraylist_refine pred1 pred2 pred3 (US.v hd1) (US.v hd2) (US.v hd3))
 
-let lemma_head1_not_null_mem (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:US.t) :
-  SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (requires fun _ -> hd1 <> null_ptr)
-    (ensures fun h0 _ h1 ->
-      // Framing
-      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
-      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
-      // Inferred property
-      mem (US.v hd1) (US.v hd1) (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)))
-    )
-  = noop ()
+let lemma_head1_not_null_mem  pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
-let lemma_head1_in_bounds (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:US.t) :
-  SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (requires fun _ -> hd1 <> null_ptr)
-    (ensures fun h0 _ h1 ->
-      // Framing
-      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
-      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
-      // Functional property
-      US.v hd1 < A.length r
-    )
-   = noop ()
+let lemma_head1_in_bounds pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
-let lemma_head2_in_bounds (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:US.t) :
-  SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (requires fun _ -> hd2 <> null_ptr)
-    (ensures fun h0 _ h1 ->
-      // Framing
-      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
-      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
-      // Functional property
-      US.v hd2 < A.length r
-    )
-   = noop ()
+let lemma_head2_in_bounds pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
-let lemma_head1_implies_pred1 (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1:US.t{US.v hd1 < A.length r})
-  (hd2 hd3:US.t) :
-  SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (requires fun h -> hd1 <> null_ptr)
-    (ensures fun h0 _ h1 ->
-      // Framing
-      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
-      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
-      // Functional property
-      pred1 (get_data (Seq.index (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))) (US.v hd1)))
-    )
-    = noop ()
+let lemma_head1_implies_pred1 pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
 /// Reads at index [idx] in the array.
 let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
@@ -1260,3 +1206,53 @@ let insert3 #a #pred1 #pred2 #pred3 r hd hd1 hd2 idx v =
   (**) lemma_insert_spec_dataify pred3 gs0 hd idx v;
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v idx))
+
+/// An implementation of a map_seq_slice lemma currently not in F* ulib, specialized for `cell a`
+let dataify_slice (#a:Type)
+  (s: Seq.seq (cell a))
+  (n:nat{n <= Seq.length s})
+  : Lemma (dataify (Seq.slice s 0 n) == Seq.slice (dataify s) 0 n)
+  = let s1 = dataify (Seq.slice s 0 n) in
+    let s2 = Seq.slice (dataify s) 0 n in
+    let aux (i:nat{i < n}) : Lemma (Seq.index s1 i == Seq.index s2 i)
+      = Seq.map_seq_index get_data s i;
+        Seq.map_seq_index get_data (Seq.slice s 0 n) i
+    in Classical.forall_intro aux;
+    Seq.lemma_eq_intro s1 s2
+
+#push-options "--z3rlimit 100"
+let extend1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 k v =
+  (**) let s0 = gget (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
+
+  (**) elim_vrefine (A.varray (A.split_l r k)) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
+  (**) let gs0 = gget (A.varray (A.split_l r k)) in
+
+  (**) A.ghost_join (A.split_l r k) (A.split_l (A.split_r r k) 1sz) ();
+  (**) change_equal_slprop
+         (A.varray (A.merge (A.split_l r k) (A.split_l (A.split_r r k) 1sz)))
+         (A.varray (A.split_l r (k `US.add` 1sz)));
+
+  (**) let gs1 = gget (A.varray (A.split_l r (k `US.add` 1sz))) in
+  assume (~ (mem_all (US.v k) (US.v hd) hd2 hd3 gs1));
+  assume (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3 (Ghost.reveal gs1));
+
+  (**) intro_vrefine (A.varray (A.split_l r (k `US.add` 1sz))) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
+
+  (**) let s1 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v hd) hd2 hd3) in
+
+  insert1 (A.split_l r (k `US.add` 1sz)) hd hd2 hd3 k v;
+
+  (**) let s2 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
+
+  // Derived from the postcondition of join
+  (**) assert (Ghost.reveal s0 `Seq.equal` Seq.slice #(cell a) (Ghost.reveal s1) 0 (US.v k));
+  // Direct from above
+  (**) assert (dataify (Ghost.reveal s0) == dataify (Seq.slice #(cell a) (Ghost.reveal s1) 0 (US.v k)));
+  // Move the slice out of dataify
+  (**) dataify_slice #a (Ghost.reveal s1) (US.v k);
+  (**) assert (dataify (Ghost.reveal s0) == Seq.slice #a (dataify (Ghost.reveal s1)) 0 (US.v k));
+  // Postcondition of insert1
+  (**) assert (dataify (Ghost.reveal s2) == Seq.upd (dataify (Ghost.reveal s1)) (US.v k) v);
+  // Final conclusion
+  (**) assert (Seq.append (dataify (Ghost.reveal s0)) (Seq.create 1 v) `Seq.equal` dataify (Ghost.reveal s2))
+#pop-options
