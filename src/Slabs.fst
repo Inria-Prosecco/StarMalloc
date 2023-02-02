@@ -1519,6 +1519,21 @@ let lemma_slab_aux_3_2
         SeqUtils.init_u32_refined_index (U32.v (U32.add md_count_v 1ul)) k
     in Classical.forall_intro aux
 
+let lemma_slab_aux_3_2_bis
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  : Lemma
+    (p_empty size_class (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v) ==
+     f size_class slab_region md_bm_region
+      (U32.add md_count_v 1ul)
+      (Seq.append md_region_lv (Seq.create 1 0ul))
+      (Seq.index (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) (U32.v md_count_v)))
+  = SeqUtils.init_u32_refined_index (U32.v (U32.add md_count_v 1ul)) (U32.v md_count_v)
+
 open Helpers
 let allocate_slab_aux_3_2 (#opened:_)
   (size_class: sc)
@@ -1569,14 +1584,22 @@ let allocate_slab_aux_3_2 (#opened:_)
       (Seq.append md_region_lv (Seq.create 1 0ul)))
     (SeqUtils.init_u32_refined (U32.v md_count_v))
     (Seq.slice (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) 0 (U32.v md_count_v));
+
+  // TODO: This one does not look obvious, need a combination of
+  // intro_slab_vprop and p_empty_pack
   rewrite_slprop
-    (A.varray (slab_array slab_region md_count_v) `star`
-    A.varray (md_bm_array md_bm_region md_count_v))
+    (A.varray (slab_array slab_region md_count_v) `star` A.varray (md_bm_array md_bm_region md_count_v))
+    (p_empty size_class (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v))
+    (fun _ -> admit());
+
+  SeqUtils.init_u32_refined_index (U32.v (U32.add md_count_v 1ul)) (U32.v md_count_v);
+  change_equal_slprop
+    (p_empty size_class (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v))
     (f size_class slab_region md_bm_region
       (U32.add md_count_v 1ul)
       (Seq.append md_region_lv (Seq.create 1 0ul))
-      (Seq.index (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) (U32.v md_count_v)))
-    (fun _ -> admit ());
+      (Seq.index (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) (U32.v md_count_v)));
+
   starseq_add_singleton_s
     #_
     #(pos:U32.t{U32.v pos < U32.v (U32.add md_count_v 1ul)})
