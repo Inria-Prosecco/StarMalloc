@@ -1221,7 +1221,26 @@ let dataify_slice (#a:Type)
     Seq.lemma_eq_intro s1 s2
 
 #push-options "--z3rlimit 100"
-let extend1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 k v =
+let extend1 (#a:Type)
+  (#pred1 #pred2 #pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (hd2 hd3:Ghost.erased nat)
+  (k:US.t{US.v k + 1 <= A.length r /\ US.fits (US.v k + 1)})
+  (v:a)
+  : Steel unit
+          (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3 `star`
+            A.varray (A.split_l (A.split_r r k) 1sz))
+          (fun _ -> varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3)
+          (requires fun _ ->
+            k <> null_ptr /\ pred1 v)
+          (ensures fun h0 _ h1 ->
+            dataify (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3))
+              ==
+            Seq.append (dataify (h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3))) (Seq.create 1 v)
+          )
+  =
+//let extend1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 k v =
   (**) let s0 = gget (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
 
   (**) elim_vrefine (A.varray (A.split_l r k)) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
@@ -1254,5 +1273,7 @@ let extend1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 k v =
   // Postcondition of insert1
   (**) assert (dataify (Ghost.reveal s2) == Seq.upd (dataify (Ghost.reveal s1)) (US.v k) v);
   // Final conclusion
-  (**) assert (Seq.append (dataify (Ghost.reveal s0)) (Seq.create 1 v) `Seq.equal` dataify (Ghost.reveal s2))
+  Seq.lemma_eq_intro #a
+   (Seq.append (dataify (Ghost.reveal s0)) (Seq.create 1 v))
+   (dataify (Ghost.reveal s2))
 #pop-options

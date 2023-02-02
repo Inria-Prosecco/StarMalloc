@@ -417,6 +417,6 @@ val extend1 (#a:Type)
             k <> null_ptr /\ pred1 v)
           (ensures fun h0 _ h1 ->
             dataify (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3))
-              `Seq.equal`
+              ==
             Seq.append (dataify (h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3))) (Seq.create 1 v)
           )
