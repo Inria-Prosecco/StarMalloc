@@ -955,7 +955,7 @@ let intro_arraylist_nil #a #opened pred1 pred2 pred3 r hd1 hd2 hd3 =
     (A.varray r)
     (varraylist_refine pred1 pred2 pred3 (US.v hd1) (US.v hd2) (US.v hd3))
 
-let lemma_head1_not_null_mem  pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
+let lemma_head_not_null_mem  pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
 let lemma_head1_in_bounds pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 

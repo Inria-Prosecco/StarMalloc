@@ -620,7 +620,7 @@ let allocate_slab_aux_1_partial
   )
   (ensures fun _ _ _ -> True)
   =
-  ALG.lemma_head1_not_null_mem pred1 pred2 pred3
+  ALG.lemma_head_not_null_mem pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 idx2 idx3;
 
@@ -700,7 +700,7 @@ let allocate_slab_aux_1_full
   )
   (ensures fun _ _ _ -> True)
   =
-  ALG.lemma_head1_not_null_mem pred1 pred2 pred3
+  ALG.lemma_head_not_null_mem pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 idx2 idx3;
 
