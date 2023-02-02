@@ -87,7 +87,7 @@ let remove2
 let insert2
   (#pred1 #pred2 #pred3: status -> prop)
   (r:A.array cell)
-  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (hd:US.t)
   (hd1 hd3:Ghost.erased nat)
   (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
   (v: status)
@@ -111,7 +111,7 @@ let insert2
 let insert3
   (#pred1 #pred2 #pred3: status -> prop)
   (r:A.array cell)
-  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
+  (hd:US.t)
   (hd1 hd2:Ghost.erased nat)
   (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
   (v: status)
