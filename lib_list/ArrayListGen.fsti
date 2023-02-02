@@ -147,6 +147,24 @@ val lemma_head1_in_bounds (#a:Type) (#opened:inames)
       US.v hd1 < A.length r
     )
 
+/// If the head of one of the lists is not null, then it is smaller than the length
+/// of the underlying array
+val lemma_head2_in_bounds (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3:US.t) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (requires fun _ -> hd2 <> null_ptr)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
+      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
+      // Functional property
+      US.v hd2 < A.length r
+    )
+
 /// If the head of one of the lists is not null, then it satisfies the corresponding predicate
 val lemma_head1_implies_pred1 (#a:Type) (#opened:inames)
   (pred1 pred2 pred3: a -> prop)
