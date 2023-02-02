@@ -1220,6 +1220,55 @@ let dataify_slice (#a:Type)
     in Classical.forall_intro aux;
     Seq.lemma_eq_intro s1 s2
 
+/// If we have a dlist on sequence [s], and [s'] is an extension of [s],
+/// then we have a dlist on [s'] and the set of pointers in the list are
+/// the same
+let rec lemma_extend_dlist' (#a:Type0)
+  (pred: a -> prop)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (prev: nat)
+  (visited: FS.set nat{Seq.length s >= FS.cardinality visited})
+  (s':Seq.seq (cell a))
+  (n:nat{n <= Seq.length s})
+  : Lemma
+      (requires
+        is_dlist' pred hd s prev visited /\
+        Seq.length s' >= Seq.length s /\
+        s `Seq.equal` Seq.slice s' 0 n)
+      (ensures
+        is_dlist' pred hd s' prev visited /\
+        ptrs_in' hd s visited == ptrs_in' hd s' visited
+      )
+      (decreases (Seq.length s - FS.cardinality visited))
+  = if hd = null then ()
+    else if FS.cardinality visited = Seq.length s ||
+       FS.mem hd visited ||
+       // If the prev pointer is not null, it should be in the visited set
+       not (prev = null || FS.mem prev visited) ||
+       hd >= Seq.length s then ()
+    else
+      let cur = Seq.index s hd in
+      let next = US.v cur.next in
+      lemma_extend_dlist' pred next s hd (FS.insert hd visited) s' n
+
+let lemma_extend_dlist (#a:Type0)
+  (pred: a -> prop)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (s':Seq.seq (cell a))
+  (n:nat{n <= Seq.length s})
+  : Lemma
+      (requires
+        is_dlist pred hd s /\
+        Seq.length s' >= Seq.length s /\
+        s `Seq.equal` Seq.slice s' 0 n)
+      (ensures
+        is_dlist pred hd s' /\
+        ptrs_in hd s == ptrs_in hd s'
+      )
+  = lemma_extend_dlist' pred hd s null FS.emptyset s' n
+
 #push-options "--z3rlimit 50"
 let extend_aux (#a:Type) (#opened:_)
   (#pred1 #pred2 #pred3: a -> prop)
@@ -1253,9 +1302,18 @@ let extend_aux (#a:Type) (#opened:_)
 
   (**) let gs1 = gget (A.varray (A.split_l r (k `US.add` 1sz))) in
 
+  (**) lemma_extend_dlist pred1 hd1 (Ghost.reveal gs0) (Ghost.reveal gs1) (US.v k);
+  (**) lemma_extend_dlist pred2 hd2 (Ghost.reveal gs0) (Ghost.reveal gs1) (US.v k);
+  (**) lemma_extend_dlist pred3 hd3 (Ghost.reveal gs0) (Ghost.reveal gs1) (US.v k);
+  (**) assert (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3 (Ghost.reveal gs1));
 
-  assume (~ (mem_all (US.v k) hd1 hd2 hd3 gs1));
-  assume (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3 (Ghost.reveal gs1));
+  (**) lemma_mem_ptrs_in hd1 (Ghost.reveal gs0) (US.v k);
+  (**) lemma_mem_ptrs_in hd2 (Ghost.reveal gs0) (US.v k);
+  (**) lemma_mem_ptrs_in hd3 (Ghost.reveal gs0) (US.v k);
+  (**) lemma_mem_ptrs_in hd1 (Ghost.reveal gs1) (US.v k);
+  (**) lemma_mem_ptrs_in hd2 (Ghost.reveal gs1) (US.v k);
+  (**) lemma_mem_ptrs_in hd3 (Ghost.reveal gs1) (US.v k);
+  (**) assert (~ (mem_all (US.v k) hd1 hd2 hd3 gs1));
 
   (**) intro_vrefine (A.varray (A.split_l r (k `US.add` 1sz))) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
 
@@ -1266,6 +1324,7 @@ let extend_aux (#a:Type) (#opened:_)
   (**) dataify_slice #a (Ghost.reveal s1) (US.v k)
 #pop-options
 
+#restart-solver
 #push-options "--z3rlimit 100"
 let extend1 (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
