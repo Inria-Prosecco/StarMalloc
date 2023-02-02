@@ -145,8 +145,8 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 =
   starseq_intro_empty #_
       #(pos:U32.t{U32.v pos < U32.v 0ul})
       #(Slabs.t sc)
-      (Slabs.f sc slab_region md_bm_region 0ul (dataify (dsnd s)))
-      (Slabs.f_lemma sc slab_region md_bm_region 0ul (dataify (dsnd s)));
+      (Slabs.f sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
+      (Slabs.f_lemma sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)));
 
   assert (SeqUtils.init_u32_refined (U32.v 0ul) `Seq.equal` Seq.empty);
 
@@ -154,8 +154,8 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 =
   assert ((starseq
       #(pos:U32.t{U32.v pos < U32.v 0ul})
       #(t sc)
-      (f sc slab_region md_bm_region 0ul (dataify (dsnd s)))
-      (f_lemma sc slab_region md_bm_region 0ul (dataify (dsnd s)))
+      (f sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
+      (f_lemma sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
       Seq.empty) ==
     (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3 s))
   by (norm [delta_only [`%left_vprop_aux]]);
@@ -165,8 +165,8 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 =
     (starseq
       #(pos:U32.t{U32.v pos < U32.v 0ul})
       #(t sc)
-      (f sc slab_region md_bm_region 0ul (dataify (dsnd s)))
-      (f_lemma sc slab_region md_bm_region 0ul (dataify (dsnd s)))
+      (f sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
+      (f_lemma sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
       Seq.empty)
     (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3 s);
 

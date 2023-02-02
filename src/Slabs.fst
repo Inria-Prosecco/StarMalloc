@@ -1491,6 +1491,34 @@ let allocate_slab_aux_3_1
   allocate_slab_aux_3_1_varraylist
     md_region md_count_v idx1 idx2 idx3
 
+let lemma_slab_aux_3_2
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  : Lemma
+    (let f1 = (f size_class slab_region md_bm_region md_count_v md_region_lv) in
+     let f2 = (f size_class slab_region md_bm_region
+      (U32.add md_count_v 1ul)
+      (Seq.append md_region_lv (Seq.create 1 0ul))) in
+     let s1 = (SeqUtils.init_u32_refined (U32.v md_count_v)) in
+     let s2 = (Seq.slice (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) 0 (U32.v md_count_v)) in
+
+     forall (k:nat{k < Seq.length s1}). f1 (Seq.index s1 k) == f2 (Seq.index s2 k))
+  = let md_region_lv' = Seq.append md_region_lv (Seq.create 1 0ul) in
+    let f1 = (f size_class slab_region md_bm_region md_count_v md_region_lv) in
+    let f2 = (f size_class slab_region md_bm_region
+     (U32.add md_count_v 1ul) md_region_lv') in
+    let s1 = (SeqUtils.init_u32_refined (U32.v md_count_v)) in
+    let s2 = (Seq.slice (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) 0 (U32.v md_count_v)) in
+
+    let aux (k:nat{k < Seq.length s1}) : Lemma (f1 (Seq.index s1 k) == f2 (Seq.index s2 k))
+      = SeqUtils.init_u32_refined_index (U32.v md_count_v) k;
+        SeqUtils.init_u32_refined_index (U32.v (U32.add md_count_v 1ul)) k
+    in Classical.forall_intro aux
+
 open Helpers
 let allocate_slab_aux_3_2 (#opened:_)
   (size_class: sc)
@@ -1524,7 +1552,8 @@ let allocate_slab_aux_3_2 (#opened:_)
       (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul)))
   )
   =
-  admit ();
+  lemma_slab_aux_3_2 size_class slab_region md_bm_region md_region md_count_v md_region_lv;
+
   starseq_weakening_ref
     #_
     #(pos:U32.t{U32.v pos < U32.v md_count_v})
