@@ -1383,11 +1383,10 @@ let right_vprop_sl_lemma2
 
 //TODO: Aymeric, varraylist
 let allocate_slab_aux_3_1_varraylist
-  (#opened:_)
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
   (idx1 idx2 idx3: US.t)
-  : SteelGhost unit opened
+  : Steel unit
   (AL.varraylist pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     (US.v idx1) (US.v idx2) (US.v idx3) `star`
@@ -1396,18 +1395,26 @@ let allocate_slab_aux_3_1_varraylist
     (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
     (U32.v md_count_v) (US.v idx2) (US.v idx3))
   (requires fun _ -> True)
-  (ensures fun _ _ _ -> True)
+  (ensures fun h0 _ h1 ->
+    ALG.dataify
+      (AL.v_arraylist pred1 pred2 pred3
+        (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+        (U32.v md_count_v) (US.v idx2) (US.v idx3) h1)
+      `Seq.equal`
+    Seq.append
+      (ALG.dataify
+        (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0))
+      (Seq.create 1 0ul)
+  )
   = sladmit ()
 
-
 let allocate_slab_aux_3_1
-  (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
   (idx1 idx2 idx3: US.t)
-  : SteelGhost unit opened
+  : Steel unit
   (
     right_vprop slab_region md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3
@@ -1423,7 +1430,17 @@ let allocate_slab_aux_3_1
     A.varray (md_bm_array md_bm_region md_count_v)
   )
   (requires fun h0 -> True)
-  (ensures fun h0 _ h1 -> True)
+  (ensures fun h0 _ h1 ->
+    ALG.dataify
+      (AL.v_arraylist pred1 pred2 pred3
+        (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+        (U32.v md_count_v) (US.v idx2) (US.v idx3) h1)
+      `Seq.equal`
+    Seq.append
+      (ALG.dataify
+        (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0))
+      (Seq.create 1 0ul)
+   )
   =
   change_slprop_rel
     (right_vprop slab_region md_bm_region md_region md_count_v)
@@ -1462,7 +1479,7 @@ let allocate_slab_aux_3_1
     md_region md_count_v idx1 idx2 idx3
 
 open Helpers
-let allocate_slab_aux_3_2
+let allocate_slab_aux_3_2 (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -1470,11 +1487,8 @@ let allocate_slab_aux_3_2
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
-  : Steel US.t
+  : SteelGhostT unit opened
   (
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
-      (U32.v md_count_v) (US.v idx2) (US.v idx3)) `star`
     A.varray (slab_array slab_region md_count_v) `star`
     A.varray (md_bm_array md_bm_region md_count_v) `star`
     starseq
@@ -1484,10 +1498,7 @@ let allocate_slab_aux_3_2
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
       (SeqUtils.init_u32_refined (U32.v md_count_v))
   )
-  (fun idx1' ->
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
-      (US.v idx1') (US.v idx2) (US.v idx3)) `star`
+  (fun _ ->
     starseq
       #(pos:U32.t{U32.v pos < U32.v (U32.add md_count_v 1ul)})
       #(t size_class)
@@ -1498,10 +1509,6 @@ let allocate_slab_aux_3_2
         (U32.add md_count_v 1ul)
         (Seq.append md_region_lv (Seq.create 1 0ul)))
       (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul)))
-  )
-  (requires fun h0 -> True)
-  (ensures fun h0 idx1' h1 ->
-    idx1' <> AL.null_ptr
   )
   =
   admit ();
@@ -1539,17 +1546,11 @@ let allocate_slab_aux_3_2
       (U32.add md_count_v 1ul)
       (Seq.append md_region_lv (Seq.create 1 0ul)))
     (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul)))
-    (U32.v md_count_v);
-  change_equal_slprop
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
-      (U32.v md_count_v) (US.v idx2) (US.v idx3))
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
-      (US.v (u32_to_sz md_count_v)) (US.v idx2) (US.v idx3));
-  return (u32_to_sz md_count_v)
+    (U32.v md_count_v)
 
 //TODO: @Antonin, yapluka
+#restart-solver
+#push-options "--z3rlimit 100"
 let allocate_slab_aux_3
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1614,20 +1615,35 @@ let allocate_slab_aux_3
     Seq.append (Ghost.reveal md_region_lv) (Seq.create 1 0ul)
   )
   =
+  let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
+
   allocate_slab_aux_3_1
     slab_region md_bm_region md_region md_count_v
     idx1 idx2 idx3;
-  let idx1' = allocate_slab_aux_3_2 size_class
+  allocate_slab_aux_3_2 size_class
     slab_region md_bm_region md_region md_count_v md_region_lv
-    (u32_to_sz md_count_v) idx2 idx3 in
+    (u32_to_sz md_count_v) idx2 idx3;
+
+  let idx1' = u32_to_sz md_count_v in
+
+  change_slprop_rel
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+      (U32.v md_count_v) (US.v idx2) (US.v idx3))
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+      (US.v idx1') (US.v idx2) (US.v idx3))
+    (fun x y -> x == y)
+    (fun _ -> assert (U32.v md_count_v == US.v idx1'));
+
   let v = read md_count in
   write md_count (U32.add v 1ul);
   write r1 idx1';
 
-  let gs1 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul))) (US.v idx1') (US.v idx2) (US.v idx3)) in
-  assume (ALG.dataify (Ghost.reveal gs1) `Seq.equal` Seq.append (Ghost.reveal md_region_lv) (Seq.create 1 0ul));
+  assume (idx1' <> AL.null_ptr);
 
   return idx1'
+#pop-options
 
 let size_class_vprop_aux
   size slab_region md_bm_region md_region empty_slabs partial_slabs full_slabs
