@@ -269,6 +269,7 @@ let p_empty_pack (#opened:_)
 #pop-options
 
 #push-options "--z3rlimit 50"
+inline_for_extraction noextract
 let allocate_slab_aux_cond
   (size_class: sc)
   (md: slab_metadata)
@@ -301,6 +302,7 @@ let allocate_slab_aux_cond
 #pop-options
 
 #push-options "--z3rlimit 30"
+inline_for_extraction noextract
 let slab_array
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -355,6 +357,7 @@ let slab_region_mon_split
     (A.varray (A.split_r (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)))
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))))
 
+inline_for_extraction noextract
 let md_bm_array
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -409,6 +412,7 @@ let md_bm_region_mon_split
     (A.varray (A.split_r (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)))
     (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))))
 
+inline_for_extraction noextract
 let md_array
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -645,6 +649,7 @@ let pack_3
     (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3)
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
 let allocate_slab_aux_1_partial
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -715,6 +720,7 @@ let allocate_slab_aux_1_partial
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
     idx1' idx1 idx3
 
+inline_for_extraction noextract
 let allocate_slab_aux_1_full
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -912,6 +918,7 @@ let allocate_slab_aux_helper
     (US.v idx)
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
 let allocate_slab_aux_1
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1015,6 +1022,7 @@ let allocate_slab_aux_1
 #pop-options
 
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
 let allocate_slab_aux_2_full
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1086,6 +1094,7 @@ let allocate_slab_aux_2_full
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul))
     idx1 idx2' idx2
 
+inline_for_extraction noextract
 let allocate_slab_aux_2_partial
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1142,6 +1151,7 @@ let allocate_slab_aux_2_partial
     md_count_v md_region_lv
     idx1 idx2 idx3
 
+inline_for_extraction noextract
 let allocate_slab_aux_2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1422,6 +1432,7 @@ let right_vprop_sl_lemma2
   )
   = ()
 
+inline_for_extraction noextract
 let allocate_slab_aux_3_1_varraylist
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
@@ -1462,6 +1473,7 @@ let allocate_slab_aux_3_1_varraylist
       (fun x y -> x == y)
       (fun _ -> assert (u32_to_sz (U32.add md_count_v 1ul) == u32_to_sz md_count_v `US.add` 1sz))
 
+inline_for_extraction noextract
 let allocate_slab_aux_3_1
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -1657,6 +1669,7 @@ let allocate_slab_aux_3_2 (#opened:_)
 //TODO: @Antonin, yapluka
 #restart-solver
 #push-options "--z3rlimit 100"
+inline_for_extraction noextract
 let allocate_slab_aux_3
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -1826,6 +1839,7 @@ module P = Steel.FractionalPermission
 
 #restart-solver
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
 let allocate_slab'
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})

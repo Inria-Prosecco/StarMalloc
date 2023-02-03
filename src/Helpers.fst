@@ -38,7 +38,7 @@ let u32_to_sz
   US.uint32_to_sizet x
 
 open FStar.Mul
-#push-options "--z3rlimit 50 --fuel 0 --ifuel 0"
+#push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
 let slot_array (#a: Type)
   (size: U32.t)
   (max: U32.t)
