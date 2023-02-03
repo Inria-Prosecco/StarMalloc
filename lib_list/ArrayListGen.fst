@@ -966,6 +966,8 @@ let lemma_head2_in_bounds pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
 let lemma_head1_implies_pred1 pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
+let lemma_head2_implies_pred2 pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
+
 /// Reads at index [idx] in the array.
 let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);

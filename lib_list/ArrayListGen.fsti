@@ -197,6 +197,25 @@ val lemma_head1_implies_pred1 (#a:Type) (#opened:inames)
       pred1 (get_data (Seq.index (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))) (US.v hd1)))
     )
 
+/// If the head of one of the lists is not null, then it satisfies the corresponding predicate
+val lemma_head2_implies_pred2 (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1:US.t)
+  (hd2:US.t{US.v hd2 < A.length r})
+  (hd3:US.t) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (requires fun h -> hd2 <> null_ptr)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
+      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
+      // Functional property
+      pred2 (get_data (Seq.index (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))) (US.v hd2)))
+    )
+
 /// Reads at index [idx] in the array.
 inline_for_extraction noextract
 val read_in_place (#a:Type)
