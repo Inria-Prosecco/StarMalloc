@@ -813,7 +813,7 @@ let lemma_slab_aux_1_starseq
       assert (Seq.index md_region_lv (U32.v i) == Seq.index md_region_lv' (U32.v i))
   in Classical.forall_intro aux
 
-let allocate_slab_aux_1_full_helper
+let allocate_slab_aux_1_helper
   (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -825,6 +825,7 @@ let allocate_slab_aux_1_full_helper
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1: US.t{US.v idx1 < U32.v md_count_v})
   (idx2 idx3: US.t)
+  (v: AL.status)
   : SteelGhost unit opened
   (
     vptr md_count `star`
@@ -861,11 +862,17 @@ let allocate_slab_aux_1_full_helper
     starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx1) 2ul))
-      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx1) 2ul))
+      (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx1) v))
+      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx1) v))
       (SeqUtils.init_u32_refined (U32.v md_count_v))
   )
   (requires fun h0 ->
+    let md = v_slab_vprop_md size_class
+      (slab_array slab_region (US.sizet_to_uint32 idx1))
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx1)) h0 in
+    (is_full size_class md ==> v == 2ul) /\
+    (is_partial size_class md ==> v == 1ul) /\
+    (is_empty size_class md ==> v == 0ul) /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -884,6 +891,7 @@ let allocate_slab_aux_1_full_helper
   )
   =
   sladmit ()
+
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let allocate_slab_aux_1
@@ -972,77 +980,20 @@ let allocate_slab_aux_1
     (slab_array slab_region (US.sizet_to_uint32 idx1))
   in
   if cond then (
-    allocate_slab_aux_1_full_helper size_class
+    allocate_slab_aux_1_helper size_class
+      slab_region md_bm_region md_region md_count r1 r2 r3
+      md_count_v md_region_lv idx1 idx2 idx3 2ul;
+    allocate_slab_aux_1_full size_class
       slab_region md_bm_region md_region md_count r1 r2 r3
       md_count_v md_region_lv idx1 idx2 idx3;
-
-    //sladmit ();
-    //change_slprop_rel
-    //  (slab_vprop size_class
-    //    (slab_array slab_region (US.sizet_to_uint32 idx1))
-    //    (md_bm_array md_bm_region (US.sizet_to_uint32 idx1)))
-    //  (f size_class slab_region md_bm_region md_count_v
-    //    (Seq.upd md_region_lv (US.v idx1) 2ul)
-    //    (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1)))
-    //  (fun x y -> x == y)
-    //  (fun _ -> admit());
-    //lemma_slab_aux_1_starseq size_class slab_region md_bm_region md_region md_count_v md_region_lv (US.v idx1) 2ul;
-    //starseq_upd_pack
-    //  #_
-    //  #(pos:U32.t{U32.v pos < U32.v md_count_v})
-    //  #(t size_class)
-    //  (f size_class slab_region md_bm_region md_count_v md_region_lv)
-    //  (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
-    //  (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-    //  (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
-    //  (SeqUtils.init_u32_refined (U32.v md_count_v))
-    //  (SeqUtils.init_u32_refined (U32.v md_count_v))
-    //  (US.v idx1);
-    allocate_slab_aux_1_full
-      size_class
-      slab_region
-      md_bm_region
-      md_region
-      md_count
-      r1 r2 r3
-      md_count_v
-      md_region_lv
-      idx1 idx2 idx3;
     return r
   ) else (
-    sladmit ();
-    //change_slprop_rel
-    //  (slab_vprop size_class
-    //    (slab_array slab_region (US.sizet_to_uint32 idx1))
-    //    (md_bm_array md_bm_region (US.sizet_to_uint32 idx1)))
-    //  (f size_class slab_region md_bm_region md_count_v
-    //    (Seq.upd md_region_lv (US.v idx1) 1ul)
-    //    (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx1)))
-    //  (fun x y -> x == y)
-    //  (fun _ -> admit ());
-
-    //lemma_slab_aux_1_starseq size_class slab_region md_bm_region md_region md_count_v md_region_lv (US.v idx1) 1ul;
-    //starseq_upd_pack
-    //  #_
-    //  #(pos:U32.t{U32.v pos < U32.v md_count_v})
-    //  #(t size_class)
-    //  (f size_class slab_region md_bm_region md_count_v md_region_lv)
-    //  (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
-    //  (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-    //  (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
-    //  (SeqUtils.init_u32_refined (U32.v md_count_v))
-    //  (SeqUtils.init_u32_refined (U32.v md_count_v))
-    //  (US.v idx1);
-    allocate_slab_aux_1_partial
-      size_class
-      slab_region
-      md_bm_region
-      md_region
-      md_count
-      r1 r2 r3
-      md_count_v
-      md_region_lv
-      idx1 idx2 idx3;
+    allocate_slab_aux_1_helper size_class
+      slab_region md_bm_region md_region md_count r1 r2 r3
+      md_count_v md_region_lv idx1 idx2 idx3 1ul;
+    allocate_slab_aux_1_partial size_class
+      slab_region md_bm_region md_region md_count r1 r2 r3
+      md_count_v md_region_lv idx1 idx2 idx3;
     return r
   )
 #pop-options

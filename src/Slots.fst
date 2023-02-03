@@ -180,6 +180,20 @@ let slab_vprop_lemma
       (Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
         (U32.v (nb_slots size_class)))
 
+[@@ __steel_reduce__]
+let v_slab_vprop_md (#p:vprop)
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (md: slab_metadata)
+  (h:rmem p{FStar.Tactics.with_tactic selector_tactic
+    (can_be_split p (slab_vprop size_class arr md) /\ True)})
+  : GTot (Seq.lseq U64.t 4)
+  =
+  let blob
+    : t_of (slab_vprop size_class arr md)
+    = h (slab_vprop size_class arr md) in
+  dfst (fst blob)
+
 #push-options "--print_implicits"
 
 noextract
