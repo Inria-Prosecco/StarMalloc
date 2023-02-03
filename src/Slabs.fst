@@ -770,7 +770,7 @@ let allocate_slab_aux_1_full
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 idx2 idx3;
   // required for selector equality propagation
-  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
+  (**) let _ = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
 
   let idx1' = AL.remove1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -912,7 +912,6 @@ let allocate_slab_aux_1_helper
     (SeqUtils.init_u32_refined (U32.v md_count_v))
     (SeqUtils.init_u32_refined (U32.v md_count_v))
     (US.v idx1)
-
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let allocate_slab_aux_1
@@ -1060,61 +1059,36 @@ let allocate_slab_aux_2_full
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    idx2 <> AL.null_ptr
+    idx2 <> AL.null_ptr /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ _ h1 ->
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
+    ) in
+    md_count_v == dfst blob1)
   =
-  //assume (t_of (
-  //  AL.varraylist pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count))
-  //    (US.v idx1) (US.v idx2) (US.v idx3))
-  //  ==
-  //  v:Seq.seq (AL.cell status){AL.varraylist_refine pred1 pred2 pred3 (US.v idx1) (US.v idx2) (US.v idx3) v});
-  //let l
-  //  = gget (
-  //  AL.varraylist pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count))
-  //    (US.v idx1) (US.v idx2) (US.v idx3)
-  //) in
-  //TODO @Aymeric: deduce mem x x::_
-  //assume (AL.mem (US.v idx1) (US.v idx1) (G.reveal l));
-  admit ();
+  (**) ALG.lemma_head_not_null_mem pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    idx1 idx2 idx3;
+  // required for selector equality propagation
+  (**) let __ = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
+
   let idx2' = AL.remove2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
-    //TODO: To check, is it really idx passed as an index?
-    (Ghost.hide (US.v idx1)) idx2 (Ghost.hide (US.v idx3)) idx1 in
-  //TODO @Aymeric: refine insert3 spec
+    (Ghost.hide (US.v idx1)) idx2 (Ghost.hide (US.v idx3)) idx2 in
   AL.insert3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx3 (Ghost.hide (US.v idx1)) (Ghost.hide (US.v idx2')) idx2 2ul;
   write r2 idx2';
   write r3 idx2;
-  intro_vdep
-    (vptr r1 `star` vptr r2 `star` vptr r3)
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz md_count_v))
-      (US.v idx1) (US.v idx2') (US.v idx2))
-    (fun (idxs: (US.t & US.t) & US.t) ->
-      AL.varraylist pred1 pred2 pred3
-        (A.split_l md_region (u32_to_sz md_count_v))
 
-      (US.v (fst (fst idxs)))
-      (US.v (snd (fst idxs)))
-      (US.v (snd idxs))
-    );
-  slassert (left_vprop1 md_region md_count_v r1 r2 r3);
-  slassert (left_vprop2 size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul));
-  intro_vdep
-    (left_vprop1 md_region md_count_v r1 r2 r3)
-    (left_vprop2 size_class slab_region md_bm_region md_count_v
-      (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul))
-    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)));
-  slassert (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
-  intro_vrefinedep
-    (vptr md_count)
-    (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
-    (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3)
+  (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3
+    md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul))
+    idx1 idx2' idx2
 
 let allocate_slab_aux_2_partial
   (size_class: sc)
@@ -1156,36 +1130,21 @@ let allocate_slab_aux_2_partial
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    idx2 <> AL.null_ptr
+    idx2 <> AL.null_ptr /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ _ h1 ->
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
+    ) in
+    md_count_v == dfst blob1)
   =
-  admit ();
-  intro_vdep
-    (vptr r1 `star` vptr r2 `star` vptr r3)
-    (AL.varraylist pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz md_count_v))
-      (US.v idx1) (US.v idx2) (US.v idx3))
-    (fun (idxs: (US.t & US.t) & US.t) ->
-      AL.varraylist pred1 pred2 pred3
-        (A.split_l md_region (u32_to_sz md_count_v))
-
-      (US.v (fst (fst idxs)))
-      (US.v (snd (fst idxs)))
-      (US.v (snd idxs))
-    );
-  slassert (left_vprop1 md_region md_count_v r1 r2 r3);
-  slassert (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv));
-  intro_vdep
-    (left_vprop1 md_region md_count_v r1 r2 r3)
-    (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
-    (fun x -> left_vprop2 size_class slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)));
-  slassert (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3);
-  intro_vrefinedep
-    (vptr md_count)
-    (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v -> left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3)
-    (left_vprop size_class slab_region md_bm_region md_count_v md_region r1 r2 r3)
+  (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3
+    md_count_v md_region_lv
+    idx1 idx2 idx3
 
 let allocate_slab_aux_2
   (size_class: sc)
