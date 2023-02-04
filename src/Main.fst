@@ -120,7 +120,7 @@ val intro_left_vprop_empty (#opened:_)
   (r1 r2 r3: R.ref US.t)
   : SteelGhost unit opened
       (A.varray (split_l md_region 0sz) `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
-      (fun _ -> Slabs.left_vprop sc slab_region md_bm_region 0ul md_region r1 r2 r3)
+      (fun _ -> Slabs.left_vprop sc slab_region md_bm_region md_region r1 r2 r3 0ul)
       (requires fun h ->
         R.sel r1 h == 0sz /\
         R.sel r2 h == 0sz /\
@@ -157,7 +157,7 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 =
       (f sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
       (f_lemma sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
       Seq.empty) ==
-    (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3 s))
+    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 0ul s))
   by (norm [delta_only [`%left_vprop_aux]]);
 
 
@@ -168,14 +168,14 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 =
       (f sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
       (f_lemma sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
       Seq.empty)
-    (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3 s);
+    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 0ul s);
 
   intro_vdep
     (ind_varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz 0ul))
       r1 r2 r3)
-    (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3 s)
-    (left_vprop_aux sc slab_region md_bm_region 0ul md_region r1 r2 r3)
+    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 0ul s)
+    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 0ul)
 
 val intro_right_vprop_empty (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -266,8 +266,8 @@ let init_struct (sc:sc)
     (R.vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
     (size_class_vprop_aux sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full)
-    (left_vprop sc slab_region md_bm_region 0ul md_region
-         ptr_empty ptr_partial ptr_full `star`
+    (left_vprop sc slab_region md_bm_region md_region
+         ptr_empty ptr_partial ptr_full 0ul `star`
      right_vprop slab_region md_bm_region md_region 0ul);
 
   [@inline_let]

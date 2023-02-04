@@ -120,7 +120,7 @@ assume val deallocate_slab_aux_empty
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v ->
-         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
+         left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v `star`
          right_vprop slab_region md_bm_region md_region v)
   )
 
@@ -160,7 +160,7 @@ assume val deallocate_slab_aux_partial
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v ->
-         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
+         left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v `star`
          right_vprop slab_region md_bm_region md_region v)
   )
 
@@ -201,7 +201,7 @@ let deallocate_slab'
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
       (fun v ->
-         left_vprop size_class slab_region md_bm_region v md_region r1 r2 r3 `star`
+         left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v `star`
          right_vprop slab_region md_bm_region md_region v)
   )
   (requires fun h0 ->

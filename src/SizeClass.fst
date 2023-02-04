@@ -64,14 +64,6 @@ type blob2 = {
 
 open SteelVRefineDep
 
-
-let size_class_vprop_aux
-  size slab_region md_bm_region md_region empty_slabs partial_slabs full_slabs
-  (v: U32.t{U32.v v <= U32.v metadata_max == true}) : vprop =
-  Slabs.left_vprop size slab_region md_bm_region v md_region
-    empty_slabs partial_slabs full_slabs `star`
-  Slabs.right_vprop slab_region md_bm_region md_region v
-
 let size_class_vprop
   (scs: size_class_struct)
   : vprop
@@ -80,7 +72,6 @@ let size_class_vprop
     (vptr scs.md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
     (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
-
 
 let allocate_size_class_sl_lemma1
   (scs: size_class_struct)
