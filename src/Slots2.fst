@@ -599,12 +599,21 @@ let deallocate_slot
     (U32.v page_size) % (U32.v size_class) = 0 /\
     True)
     //not (is_empty size_class v0))
-  (ensures fun _ _ _ -> True)
+  (ensures fun h0 b h1 ->
+    let blob0 : t_of (slab_vprop size_class arr md)
+      = h0 (slab_vprop size_class arr md) in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let blob1 : t_of (slab_vprop size_class arr md)
+      = h1 (slab_vprop size_class arr md) in
+    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    (b ==> not (is_empty size_class v1)) /\
+    (not b ==> v1 == v0))
   =
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
   let r = deallocate_slot' size_class md md_as_seq arr ptr in
+  admit ();
   if (fst r) then (
     change_equal_slprop
       (if (fst r) then

@@ -36,6 +36,23 @@ let v_arraylist (#p2:vprop) (pred1 pred2 pred3: status -> prop) (r:A.array cell)
     (can_be_split p2 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) /\ True)}) : GTot (Seq.seq cell)
   = h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
 
+let read_in_place
+  (#pred1 #pred2 #pred3: status -> prop)
+  (r:A.array cell)
+  (hd1 hd2 hd3:Ghost.erased nat)
+  (idx:US.t{US.v idx < A.length r})
+  : Steel status
+          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+          (requires fun _ -> True)
+          (ensures fun h0 result h1 ->
+            result == AL.get_data (Seq.index (v_arraylist pred1 pred2 pred3 r hd1 hd2 hd3 h0) (US.v idx)) /\
+            h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) ==
+            h1 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))
+  =
+  admit ();
+  AL.read_in_place r hd1 hd2 hd3 idx
+
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
 let remove1
   (#pred1 #pred2 #pred3: status -> prop)
@@ -83,6 +100,54 @@ let remove2
             AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))
           )
   = AL.remove2 r hd1 hd2 hd3 idx
+
+let remove3
+  (#pred1 #pred2 #pred3: status -> prop)
+  (r:A.array cell)
+  (hd1:Ghost.erased nat)
+  (hd2:Ghost.erased nat)
+  (hd3:US.t)
+  (idx:US.t{US.v idx < A.length r})
+   : Steel US.t
+          (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))
+          (fun hd' -> varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))
+          (requires fun h -> AL.mem (US.v idx) (US.v hd3) (h (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))))
+          (ensures fun h0 hd' h1 ->
+            AL.ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
+            FS.remove (US.v idx) (AL.ptrs_in (US.v hd3) (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))) /\
+            AL.ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
+            AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
+            AL.ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
+            AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
+            (~ (AL.mem_all (US.v idx) hd1 hd2 (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))))) /\
+            AL.dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
+            AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))
+          )
+  = AL.remove3 r hd1 hd2 hd3 idx
+
+let insert1
+  (#pred1 #pred2 #pred3: status -> prop)
+  (r:A.array cell)
+  (hd:US.t)
+  (hd2 hd3:Ghost.erased nat)
+  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
+  (v: status)
+   : Steel unit
+          (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)
+          (requires fun h -> pred1 v /\
+            (~ (AL.mem_all (US.v idx) (US.v hd) hd2 hd3 (h (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)))))
+          (ensures fun h0 hd' h1 ->
+            AL.ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
+            FS.insert (US.v idx) (AL.ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) /\
+            AL.ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
+            AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
+            AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
+            AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
+            AL.dataify (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
+            Seq.upd (AL.dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) (US.v idx) v
+          )
+  = AL.insert1 r hd hd2 hd3 idx v
 
 let insert2
   (#pred1 #pred2 #pred3: status -> prop)

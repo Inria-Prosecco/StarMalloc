@@ -886,7 +886,7 @@ let allocate_slot
     md_as_seq
     (A.split_r arr 0sz)
     pos in
-  set_lemma_nonzero size_class (G.reveal md_as_seq) (Bitmap4.set (G.reveal md_as_seq) pos) pos;
+  set_lemma_nonempty size_class (G.reveal md_as_seq) (Bitmap4.set (G.reveal md_as_seq) pos) pos;
   bound2_inv size_class (G.reveal md_as_seq) pos;
   intro_slab_vprop size_class md (G.hide (Bitmap4.set (G.reveal md_as_seq) pos)) arr;
   return r
