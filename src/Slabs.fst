@@ -1021,6 +1021,7 @@ let allocate_slab_aux_1
   )
 #pop-options
 
+#restart-solver
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
 let allocate_slab_aux_2_full
@@ -1585,6 +1586,8 @@ let lemma_slab_aux_3_2_bis
       (Seq.append md_region_lv (Seq.create 1 0ul))
       (Seq.index (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul))) (U32.v md_count_v)))
   = SeqUtils.init_u32_refined_index (U32.v (U32.add md_count_v 1ul)) (U32.v md_count_v)
+
+#restart-solver
 
 open Helpers
 let allocate_slab_aux_3_2 (#opened:_)
