@@ -26,9 +26,7 @@ let read_in_place
             result == AL.get_data (Seq.index (v_arraylist pred1 pred2 pred3 r hd1 hd2 hd3 h0) (US.v idx)) /\
             h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) ==
             h1 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))
-  =
-  admit ();
-  AL.read_in_place r hd1 hd2 hd3 idx
+  = AL.read_in_place r hd1 hd2 hd3 idx
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
 let remove

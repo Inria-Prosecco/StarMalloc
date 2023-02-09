@@ -281,7 +281,10 @@ val read_in_place (#a:Type)
           (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
           (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
           (requires fun _ -> True)
-          (ensures fun h0 _ h1 ->
+          (ensures fun h0 res h1 ->
+            // Fucntional correctness
+            res == get_data (Seq.index (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)) (US.v idx)) /\
+            // Framing
             h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) ==
             h1 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3))
 
