@@ -289,8 +289,11 @@ val read_in_place (#a:Type)
 /// We define three different functions, depending on which list the element
 /// belongs to. In all three cases, we require [v] to satisfy the predicate
 /// corresponding to a given list
+/// Note, we only expose the version for [hd1] to avoid duplication,
+/// but we can easily obtain versions for [hd2] and [hd3] using the
+/// permutations above. See instantiations in `src/ArrayList.fst`
 inline_for_extraction noextract
-val write_in_place1 (#a:Type)
+val write_in_place (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
   (hd1 hd2 hd3:Ghost.erased nat)
@@ -300,32 +303,6 @@ val write_in_place1 (#a:Type)
           (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
           (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
           (requires fun h -> pred1 v /\ mem (US.v idx) hd1 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
-          (ensures fun h0 _ h1 -> True) // TODO
-
-inline_for_extraction noextract
-val write_in_place2 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-  (v:a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (requires fun h -> pred2 v /\ mem (US.v idx) hd2 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
-          (ensures fun h0 _ h1 -> True) // TODO
-
-inline_for_extraction noextract
-val write_in_place3 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-  (v:a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
-          (requires fun h -> pred3 v /\ mem (US.v idx) hd3 (h (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)))
           (ensures fun h0 _ h1 -> True) // TODO
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]

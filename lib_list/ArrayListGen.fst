@@ -991,7 +991,7 @@ let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
 /// We define three different functions, depending on which list the element
 /// belongs to. In all three cases, we require [v] to satisfy the predicate
 /// corresponding to a given list
-let write_in_place1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
+let write_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
   let c = A.index r idx in
   (**) let gs = gget (A.varray r) in
@@ -1006,39 +1006,6 @@ let write_in_place1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) lemma_dlist_frame pred2 gs hd2 (US.v idx) (write_data c v);
   (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
-
-let write_in_place2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
-  let c = A.index r idx in
-  (**) let gs = gget (A.varray r) in
-  A.upd r idx (write_data c v);
-  (**) lemma_write_data_frame pred2 hd2 gs (US.v idx) v;
-  // The three lemmas below in conjunction with disjoint3 enable to infer
-  // that idx does not belong to the hd1 or hd3 dlists
-  (**) lemma_mem_ptrs_in hd1 gs (US.v idx);
-  (**) lemma_mem_ptrs_in hd2 gs (US.v idx);
-  (**) lemma_mem_ptrs_in hd3 gs (US.v idx);
-  // Framing of the hd1 and hd3 dlists
-  (**) lemma_dlist_frame pred1 gs hd1 (US.v idx) (write_data c v);
-  (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
-
-let write_in_place3  #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
-  let c = A.index r idx in
-  (**) let gs = gget (A.varray r) in
-  A.upd r idx (write_data c v);
-  (**) lemma_write_data_frame pred3 hd3 gs (US.v idx) v;
-  // The three lemmas below in conjunction with disjoint3 enable to infer
-  // that idx does not belong to the hd1 or hd2 dlists
-  (**) lemma_mem_ptrs_in hd1 gs (US.v idx);
-  (**) lemma_mem_ptrs_in hd2 gs (US.v idx);
-  (**) lemma_mem_ptrs_in hd3 gs (US.v idx);
-  // Framing of the hd1 and hd2 dlists
-  (**) lemma_dlist_frame pred2 gs hd2 (US.v idx) (write_data c v);
-  (**) lemma_dlist_frame pred1 gs hd1 (US.v idx) (write_data c v);
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
-
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
 let remove #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
