@@ -312,9 +312,14 @@ let init16 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = i
 let init32 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 32ul
 let init64 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 64ul
 
+
+// Intentional top-level effect for initialization, we temporarily disable the corresponding warning
+// for these definitions
+#push-options "--warn_error '-272'"
 let size_class16 : size_class = init16 ()
 let size_class32 : size_class = init32 ()
 let size_class64 : size_class = init64 ()
+#pop-options
 
 let null_or_varray (#a:Type) (r:array a) : vprop = if is_null r then emp else varray r
 
