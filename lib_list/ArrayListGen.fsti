@@ -216,6 +216,60 @@ val lemma_head2_implies_pred2 (#a:Type) (#opened:inames)
       pred2 (get_data (Seq.index (h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))) (US.v hd2)))
     )
 
+/// The order of the three lists does not matter, we can permute them in the varraylist predicate.
+/// We permute here the first and second lists
+val permute12 (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1:nat)
+  (hd2:nat)
+  (hd3:nat) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+    (fun _ -> varraylist pred2 pred1 pred3 r hd2 hd1 hd3)
+    (requires fun _ -> True)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) ==
+      h1 (varraylist pred2 pred1 pred3 r hd2 hd1 hd3)
+    )
+
+/// The order of the three lists does not matter, we can permute them in the varraylist predicate
+/// We permute here the first and third lists
+val permute13 (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1:nat)
+  (hd2:nat)
+  (hd3:nat) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+    (fun _ -> varraylist pred3 pred2 pred1 r hd3 hd2 hd1)
+    (requires fun _ -> True)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) ==
+      h1 (varraylist pred3 pred2 pred1 r hd3 hd2 hd1)
+    )
+
+/// The order of the three lists does not matter, we can permute them in the varraylist predicate
+/// We permute here the second and third lists
+val permute23 (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3: a -> prop)
+  (r:A.array (cell a))
+  (hd1:nat)
+  (hd2:nat)
+  (hd3:nat) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 r hd1 hd2 hd3)
+    (fun _ -> varraylist pred1 pred3 pred2 r hd1 hd3 hd2)
+    (requires fun _ -> True)
+    (ensures fun h0 _ h1 ->
+      // Framing
+      h0 (varraylist pred1 pred2 pred3 r hd1 hd2 hd3) ==
+      h1 (varraylist pred1 pred3 pred2 r hd1 hd3 hd2)
+    )
+
 /// Reads at index [idx] in the array.
 inline_for_extraction noextract
 val read_in_place (#a:Type)
@@ -275,8 +329,11 @@ val write_in_place3 (#a:Type)
           (ensures fun h0 _ h1 -> True) // TODO
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
+/// Note, we only expose the version for [hd1] to avoid duplication,
+/// but we can easily obtain versions for [hd2] and [hd3] using the
+/// permutations above. See instantiations in `src/ArrayList.fst`
 inline_for_extraction noextract
-val remove1 (#a:Type)
+val remove (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
   (hd1:US.t)
@@ -298,59 +355,14 @@ val remove1 (#a:Type)
             dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))
           )
 
-/// Removes the element at offset [idx] from the dlist pointed to by [hd2]
-inline_for_extraction noextract
-val remove2 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1:Ghost.erased nat)
-  (hd2:US.t)
-  (hd3:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-   : Steel US.t
-          (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)
-          (fun hd' -> varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)
-          (requires fun h -> mem (US.v idx) (US.v hd2) (h (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            FS.remove (US.v idx) (ptrs_in (US.v hd2) (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))) /\
-            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
-            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
-            (~ (mem_all (US.v idx) hd1 (US.v hd') hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)))) /\
-            dataify (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))
-          )
-
-/// Removes the element at offset [idx] from the dlist pointed to by [hd3]
-inline_for_extraction noextract
-val remove3 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2:Ghost.erased nat)
-  (hd3:US.t)
-  (idx:US.t{US.v idx < A.length r})
-   : Steel US.t
-          (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))
-          (fun hd' -> varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))
-          (requires fun h -> mem (US.v idx) (US.v hd3) (h (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            FS.remove (US.v idx) (ptrs_in (US.v hd3) (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))) /\
-            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
-            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
-            (~ (mem_all (US.v idx) hd1 hd2 (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))))) /\
-            dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))
-          )
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
-/// If so, insert it at the head of list [hd1]
+/// If so, insert it at the head of list [hd1].
+/// Note, we only expose the version for [hd1] to avoid duplication,
+/// but we can easily obtain versions for [hd2] and [hd3] using the
+/// permutations above. See instantiations in `src/ArrayList.fst`
 inline_for_extraction noextract
-val insert1 (#a:Type)
+val insert (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
   (hd:US.t)
@@ -373,64 +385,11 @@ val insert1 (#a:Type)
             Seq.upd (dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) (US.v idx) v
           )
 
-/// Requires that the element at offset [idx] does not belong to any dlist.
-/// If so, insert it at the head of list [hd2]
-inline_for_extraction noextract
-val insert2 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd:US.t)
-  (hd1 hd3:Ghost.erased nat)
-  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
-  (v: a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)
-          (requires fun h -> pred2 v /\
-            (~ (mem_all (US.v idx) hd1 (US.v hd) hd3 (h (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)))))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))) /\
-            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
-            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
-            dataify (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            Seq.upd (dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))) (US.v idx) v
-          )
-
-/// Requires that the element at offset [idx] does not belong to any dlist.
-/// If so, insert it at the head of list [hd3]
-inline_for_extraction noextract
-val insert3 (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
-  (r:A.array (cell a))
-  (hd:US.t)
-  (hd1 hd2:Ghost.erased nat)
-  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
-  (v: a)
-   : Steel unit
-          (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))
-          (fun _ -> varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))
-          (requires fun h -> pred3 v /\
-            (~ (mem_all (US.v idx) hd1 hd2 (US.v hd) (h (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))))))
-          (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) /\
-            ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
-            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
-            dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            Seq.upd (dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) (US.v idx) v
-          )
-
-
 /// If the doubly linked lists fit in the first [k] elements of the array, then
 /// they also fit in the [k] + 1 first elements of the array, and we inserted
 /// element [k] in the first list
 inline_for_extraction noextract
-val extend1 (#a:Type)
+val extend (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
   (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})

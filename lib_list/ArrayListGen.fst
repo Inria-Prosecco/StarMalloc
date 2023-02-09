@@ -968,6 +968,18 @@ let lemma_head1_implies_pred1 pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
 let lemma_head2_implies_pred2 pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
 
+let permute12 pred1 pred2 pred3 r hd1 hd2 hd3 =
+  elim_vrefine _ _;
+  intro_vrefine _ _
+
+let permute13 pred1 pred2 pred3 r hd1 hd2 hd3 =
+  elim_vrefine _ _;
+  intro_vrefine _ _
+
+let permute23 pred1 pred2 pred3 r hd1 hd2 hd3 =
+  elim_vrefine _ _;
+  intro_vrefine _ _
+
 /// Reads at index [idx] in the array.
 let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
@@ -1029,7 +1041,7 @@ let write_in_place3  #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
 
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
-let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
+let remove #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd1) hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
 
@@ -1067,83 +1079,7 @@ let remove1 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd') hd2 hd3);
   return hd'
 
-/// Removes the element at offset [idx] from the dlist pointed to by [hd2]
-let remove2 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v hd2) hd3);
-  (**) let gs0 = gget (A.varray r) in
-  let cell = A.index r idx in
-  (**) lemma_mem_valid_or_null_next_prev pred2 (US.v hd2) gs0 (US.v idx);
-
-  // Derive that idx is not in the two other lists, through disjointness and belonging to
-  // the first list
-  (**) lemma_mem_ptrs_in (US.v hd2) gs0 (US.v idx);
-  (**) lemma_mem_ptrs_in hd1 gs0 (US.v idx);
-  (**) lemma_mem_ptrs_in hd3 gs0 (US.v idx);
-
-  if cell.next <> null_ptr then
-    // Next is not null, we need to update it
-    let next = A.index r cell.next in
-    let next = {next with prev = cell.prev} in
-    A.upd r cell.next next
-  else noop ();
-
-  if cell.prev <> null_ptr then
-    // Prev is not null, we need to update it
-    let prev = A.index r cell.prev in
-    let prev = {prev with next = cell.next} in
-    A.upd r cell.prev prev
-  else noop ();
-
-  (**) let gs1 = gget (A.varray r) in
-  let hd' = if hd2 = idx then cell.next else hd2 in
-  (**) lemma_remove_spec pred2 (US.v hd2) gs0 (US.v idx);
-  (**) lemma_remove_spec_frame pred2 pred1 (US.v hd2) hd1 gs0 (US.v idx);
-  (**) lemma_remove_spec_frame pred2 pred3 (US.v hd2) hd3 gs0 (US.v idx);
-
-  (**) lemma_remove_spec_dataify pred2 (US.v hd2) gs0 (US.v idx);
-
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v hd') hd3);
-  return hd'
-
-/// Removes the element at offset [idx] from the dlist pointed to by [hd3]
-let remove3 #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd3));
-  (**) let gs0 = gget (A.varray r) in
-  let cell = A.index r idx in
-  (**) lemma_mem_valid_or_null_next_prev pred3 (US.v hd3) gs0 (US.v idx);
-
-  // Derive that idx is not in the two other lists, through disjointness and belonging to
-  // the first list
-  (**) lemma_mem_ptrs_in (US.v hd3) gs0 (US.v idx);
-  (**) lemma_mem_ptrs_in hd2 gs0 (US.v idx);
-  (**) lemma_mem_ptrs_in hd1 gs0 (US.v idx);
-
-  if cell.next <> null_ptr then
-    // Next is not null, we need to update it
-    let next = A.index r cell.next in
-    let next = {next with prev = cell.prev} in
-    A.upd r cell.next next
-  else noop ();
-
-  if cell.prev <> null_ptr then
-    // Prev is not null, we need to update it
-    let prev = A.index r cell.prev in
-    let prev = {prev with next = cell.next} in
-    A.upd r cell.prev prev
-  else noop ();
-
-  (**) let gs1 = gget (A.varray r) in
-  let hd' = if hd3 = idx then cell.next else hd3 in
-  (**) lemma_remove_spec pred3 (US.v hd3) gs0 (US.v idx);
-  (**) lemma_remove_spec_frame pred3 pred2 (US.v hd3) hd2 gs0 (US.v idx);
-  (**) lemma_remove_spec_frame pred3 pred1 (US.v hd3) hd1 gs0 (US.v idx);
-
-  (**) lemma_remove_spec_dataify pred3 (US.v hd3) gs0 (US.v idx);
-
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd'));
-  return hd'
-
-let insert1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
+let insert #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
 
@@ -1165,52 +1101,6 @@ let insert1 #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
   (**) lemma_insert_spec_dataify pred1 gs0 hd idx v;
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v idx) hd2 hd3)
-
-let insert2 #a #pred1 #pred2 #pred3 r hd hd1 hd3 idx v =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v hd) hd3);
-  (**) let gs0 = gget (A.varray r) in
-
-  let cell = {data = v; prev = null_ptr; next = hd} in
-  A.upd r idx cell;
-  if hd <> null_ptr then
-    let cell = A.index r hd in
-    let cell = {cell with prev = idx} in
-    A.upd r hd cell
-  else noop ();
-
-  let gs1 = gget (A.varray r) in
-
-  (**) lemma_mem_ptrs_in (US.v hd) gs0 (US.v idx);
-  (**) lemma_insert_spec pred2 gs0 hd idx v;
-  (**) lemma_insert_spec_frame pred2 pred1 gs0 hd idx hd1 v;
-  (**) lemma_insert_spec_frame pred2 pred3 gs0 hd idx hd3 v;
-
-  (**) lemma_insert_spec_dataify pred2 gs0 hd idx v;
-
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 (US.v idx) hd3)
-
-let insert3 #a #pred1 #pred2 #pred3 r hd hd1 hd2 idx v =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v hd));
-  (**) let gs0 = gget (A.varray r) in
-
-  let cell = {data = v; prev = null_ptr; next = hd} in
-  A.upd r idx cell;
-  if hd <> null_ptr then
-    let cell = A.index r hd in
-    let cell = {cell with prev = idx} in
-    A.upd r hd cell
-  else noop ();
-
-  let gs1 = gget (A.varray r) in
-
-  (**) lemma_mem_ptrs_in (US.v hd) gs0 (US.v idx);
-  (**) lemma_insert_spec pred3 gs0 hd idx v;
-  (**) lemma_insert_spec_frame pred3 pred2 gs0 hd idx hd2 v;
-  (**) lemma_insert_spec_frame pred3 pred1 gs0 hd idx hd1 v;
-
-  (**) lemma_insert_spec_dataify pred3 gs0 hd idx v;
-
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 (US.v idx))
 
 /// An implementation of a map_seq_slice lemma currently not in F* ulib, specialized for `cell a`
 let dataify_slice (#a:Type)
@@ -1331,7 +1221,7 @@ let extend_aux (#a:Type) (#opened:_)
 
 #restart-solver
 #push-options "--z3rlimit 100"
-let extend1 (#a:Type)
+let extend (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
   (r:A.array (cell a))
   (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
@@ -1354,7 +1244,7 @@ let extend1 (#a:Type)
 
   extend_aux r (US.v hd) hd2 hd3 k v;
 
-  insert1 (A.split_l r (k `US.add` 1sz)) hd hd2 hd3 k v;
+  insert (A.split_l r (k `US.add` 1sz)) hd hd2 hd3 k v;
 
   (**) let s2 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
 
