@@ -77,7 +77,7 @@ let deallocate_slab_aux_1_partial
   (idx1: US.t)
   (idx2: US.t)
   (idx3: US.t)
-  (pos: US.t{US.v pos < U32.v md_count_v})
+  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < U32.v md_count_v})
   : Steel unit
   (
     vptr md_count `star`
@@ -118,9 +118,9 @@ let deallocate_slab_aux_1_partial
     md_count_v == dfst blob1)
   =
   // required for selector equality propagation
-  (**) let _ = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-  // partition improvements required
-  admit ();
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
+  // @Aymeric partition improvements required
+  assume (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
 
   let idx3' = AL.remove3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -148,7 +148,7 @@ let deallocate_slab_aux_1_empty
   (idx1: US.t)
   (idx2: US.t)
   (idx3: US.t)
-  (pos: US.t{US.v pos < U32.v md_count_v})
+  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < U32.v md_count_v})
   : Steel unit
   (
     vptr md_count `star`
@@ -189,16 +189,16 @@ let deallocate_slab_aux_1_empty
     md_count_v == dfst blob1)
   =
   // required for selector equality propagation
-  (**) let _ = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-  // partition improvements required
-  admit ();
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
+  // @Aymeric partition improvements required
+  assume (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
 
   let idx3' = AL.remove3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     (G.hide (US.v idx1)) (G.hide (US.v idx2)) idx3 pos in
   AL.insert1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
-    idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3')) pos 1ul;
+    idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3')) pos 0ul;
   write r3 idx3';
   write r1 pos;
 
@@ -207,6 +207,7 @@ let deallocate_slab_aux_1_empty
     pos idx2 idx3'
 
 #restart-solver
+
 #push-options "--z3rlimit 100"
 let deallocate_slab_aux_1
   (ptr: array U8.t)
@@ -294,6 +295,7 @@ let deallocate_slab_aux_1
       (md_bm_array md_bm_region (US.sizet_to_uint32 pos))
       (slab_array slab_region (US.sizet_to_uint32 pos)) in
     if cond then (
+      //TODO: to be fixed, v_slab_vprop norm
       admit ();
       allocate_slab_aux_helper size_class
         slab_region md_bm_region md_region md_count r1 r2 r3
@@ -303,6 +305,7 @@ let deallocate_slab_aux_1
         md_count_v md_region_lv idx1 idx2 idx3 pos;
       return b
     ) else (
+      //TODO: to be fixed, v_slab_vprop norm
       admit ();
       allocate_slab_aux_helper size_class
         slab_region md_bm_region md_region md_count r1 r2 r3
@@ -331,7 +334,7 @@ let deallocate_slab_aux_2_empty
   (idx1: US.t)
   (idx2: US.t)
   (idx3: US.t)
-  (pos: US.t{US.v pos < U32.v md_count_v})
+  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < U32.v md_count_v})
   : Steel unit
   (
     vptr md_count `star`
@@ -372,9 +375,9 @@ let deallocate_slab_aux_2_empty
     md_count_v == dfst blob1)
   =
   // required for selector equality propagation
-  (**) let _ = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-  // partition improvements required
-  admit ();
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
+  // @Aymeric partition improvements required
+  assume (ALG.mem #AL.status (US.v pos) (US.v idx2) gs0);
 
   let idx2' = AL.remove2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -447,6 +450,7 @@ let deallocate_slab_aux_2_partial
     idx1 idx2 idx3
 
 #restart-solver
+
 #push-options "--z3rlimit 100"
 let deallocate_slab_aux_2
   (ptr: array U8.t)
