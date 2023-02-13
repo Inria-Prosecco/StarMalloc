@@ -68,6 +68,17 @@ val lemma_mem_ptrs_in (#a:Type)
   (x: nat)
   : Lemma (mem x hd s <==> FS.mem x (ptrs_in hd s))
 
+/// If an element belongs to a list, then it satisfies the corresponding
+/// list predicate
+val lemma_mem_implies_pred (#a:Type)
+  (pred: a -> prop)
+  (hd:nat)
+  (s: Seq.seq (cell a))
+  (x:nat{x < Seq.length s})
+  : Lemma
+    (requires mem x hd s /\ is_dlist pred hd s)
+    (ensures pred (get_data (Seq.index s x)))
+
 /// Disjointness between two lists, specified directly on the sets of pointers
 /// to alleviate the need for recursive reasoning
 val disjoint (#a:Type)

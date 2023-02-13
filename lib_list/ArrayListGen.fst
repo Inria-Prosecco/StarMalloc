@@ -133,6 +133,34 @@ let lemma_mem_ptrs_in (#a:Type)
   : Lemma (mem x hd s <==> FS.mem x (ptrs_in hd s))
   = lemma_mem_ptrs_in' hd s FS.emptyset x
 
+/// If an element belongs to a list, then it satisfies the corresponding
+/// list predicate
+let rec lemma_mem_implies_pred' (#a:Type)
+  (pred: a -> prop)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (prev:nat)
+  (visited:FS.set nat{Seq.length s >= FS.cardinality visited})
+  (x:nat)
+  : Lemma
+    (requires mem' x hd s visited /\ is_dlist' pred hd s prev visited)
+    (ensures pred (get_data (Seq.index s x)))
+    (decreases (Seq.length s - FS.cardinality visited))
+  = if hd = null || x = hd then ()
+    else
+      let next = US.v (Seq.index s hd).next in
+      lemma_mem_implies_pred' pred next s hd (FS.insert hd visited) x
+
+let lemma_mem_implies_pred (#a:Type)
+  (pred: a -> prop)
+  (hd:nat)
+  (s: Seq.seq (cell a))
+  (x:nat{x < Seq.length s})
+  : Lemma
+    (requires mem x hd s /\ is_dlist pred hd s)
+    (ensures pred (get_data (Seq.index s x)))
+  = lemma_mem_implies_pred' pred hd s null FS.emptyset x
+
 /// Disjointness between two lists, specified directly on the sets of pointers
 /// to alleviate the need for recursive reasoning
 let disjoint' (#a:Type)

@@ -119,8 +119,11 @@ let deallocate_slab_aux_1_partial
   =
   // required for selector equality propagation
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-  // @Aymeric partition improvements required
-  assume (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
+  // TODO: Move this to precondition of the function
+  assume (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
+  (**) ALG.lemma_dataify_index #AL.status gs0 (US.v pos);
+  (**) lemma_partition_and_pred_implies_mem3 (US.v idx1) (US.v idx2) (US.v idx3) gs0 (US.v pos);
+  assert (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
 
   let idx3' = AL.remove3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -666,4 +669,3 @@ let deallocate_slab'
     sladmit ();
     return false
   )
-
