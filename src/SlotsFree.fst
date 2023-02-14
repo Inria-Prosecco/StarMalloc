@@ -1,4 +1,4 @@
-module Slots2
+module SlotsFree
 
 module FI = FStar.Int
 module STU = SizeTUtils
@@ -22,7 +22,7 @@ open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
 
-open Slots
+open SlotsAlloc
 
 let apply_starseq_upd2 (#opened:_)
   (size_class: sc)

@@ -23,7 +23,7 @@ module ALG = ArrayListGen
 
 open Prelude
 open Utils2
-open Slots
+open SlotsAlloc
 open SteelStarSeqUtils
 open FStar.Mul
 

@@ -18,7 +18,7 @@ module ALG = ArrayListGen
 
 open Prelude
 open SizeClass
-open Slabs
+open SlabsCommon
 open SteelVRefineDep
 open SteelStarSeqUtils
 open Utils2
@@ -120,7 +120,7 @@ val intro_left_vprop_empty (#opened:_)
   (r1 r2 r3: R.ref US.t)
   : SteelGhost unit opened
       (A.varray (split_l md_region 0sz) `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
-      (fun _ -> Slabs.left_vprop sc slab_region md_bm_region md_region r1 r2 r3 0ul)
+      (fun _ -> SlabsCommon.left_vprop sc slab_region md_bm_region md_region r1 r2 r3 0ul)
       (requires fun h ->
         R.sel r1 h == 0sz /\
         R.sel r2 h == 0sz /\
@@ -144,9 +144,9 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 =
 
   starseq_intro_empty #_
       #(pos:U32.t{U32.v pos < U32.v 0ul})
-      #(Slabs.t sc)
-      (Slabs.f sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
-      (Slabs.f_lemma sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)));
+      #(SlabsCommon.t sc)
+      (SlabsCommon.f sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)))
+      (SlabsCommon.f_lemma sc slab_region md_bm_region 0ul (ALG.dataify (dsnd s)));
 
   assert (SeqUtils.init_u32_refined (U32.v 0ul) `Seq.equal` Seq.empty);
 
@@ -185,7 +185,7 @@ val intro_right_vprop_empty (#opened:_)
      (A.varray (split_r slab_region 0sz) `star`
       A.varray (split_r md_bm_region 0sz) `star`
       A.varray (split_r md_region 0sz))
-    (fun _ -> Slabs.right_vprop slab_region md_bm_region md_region 0ul)
+    (fun _ -> SlabsCommon.right_vprop slab_region md_bm_region md_region 0ul)
     (requires fun h ->
       A.asel (split_r slab_region 0sz) h `Seq.equal` Seq.create (A.length slab_region) U8.zero /\
       A.asel (split_r md_bm_region 0sz) h `Seq.equal` Seq.create (A.length md_bm_region) U64.zero)

@@ -22,7 +22,7 @@ open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
-open Slots
+open SlotsAlloc
 
 
 // TODO: to be removed/move apart ; use stdlib
@@ -301,18 +301,18 @@ let slab_to_slots_aux
   : Lemma
   (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos
   ==
-  some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (Slots.slot_vprop size_class arr pos))
+  some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (SlotsAlloc.slot_vprop size_class arr pos))
   =
   let bm = a2bv (Seq.create 4 0UL) in
   let idx = Bitmap5.f #4 (U32.v pos) in
   empty_md_lemma idx;
-  Slots.starseq_upd_aux_lemma3 size_class (Seq.create 4 0UL) arr pos;
+  SlotsAlloc.starseq_upd_aux_lemma3 size_class (Seq.create 4 0UL) arr pos;
   SeqUtils.init_u32_refined_index (U32.v (nb_slots size_class)) (U32.v pos);
   assert (
     (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos)
     ==
     some_as_vp #(Seq.lseq U8.t (U32.v size_class))
-      (Slots.slot_vprop size_class arr pos)
+      (SlotsAlloc.slot_vprop size_class arr pos)
   )
 
 let slab_to_slots (#opened:_)
@@ -342,9 +342,9 @@ let slab_to_slots (#opened:_)
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
     (slot_vprop size_class (nb_slots size_class) arr)
-    (Slots.slot_vprop size_class arr)
+    (SlotsAlloc.slot_vprop size_class arr)
     (slot_vprop_lemma size_class (nb_slots size_class) arr)
-    (Slots.slot_vprop_lemma size_class arr)
+    (SlotsAlloc.slot_vprop_lemma size_class arr)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
   Classical.forall_intro (slab_to_slots_aux size_class arr);
@@ -352,9 +352,9 @@ let slab_to_slots (#opened:_)
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
-    (Slots.slot_vprop size_class arr)
+    (SlotsAlloc.slot_vprop size_class arr)
     (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr)
-    (Slots.slot_vprop_lemma size_class arr)
+    (SlotsAlloc.slot_vprop_lemma size_class arr)
     (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL) arr)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))

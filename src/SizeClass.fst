@@ -18,7 +18,7 @@ open Steel.Effect
 open Steel.Reference
 
 open Utils2
-open Slabs
+open SlabsAlloc
 
 #push-options "--ide_id_info_off"
 
@@ -158,7 +158,7 @@ let allocate_size_class
     (fun m -> allocate_size_class_sl_lemma2 scs m);
   return result
 
-open Slabs2
+open SlabsFree
 
 module UP = FStar.PtrdiffT
 

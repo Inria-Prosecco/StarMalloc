@@ -16,7 +16,6 @@ let array = Steel.ST.Array.array
 open Impl.Core
 open Impl.Mono
 open Map.M
-open Slabs
 
 #set-options "--ide_id_info_off"
 

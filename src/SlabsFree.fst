@@ -1,4 +1,4 @@
-module Slabs2
+module SlabsFree
 
 module UP = FStar.PtrdiffT
 module US = FStar.SizeT
@@ -21,8 +21,8 @@ module SM = Steel.Memory
 module AL = ArrayList
 
 open Utils2
-open Slots
-open Slots2
+open SlotsAlloc
+open SlotsFree
 open SlabsCommon
 
 open FStar.Mul

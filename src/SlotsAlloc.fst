@@ -1,4 +1,4 @@
-module Slots
+module SlotsAlloc
 
 module FU = FStar.UInt
 module FI = FStar.Int

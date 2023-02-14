@@ -1,7 +1,6 @@
 module SmallAlloc
 
 open Utils2
-open Slabs
 
 open Steel.Effect.Atomic
 open Steel.Effect

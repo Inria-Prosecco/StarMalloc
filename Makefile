@@ -97,8 +97,10 @@ dist/LargeAlloc.h \
 dist/Main.h \
 dist/SmallAlloc.h \
 dist/SizeClass.h \
-dist/Slabs.h \
-dist/Slots.h \
+dist/SlabsAlloc.h \
+dist/SlabsFree.h \
+dist/SlotsAlloc.h \
+dist/SlotsFree.h \
 dist/Steel_SpinLock.h \
 dist/Bitmap5.h \
 dist/Utils2.h \
@@ -118,8 +120,10 @@ dist/LargeAlloc.c \
 dist/Main.c \
 dist/SmallAlloc.c \
 dist/SizeClass.c \
-dist/Slabs.c \
-dist/Slots.c \
+dist/SlabsAlloc.c \
+dist/SlabsFree.c \
+dist/SlotsAlloc.c \
+dist/SlotsFree.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 src/utils.c \

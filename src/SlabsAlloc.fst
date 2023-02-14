@@ -1,4 +1,4 @@
-module Slabs
+module SlabsAlloc
 
 module US = FStar.SizeT
 module U64 = FStar.UInt64
@@ -23,7 +23,7 @@ module ALG = ArrayListGen
 
 open Prelude
 open Utils2
-open Slots
+open SlotsAlloc
 open SteelStarSeqUtils
 open FStar.Mul
 open SlabsCommon
