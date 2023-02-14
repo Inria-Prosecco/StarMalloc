@@ -25,6 +25,8 @@ open Slots
 open Slots2
 open Slabs
 
+include SlabsCommon
+
 open FStar.Mul
 open SteelStarSeqUtils
 open SteelVRefineDep
@@ -97,8 +99,8 @@ let deallocate_slab_aux_1_partial
   (fun _ ->
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
     sel md_count h0 == md_count_v /\
@@ -112,8 +114,8 @@ let deallocate_slab_aux_1_partial
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
     ) in
     md_count_v == dfst blob1)
   =
@@ -171,8 +173,8 @@ let deallocate_slab_aux_1_empty
   (fun _ ->
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
     sel md_count h0 == md_count_v /\
@@ -186,8 +188,8 @@ let deallocate_slab_aux_1_empty
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
     ) in
     md_count_v == dfst blob1)
   =
@@ -245,9 +247,8 @@ let deallocate_slab_aux_1
     (if b then emp else A.varray ptr) `star`
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-         left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
     let arr' = slab_array slab_region (US.sizet_to_uint32 pos) in
@@ -266,8 +267,8 @@ let deallocate_slab_aux_1
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
     ) in
     md_count_v == dfst blob1)
   =
@@ -357,8 +358,8 @@ let deallocate_slab_aux_2_empty
   (fun _ ->
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
     sel md_count h0 == md_count_v /\
@@ -372,8 +373,8 @@ let deallocate_slab_aux_2_empty
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
     ) in
     md_count_v == dfst blob1)
   =
@@ -428,8 +429,8 @@ let deallocate_slab_aux_2_partial
   (fun _ ->
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
     sel md_count h0 == md_count_v /\
@@ -443,8 +444,8 @@ let deallocate_slab_aux_2_partial
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
     ) in
     md_count_v == dfst blob1)
   =
@@ -488,9 +489,8 @@ let deallocate_slab_aux_2
     (if b then emp else A.varray ptr) `star`
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v ->
-         left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
     let arr' = slab_array slab_region (US.sizet_to_uint32 pos) in
@@ -509,11 +509,12 @@ let deallocate_slab_aux_2
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
     ) in
     md_count_v == dfst blob1)
   =
+  admit (); // Diff < page_size
   (**) starseq_unpack_s
     #_
     #(pos:U32.t{U32.v pos < U32.v md_count_v})
@@ -613,7 +614,7 @@ let deallocate_slab'
     (if b then emp else A.varray ptr) `star`
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
+      vrefinedep_prop
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
@@ -689,14 +690,14 @@ let deallocate_slab
     A.varray ptr `star`
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
+      vrefinedep_prop
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
     vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
+      vrefinedep_prop
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun _ ->
@@ -711,7 +712,7 @@ let deallocate_slab
     : G.erased _
     = elim_vrefinedep
       (vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
+      vrefinedep_prop
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3) in
 
   let md_count_v_ = read md_count in

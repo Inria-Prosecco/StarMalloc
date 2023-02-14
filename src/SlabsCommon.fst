@@ -308,3 +308,101 @@ let unpack_md_array (#opened:_)
   = change_equal_slprop
       (A.varray (md_array md_region md_count))
       (A.varray (A.split_l (A.split_r md_region (u32_to_sz md_count)) 1sz))
+
+let t (size_class: sc) : Type0 =
+  dtuple2
+    (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
+    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
+  & Seq.lseq U8.t 0
+
+let f_lemma
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
+  (md_region_lv: Seq.lseq AL.status (U32.v md_count_v))
+  (i: U32.t{U32.v i < U32.v md_count_v})
+  : Lemma
+  (t_of (f size_class slab_region md_bm_region md_count_v md_region_lv i)
+  == t size_class)
+  = slab_vprop_lemma size_class
+    (slab_array slab_region i)
+    (md_bm_array md_bm_region i)
+
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 30"
+let pack_3
+  (#opened:_)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count: ref U32.t)
+  (r1 r2 r3: ref US.t)
+  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (idx1: US.t)
+  (idx2: US.t)
+  (idx3: US.t)
+  : SteelGhost unit opened
+  (
+    vptr md_count `star`
+    vptr r1 `star`
+    vptr r2 `star`
+    vptr r3 `star`
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v))
+      (US.v idx1) (US.v idx2) (US.v idx3)) `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
+      (f_lemma size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
+      (SeqUtils.init_u32_refined (U32.v md_count_v))
+  )
+  (fun _ ->
+    vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
+  )
+  (requires fun h0 ->
+    sel md_count h0 == md_count_v /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    sel r1 h0 == idx1 /\
+    sel r2 h0 == idx2 /\
+    sel r3 h0 == idx3
+  )
+  (ensures fun _ _ h1 ->
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
+    ) in
+    md_count_v == dfst blob1)
+  =
+  intro_vdep
+    (vptr r1 `star` vptr r2 `star` vptr r3)
+    (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3))
+    (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)));
+
+  change_equal_slprop
+    (starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
+      (f_lemma size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
+      (SeqUtils.init_u32_refined (U32.v md_count_v)))
+    (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv));
+
+  intro_vdep
+    (left_vprop1 md_region r1 r2 r3 md_count_v)
+    (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
+    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 md_count_v);
+
+  intro_vrefinedep
+    (vptr md_count)
+    vrefinedep_prop
+    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
+    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 md_count_v)
+#pop-options
