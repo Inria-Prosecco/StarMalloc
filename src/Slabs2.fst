@@ -301,7 +301,7 @@ let deallocate_slab_aux_1
     if cond then (
       //TODO: to be fixed, v_slab_vprop norm
       admit ();
-      allocate_slab_aux_helper size_class
+      pack_slab_starseq size_class
         slab_region md_bm_region md_region md_count r1 r2 r3
         md_count_v md_region_lv pos 0ul;
       deallocate_slab_aux_1_empty size_class
@@ -311,7 +311,7 @@ let deallocate_slab_aux_1
     ) else (
       //TODO: to be fixed, v_slab_vprop norm
       admit ();
-      allocate_slab_aux_helper size_class
+      pack_slab_starseq size_class
         slab_region md_bm_region md_region md_count r1 r2 r3
         md_count_v md_region_lv pos 1ul;
       deallocate_slab_aux_1_partial size_class
@@ -542,7 +542,7 @@ let deallocate_slab_aux_2
       (slab_array slab_region (US.sizet_to_uint32 pos)) in
     if cond then (
       admit ();
-      (**) allocate_slab_aux_helper size_class
+      (**) pack_slab_starseq size_class
         slab_region md_bm_region md_region md_count r1 r2 r3
         md_count_v md_region_lv pos 0ul;
       deallocate_slab_aux_2_empty size_class
@@ -551,7 +551,7 @@ let deallocate_slab_aux_2
       return b
     ) else (
       admit ();
-      (**) allocate_slab_aux_helper size_class
+      (**) pack_slab_starseq size_class
         slab_region md_bm_region md_region md_count r1 r2 r3
         md_count_v md_region_lv pos 1ul;
       assert (Seq.upd (G.reveal md_region_lv) (US.v pos) 1ul `Seq.equal` md_region_lv);

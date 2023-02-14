@@ -313,6 +313,8 @@ val unpack_md_array (#opened:_)
 
 (** VProps related to slabs *)
 
+// TODO: Document what the vprops represent
+
 let f
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -339,8 +341,6 @@ val f_lemma
   : Lemma
   (t_of (f size_class slab_region md_bm_region md_count_v md_region_lv i)
   == t size_class)
-
-
 
 let ind_varraylist_aux
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
@@ -492,3 +492,52 @@ val pack_3
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
     ) in
     md_count_v == dfst blob1)
+
+val pack_slab_starseq
+  (#opened:_)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count: ref U32.t)
+  (r1 r2 r3: ref US.t)
+  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (idx: US.t{US.v idx < U32.v md_count_v})
+  (v: AL.status)
+  : SteelGhost unit opened
+  (
+    slab_vprop size_class
+      (slab_array slab_region (US.sizet_to_uint32 idx))
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx)) `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) 0 (US.v idx)) `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v md_count_v))))
+  )
+  (fun _ ->
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v))
+      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v))
+      (SeqUtils.init_u32_refined (U32.v md_count_v))
+  )
+  (requires fun h0 ->
+    let md = v_slab_vprop_md size_class
+      (slab_array slab_region (US.sizet_to_uint32 idx))
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx)) h0 in
+    (v == 2ul ==> is_full size_class md) /\
+    (v == 1ul ==> is_partial size_class md) /\
+    (v == 0ul ==> is_empty size_class md) /\
+    idx <> AL.null_ptr
+  )
+  (ensures fun h0 _ h1 -> True)
