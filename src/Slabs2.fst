@@ -643,7 +643,7 @@ let deallocate_slab'
     ALG.lemma_dataify_index #AL.status gs0 (U32.v pos);
     let status1 = AL.read_in_place
         (A.split_l md_region (u32_to_sz md_count_v))
-        (US.v idx1) (US.v idx2) (US.v idx3) (US.uint_to_t (U32.v pos)) in
+        (US.v idx1) (US.v idx2) (US.v idx3) (u32_to_sz pos) in
     if (U32.eq status1 2ul) then (
       let b = deallocate_slab_aux_1 ptr size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
