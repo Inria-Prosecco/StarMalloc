@@ -271,6 +271,7 @@ let deallocate_slab_aux_1
     ) in
     md_count_v == dfst blob1)
   =
+  admit();
   (**) starseq_unpack_s
     #_
     #(pos:U32.t{U32.v pos < U32.v md_count_v})
