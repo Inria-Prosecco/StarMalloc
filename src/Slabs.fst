@@ -1805,13 +1805,20 @@ let allocate_slab_aux_3
 #pop-options
 
 let size_class_vprop_aux
-  size slab_region md_bm_region md_region empty_slabs partial_slabs full_slabs
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  empty_slabs partial_slabs full_slabs
   (v: U32.t{U32.v v <= U32.v metadata_max == true})
   : vprop
   =
-  left_vprop size slab_region md_bm_region md_region
+  left_vprop size_class
+    (A.split_r slab_region 0sz) md_bm_region md_region
     empty_slabs partial_slabs full_slabs v `star`
-  right_vprop slab_region md_bm_region md_region v
+  right_vprop
+    (A.split_r slab_region 0sz) md_bm_region md_region v `star`
+  A.varray (A.split_l slab_region 0sz)
 
 let pack_right_and_refactor_vrefine_dep
   (#opened:_)
@@ -1827,9 +1834,10 @@ let pack_right_and_refactor_vrefine_dep
     vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      (fun v -> left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 v)
     `star`
-    right_vprop slab_region md_bm_region md_region md_count_v
+    (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
+    A.varray (A.split_l slab_region 0sz))
   )
   (fun _ ->
     vrefinedep
@@ -1842,7 +1850,7 @@ let pack_right_and_refactor_vrefine_dep
       = h0 (vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      (fun v -> left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 v)
     ) in
     md_count_v == dfst blob0)
   (ensures fun h0 _ h1 ->
@@ -1850,7 +1858,7 @@ let pack_right_and_refactor_vrefine_dep
       = h0 (vrefinedep
       (vptr md_count)
       (fun x -> U32.v x <= U32.v metadata_max == true)
-      (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v)
+      (fun v -> left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 v)
     ) in
     let blob1
       = h1 (vrefinedep
@@ -1864,17 +1872,18 @@ let pack_right_and_refactor_vrefine_dep
   let md_count_v' = elim_vrefinedep
     (vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
-    (fun v -> left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 v) in
+    (fun v -> left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 v) in
   assert (G.reveal md_count_v' == md_count_v);
   change_equal_slprop
-    (right_vprop slab_region md_bm_region md_region md_count_v)
-    (right_vprop slab_region md_bm_region md_region (G.reveal md_count_v'));
+    (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v)
+    (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region (G.reveal md_count_v'));
   intro_vrefinedep
     (vptr md_count)
     (fun x -> U32.v x <= U32.v metadata_max == true)
     (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
-    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 (G.reveal md_count_v') `star`
-    right_vprop slab_region md_bm_region md_region (G.reveal md_count_v'))
+    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 (G.reveal md_count_v') `star`
+    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region (G.reveal md_count_v') `star`
+    A.varray (A.split_l slab_region 0sz))
 
 module P = Steel.FractionalPermission
 
@@ -1897,16 +1906,17 @@ let allocate_slab'
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
-    right_vprop slab_region md_bm_region md_region md_count_v `star`
+    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
       (US.v idx1) (US.v idx2) (US.v idx3)) `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
+      (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_u32_refined (U32.v md_count_v)) `star`
+    A.varray (A.split_l slab_region 0sz)
   )
   (fun r ->
     (if (A.is_null r) then emp else A.varray r) `star`
@@ -1932,7 +1942,7 @@ let allocate_slab'
     assert (0 < U32.v md_count_v);
 
     let r = allocate_slab_aux_2 size_class
-      slab_region md_bm_region md_region
+      (A.split_r slab_region 0sz) md_bm_region md_region
       md_count r1 r2 r3
       md_count_v md_region_lv idx1 idx2 idx3 in
     pack_right_and_refactor_vrefine_dep
@@ -1951,7 +1961,7 @@ let allocate_slab'
     assert (0 < U32.v md_count_v);
 
     let r = allocate_slab_aux_1 size_class
-      slab_region md_bm_region md_region
+      (A.split_r slab_region 0sz) md_bm_region md_region
       md_count r1 r2 r3
       md_count_v md_region_lv idx1 idx2 idx3 in
     pack_right_and_refactor_vrefine_dep
@@ -1968,12 +1978,12 @@ let allocate_slab'
     let b = U32.lt md_count_v' metadata_max in
     if b then (
       let idx1' = allocate_slab_aux_3 size_class
-        slab_region md_bm_region md_region
+        (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3
         md_count_v md_region_lv
         idx1 idx2 idx3 in
       let r = allocate_slab_aux_1 size_class
-        slab_region md_bm_region md_region
+        (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3
         (U32.add md_count_v 1ul)
         (G.hide (Seq.append (G.reveal md_region_lv) (Seq.create 1 0ul)))
@@ -1987,45 +1997,17 @@ let allocate_slab'
         (if (A.is_null r) then emp else A.varray r);
       return r
     ) else (
-      intro_vdep
-        (vptr r1 `star` vptr r2 `star` vptr r3)
-        (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3))
-        (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)));
-
-      change_equal_slprop
-        (ind_varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) r1 r2 r3)
-        (left_vprop1 md_region r1 r2 r3 md_count_v);
-      let ds = gget (left_vprop1 md_region r1 r2 r3 md_count_v) in
-      assert (ALG.dataify (dsnd (G.reveal ds)) == Ghost.reveal md_region_lv);
-
-      intro_vdep
-        (left_vprop1 md_region r1 r2 r3 md_count_v)
-        (starseq
-          #(pos:U32.t{U32.v pos < U32.v md_count_v})
-          #(t size_class)
-          (f size_class slab_region md_bm_region md_count_v md_region_lv)
-          (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-          (SeqUtils.init_u32_refined (U32.v md_count_v)))
-        (left_vprop_aux size_class slab_region md_bm_region
-          md_region r1 r2 r3 md_count_v);
-
-      intro_vrefinedep
-        (vptr md_count)
-        (fun x -> U32.v x <= U32.v metadata_max == true)
-        (fun v -> left_vprop size_class slab_region md_bm_region md_region
-          r1 r2 r3 v)
-        (left_vprop size_class slab_region md_bm_region
-          md_region r1 r2 r3 md_count_v);
-
+      pack_3 size_class
+        (A.split_r slab_region 0sz) md_bm_region md_region
+        md_count r1 r2 r3
+        md_count_v md_region_lv idx1 idx2 idx3;
       pack_right_and_refactor_vrefine_dep
           size_class slab_region md_bm_region md_region
           md_count
           r1 r2 r3 md_count_v;
-
       change_equal_slprop
         emp
         (if A.is_null A.null then emp else A.varray A.null);
-
       return (A.null #U8.t)
     )
   )
@@ -2064,16 +2046,17 @@ let allocate_slab
 
   change_equal_slprop
     (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 (G.reveal md_count_v))
-    (left_vprop size_class slab_region md_bm_region md_region
+    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region
       r1 r2 r3 md_count_v_ `star`
-    right_vprop slab_region md_bm_region md_region md_count_v_);
+    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v_ `star`
+    A.varray (A.split_l slab_region 0sz));
 
 
   let x
     : G.erased _
     = elim_vdep
     (left_vprop1 md_region r1 r2 r3 md_count_v_)
-    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 md_count_v_) in
+    (left_vprop_aux size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 md_count_v_) in
 
   change_equal_slprop
     (left_vprop1 md_region r1 r2 r3 md_count_v_)
@@ -2110,12 +2093,12 @@ let allocate_slab
   let x' : Ghost.erased (Seq.lseq AL.status (U32.v md_count_v_)) = ALG.dataify (dsnd x) in
 
   change_equal_slprop
-    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 md_count_v_ x)
+    (left_vprop_aux size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 md_count_v_ x)
     (starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v_})
       #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v_ x')
-      (f_lemma size_class slab_region md_bm_region md_count_v_ x')
+      (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v_ x')
+      (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v_ x')
       (SeqUtils.init_u32_refined (U32.v md_count_v_)));
 
   let r = allocate_slab' size_class

@@ -220,7 +220,7 @@ let deallocate_slab_aux_1
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
+  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   (pos: US.t{US.v pos < U32.v md_count_v})
@@ -254,7 +254,6 @@ let deallocate_slab_aux_1
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr') in
     same_base_array arr' ptr /\
     0 <= diff /\
-    diff < U32.v  page_size /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
@@ -463,7 +462,7 @@ let deallocate_slab_aux_2
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
+  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   (pos: US.t{US.v pos < U32.v md_count_v})
@@ -497,7 +496,6 @@ let deallocate_slab_aux_2
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr') in
     same_base_array arr' ptr /\
     0 <= diff /\
-    diff < U32.v  page_size /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
@@ -576,6 +574,8 @@ let deallocate_slab_aux_2
   )
 #pop-options
 
+#restart-solver
+
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let deallocate_slab'
   (ptr: array U8.t)
@@ -585,7 +585,7 @@ let deallocate_slab'
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v < U32.v metadata_max})
+  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx1 idx2 idx3: US.t)
   (diff: UP.t)
@@ -596,16 +596,17 @@ let deallocate_slab'
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
-    right_vprop slab_region md_bm_region md_region md_count_v `star`
+    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
       (US.v idx1) (US.v idx2) (US.v idx3)) `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
+      (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_u32_refined (U32.v md_count_v)) `star`
+    A.varray (A.split_l slab_region 0sz)
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
@@ -617,7 +618,7 @@ let deallocate_slab'
   (requires fun h0 ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
-    diff' < U32.v page_size /\
+    //diff' < (U32.v page_size) * (U32.v page_size) /\
     UP.v diff == diff' /\
     same_base_array ptr slab_region /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
@@ -636,7 +637,7 @@ let deallocate_slab'
   assume (U32.v diff_u32 == UP.v diff);
   let pos = U32.div diff_u32 page_size in
   let pos' = u32_to_sz pos in
-
+  admit ();
   // check diff/page_size < md_count
   if U32.lt pos md_count_v then (
     // selector equality propagation
@@ -647,7 +648,8 @@ let deallocate_slab'
         (US.v idx1) (US.v idx2) (US.v idx3) (US.uint_to_t (U32.v pos)) in
     if (U32.eq status1 2ul) then (
       let b = deallocate_slab_aux_1 ptr size_class
-        slab_region md_bm_region md_region md_count r1 r2 r3
+        (A.split_r slab_region 0sz) md_bm_region md_region
+        md_count r1 r2 r3
         md_count_v md_region_lv idx1 idx2 idx3 pos' in
       pack_right_and_refactor_vrefine_dep
         size_class slab_region md_bm_region md_region md_count
@@ -655,7 +657,8 @@ let deallocate_slab'
       return b
     ) else if (U32.eq status1 1ul) then (
       let b = deallocate_slab_aux_2 ptr size_class
-        slab_region md_bm_region md_region md_count r1 r2 r3
+        (A.split_r slab_region 0sz) md_bm_region md_region
+        md_count r1 r2 r3
         md_count_v md_region_lv idx1 idx2 idx3 pos' in
       pack_right_and_refactor_vrefine_dep
         size_class slab_region md_bm_region md_region md_count
@@ -669,3 +672,108 @@ let deallocate_slab'
     sladmit ();
     return false
   )
+
+
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 150"
+let deallocate_slab
+  (ptr: array U8.t)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count: ref U32.t)
+  (r1 r2 r3: ref US.t)
+  : Steel bool
+  (
+    A.varray ptr `star`
+    vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
+  )
+  (fun b ->
+    (if b then emp else A.varray ptr) `star`
+    vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
+  )
+  (requires fun _ ->
+    let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
+    0 <= diff' /\
+    same_base_array ptr slab_region /\
+    UP.fits diff' /\
+    (U32.v page_size) % (U32.v size_class) = 0)
+  (ensures fun _ _ _ -> True)
+  =
+  let md_count_v
+    : G.erased _
+    = elim_vrefinedep
+      (vptr md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3) in
+
+  let md_count_v_ = read md_count in
+
+  change_equal_slprop
+    (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 (G.reveal md_count_v))
+    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region
+      r1 r2 r3 md_count_v_ `star`
+    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v_ `star`
+    A.varray (A.split_l slab_region 0sz));
+
+
+  let x
+    : G.erased _
+    = elim_vdep
+    (left_vprop1 md_region r1 r2 r3 md_count_v_)
+    (left_vprop_aux size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 md_count_v_) in
+
+  change_equal_slprop
+    (left_vprop1 md_region r1 r2 r3 md_count_v_)
+    (ind_varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v_))
+       r1 r2 r3);
+
+  let idxs
+    : G.erased _
+    = elim_vdep
+      (vptr r1 `star` vptr r2 `star` vptr r3)
+      (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v_)))
+  in
+  let idx1_ = read r1 in
+  let idx2_ = read r2 in
+  let idx3_ = read r3 in
+
+  change_slprop_rel
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v_))
+      (US.v (fst (fst (G.reveal idxs))))
+      (US.v (snd (fst (G.reveal idxs))))
+      (US.v (snd (G.reveal idxs))))
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v_))
+      (US.v idx1_) (US.v idx2_) (US.v idx3_))
+    (fun x y -> x == y)
+    (fun _ ->
+      assert (fst (fst (G.reveal idxs)) == idx1_);
+      assert (snd (fst (G.reveal idxs)) == idx2_);
+      assert (snd (G.reveal idxs) = idx3_)
+    );
+
+  let x' : Ghost.erased (Seq.lseq AL.status (U32.v md_count_v_)) = ALG.dataify (dsnd x) in
+
+  change_equal_slprop
+    (left_vprop_aux size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 md_count_v_ x)
+    (starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v_})
+      #(t size_class)
+      (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v_ x')
+      (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v_ x')
+      (SeqUtils.init_u32_refined (U32.v md_count_v_)));
+  let diff = A.ptrdiff ptr (A.split_l slab_region 0sz) in
+
+  let b = deallocate_slab' ptr size_class
+    slab_region md_bm_region md_region md_count r1 r2 r3
+    md_count_v_ x' idx1_ idx2_ idx3_ diff in
+  return b

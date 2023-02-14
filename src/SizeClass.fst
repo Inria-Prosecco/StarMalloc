@@ -157,3 +157,47 @@ let allocate_size_class
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);
   return result
+
+open Slabs2
+
+module UP = FStar.PtrdiffT
+
+let deallocate_size_class
+  (scs: size_class_struct)
+  (ptr: array U8.t)
+  : Steel bool
+  (A.varray ptr `star`
+  size_class_vprop scs)
+  (fun b ->
+    (if b then emp else A.varray ptr) `star`
+    size_class_vprop scs)
+  (requires fun h0 -> same_base_array ptr scs.slab_region)
+  (ensures fun h0 _ h1 -> True)
+  =
+  change_slprop_rel
+    (size_class_vprop scs)
+    (vrefinedep
+      (vptr scs.md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs))
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma1 scs m);
+  assume ((U32.v page_size) % (U32.v scs.size) == 0);
+  let diff = G.hide (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region)) in
+  assume (0 <= G.reveal diff);
+  assume (same_base_array ptr scs.slab_region);
+  assume (UP.fits (G.reveal diff));
+  let b = deallocate_slab ptr
+    scs.size
+    scs.slab_region scs.md_bm_region scs.md_region
+    scs.md_count
+    scs.empty_slabs scs.partial_slabs scs.full_slabs in
+  change_slprop_rel
+    (vrefinedep
+      (vptr scs.md_count)
+      (fun x -> U32.v x <= U32.v metadata_max == true)
+      (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs))
+    (size_class_vprop scs)
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma2 scs m);
+  return b
