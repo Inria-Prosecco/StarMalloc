@@ -248,6 +248,7 @@ val pack_slab_array (#opened:_)
       A.asel (A.split_l (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)) h0 ==
       A.asel (slab_array slab_region md_count) h1)
 
+/// Retrieving the metadata bitmap at index [md_count] in array [md_bm_region]
 inline_for_extraction noextract
 val md_bm_array
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -272,6 +273,8 @@ val pack_md_bm_array (#opened:_)
       A.asel (A.split_l (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)) h0 ==
       A.asel (md_bm_array md_bm_region md_count) h1)
 
+/// Retrieving the metadata status indicator at index [md_count] in array [md_region]
+inline_for_extraction noextract
 val md_array
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: U32.t{U32.v md_count < U32.v metadata_max})
@@ -295,3 +298,14 @@ val pack_md_array (#opened:_)
     (ensures fun h0 _ h1 ->
       A.asel (A.split_l (A.split_r md_region (u32_to_sz md_count)) (u32_to_sz 1ul)) h0 ==
       A.asel (md_array md_region md_count) h1)
+
+val unpack_md_array (#opened:_)
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : SteelGhost unit opened
+    (A.varray (md_array md_region md_count))
+    (fun _ -> A.varray (A.split_l (A.split_r md_region (u32_to_sz md_count)) 1sz))
+    (requires fun _ -> True)
+    (ensures fun h0 _ h1 ->
+      A.asel (A.split_l (A.split_r md_region (u32_to_sz md_count)) 1sz) h1 ==
+      A.asel (md_array md_region md_count) h0)

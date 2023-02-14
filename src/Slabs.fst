@@ -1150,9 +1150,7 @@ let allocate_slab_aux_3_1_varraylist
         (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0))
       (Seq.create 1 0ul)
   )
-  = change_equal_slprop
-      (A.varray (md_array md_region md_count_v))
-      (A.varray (A.split_l (A.split_r md_region (u32_to_sz md_count_v)) 1sz));
+  = unpack_md_array md_region md_count_v;
     ALG.lemma_head1_in_bounds pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) idx1 idx2 idx3;
     A.length_fits md_region;
     AL.extend1 md_region idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) (u32_to_sz md_count_v) 0ul;
