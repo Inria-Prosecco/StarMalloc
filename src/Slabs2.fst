@@ -23,7 +23,6 @@ module AL = ArrayList
 open Utils2
 open Slots
 open Slots2
-open Slabs
 
 include SlabsCommon
 
