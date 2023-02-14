@@ -234,9 +234,6 @@ let init_struct (sc:sc)
   emp
   (fun scs -> size_class_vprop scs)
   =
-  [@inline_let]
-  let v : v:U32.t{U32.v v <= U32.v metadata_max == true}
-    = 0ul in
   let slab_region = mmap_u8 (u32_to_sz (U32.mul metadata_max page_size)) in
   let md_bm_region = mmap_u64 (u32_to_sz (U32.mul metadata_max 4ul)) in
   let md_region = mmap_cell_status (u32_to_sz metadata_max) in
@@ -245,10 +242,12 @@ let init_struct (sc:sc)
   A.ghost_split md_bm_region 0sz;
   A.ghost_split md_region 0sz;
 
-  drop (A.varray (A.split_l slab_region 0sz));
+  A.ghost_split (A.split_r slab_region 0sz) 0sz;
+
+  drop (A.varray (A.split_l (A.split_r slab_region 0sz) 0sz));
   drop (A.varray (A.split_l md_bm_region 0sz));
 
-  intro_right_vprop_empty slab_region md_bm_region md_region;
+  intro_right_vprop_empty (A.split_r slab_region 0sz) md_bm_region md_region;
 
   let ptr_partial = mmap_ptr_us () in
   let ptr_empty = mmap_ptr_us () in
@@ -258,17 +257,18 @@ let init_struct (sc:sc)
   R.write ptr_empty 0sz;
   R.write ptr_full 0sz;
 
-  intro_left_vprop_empty sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full;
+  intro_left_vprop_empty sc (A.split_r slab_region 0sz) md_bm_region md_region ptr_empty ptr_partial ptr_full;
 
   let md_count = mmap_ptr_u32 () in
   R.write md_count 0ul;
   intro_vrefinedep
     (R.vptr md_count)
-    (fun x -> U32.v x <= U32.v metadata_max == true)
+    vrefinedep_prop
     (size_class_vprop_aux sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full)
-    (left_vprop sc slab_region md_bm_region md_region
+    (left_vprop sc (A.split_r slab_region 0sz) md_bm_region md_region
          ptr_empty ptr_partial ptr_full 0ul `star`
-     right_vprop slab_region md_bm_region md_region 0ul);
+     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region 0ul `star` A.varray (A.split_l slab_region 0sz));
+
 
   [@inline_let]
   let scs = {
@@ -285,7 +285,7 @@ let init_struct (sc:sc)
   change_slprop_rel
     (vrefinedep
       (R.vptr md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
+      vrefinedep_prop
       (size_class_vprop_aux sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full))
      (size_class_vprop scs)
     (fun _ _ -> True)
@@ -295,7 +295,7 @@ let init_struct (sc:sc)
         size_class_vprop scs ==
     vrefinedep
       (R.vptr scs.md_count)
-      (fun x -> U32.v x <= U32.v metadata_max == true)
+      vrefinedep_prop
       (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs)
          ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
     );
