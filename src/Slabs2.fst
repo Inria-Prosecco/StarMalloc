@@ -23,8 +23,7 @@ module AL = ArrayList
 open Utils2
 open Slots
 open Slots2
-
-include SlabsCommon
+open SlabsCommon
 
 open FStar.Mul
 open SteelStarSeqUtils

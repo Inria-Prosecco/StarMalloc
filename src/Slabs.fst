@@ -26,8 +26,7 @@ open Utils2
 open Slots
 open SteelStarSeqUtils
 open FStar.Mul
-
-include SlabsCommon
+open SlabsCommon
 
 #push-options "--z3rlimit 50"
 inline_for_extraction noextract
