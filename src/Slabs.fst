@@ -94,26 +94,6 @@ let slab_region_mon_split
     (A.varray (A.split_r (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)))
     (A.varray (A.split_r slab_region (u32_to_sz (U32.mul (U32.add md_count 1ul) page_size))))
 
-inline_for_extraction noextract
-let md_bm_array
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
-  : Pure (array U64.t)
-  (requires
-    A.length md_bm_region = U32.v metadata_max * 4 /\
-    U32.v md_count < U32.v metadata_max)
-  (ensures fun r ->
-    A.length r = 4 /\
-    same_base_array r md_bm_region /\
-    True
-  )
-  =
-  let ptr = A.ptr_of md_bm_region in
-  let shift = U32.mul md_count 4ul in
-  let shift_size_t = u32_to_sz shift in
-  let ptr_shifted = A.ptr_shift ptr shift_size_t in
-  (|ptr_shifted, G.hide 4|)
-
 let md_bm_region_mon_split
   (#opened:_)
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
@@ -137,9 +117,7 @@ let md_bm_region_mon_split
     (u32_to_sz 4ul);
   zf_u64_slice (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0) 0 (US.v (u32_to_sz 4ul));
   zf_u64_slice (A.asel (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) h0) (US.v (u32_to_sz 4ul)) (A.length (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))));
-  change_equal_slprop
-    (A.varray (A.split_l (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)))
-    (A.varray (md_bm_array md_bm_region md_count));
+  pack_md_bm_array md_bm_region md_count;
   let x1 = A.split_r (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul) in
   let x2 = A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul)) in
   A.ptr_base_offset_inj (A.ptr_of x1) (A.ptr_of x2);
@@ -148,25 +126,6 @@ let md_bm_region_mon_split
   change_equal_slprop
     (A.varray (A.split_r (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)))
     (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul (U32.add md_count 1ul) 4ul))))
-
-inline_for_extraction noextract
-let md_array
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
-  : Pure (array AL.cell)
-  (requires
-    A.length md_region = U32.v metadata_max /\
-    U32.v md_count < U32.v metadata_max)
-  (ensures fun r ->
-    A.length r = 1 /\
-    same_base_array r md_region /\
-    True
-  )
-  =
-  let ptr = A.ptr_of md_region in
-  let shift_size_t = u32_to_sz md_count in
-  let ptr_shifted = A.ptr_shift ptr shift_size_t in
-  (|ptr_shifted, G.hide 1|)
 
 let md_region_mon_split
   (#opened:_)
@@ -182,9 +141,7 @@ let md_region_mon_split
   A.ghost_split
     (A.split_r md_region (u32_to_sz md_count))
     (u32_to_sz 1ul);
-  change_equal_slprop
-    (A.varray (A.split_l (A.split_r md_region (u32_to_sz md_count)) (u32_to_sz 1ul)))
-    (A.varray (md_array md_region md_count));
+  pack_md_array md_region md_count;
   let x1 = A.split_r (A.split_r md_region (u32_to_sz md_count)) (u32_to_sz 1ul) in
   let x2 = A.split_r md_region (u32_to_sz (U32.add md_count 1ul)) in
   A.ptr_base_offset_inj (A.ptr_of x1) (A.ptr_of x2);

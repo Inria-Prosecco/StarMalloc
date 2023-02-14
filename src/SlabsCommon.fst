@@ -228,3 +228,69 @@ let pack_slab_array (#opened:_)
   = change_equal_slprop
     (A.varray (A.split_l (A.split_r slab_region (u32_to_sz (U32.mul md_count page_size))) (u32_to_sz page_size)))
     (A.varray (slab_array slab_region md_count))
+
+inline_for_extraction noextract
+let md_bm_array
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : Pure (array U64.t)
+  (requires
+    A.length md_bm_region = U32.v metadata_max * 4 /\
+    U32.v md_count < U32.v metadata_max)
+  (ensures fun r ->
+    A.length r = 4 /\
+    same_base_array r md_bm_region
+  )
+  =
+  let ptr = A.ptr_of md_bm_region in
+  let shift = U32.mul md_count 4ul in
+  let shift_size_t = u32_to_sz shift in
+  let ptr_shifted = A.ptr_shift ptr shift_size_t in
+  (|ptr_shifted, G.hide 4|)
+
+let pack_md_bm_array (#opened:_)
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : SteelGhost unit opened
+    (A.varray (A.split_l (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)))
+    (fun _ -> A.varray (md_bm_array md_bm_region md_count))
+    (requires fun _ -> True)
+    (ensures fun h0 _ h1 ->
+      A.asel (A.split_l (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)) h0 ==
+      A.asel (md_bm_array md_bm_region md_count) h1)
+  = change_equal_slprop
+    (A.varray (A.split_l (A.split_r md_bm_region (u32_to_sz (U32.mul md_count 4ul))) (u32_to_sz 4ul)))
+    (A.varray (md_bm_array md_bm_region md_count))
+
+inline_for_extraction noextract
+let md_array
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : Pure (array AL.cell)
+  (requires
+    A.length md_region = U32.v metadata_max /\
+    U32.v md_count < U32.v metadata_max)
+  (ensures fun r ->
+    A.length r = 1 /\
+    same_base_array r md_region /\
+    True
+  )
+  =
+  let ptr = A.ptr_of md_region in
+  let shift_size_t = u32_to_sz md_count in
+  let ptr_shifted = A.ptr_shift ptr shift_size_t in
+  (|ptr_shifted, G.hide 1|)
+
+let pack_md_array (#opened:_)
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count: U32.t{U32.v md_count < U32.v metadata_max})
+  : SteelGhost unit opened
+    (A.varray (A.split_l (A.split_r md_region (u32_to_sz md_count)) (u32_to_sz 1ul)))
+    (fun _ -> A.varray (md_array md_region md_count))
+    (requires fun _ -> True)
+    (ensures fun h0 _ h1 ->
+      A.asel (A.split_l (A.split_r md_region (u32_to_sz md_count)) (u32_to_sz 1ul)) h0 ==
+      A.asel (md_array md_region md_count) h1)
+  = change_equal_slprop
+      (A.varray (A.split_l (A.split_r md_region (u32_to_sz md_count)) (u32_to_sz 1ul)))
+      (A.varray (md_array md_region md_count))
