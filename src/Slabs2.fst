@@ -32,9 +32,6 @@ open SteelVRefineDep
 module AL = ArrayList
 module ALG = ArrayListGen
 
-unfold
-let blob = Slabs.blob
-
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
 let deallocate_slab_aux_cond
   (size_class: sc)
