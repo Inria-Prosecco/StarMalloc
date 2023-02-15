@@ -83,11 +83,12 @@ let unset (b: U64.t) (m:U32.t{U32.v m < U64.n})
   let r = U64.logand c b in
   r
 
+#push-options "--z3rlimit 20"
 let bv_unset_lemma (b: U64.t) (m:U32.t{U32.v m < U64.n})
   : Lemma
   (requires nth (U64.v b) (U64.n - U32.v m - 1) = true)
   (ensures
-    nth (U64.v (set b m)) (U64.n - U32.v m - 1) = false /\
+    nth (U64.v (unset b m)) (U64.n - U32.v m - 1) = false /\
     to_vec #64 (U64.v (unset b m)) = Seq.upd (to_vec #64 (U64.v b)) (U64.n - U32.v m - 1) false
   )
   =
@@ -95,7 +96,7 @@ let bv_unset_lemma (b: U64.t) (m:U32.t{U32.v m < U64.n})
   shift_left_is_pow2 m;
   assert (U64.v r == spec2_unset (U64.v b) (U32.v m));
   spec2_bv_unset (U64.v b) (U32.v m);
-  admit ();
   Seq.lemma_eq_intro
     (to_vec #64 (U64.v (unset b m)))
     (Seq.upd (to_vec #64 (U64.v b)) (U64.n - U32.v m - 1) false)
+#pop-options

@@ -484,7 +484,7 @@ let array_to_bv_lemma_upd_set
   end
 #pop-options
 
-#push-options "--z3rlimit 50"
+#push-options "--z3rlimit 80"
 let array_to_bv_lemma_upd_unset
   (#n: nat)
   (s0 s1: Seq.lseq U64.t n)
@@ -493,7 +493,7 @@ let array_to_bv_lemma_upd_unset
   (requires
     i < U64.n * n /\
     Seq.index (array_to_bv2 s0) (f #n i) = true /\
-    s1 == Seq.upd s0 (i/64) (Bitmap3.set (Seq.index s0 (i/64)) (U32.uint_to_t (i%64)))
+    s1 == Seq.upd s0 (i/64) (Bitmap3.unset (Seq.index s0 (i/64)) (U32.uint_to_t (i%64)))
   )
   (ensures
     array_to_bv2 s1
