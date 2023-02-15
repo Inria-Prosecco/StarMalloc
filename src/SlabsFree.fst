@@ -20,6 +20,7 @@ module SM = Steel.Memory
 
 module AL = ArrayList
 
+open Prelude
 open Utils2
 open SlotsAlloc
 open SlotsFree
@@ -635,7 +636,6 @@ let deallocate_slab'
   (ensures fun _ _ _ -> True)
   =
   let diff_sz = UP.ptrdifft_to_sizet diff in
-  assume (US.fits_u32);
   assert_norm (4 < FI.max_int 16);
   let diff_u32 = US.sizet_to_uint32 diff_sz in
   assume (U32.v diff_u32 == UP.v diff);

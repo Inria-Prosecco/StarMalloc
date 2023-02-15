@@ -316,7 +316,6 @@ let deallocate_slot_aux2
   ))
   =
   let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
-  assume (US.fits_u32);
   let pos = diff / (U32.v size_class) in
   let rem = diff % (U32.v size_class) in
   assert (rem = 0);
@@ -550,7 +549,6 @@ let deallocate_slot'
   assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
   assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (A.split_r arr 0sz)));
   let diff_sz = UP.ptrdifft_to_sizet diff in
-  assume (US.fits_u32);
   assert_norm (4 < FI.max_int 16);
   let diff_u32 = US.sizet_to_uint32 diff_sz in
   let b = deallocate_slot_aux0 size_class (A.split_r arr 0sz) ptr diff_u32 in
