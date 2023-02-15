@@ -203,17 +203,18 @@ let intro_linked_tree_leaf #opened #a _ =
 
 let elim_leaf_lemma (#a:Type0) (ptr:t a) (m:mem) : Lemma
     (requires interp (tree_sl ptr) m /\ ptr == null_t)
-    (ensures interp (tree_sl ptr) m /\ tree_sel ptr m == Spec.Leaf)
+    (ensures interp (hp_of emp) m /\ tree_sel ptr m == Spec.Leaf)
     = let l' = id_elim_exists (tree_sl' ptr) m in
       pure_interp (ptr == null_t) m;
-      tree_sel_interp ptr Spec.Leaf m
+      tree_sel_interp ptr Spec.Leaf m;
+      reveal_emp ();
+      intro_emp m
 
-(*let elim_linked_tree_leaf #opened #a ptr =
-  change_slprop_rel (linked_tree ptr) (linked_tree ptr)
-    (fun x y -> x == y /\ y == Spec.Leaf)
-    (fun m -> elim_leaf_lemma ptr m)*)
+let elim_linked_tree_leaf #opened #a ptr =
+  change_slprop_rel (linked_tree ptr) emp
+    (fun x y -> x == Spec.Leaf)
+    (fun m -> elim_leaf_lemma ptr m)
 
-let elim_linked_tree_leaf #opened #a ptr = sladmit ()
 
 let lemma_node_is_not_null (#a:Type) (ptr:t a) (t:wdm a) (m:mem) : Lemma
     (requires interp (tree_sl ptr) m /\ tree_sel ptr m == t /\ Spec.Node? t)
@@ -766,4 +767,3 @@ let unpack_tree (#a: Type0) (ptr: t a)
   tree_view_aux_same_height (v_node (get_left n) h2);
   tree_view_aux_same_height (v_node (get_right n) h2);
   return n
-
