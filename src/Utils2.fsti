@@ -39,9 +39,9 @@ let max_sc = U32.v page_size
 // for the first u64 of the bitmap
 // note: this mechanism does not rely on any loop!
 let sc = x:U32.t{
-  U32.eq x 16ul \/
-  U32.eq x 32ul \/
-  (min_sc <= U32.v x /\ U32.v x <= max_sc)}
+  (U32.eq x 16ul \/ U32.eq x 32ul \/ (min_sc <= U32.v x /\ U32.v x <= max_sc)) /\
+  (U32.v page_size) % (U32.v x) == 0
+}
 
 let nb_slots (size_class: sc)
   : Pure U32.t

@@ -994,7 +994,6 @@ let allocate_slab_aux_3_2 (#opened:_)
   )
   (ensures fun _ _ _ -> True)
   =
-  assume ((U32.v page_size) % (U32.v size_class) == 0);
   lemma_slab_aux_3_2 size_class slab_region md_bm_region md_region md_count_v md_region_lv;
 
   starseq_weakening_ref

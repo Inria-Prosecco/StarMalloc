@@ -182,7 +182,6 @@ let deallocate_size_class
       (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
-  assume ((U32.v page_size) % (U32.v scs.size) == 0);
   let diff = G.hide (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region)) in
   assume (0 <= G.reveal diff);
   assume (same_base_array ptr scs.slab_region);
