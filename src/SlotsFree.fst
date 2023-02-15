@@ -1,7 +1,6 @@
 module SlotsFree
 
 module FI = FStar.Int
-module STU = SizeTUtils
 module US = FStar.SizeT
 module UP = FStar.PtrdiffT
 module U64 = FStar.UInt64
@@ -17,6 +16,7 @@ open Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
+open Prelude
 open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
@@ -290,7 +290,7 @@ let slot_array_offset_lemma (size_class: sc) (arr: array U8.t) (pos: U32.t)
   assert (U32.v shift <= U32.v page_size);
   assert_norm (U32.v shift <= FI.max_int U16.n);
   assert (U32.v shift <= FI.max_int U16.n);
-  let shift_size_t = STU.small_uint32_to_sizet shift in
+  let shift_size_t = US.uint32_to_sizet shift in
   assert (US.v shift_size_t < A.length arr);
   let ptr_shifted = A.ptr_shift ptr shift_size_t in
   assert (ptr_shifted == A.ptr_of (slot_array size_class arr pos));

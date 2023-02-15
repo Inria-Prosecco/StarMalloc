@@ -2,7 +2,6 @@ module Helpers
 
 module FU = FStar.UInt
 module FI = FStar.Int
-module STU = SizeTUtils
 module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
@@ -23,19 +22,6 @@ open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
 open SlotsAlloc
-
-
-// TODO: to be removed/move apart ; use stdlib
-// discussion
-inline_for_extraction noextract
-let u32_to_sz
-  (x:U32.t)
-  : Tot (y:US.t{US.v y == U32.v x})
-  //: Pure US.t
-  //(requires True)
-  //(ensures fun y -> US.v y == U32.v x)
-  =
-  US.uint32_to_sizet x
 
 open FStar.Mul
 #push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
@@ -61,7 +47,7 @@ let slot_array (#a: Type)
   assert (U32.v shift <= FI.max_int U32.n);
   assert (U32.v shift <= (U32.v max - 1) * (U32.v size));
   assert (U32.v shift + U32.v size <= A.length arr);
-  let shift_sz = u32_to_sz shift in
+  let shift_sz = US.uint32_to_sizet shift in
   assert (US.v shift_sz < A.length arr);
   let ptr_shifted = A.ptr_shift ptr shift_sz in
   (| ptr_shifted, G.hide (U32.v size) |)
@@ -221,7 +207,7 @@ let rec array_to_pieces_rec (#opened:_)
     assert_norm (FStar.UInt.size (U32.v max' * U32.v size) U32.n);
     assert (U32.v (U32.mul max' size) == U32.v max' * U32.v size);
     let index = U32.mul max' size in
-    let index = u32_to_sz index in
+    let index = US.uint32_to_sizet index in
     A.ghost_split arr index;
     array_to_pieces_rec size max' (A.split_l arr index);
     let arr1 = A.split_r arr index in

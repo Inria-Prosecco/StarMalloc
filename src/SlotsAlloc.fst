@@ -2,7 +2,6 @@ module SlotsAlloc
 
 module FU = FStar.UInt
 module FI = FStar.Int
-module STU = SizeTUtils
 module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
@@ -17,6 +16,7 @@ open Steel.Reference
 module A = Steel.Array
 module SM = Steel.Memory
 
+open Prelude
 open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
@@ -37,7 +37,7 @@ let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   assert (U32.v shift <= U32.v page_size);
   assert_norm (U32.v shift <= FI.max_int U16.n);
   assert (U32.v shift <= FI.max_int U16.n);
-  let shift_size_t = STU.small_uint32_to_sizet shift in
+  let shift_size_t = US.uint32_to_sizet shift in
   assert (US.v shift_size_t < A.length arr);
   let ptr_shifted = A.ptr_shift ptr shift_size_t in
   (| ptr_shifted, G.hide (U32.v size_class) |)
@@ -609,7 +609,7 @@ let get_free_slot_aux
   let h0 = get () in
   assert (U32.v i <= 3);
   assert_norm (3 <= FI.max_int U16.n);
-  let i2 = STU.small_uint32_to_sizet i in
+  let i2 = US.uint32_to_sizet i in
   let x = A.index bitmap i2 in
   max64_lemma x;
   let r = ffs64 x (G.hide 64ul) in

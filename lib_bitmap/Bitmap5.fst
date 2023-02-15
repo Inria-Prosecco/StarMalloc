@@ -1,6 +1,5 @@
 module Bitmap5
 
-module STU = SizeTUtils
 module FI = FStar.Int
 module US = FStar.SizeT
 module U64 = FStar.UInt64
@@ -18,8 +17,9 @@ let array = Steel.ST.Array.array
 
 module FU = FStar.UInt
 open FStar.Mul
-
 module G =  FStar.Ghost
+
+open Prelude
 
 // spec is done
 // lets define the Steel implementation
@@ -60,7 +60,7 @@ let bm_get_aux
   )
   =
   let k1 = U32.div k 64ul in
-  let k_index = STU.small_uint32_to_sizet k1 in
+  let k_index = US.uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
   let x = A.index arr k_index in
   let r = Bitmap3.get x k2 in
@@ -88,7 +88,7 @@ let bm_get
   let k' = G.hide (f #n (U32.v k)) in
 
   let k1 = U32.div k 64ul in
-  let k_index = STU.small_uint32_to_sizet k1 in
+  let k_index = US.uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
   let x = A.index arr k_index in
   let r = Bitmap3.get x k2 in
@@ -114,7 +114,7 @@ let bm_set_aux
   )
   =
   let k1 = U32.div k 64ul in
-  let k_index = STU.small_uint32_to_sizet k1 in
+  let k_index = US.uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
   let x = A.index arr k_index in
   let r = Bitmap3.set x k2 in
@@ -147,7 +147,7 @@ let bm_set
   Bitmap4.array_to_bv2_lemma s0;
   let k' = G.hide (f #n (U32.v k)) in
   let k1 = U32.div k 64ul in
-  let k_index = STU.small_uint32_to_sizet k1 in
+  let k_index = US.uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
   let x = A.index arr k_index in
   Bitmap4.array_to_bv_lemma s0 k';
@@ -185,7 +185,7 @@ let bm_unset_aux
   )
   =
   let k1 = U32.div k 64ul in
-  let k_index = STU.small_uint32_to_sizet k1 in
+  let k_index = US.uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
   let x = A.index arr k_index in
   let r = Bitmap3.unset x k2 in
@@ -218,7 +218,7 @@ let bm_unset
   Bitmap4.array_to_bv2_lemma s0;
   let k' = G.hide (f #n (U32.v k)) in
   let k1 = U32.div k 64ul in
-  let k_index = STU.small_uint32_to_sizet k1 in
+  let k_index = US.uint32_to_sizet k1 in
   let k2 = U32.rem k 64ul in
   let x = A.index arr k_index in
   Bitmap4.array_to_bv_lemma s0 k';
