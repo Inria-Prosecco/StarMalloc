@@ -98,6 +98,7 @@ let deallocate_slab_aux_1_partial
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -172,6 +173,7 @@ let deallocate_slab_aux_1_empty
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -251,6 +253,7 @@ let deallocate_slab_aux_1
     same_base_array arr' ptr /\
     0 <= diff /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -357,6 +360,7 @@ let deallocate_slab_aux_2_empty
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -428,6 +432,7 @@ let deallocate_slab_aux_2_partial
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -493,6 +498,7 @@ let deallocate_slab_aux_2
     same_base_array arr' ptr /\
     0 <= diff /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -622,6 +628,7 @@ let deallocate_slab'
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
+    U32.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )

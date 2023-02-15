@@ -408,8 +408,9 @@ let left_vprop
   left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 md_count_v
 
 unfold
-let vrefinedep_prop (x:U32.t) : prop = U32.v x <= U32.v metadata_max == true
-
+let vrefinedep_prop (x:U32.t) : prop =
+  U32.v x <= U32.v metadata_max /\
+  U32.v x <> AL.null
 
 let right_vprop
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
@@ -478,6 +479,7 @@ val pack_3
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
     sel r1 h0 == idx1 /\

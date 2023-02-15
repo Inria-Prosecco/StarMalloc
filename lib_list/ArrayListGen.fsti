@@ -11,6 +11,8 @@ module US = FStar.SizeT
 module FS = FStar.FiniteSet.Base
 open FStar.FiniteSet.Ambient
 
+open Prelude
+
 (** A library for doubly linked lists, that are located in memory in a contiguous region (an array) *)
 
 /// The type of cells for the doubly linked list. Compared to a standard doubly linked list,
@@ -22,11 +24,14 @@ val cell (t:Type0) : Type0
 inline_for_extraction noextract
 val get_data (#a:Type0) (c:cell a) : a
 
-/// As a convention, we represent NULL as 0
+/// As a convention, we represent NULL as the max length of the metadata array + 1,
+/// i.e., metadata_max + 1.
+/// The + 1 is needed to handle the case where the metadata array will be full,
+/// and the metadata counter will be exactly metadata_max
 noextract inline_for_extraction
-let null : nat = 0
+let null : nat = 131073
 noextract inline_for_extraction
-let null_ptr : US.t = 0sz
+let null_ptr : US.t = US.of_u32 131073ul
 
 /// Erases the next and prev field to return a sequence of data
 val dataify (#a:Type)

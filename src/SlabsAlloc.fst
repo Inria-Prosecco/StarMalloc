@@ -189,6 +189,7 @@ let allocate_slab_aux_1_partial
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -260,6 +261,7 @@ let allocate_slab_aux_1_full
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -331,6 +333,7 @@ let allocate_slab_aux_1
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -414,7 +417,6 @@ let allocate_slab_aux_2_full
   (idx1: US.t)
   (idx2: US.t{US.v idx2 < U32.v md_count_v})
   (idx3: US.t)
-  //: Steel (array U8.t)
   : Steel unit
   (
     vptr md_count `star`
@@ -438,6 +440,7 @@ let allocate_slab_aux_2_full
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -509,6 +512,7 @@ let allocate_slab_aux_2_partial
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -564,6 +568,7 @@ let allocate_slab_aux_2
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -1094,6 +1099,7 @@ let allocate_slab_aux_3
       (SeqUtils.init_u32_refined (U32.v (U32.add md_count_v 1ul)))
   )
   (requires fun h0 ->
+    U32.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     U32.v md_count_v < U32.v metadata_max /\
     ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
@@ -1111,9 +1117,6 @@ let allocate_slab_aux_3
   )
   =
   let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-
-  // AF: Need to better think about how to model null to handle the case md_count == 0
-  assume (U32.v md_count_v <> AL.null);
 
   allocate_slab_aux_3_1
     slab_region md_bm_region md_region md_count_v
@@ -1185,6 +1188,7 @@ let allocate_slab'
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
+    U32.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
   )
@@ -1195,7 +1199,7 @@ let allocate_slab'
       (A.split_l md_region (u32_to_sz md_count_v))
       idx1 idx2 idx3;
     // Lemma above used to derive
-    assert (0 < U32.v md_count_v);
+    assert (U32.v md_count_v <> AL.null);
 
     let r = allocate_slab_aux_2 size_class
       (A.split_r slab_region 0sz) md_bm_region md_region
@@ -1214,7 +1218,7 @@ let allocate_slab'
       (A.split_l md_region (u32_to_sz md_count_v))
       idx1 idx2 idx3;
     // Lemma above used to derive
-    assert (0 < U32.v md_count_v);
+    assert (U32.v md_count_v <> AL.null);
 
     let r = allocate_slab_aux_1 size_class
       (A.split_r slab_region 0sz) md_bm_region md_region
