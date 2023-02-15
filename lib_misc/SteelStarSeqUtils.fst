@@ -1567,12 +1567,13 @@ let starseq_upd3 (#opened:_) (#a #b: Type0)
     SeqUtils.lemma_slice_index vs2 vs3 0 n));
   Classical.forall_intro (Classical.move_requires (
     SeqUtils.lemma_slice_index vs2 vs3 (n+1) (Seq.length s1)));
-  assert (forall (x:nat{x < Seq.length s1}).
+   assert (forall (x:nat{x < Seq.length s1}).
     Seq.index vs2 x == Seq.index vs3 x);
   Seq.lemma_eq_intro vs2 vs3;
   ()
 #pop-options
 
+#push-options "--z3rlimit 30"
 let starseq_upd4 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
@@ -1599,7 +1600,26 @@ let starseq_upd4 (#opened:_) (#a #b: Type0)
     let x : normal (t_of (f2 (Seq.index s2 n))) = h0 (f2 (Seq.index s2 n)) in
     v1 == Seq.upd v0 n x
   )
-  = sladmit ()
+  = let h0 = get () in
+    let x = gget (f2 (Seq.index s2 n)) in
+    let vs0 = v_starseq #a #(option b) f1 f1_lemma s1 h0 in
+    starseq_unpack_s f1 f1_lemma s1 n;
+    starseq_upd f1 f2 f1_lemma f2_lemma s1 s2 n;
+    starseq_pack_s f2 f2_lemma s2 n;
+    let h2 = get () in
+    let vs2 = v_starseq #a #(option b) f2 f2_lemma s2 h2 in
+    f2_lemma (Seq.index s2 n);
+    let vs3 = Seq.upd vs0 n x in
+
+    let aux (i:nat{i < Seq.length vs0}) : Lemma (Seq.index vs2 i == Seq.index vs3 i)
+      = if i < n then SeqUtils.lemma_slice_index vs2 vs3 0 n i
+        else if i > n then SeqUtils.lemma_slice_index vs2 vs3 (n+1) (Seq.length s1) i
+        else ()
+    in
+    Classical.forall_intro aux;
+    Seq.lemma_eq_intro vs2 vs3;
+    drop (f1 (Seq.index s1 n))
+#pop-options
 
 // [ok] starseq_unpack (pure equiv)
 //   [ok] aux lemma
