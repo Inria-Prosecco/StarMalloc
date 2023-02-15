@@ -434,7 +434,7 @@ let lemma_slab_aux_starseq
       assert (Seq.index md_region_lv (U32.v i) == Seq.index md_region_lv' (U32.v i))
   in Classical.forall_intro aux
 
-#push-options "--z3rlimit 50 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
 let pack_slab_starseq
   (#opened:_)
   (size_class: sc)
