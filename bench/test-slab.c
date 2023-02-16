@@ -13,16 +13,24 @@ void* smalloc(size_t size) {
   return slab_malloc((uint32_t)size);
 }
 
+void* sfree(void* ptr) {
+  bool r = slab_free(ptr);
+  return;
+}
+
 int main(){
   uint8_t* ptr = NULL;
   uint32_t bound = 256ul;
   for (uint32_t i = 0; i < 256; ++i) {
     ptr = smalloc(12);
     ptr[1] = 1;
+    sfree(ptr);
     ptr = smalloc(37);
     ptr[1] = 1;
+    sfree(ptr);
     ptr = smalloc(29);
     ptr[1] = 1;
+    sfree(ptr);
   }
   return 0;
 }

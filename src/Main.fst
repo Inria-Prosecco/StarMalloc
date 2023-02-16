@@ -16,6 +16,7 @@ module L = Steel.SpinLock
 module AL = ArrayList
 module ALG = ArrayListGen
 module RS = RegionSelect
+module SAA = Steel.ArrayArith
 
 open Prelude
 open SizeClass
@@ -342,6 +343,14 @@ let init16 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = i
 let init32 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 32ul
 let init64 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 64ul
 
+let init128 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 128ul
+let init256 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 256ul
+let init512 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 512ul
+
+let init1024 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 1024ul
+let init2048 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 2048ul
+let init4096 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 4096ul
+
 
 // Intentional top-level effect for initialization, we temporarily disable the corresponding warning
 // for these definitions
@@ -349,6 +358,14 @@ let init64 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = i
 let size_class16 : size_class = init16 ()
 let size_class32 : size_class = init32 ()
 let size_class64 : size_class = init64 ()
+
+let size_class128 : size_class = init128 ()
+let size_class256 : size_class = init256 ()
+let size_class512 : size_class = init512 ()
+
+let size_class1024 : size_class = init1024 ()
+let size_class2048 : size_class = init2048 ()
+let size_class4096 : size_class = init4096 ()
 #pop-options
 
 let null_or_varray (#a:Type) (r:array a) : vprop = if is_null r then emp else varray r
@@ -377,74 +394,86 @@ let allocate_size_class scs =
 
 val slab_malloc (bytes:U32.t) : SteelT (array U8.t) emp (fun r -> if is_null r then emp else varray r)
 
-let slab_malloc bytes =
-  if bytes = 0ul then
-    return_null ()
-  else begin
-    if bytes `U32.lte` 16ul then begin
-      L.acquire size_class16.lock;
-      let ptr = allocate_size_class size_class16.data in
-      L.release size_class16.lock;
-      return ptr
-    end
-    else
-    if bytes `U32.lte` 32ul then begin
-      L.acquire size_class32.lock;
-      let ptr = allocate_size_class size_class32.data in
-      L.release size_class32.lock;
-      return ptr
+inline_for_extraction
+let slab_malloc' (sc: size_class) (bytes: U32.t)
+  : Steel
+  (array U8.t)
+  emp (fun r -> if is_null r then emp else varray r)
+  //TODO: (requires fun _ -> U32.lte bytes sc.data.size)
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  =
+  L.acquire sc.lock;
+  let ptr = allocate_size_class sc.data in
+  L.release sc.lock;
+  return ptr
 
-    end
-    else
-    if bytes `U32.lte` 64ul then begin
-      L.acquire size_class64.lock;
-      let ptr = allocate_size_class size_class64.data in
-      L.release size_class64.lock;
-      return ptr
-    end
-    else return_null ()
-  end
+#restart-solver
+
+#push-options "--fuel 1 --ifuel 1"
+
+let slab_malloc bytes =
+  if bytes = 0ul then return_null ()
+  else if bytes `U32.lte` 16ul then slab_malloc' size_class16 bytes
+  else if bytes `U32.lte` 32ul then slab_malloc' size_class32 bytes
+  else if bytes `U32.lte` 64ul then slab_malloc' size_class64 bytes
+  else if bytes `U32.lte` 128ul then slab_malloc' size_class128 bytes
+  else if bytes `U32.lte` 256ul then slab_malloc' size_class256 bytes
+  else if bytes `U32.lte` 512ul then slab_malloc' size_class512 bytes
+  else if bytes `U32.lte` 1024ul then slab_malloc' size_class1024 bytes
+  else if bytes `U32.lte` 2048ul then slab_malloc' size_class2048 bytes
+  else if bytes `U32.lte` 4096ul then slab_malloc' size_class4096 bytes
+  else return_null ()
 
 val slab_free (ptr:array U8.t)
   : SteelT bool
            (A.varray ptr)
            (fun b -> if b then emp else A.varray ptr)
 
+inline_for_extraction
+let slab_free1 (sc: size_class) (ptr: array U8.t)
+  : Steel bool
+  (A.varray ptr)
+  (fun b -> A.varray ptr)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    (if r then SAA.within_bounds
+      (A.split_l sc.data.slab_region 0sz)
+      ptr
+      (A.split_r sc.data.slab_region slab_size) else
+    True) /\
+    asel ptr h1 == asel ptr h0
+  )
+  =
+  RS.within_bounds_intro
+    (A.split_l sc.data.slab_region 0sz)
+    ptr
+    (A.split_r sc.data.slab_region slab_size)
+    sc.region_start
+    sc.region_end
+
+inline_for_extraction
+let slab_free2 (sc: size_class) (ptr: array U8.t)
+  : Steel bool
+  (A.varray ptr)
+  (fun b -> if b then emp else A.varray ptr)
+  (requires fun h0 ->
+    SAA.within_bounds (A.split_l sc.data.slab_region 0sz) ptr (A.split_r sc.data.slab_region slab_size))
+  (ensures fun h0 _ h1 -> True)
+  =
+  L.acquire sc.lock;
+  let res = deallocate_size_class sc.data ptr in
+  L.release sc.lock;
+  return res
+
 let slab_free ptr =
-  if (RS.within_bounds_intro
-    (A.split_l size_class16.data.slab_region 0sz)
-    ptr
-    (A.split_r size_class16.data.slab_region slab_size)
-    size_class16.region_start
-    size_class16.region_end)
-  then begin
-    L.acquire size_class16.lock;
-    let res = deallocate_size_class size_class16.data ptr in
-    L.release size_class16.lock;
-    return res
-  end else
-  if (RS.within_bounds_intro
-    (A.split_l size_class32.data.slab_region 0sz)
-    ptr
-    (A.split_r size_class32.data.slab_region slab_size)
-    size_class32.region_start
-    size_class32.region_end)
-  then begin
-    L.acquire size_class32.lock;
-    let res = deallocate_size_class size_class32.data ptr in
-    L.release size_class32.lock;
-    return res
-  end else
-  if (RS.within_bounds_intro
-    (A.split_l size_class64.data.slab_region 0sz)
-    ptr
-    (A.split_r size_class64.data.slab_region slab_size)
-    size_class64.region_start
-    size_class64.region_end)
-  then begin
-    L.acquire size_class64.lock;
-    let res = deallocate_size_class size_class64.data ptr in
-    L.release size_class64.lock;
-    return res
-  end else
-    return false
+  if (slab_free1 size_class16 ptr) then slab_free2 size_class16 ptr
+  else if (slab_free1 size_class32 ptr) then slab_free2 size_class32 ptr
+  else if (slab_free1 size_class64 ptr) then slab_free2 size_class64 ptr
+  else if (slab_free1 size_class128 ptr) then slab_free2 size_class128 ptr
+  else if (slab_free1 size_class256 ptr) then slab_free2 size_class256 ptr
+  else if (slab_free1 size_class512 ptr) then slab_free2 size_class512 ptr
+  else if (slab_free1 size_class1024 ptr) then slab_free2 size_class1024 ptr
+  else if (slab_free1 size_class2048 ptr) then slab_free2 size_class2048 ptr
+  else if (slab_free1 size_class4096 ptr) then slab_free2 size_class4096 ptr
+  else return false
