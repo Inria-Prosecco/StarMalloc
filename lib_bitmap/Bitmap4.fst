@@ -396,7 +396,7 @@ let array_to_bv_lemma_upd_set_aux4
     (to_vec #64 (U64.v x))
 #pop-options
 
-#push-options "--z3rlimit 50"
+#push-options "--z3rlimit 80"
 let array_to_bv_lemma_upd_set
   (#n: nat)
   (s0 s1: Seq.lseq U64.t n)

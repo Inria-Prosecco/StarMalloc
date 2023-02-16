@@ -227,7 +227,7 @@ let vrefinedep_ext
   = ()
 
 #restart-solver
-#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects --fuel 0 --ifuel 0"
 noextract inline_for_extraction
 let init_struct (sc:sc)
   : SteelT size_class_struct
