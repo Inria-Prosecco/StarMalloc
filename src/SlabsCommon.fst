@@ -1,5 +1,7 @@
 module SlabsCommon
 
+#reset-options "--fuel 1 --ifuel 1"
+
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let p_empty_unpack (#opened:_)
   (sc: sc)
@@ -452,7 +454,7 @@ let pack_slab_starseq
     slab_vprop size_class
       (slab_array slab_region (US.sizet_to_uint32 idx))
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx)) `star`
-    starseq
+    (starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
@@ -463,7 +465,7 @@ let pack_slab_starseq
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v md_count_v))))
+      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v md_count_v)))))
   )
   (fun _ ->
     starseq
@@ -474,9 +476,13 @@ let pack_slab_starseq
       (SeqUtils.init_u32_refined (U32.v md_count_v))
   )
   (requires fun h0 ->
-    let md = v_slab_vprop_md size_class
+    let md_blob : t_of (slab_vprop size_class
       (slab_array slab_region (US.sizet_to_uint32 idx))
-      (md_bm_array md_bm_region (US.sizet_to_uint32 idx)) h0 in
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx)))
+    = h0 (slab_vprop size_class
+      (slab_array slab_region (US.sizet_to_uint32 idx))
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx))) in
+    let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
     (v == 2ul ==> is_full size_class md) /\
     (v == 1ul ==> is_partial size_class md) /\
     (v == 0ul ==> is_empty size_class md) /\
@@ -484,13 +490,13 @@ let pack_slab_starseq
   )
   (ensures fun h0 _ h1 -> True)
   =
+  SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx);
   if U32.eq v 2ul then (
     p_full_pack size_class
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx),
       slab_array slab_region (US.sizet_to_uint32 idx))
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx),
       slab_array slab_region (US.sizet_to_uint32 idx));
-    SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx);
     change_equal_slprop
       (p_full size_class (md_bm_array md_bm_region (US.sizet_to_uint32 idx), slab_array slab_region (US.sizet_to_uint32 idx)))
       (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v)
@@ -501,7 +507,6 @@ let pack_slab_starseq
       slab_array slab_region (US.sizet_to_uint32 idx))
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx),
       slab_array slab_region (US.sizet_to_uint32 idx));
-    SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx);
     change_equal_slprop
       (p_partial size_class (md_bm_array md_bm_region (US.sizet_to_uint32 idx), slab_array slab_region (US.sizet_to_uint32 idx)))
       (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v)
@@ -512,7 +517,6 @@ let pack_slab_starseq
       slab_array slab_region (US.sizet_to_uint32 idx))
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx),
       slab_array slab_region (US.sizet_to_uint32 idx));
-    SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx);
     change_equal_slprop
       (p_empty size_class (md_bm_array md_bm_region (US.sizet_to_uint32 idx), slab_array slab_region (US.sizet_to_uint32 idx)))
       (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v)

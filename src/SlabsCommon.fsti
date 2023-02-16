@@ -512,7 +512,7 @@ val pack_slab_starseq
     slab_vprop size_class
       (slab_array slab_region (US.sizet_to_uint32 idx))
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx)) `star`
-    starseq
+    (starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
@@ -523,7 +523,7 @@ val pack_slab_starseq
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v md_count_v))))
+      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v md_count_v)))))
   )
   (fun _ ->
     starseq
@@ -534,15 +534,19 @@ val pack_slab_starseq
       (SeqUtils.init_u32_refined (U32.v md_count_v))
   )
   (requires fun h0 ->
-    let md = v_slab_vprop_md size_class
+    let md_blob : t_of (slab_vprop size_class
       (slab_array slab_region (US.sizet_to_uint32 idx))
-      (md_bm_array md_bm_region (US.sizet_to_uint32 idx)) h0 in
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx)))
+    = h0 (slab_vprop size_class
+      (slab_array slab_region (US.sizet_to_uint32 idx))
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx))) in
+    let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
     (v == 2ul ==> is_full size_class md) /\
     (v == 1ul ==> is_partial size_class md) /\
     (v == 0ul ==> is_empty size_class md) /\
     idx <> AL.null_ptr
   )
-  (ensures fun h0 _ h1 -> True)
+  (ensures fun _ _ _ -> True)
 
 val pack_right_and_refactor_vrefine_dep
   (#opened:_)

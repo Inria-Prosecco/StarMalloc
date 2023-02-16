@@ -604,7 +604,7 @@ let deallocate_slot
     let blob1 : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
     let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
-    (b ==> not (is_empty size_class v1)) /\
+    (b ==> not (is_full size_class v1)) /\
     (not b ==> v1 == v0))
   =
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
