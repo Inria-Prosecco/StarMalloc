@@ -763,6 +763,68 @@ let deallocate_slab_aux_2
 
 #restart-solver
 
+let deallocate_slab_fail
+  (ptr: array U8.t)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
+  (md_count: ref U32.t)
+  (r1 r2 r3: ref US.t)
+  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (idx1 idx2 idx3: US.t)
+  : Steel bool
+  (
+    A.varray ptr `star`
+    vptr md_count `star`
+    vptr r1 `star`
+    vptr r2 `star`
+    vptr r3 `star`
+    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
+    (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v))
+      (US.v idx1) (US.v idx2) (US.v idx3)) `star`
+    starseq
+      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(t size_class)
+      (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_u32_refined (U32.v md_count_v)) `star`
+    A.varray (A.split_l slab_region 0sz)
+  )
+  (fun b ->
+    (if b then emp else A.varray ptr) `star`
+    vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
+  )
+  (requires fun h0 ->
+    (U32.v page_size) % (U32.v size_class) = 0 /\
+    sel r1 h0 == idx1 /\
+    sel r2 h0 == idx2 /\
+    sel r3 h0 == idx3 /\
+    U32.v md_count_v <> AL.null /\
+    md_count_v == sel md_count h0 /\
+    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
+   )
+  (ensures fun _ _ _ -> True)
+  =
+  let b = false in
+  pack_3 size_class
+    (A.split_r slab_region 0sz) md_bm_region md_region
+    md_count r1 r2 r3
+    md_count_v md_region_lv
+    idx1 idx2 idx3;
+  pack_right_and_refactor_vrefine_dep
+    size_class slab_region md_bm_region md_region md_count
+    r1 r2 r3 md_count_v;
+  change_equal_slprop
+    (A.varray ptr)
+    (if b then emp else A.varray ptr);
+  return b
+
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let deallocate_slab'
   (ptr: array U8.t)
@@ -824,9 +886,11 @@ let deallocate_slab'
   assume (U32.v diff_u32 == UP.v diff);
   let pos = U32.div diff_u32 page_size in
   let pos' = u32_to_sz pos in
-  admit ();
   // check diff/page_size < md_count
   if U32.lt pos md_count_v then (
+    assume (same_base_array ptr (slab_array slab_region pos));
+    assume (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array (A.split_r slab_region 0sz) pos)) >= 0);
+    assume (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array (A.split_r slab_region 0sz) pos)) < U32.v page_size);
     // selector equality propagation
     let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
     ALG.lemma_dataify_index #AL.status gs0 (U32.v pos);
@@ -852,13 +916,17 @@ let deallocate_slab'
         r1 r2 r3 md_count_v;
       return b
     ) else (
-      sladmit ();
-      return false
+      deallocate_slab_fail ptr size_class
+        slab_region md_bm_region md_region
+        md_count r1 r2 r3
+        md_count_v md_region_lv idx1 idx2 idx3
     )
   ) else (
-    return false
+    deallocate_slab_fail ptr size_class
+      slab_region md_bm_region md_region
+      md_count r1 r2 r3
+      md_count_v md_region_lv idx1 idx2 idx3
   )
-
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 150"
 let deallocate_slab
