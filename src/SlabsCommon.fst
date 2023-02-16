@@ -1,7 +1,5 @@
 module SlabsCommon
 
-#reset-options "--fuel 1 --ifuel 1"
-
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let p_empty_unpack (#opened:_)
   (sc: sc)
@@ -330,7 +328,7 @@ let f_lemma
     (slab_array slab_region i)
     (md_bm_array md_bm_region i)
 
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 30"
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let pack_3
   (#opened:_)
   (size_class: sc)
