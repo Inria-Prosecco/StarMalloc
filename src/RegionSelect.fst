@@ -10,6 +10,7 @@ let ro_array_vprop (#a:Type) (r:array a) : vprop = h_exists (varrayp r)
 let ro_array (#a:Type) (r:array a) = inv (ro_array_vprop r)
 
 /// Creates a readable permission on the array if we have a ro_array token in the context
+inline_for_extraction noextract
 val intro_ro_array (#a:Type)
   (r:array a)
   (i: ro_array r)
