@@ -28,6 +28,8 @@ open SteelStarSeqUtils
 open FStar.Mul
 open SlabsCommon
 
+#reset-options "--ifuel 1 --fuel 1"
+
 #push-options "--z3rlimit 50"
 inline_for_extraction noextract
 let allocate_slab_aux_cond
