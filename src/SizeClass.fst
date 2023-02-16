@@ -56,19 +56,6 @@ type size_class_struct = s:size_class_struct'{
   A.length s.md_region == U32.v metadata_max
 }
 
-[@@erasable]
-noeq
-type blob2 = {
-  scs_v: size_class_struct;
-  partial_slabs_v: US.t;
-  empty_slabs_v: US.t;
-  full_slabs_v: US.t;
-  md_count_v: U32.t;
-  slab_region_v: Seq.seq U8.t;
-  md_bm_region_v: Seq.seq U64.t;
-  md_region_v: Seq.seq AL.cell;
-}
-
 open SteelVRefineDep
 
 let size_class_vprop
