@@ -20,6 +20,7 @@ open Steel.Reference
 open Utils2
 open SlabsAlloc
 
+#reset-options "--fuel 1 --ifuel 1"
 #push-options "--ide_id_info_off"
 
 //TODO: remove blob, use ptrdiff style
@@ -43,8 +44,14 @@ type size_class_struct' = {
   //lock: ref bool;
 }
 
+open Prelude
+
+inline_for_extraction noextract
+let slab_size : (v:US.t{US.v v == U32.v metadata_max * U32.v page_size}) =
+  US.of_u32 536870912ul
+
 type size_class_struct = s:size_class_struct'{
-  A.length s.slab_region == U32.v metadata_max * U32.v page_size /\
+  A.length s.slab_region == US.v slab_size /\
   A.length s.md_bm_region == U32.v metadata_max * 4 /\
   A.length s.md_region == U32.v metadata_max
 }
@@ -142,7 +149,6 @@ let allocate_size_class
       (size_class_vprop_aux scs.size scs.slab_region scs.md_bm_region scs.md_region scs.empty_slabs scs.partial_slabs scs.full_slabs))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
-  assume ((U32.v page_size) % (U32.v scs.size) == 0);
   let result = allocate_slab
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region
@@ -162,6 +168,8 @@ open SlabsFree
 
 module UP = FStar.PtrdiffT
 
+open Steel.ArrayArith
+
 let deallocate_size_class
   (scs: size_class_struct)
   (ptr: array U8.t)
@@ -171,7 +179,8 @@ let deallocate_size_class
   (fun b ->
     (if b then emp else A.varray ptr) `star`
     size_class_vprop scs)
-  (requires fun h0 -> same_base_array ptr scs.slab_region)
+  (requires fun h0 ->
+    within_bounds (A.split_l scs.slab_region 0sz) ptr (A.split_r scs.slab_region slab_size))
   (ensures fun h0 _ h1 -> True)
   =
   change_slprop_rel
@@ -183,9 +192,14 @@ let deallocate_size_class
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   let diff = G.hide (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region)) in
-  assume (0 <= G.reveal diff);
-  assume (same_base_array ptr scs.slab_region);
-  assume (UP.fits (G.reveal diff));
+  [@inline_let]
+  let a0 = A.split_l scs.slab_region 0sz in
+  [@inline_let]
+  let a1 = A.split_r scs.slab_region slab_size in
+  within_bounds_elim a0 a1 ptr;
+  // Needed for the assert below
+  A.intro_fits_ptrdiff32 ();
+  assert (UP.fits (G.reveal diff));
   let b = deallocate_slab ptr
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region
