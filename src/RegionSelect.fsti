@@ -5,6 +5,8 @@ open Steel.Array
 open Steel.Effect
 open Steel.ArrayArith
 
+module U8 = FStar.UInt8
+
 (** This module is a wrapper around Steel.ArrayArith that can be used to determine whether a given pointer is inside a slab_region *)
 
 /// A duplicable read-only permission on arrays. It is internally implemented
@@ -23,9 +25,9 @@ val create_ro_array (#a:Type) (#p:perm) (r:array a)
 /// Note, it does not require permission on arr1 and arr2, only
 /// the two tokens [ro1] and [ro2]
 inline_for_extraction noextract
-val within_bounds_intro (#a: Type)
+val within_bounds_intro
   (#pp:perm)
-  (arr1 p arr2: array a)
+  (arr1 p arr2: array U8.t)
   (ro1:ro_array arr1)
   (ro2:ro_array arr2)
   : Steel bool

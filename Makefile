@@ -68,8 +68,8 @@ ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
 
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
-	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
-    -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
+	$(KRML_EXE) -dmonomorphization -skip-compilation -no-prefix Mman -tmpdir dist \
+    -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
     -no-prefix Main \
 		-warn-error +9 \
