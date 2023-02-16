@@ -404,3 +404,47 @@ let slab_malloc bytes =
     end
     else return_null ()
   end
+
+val slab_free (ptr:array U8.t)
+  : SteelT bool
+           (A.varray ptr)
+           (fun b -> if b then emp else A.varray ptr)
+
+let slab_free ptr =
+  if (RS.within_bounds_intro
+    (A.split_l size_class16.data.slab_region 0sz)
+    ptr
+    (A.split_r size_class16.data.slab_region slab_size)
+    size_class16.region_start
+    size_class16.region_end)
+  then begin
+    L.acquire size_class16.lock;
+    let res = deallocate_size_class size_class16.data ptr in
+    L.release size_class16.lock;
+    return res
+  end else
+  if (RS.within_bounds_intro
+    (A.split_l size_class32.data.slab_region 0sz)
+    ptr
+    (A.split_r size_class32.data.slab_region slab_size)
+    size_class32.region_start
+    size_class32.region_end)
+  then begin
+    L.acquire size_class32.lock;
+    let res = deallocate_size_class size_class32.data ptr in
+    L.release size_class32.lock;
+    return res
+  end else
+  if (RS.within_bounds_intro
+    (A.split_l size_class64.data.slab_region 0sz)
+    ptr
+    (A.split_r size_class64.data.slab_region slab_size)
+    size_class64.region_start
+    size_class64.region_end)
+  then begin
+    L.acquire size_class64.lock;
+    let res = deallocate_size_class size_class64.data ptr in
+    L.release size_class64.lock;
+    return res
+  end else
+    return false
