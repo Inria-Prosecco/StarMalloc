@@ -1176,7 +1176,7 @@ let allocate_slab'
       (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
       (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
       (SeqUtils.init_u32_refined (U32.v md_count_v)) `star`
-    A.varray (A.split_l slab_region 0sz)
+    A.varrayp (A.split_l slab_region 0sz) halfp
   )
   (fun r ->
     (if (A.is_null r) then emp else A.varray r) `star`
@@ -1310,7 +1310,7 @@ let allocate_slab
     (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region
       r1 r2 r3 md_count_v_ `star`
     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v_ `star`
-    A.varray (A.split_l slab_region 0sz));
+    A.varrayp (A.split_l slab_region 0sz) halfp);
 
 
   let x

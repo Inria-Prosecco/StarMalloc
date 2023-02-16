@@ -39,6 +39,9 @@ let u32_to_sz
   =
   US.uint32_to_sizet x
 
+inline_for_extraction noextract
+let halfp = Steel.FractionalPermission.half_perm Steel.FractionalPermission.full_perm
+
 #push-options "--print_implicits --print_universes"
 #set-options "--ide_id_info_off"
 
@@ -439,7 +442,7 @@ let size_class_vprop_aux
     empty_slabs partial_slabs full_slabs v `star`
   right_vprop
     (A.split_r slab_region 0sz) md_bm_region md_region v `star`
-  A.varray (A.split_l slab_region 0sz)
+  A.varrayp (A.split_l slab_region 0sz) halfp
 
 open SteelVRefineDep
 
@@ -565,7 +568,7 @@ val pack_right_and_refactor_vrefine_dep
       (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3)
     `star`
     (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
-    A.varray (A.split_l slab_region 0sz))
+    A.varrayp (A.split_l slab_region 0sz) halfp)
   )
   (fun _ ->
     vrefinedep

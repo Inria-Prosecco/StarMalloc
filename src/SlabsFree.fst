@@ -791,7 +791,7 @@ let deallocate_slab_fail
       (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
       (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
       (SeqUtils.init_u32_refined (U32.v md_count_v)) `star`
-    A.varray (A.split_l slab_region 0sz)
+    A.varrayp (A.split_l slab_region 0sz) halfp
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
@@ -855,7 +855,7 @@ let deallocate_slab'
       (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
       (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
       (SeqUtils.init_u32_refined (U32.v md_count_v)) `star`
-    A.varray (A.split_l slab_region 0sz)
+    A.varrayp (A.split_l slab_region 0sz) halfp
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
@@ -974,7 +974,7 @@ let deallocate_slab
     (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region
       r1 r2 r3 md_count_v_ `star`
     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v_ `star`
-    A.varray (A.split_l slab_region 0sz));
+    A.varrayp (A.split_l slab_region 0sz) halfp);
 
 
   let x

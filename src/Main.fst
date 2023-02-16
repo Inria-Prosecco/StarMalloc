@@ -15,6 +15,7 @@ module R = Steel.Reference
 module L = Steel.SpinLock
 module AL = ArrayList
 module ALG = ArrayListGen
+module RS = RegionSelect
 
 open Prelude
 open SizeClass
@@ -75,7 +76,14 @@ val mmap_cell_status (len: US.t)
 noeq
 type size_class =
   { data : size_class_struct;
-    lock : L.lock (size_class_vprop data) }
+    // Mutex locking ownership of the sizeclass
+    lock : L.lock (size_class_vprop data);
+    // Two tokens for read-only permissions on the start and end
+    // of the slab regions, that allow to determine whether a pointer
+    // is in the region without acquiring the lock above
+    region_start: RS.ro_array (A.split_l data.slab_region 0sz);
+    region_end: RS.ro_array (A.split_r data.slab_region slab_size);
+    }
 
 let ind_aux pred1 pred2 pred3 r idxs : vprop =
       AL.varraylist pred1 pred2 pred3 r
@@ -232,12 +240,21 @@ noextract inline_for_extraction
 let init_struct (sc:sc)
   : SteelT size_class_struct
   emp
-  (fun scs -> size_class_vprop scs)
+  (fun scs -> size_class_vprop scs `star`
+    A.varrayp (A.split_l scs.slab_region 0sz) halfp `star`
+    A.varray (A.split_r scs.slab_region slab_size))
   =
   intro_fits_u32 ();
   let slab_region = mmap_u8 (u32_to_sz (U32.mul metadata_max page_size)) in
   let md_bm_region = mmap_u64 (u32_to_sz (U32.mul metadata_max 4ul)) in
   let md_region = mmap_cell_status (u32_to_sz metadata_max) in
+
+  A.ghost_split slab_region slab_size;
+  change_slprop_rel
+    (A.varray (A.split_l slab_region slab_size))
+    (A.varray slab_region)
+    (fun x y -> x == y)
+    (fun _ -> A.ptr_shift_zero (A.ptr_of slab_region));
 
   A.ghost_split slab_region 0sz;
   A.ghost_split md_bm_region 0sz;
@@ -262,13 +279,16 @@ let init_struct (sc:sc)
 
   let md_count = mmap_ptr_u32 () in
   R.write md_count 0ul;
+
+  A.share (A.split_l slab_region 0sz) Steel.FractionalPermission.full_perm halfp halfp;
   intro_vrefinedep
     (R.vptr md_count)
     vrefinedep_prop
     (size_class_vprop_aux sc slab_region md_bm_region md_region ptr_empty ptr_partial ptr_full)
     (left_vprop sc (A.split_r slab_region 0sz) md_bm_region md_region
          ptr_empty ptr_partial ptr_full 0ul `star`
-     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region 0ul `star` A.varray (A.split_l slab_region 0sz));
+     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region 0ul `star`
+     A.varrayp (A.split_l slab_region 0sz) halfp);
 
 
   [@inline_let]
@@ -301,13 +321,22 @@ let init_struct (sc:sc)
          ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
     );
 
+  change_equal_slprop
+    (A.varrayp (A.split_l slab_region 0sz) halfp)
+    (A.varrayp (A.split_l scs.slab_region 0sz) halfp);
+  change_equal_slprop
+    (A.varray (A.split_r slab_region slab_size))
+    (A.varray (A.split_r scs.slab_region slab_size));
+
   return scs
 
 noextract inline_for_extraction
 let init (sc:sc) : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) =
   let data = init_struct sc in
   let lock = L.new_lock (size_class_vprop data) in
-  {data; lock}
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  {data; lock; region_start; region_end}
 
 let init16 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 16ul
 let init32 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 32ul

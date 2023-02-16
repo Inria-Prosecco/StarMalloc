@@ -554,7 +554,7 @@ let pack_right_and_refactor_vrefine_dep
       (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3)
     `star`
     (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
-    A.varray (A.split_l slab_region 0sz))
+    A.varrayp (A.split_l slab_region 0sz) halfp)
   )
   (fun _ ->
     vrefinedep
@@ -600,5 +600,5 @@ let pack_right_and_refactor_vrefine_dep
     (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
     (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 (G.reveal md_count_v') `star`
     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region (G.reveal md_count_v') `star`
-    A.varray (A.split_l slab_region 0sz))
+    A.varrayp (A.split_l slab_region 0sz) halfp)
 #pop-options
