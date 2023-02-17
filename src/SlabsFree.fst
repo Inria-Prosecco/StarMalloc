@@ -868,7 +868,7 @@ let deallocate_slab'
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
     //diff' < (U32.v page_size) * (U32.v page_size) /\
-    UP.v diff < U32.v page_size /\
+    UP.v diff < pow2 32 /\
     UP.v diff == diff' /\
     same_base_array ptr slab_region /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
