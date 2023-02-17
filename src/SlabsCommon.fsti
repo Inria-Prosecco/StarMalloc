@@ -50,6 +50,32 @@ let pred2 (x: U32.t) : prop = U32.eq x 1ul == true
 let pred3 (x: U32.t) : prop = U32.eq x 2ul == true
 
 /// If the sequence is partitioned into three lists, then any
+/// element satisfying pred2 belongs to the second list.
+/// Note, this is only true because pred1, pred2, and pred3
+/// are mutually exclusive, which is why we include this lemma
+/// here instead of in the ArrayListGen library.
+let lemma_partition_and_pred_implies_mem2
+  (hd1 hd2 hd3:nat)
+  (s:Seq.seq AL.cell)
+  (idx:nat{idx < Seq.length s})
+  : Lemma
+    (requires
+      idx <> ALG.null /\
+      ALG.partition s hd1 hd2 hd3 /\
+      ALG.varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3 s /\
+      pred2 (ALG.get_data (Seq.index s idx)))
+    (ensures ALG.mem idx hd2 s)
+  = ALG.lemma_mem_ptrs_in hd1 s idx;
+    ALG.lemma_mem_ptrs_in hd2 s idx;
+    ALG.lemma_mem_ptrs_in hd3 s idx;
+    let open FStar.FiniteSet.Ambient in
+    (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
+    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 s));
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx
+
+/// If the sequence is partitioned into three lists, then any
 /// element satisfying pred3 belongs to the third list.
 /// Note, this is only true because pred1, pred2, and pred3
 /// are mutually exclusive, which is why we include this lemma
