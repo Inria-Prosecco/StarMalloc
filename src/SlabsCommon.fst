@@ -205,7 +205,8 @@ let slab_array
     U32.v md_count < U32.v metadata_max)
   (ensures fun r ->
     A.length r = U32.v page_size /\
-    same_base_array r slab_region
+    same_base_array r slab_region /\
+    A.offset (A.ptr_of r) == A.offset (A.ptr_of slab_region) + U32.v md_count * U32.v page_size
   )
   =
   let ptr = A.ptr_of slab_region in

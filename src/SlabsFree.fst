@@ -868,7 +868,7 @@ let deallocate_slab'
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
     //diff' < (U32.v page_size) * (U32.v page_size) /\
-    UP.v diff < pow2 32 /\
+    UP.v diff < U32.v page_size /\
     UP.v diff == diff' /\
     same_base_array ptr slab_region /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
@@ -889,9 +889,11 @@ let deallocate_slab'
   let pos' = u32_to_sz pos in
   // check diff/page_size < md_count
   if U32.lt pos md_count_v then (
-    assume (same_base_array ptr (slab_array slab_region pos));
-    assume (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array (A.split_r slab_region 0sz) pos)) >= 0);
-    assume (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array (A.split_r slab_region 0sz) pos)) < U32.v page_size);
+    A.ptr_shift_zero (A.ptr_of slab_region);
+    let r = slab_array slab_region pos in
+    assert (same_base_array ptr (slab_array slab_region pos));
+    assert (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array (A.split_r slab_region 0sz) pos)) >= 0);
+    assert (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array (A.split_r slab_region 0sz) pos)) < U32.v page_size);
     // selector equality propagation
     let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
     ALG.lemma_dataify_index #AL.status gs0 (U32.v pos);
