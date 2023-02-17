@@ -868,6 +868,7 @@ let deallocate_slab'
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
     //diff' < (U32.v page_size) * (U32.v page_size) /\
+    UP.v diff < pow2 32 /\
     UP.v diff == diff' /\
     same_base_array ptr slab_region /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
@@ -883,7 +884,7 @@ let deallocate_slab'
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert_norm (4 < FI.max_int 16);
   let diff_u32 = US.sizet_to_uint32 diff_sz in
-  assume (U32.v diff_u32 == UP.v diff);
+  assert (U32.v diff_u32 == UP.v diff);
   let pos = U32.div diff_u32 page_size in
   let pos' = u32_to_sz pos in
   // check diff/page_size < md_count
@@ -955,6 +956,7 @@ let deallocate_slab
   (requires fun _ ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
+    diff' < pow2 32 /\
     same_base_array ptr slab_region /\
     UP.fits diff' /\
     (U32.v page_size) % (U32.v size_class) = 0)

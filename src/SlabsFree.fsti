@@ -44,6 +44,7 @@ val deallocate_slab
   (requires fun _ ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
+    diff' < pow2 32 /\
     same_base_array ptr slab_region /\
     UP.fits diff' /\
     (U32.v page_size) % (U32.v size_class) = 0)
