@@ -93,7 +93,39 @@ let linked_avl_tree (tree: t a)
 let ind_linked_avl_tree (metadata: ref (t a))
   = vptr metadata `vdep` linked_avl_tree
 
-let large_malloc (metadata: ref (t a)) (size: size_t)
+assume
+val mmap_ptr_metadata (_:unit)
+  : SteelT (ref (t a))
+  emp
+  (fun r -> vptr r)
+
+module L = Steel.SpinLock
+
+noeq
+type mmap_md =
+  {
+    data: ref (t a);
+    lock : L.lock (ind_linked_avl_tree data);
+  }
+
+let init_mmap_md (_:unit)
+  : SteelTop mmap_md false (fun _ -> emp) (fun _ _ _ -> True)
+  =
+  let ptr = mmap_ptr_metadata () in
+  let tree = create_leaf () in
+  write ptr tree;
+  (**) intro_vrefine (linked_tree tree) is_avl;
+  (**) intro_vdep (vptr ptr) (linked_avl_tree tree) linked_avl_tree;
+  let lock = L.new_lock (ind_linked_avl_tree ptr) in
+  { data=ptr; lock=lock }
+
+// intentional top-level effect for initialization
+// corresponding warning temporarily disabled
+#push-options "--warn_error '-272'"
+let metadata : mmap_md = init_mmap_md ()
+#pop-options
+
+let large_malloc' (metadata: ref (t a)) (size: size_t)
   : Steel (ptr_t)
   (ind_linked_avl_tree metadata)
   (fun r -> A.varray r `star` ind_linked_avl_tree metadata)
@@ -125,7 +157,33 @@ let large_malloc (metadata: ref (t a)) (size: size_t)
   (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
   return ptr
 
-let large_free (metadata: ref (t a)) (ptr: ptr_t)
+inline_for_extraction noextract
+let _size (metadata: ref (t a)) : Steel U64.t
+  (ind_linked_avl_tree metadata)
+  (fun _ -> ind_linked_avl_tree metadata)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    let blob0 : t_of (ind_linked_avl_tree metadata)
+      = h0 (ind_linked_avl_tree metadata) in
+    let t : wdm a = dsnd blob0 in
+    h1 (ind_linked_avl_tree metadata)
+    ==
+    h0 (ind_linked_avl_tree metadata) /\
+    U64.v r == Spec.size_of_tree t
+  )
+  =
+  (**) let t = elim_vdep (vptr metadata) linked_avl_tree in
+  (**) elim_vrefine (linked_tree t) is_avl;
+  let md_v = read metadata in
+  (**) change_equal_slprop
+    (linked_tree t)
+    (linked_tree md_v);
+  let size = get_size md_v in
+  (**) intro_vrefine (linked_tree md_v) is_avl;
+  (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
+  return size
+
+let large_free' (metadata: ref (t a)) (ptr: ptr_t)
   : Steel bool
   (A.varray ptr `star` ind_linked_avl_tree metadata)
   (fun b ->
@@ -170,28 +228,45 @@ let large_free (metadata: ref (t a)) (ptr: ptr_t)
     return b
   )
 
-let _size (metadata: ref (t a)) : Steel U64.t
-  (ind_linked_avl_tree metadata)
-  (fun _ -> ind_linked_avl_tree metadata)
+let large_malloc (size: size_t)
+  : Steel (ptr_t)
+  emp (fun r -> A.varray r)//if is_null r then emp else A.varray r)
   (requires fun _ -> True)
-  (ensures fun h0 _ h1 ->
-    h1 (ind_linked_avl_tree metadata)
-    ==
-    h0 (ind_linked_avl_tree metadata)
-  )
+  (ensures fun _ _ _ -> True)
   =
-  (**) let t = elim_vdep (vptr metadata) linked_avl_tree in
-  (**) elim_vrefine (linked_tree t) is_avl;
-  let md_v = read metadata in
-  (**) change_equal_slprop
-    (linked_tree t)
-    (linked_tree md_v);
-  let size = get_size md_v in
-  (**) intro_vrefine (linked_tree md_v) is_avl;
-  (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
-  return size
+  L.acquire metadata.lock;
+  let size = _size metadata.data in
+  //TODO: refine check with max size_t uint
+  if U64.lte size 100UL then (
+    //TODO: large_malloc' can return NULL due to mmap
+    let ptr = large_malloc' metadata.data size in
+    L.release metadata.lock;
+    return ptr
+  ) else (
+    L.release metadata.lock;
+    sladmit ();
+    return (A.null #U8.t)
+  )
+
+let large_free (ptr: ptr_t)
+  : Steel bool
+  (A.varray ptr)
+  (fun b -> if b then emp else A.varray ptr)
+  (requires fun _ -> A.is_full_array ptr)
+  (ensures fun _ _ _ -> True)
+  =
+  L.acquire metadata.lock;
+  let b = large_free' metadata.data ptr in
+  L.release metadata.lock;
+  return b
 
 (*)
-- find: some improvements ahead? (better spec)
 - mmap/munmap: some improvements ahead? (better spec)
+  - mmap can fail -> null_or_varray instead of varray
+    - add a check in malloc
+    - what about initialization? could be a bit cumbersome...
+  - munmap better modelization
+- convert AVL lib to use size_t instead of u64
+
+- find: some improvements ahead? (better spec)
 - use a large vdep between avl and mmap'ed allocations?
