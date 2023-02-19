@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <pthread.h>
+#include "StarMalloc.h"
 
 // required for realloc
 // this small implementation is likely not very robust
@@ -13,6 +13,15 @@
 //  }
 //  //puts("D");
 //}
+
+void* malloc(size_t size) {
+  return StarMalloc_malloc(size);
+}
+
+void free(void *ptr) {
+  bool b = StarMalloc_free(ptr);
+  return;
+}
 
 // TODO: does not enforce zeroing
 void* calloc(long unsigned int nb_elem, long unsigned int size_elem) {
