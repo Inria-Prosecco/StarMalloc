@@ -15,7 +15,7 @@ let array = Steel.ST.Array.array
 
 
 noextract
-assume val mmap
+assume val mmap_s
   //(addr: U64.t)//TODO: implicit cast
   (size: US.t)
   //(prot: I32.t)

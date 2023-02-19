@@ -26,20 +26,11 @@ unfold let a = Aux.a
 let t = Impl.Core.t
 unfold let linked_tree = Impl.Core.linked_tree #a
 
-let mmap (size: US.t)
+noextract inline_for_extraction
+let mmap = Mman.mmap_s
   //= Mman.mmap 0UL len prot 33l (-1l) 0ul
   //MAP_PRIVATE instead of MAP_ANON (avoid filling the disk...)
   //34l = MAP_PRIVATE|MAP_ANON
-  : Steel (array U8.t)
-    emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v size /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v size) U8.zero
-    )
-  = Mman.mmap size
 
 let munmap (ptr: array U8.t) (size: US.t)
   : Steel bool
@@ -235,9 +226,9 @@ let large_malloc (size: size_t)
   (ensures fun _ _ _ -> True)
   =
   L.acquire metadata.lock;
-  let size = _size metadata.data in
+  let md_size = _size metadata.data in
   //TODO: refine check with max size_t uint
-  if U64.lte size 100UL then (
+  if U64.lte md_size 100UL then (
     //TODO: large_malloc' can return NULL due to mmap
     let ptr = large_malloc' metadata.data size in
     L.release metadata.lock;

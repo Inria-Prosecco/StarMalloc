@@ -72,6 +72,7 @@ extract: $(ALL_KRML_FILES)
     -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
     -no-prefix Main \
+    -no-prefix LargeAlloc \
 		-warn-error +9 \
 		-add-include 'Steel_SpinLock:"krml/steel_types.h"' $^
 
@@ -124,7 +125,6 @@ dist/SlotsFree.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 src/utils.c \
-src/lib-alloc0.c \
 src/main-mmap.h \
 src/main-mmap.c
 
@@ -158,8 +158,16 @@ test-slab: verify extract
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 -o bench/a.out \
 $(FILES) \
-bench/test-slab.c \
-src/lib-alloc.c
+bench/test-slab.c
+	./bench/a.out
+
+test-mmap: verify extract
+	gcc -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+-o bench/a.out \
+$(FILES) \
+bench/test-avl.c
 	./bench/a.out
 
 # test the allocator with a static binary
@@ -176,12 +184,12 @@ src/lib-alloc.c
 
 # test the compilation of the allocator as a shared library
 #gcc -g -O0 -DKRML_VERIFIED_UINT128
-test-compile-alloc-lib: verify extract
+lib: verify extract
 	gcc -O2 -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 	-pthread \
--shared -fPIC -o bench/malloc.so \
+-shared -fPIC -o bench/starmalloc.so \
 $(FILES) \
 src/lib-alloc.c
 
