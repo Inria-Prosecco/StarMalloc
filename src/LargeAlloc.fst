@@ -221,7 +221,7 @@ let large_free' (metadata: ref (t a)) (ptr: ptr_t)
 
 let large_malloc (size: size_t)
   : Steel (ptr_t)
-  emp (fun r -> A.varray r)//if is_null r then emp else A.varray r)
+  emp (fun r -> if A.is_null r then emp else A.varray r)
   (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
   =
@@ -232,11 +232,15 @@ let large_malloc (size: size_t)
     //TODO: large_malloc' can return NULL due to mmap
     let ptr = large_malloc' metadata.data size in
     L.release metadata.lock;
+    sladmit ();
     return ptr
   ) else (
     L.release metadata.lock;
-    sladmit ();
-    return (A.null #U8.t)
+    [@inline_let] let r = A.null #U8.t in
+    change_equal_slprop
+      emp
+      (if A.is_null r then emp else A.varray r);
+    return r
   )
 
 let large_free (ptr: ptr_t)

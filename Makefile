@@ -96,6 +96,7 @@ dist/Impl_Trees_Rotate_M.h \
 dist/krmlinit.h \
 dist/LargeAlloc.h \
 dist/Main.h \
+dist/StarMalloc.h \
 dist/SizeClass.h \
 dist/SlabsAlloc.h \
 dist/SlabsFree.h \
@@ -117,6 +118,7 @@ dist/Impl_Trees_Rotate_M.c \
 dist/krmlinit.c \
 dist/LargeAlloc.c \
 dist/Main.c \
+dist/StarMalloc.c \
 dist/SizeClass.c \
 dist/SlabsAlloc.c \
 dist/SlabsFree.c \
@@ -150,6 +152,15 @@ test-alloc0: verify extract
 $(FILES) \
 bench/test-alloc.c \
 src/lib-alloc.c
+	./bench/a.out
+
+test-both: verify extract
+	gcc -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+-o bench/a.out \
+$(FILES) \
+bench/test-both.c
 	./bench/a.out
 
 test-slab: verify extract

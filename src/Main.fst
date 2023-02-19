@@ -10,7 +10,6 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Array
 module A = Steel.Array
-module AR = Steel.ArrayRef
 module R = Steel.Reference
 module L = Steel.SpinLock
 module AL = ArrayList
