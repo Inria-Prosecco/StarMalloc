@@ -10,37 +10,23 @@ module U32 = FStar.UInt32
 module I64 = FStar.Int64
 module I32 = FStar.Int32
 module U8 = FStar.UInt8
+module US = FStar.SizeT
 
 let array = Steel.ST.Array.array
 
-open Impl.Core
 open Impl.Mono
 open Map.M
+open Impl.Core
 
 #set-options "--ide_id_info_off"
 
 // machine representation
-unfold let ptr_t = Aux.ptr_t
-unfold let size_t = Aux.size_t
 unfold let a = Aux.a
 
 let t = Impl.Core.t
-let linked_tree = Impl.Core.linked_tree
+unfold let linked_tree = Impl.Core.linked_tree #a
 
-//assume val get_metadata_pure (id: U32.t) : t a
-//assume val get_metadata (id: U32.t) : Steel (t a)
-//  (linked_tree (get_metadata_pure id))
-//  (fun r -> linked_tree r)
-//  (requires fun _ -> True)
-//  (ensures fun _ r _ -> get_metadata_pure id == r)
-//assume val set_metadata (id: U32.t) (m: t a) : Steel unit
-//  (linked_tree m)
-//  (fun _ -> linked_tree (get_metadata_pure id))
-//  (requires fun _ -> True)
-//  (ensures fun h0 _ h1 -> get_metadata_pure id == m)
-
-
-let mmap (len: U64.t) (prot: I32.t)
+let mmap (size: US.t)
   //= Mman.mmap 0UL len prot 33l (-1l) 0ul
   //MAP_PRIVATE instead of MAP_ANON (avoid filling the disk...)
   //34l = MAP_PRIVATE|MAP_ANON
@@ -49,14 +35,25 @@ let mmap (len: U64.t) (prot: I32.t)
     (fun a -> A.varray a)
     (fun _ -> True)
     (fun _ a h1 ->
-      A.length a == U64.v len /\
+      A.length a == US.v size /\
       A.is_full_array a /\
-      A.asel a h1 == Seq.create (U64.v len) U8.zero
+      A.asel a h1 == Seq.create (US.v size) U8.zero
     )
-  = Mman.mmap 0UL len prot 34l (-1l) 0ul
+  = Mman.mmap size
 
-let munmap = Mman.munmap
+let munmap (ptr: array U8.t) (size: US.t)
+  : Steel bool
+    (A.varray ptr)
+    (fun b -> if b then emp else A.varray ptr)
+    (requires fun _ ->
+      //A.length a == U64.v size_t /\
+      A.is_full_array ptr
+    )
+    (ensures fun _ _ _ -> True)
+  = Mman.munmap ptr size
 
+unfold let ptr_t = Aux.ptr_t
+unfold let size_t = Aux.size_t
 noextract
 assume val ptr_to_u64 (x: ptr_t) : U64.t
 noextract
@@ -85,78 +82,116 @@ let get_size = Impl.Mono.sot_wds
 inline_for_extraction noextract
 let find = Map.M.find
 
-//assume val metadata_ptr: t a
+open Steel.Reference
 
-let large_malloc (metadata: t a) (size: size_t)
-  : Steel (t a & ptr_t)
-  (linked_tree metadata)
-  (fun r -> linked_tree (fst r) `star` A.varray (snd r))
+let is_avl (x: wdm a) : prop
+  = Spec.is_avl (spec_convert cmp) x == true
+
+let linked_avl_tree (tree: t a)
+  = linked_tree tree `vrefine` is_avl
+
+let ind_linked_avl_tree (metadata: ref (t a))
+  = vptr metadata `vdep` linked_avl_tree
+
+let large_malloc (metadata: ref (t a)) (size: size_t)
+  : Steel (ptr_t)
+  (ind_linked_avl_tree metadata)
+  (fun r -> A.varray r `star` ind_linked_avl_tree metadata)
   (requires fun h0 ->
-    Spec.is_avl (spec_convert cmp)
-      (v_linked_tree metadata h0) /\
-    Spec.size_of_tree (v_linked_tree metadata h0) < 100)
-  (ensures fun _ r h1 ->
-    Spec.is_avl (spec_convert cmp) (v_linked_tree (fst r) h1) /\
-    A.length (snd r) == U64.v size /\
-    A.is_full_array (snd r) /\
-    A.asel (snd r) h1 == Seq.create (U64.v size) U8.zero
+    let blob0 : t_of (ind_linked_avl_tree metadata)
+      = h0 (ind_linked_avl_tree metadata) in
+    let t : wdm a = dsnd blob0 in
+    Spec.size_of_tree t < c
   )
-  =
-  let h0 = get () in
-  Spec.height_lte_size (v_linked_tree metadata h0);
-  let ptr = mmap size 3l in
-  let metadata' = insert false cmp metadata (ptr, size) in
-  return (metadata', ptr)
-
-//TODO: fix me, buffer to be freed is manipulated in a SL-sound way
-let large_free (metadata: t a) (ptr: ptr_t)
-  : Steel (t a)
-  (linked_tree metadata)
-  (fun r -> linked_tree r)
-  (requires fun h0 ->
-    Spec.is_avl (spec_convert cmp) (v_linked_tree metadata h0))
   (ensures fun _ r h1 ->
-    Spec.is_avl (spec_convert cmp) (v_linked_tree r h1))
+    A.length r == U64.v size /\
+    A.is_full_array r /\
+    A.asel r h1 == Seq.create (U64.v size) U8.zero)
   =
-  let h0 = get () in
-  Spec.height_lte_size (v_linked_tree metadata h0);
-  let size = find cmp metadata (ptr, 0UL) in
+  (**) let t = elim_vdep (vptr metadata) linked_avl_tree in
+  (**) elim_vrefine (linked_tree t) is_avl;
+  let md_v = read metadata in
+  (**) change_equal_slprop
+    (linked_tree t)
+    (linked_tree md_v);
+  (**) let h0 = get () in
+  (**) Spec.height_lte_size (v_linked_tree md_v h0);
+  assume (US.fits_u64);
+  let size' = US.uint64_to_sizet size in
+  let ptr = mmap size' in
+  let md_v' = insert false cmp md_v (ptr, size) in
+  write metadata md_v';
+  (**) intro_vrefine (linked_tree md_v') is_avl;
+  (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
+  return ptr
+
+let large_free (metadata: ref (t a)) (ptr: ptr_t)
+  : Steel bool
+  (A.varray ptr `star` ind_linked_avl_tree metadata)
+  (fun b ->
+    (if b then emp else A.varray ptr) `star`
+    ind_linked_avl_tree metadata
+  )
+  (requires fun h0 -> A.is_full_array ptr)
+  (ensures fun _ _ _ -> True)
+  =
+  (**) let t = elim_vdep (vptr metadata) linked_avl_tree in
+  (**) elim_vrefine (linked_tree t) is_avl;
+  let md_v = read metadata in
+  (**) change_equal_slprop
+    (linked_tree t)
+    (linked_tree md_v);
+  (**) let h0 = get () in
+  (**) Spec.height_lte_size (v_linked_tree md_v h0);
+  let size = find cmp md_v (ptr, 0UL) in
   if Some? size then (
     let size = Some?.v size in
-    let metadata' = delete cmp metadata (ptr, size) in
-    return metadata'
+    assume (US.fits_u64);
+    let size' = US.uint64_to_sizet size in
+    let b = munmap ptr size' in
+    if b then (
+      let md_v' = delete cmp md_v (ptr, size) in
+      write metadata md_v';
+      (**) intro_vrefine (linked_tree md_v') is_avl;
+      (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
+      return b
+    ) else (
+      (**) intro_vrefine (linked_tree md_v) is_avl;
+      (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
+      return b
+    )
   ) else (
-    return metadata
+    (**) intro_vrefine (linked_tree md_v) is_avl;
+    (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
+    let b = false in
+    change_equal_slprop
+      (A.varray ptr)
+      (if b then emp else A.varray ptr);
+    return b
   )
 
-let _size (metadata: t a) : SteelT U64.t
-  (linked_tree metadata)
-  (fun _ -> linked_tree metadata)
+let _size (metadata: ref (t a)) : Steel U64.t
+  (ind_linked_avl_tree metadata)
+  (fun _ -> ind_linked_avl_tree metadata)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    h1 (ind_linked_avl_tree metadata)
+    ==
+    h0 (ind_linked_avl_tree metadata)
+  )
   =
-  let size = get_size metadata in
+  (**) let t = elim_vdep (vptr metadata) linked_avl_tree in
+  (**) elim_vrefine (linked_tree t) is_avl;
+  let md_v = read metadata in
+  (**) change_equal_slprop
+    (linked_tree t)
+    (linked_tree md_v);
+  let size = get_size md_v in
+  (**) intro_vrefine (linked_tree md_v) is_avl;
+  (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
   return size
 
 (*)
-[ok] - find
-[ok] - extraction with find
-[ok] - basic linking with mmap/munmap
-[ok] - correct arguments for mmap in order to have write permissions + RAM and not swap
-[ok] - how should corresponding RAM be computed?
-=> only first page is being accessed and written on, hence 131072*4096 bytes are allocated
-[ok] - extract as library in order to test with LD_PRELOAD
-
-[ok] actually use tree to store metadata
-several issues:
-1) currently, AVL library rely on stdlib malloc => segfault
-=> typeclasses? rewriting it with a hammer?
-2) currently, hard to express global variables in F* (or am I missing something?)
-=> C bindings hiding the use of a global variable when calling the F*/Steel-extracted function
-
-[ok] force thread-safe code with mutexes
-
-/!\ use nm to check for symbols
-
-# basic allocator, whats next
-- force reservation of to-be-allocated pages
-- trace system calls
-- global variables traduction in C
+- find: some improvements ahead? (better spec)
+- mmap/munmap: some improvements ahead? (better spec)
+- use a large vdep between avl and mmap'ed allocations?
