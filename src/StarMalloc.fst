@@ -27,7 +27,6 @@ val malloc (size: US.t)
   (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
 
-//TODO: remove casts
 let malloc size =
   if US.lte size (US.uint32_to_sizet page_size)
   then slab_malloc (US.sizet_to_uint32 size)
