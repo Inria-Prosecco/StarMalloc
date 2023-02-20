@@ -204,6 +204,22 @@ lib: verify extract
 $(FILES) \
 src/lib-alloc.c
 
+#-Wmissing-prototypes
+#-std=c17
+#-Wall -Wextra -Wcast-align=strict -Wcast-qual
+hardened_lib: verify extract
+	gcc -DKRML_VERIFIED_UINT128 \
+	-pipe -O3 -flto -fPIC -fvisibility=hidden -fno-plt \
+	-fstack-clash-protection -fcf-protection -fstack-protector-strong \
+	-I $(KRML_HOME)/include \
+	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-pthread \
+	-Wwrite-strings -Werror -march=native \
+	-Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
+-shared -fPIC -o bench/h_starmalloc.so \
+$(FILES) \
+src/lib-alloc.c
+
 # test the allocator as a shared library with a simple program
 test-alloc1: test-compile-alloc-lib
 	gcc -O0 bench/test-alloc.c -o bench/alloc.a.out

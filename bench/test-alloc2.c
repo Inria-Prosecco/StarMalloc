@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #define N_THREADS 256
-#define N_ALLOC 1000
+#define N_ALLOC 100000
 
 pthread_mutex_t m;
 pthread_t threads[N_THREADS];
