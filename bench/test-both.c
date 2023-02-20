@@ -1,21 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "krmlinit.h"
-#include "StarMalloc.h"
-
-void krmlinit_globals(void);
-
-static uint32_t init_status = 0UL;
-
-void* malloc(size_t size) {
-  if (!init_status) { krmlinit_globals(); init_status=1UL; }
-  return StarMalloc_malloc(size);
-}
-
-void free(void* ptr) {
-  bool r = StarMalloc_free(ptr);
-  return;
-}
+#include "../src/lib-alloc.c"
 
 int main(){
   uint8_t* ptr = NULL;
