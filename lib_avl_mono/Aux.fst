@@ -7,14 +7,13 @@ module A = Steel.Array
 
 open Impl.Core
 
+module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 
 let array = Steel.ST.Array.array
 
-unfold let ptr_t = array U8.t
-unfold let size_t = U64.t
-let a = ptr_t & size_t
+let a = array U8.t & US.t
 
 noextract
 assume val trees_malloc (x: U64.t) : Steel (ref U64.t)

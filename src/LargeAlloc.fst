@@ -43,12 +43,9 @@ let munmap (ptr: array U8.t) (size: US.t)
     (ensures fun _ _ _ -> True)
   = Mman.munmap ptr size
 
-unfold let ptr_t = Aux.ptr_t
-unfold let size_t = Aux.size_t
 noextract
-assume val ptr_to_u64 (x: ptr_t) : U64.t
-noextract
-assume val u64_to_ptr (x: U64.t) : ptr_t
+assume
+val ptr_to_u64 (x: array U8.t) : U64.t
 
 let cmp (x y: a) : I64.t
   =
@@ -116,8 +113,8 @@ let init_mmap_md (_:unit)
 let metadata : mmap_md = init_mmap_md ()
 #pop-options
 
-let large_malloc' (metadata: ref (t a)) (size: size_t)
-  : Steel (ptr_t)
+let large_malloc' (metadata: ref (t a)) (size: US.t)
+  : Steel (array U8.t)
   (ind_linked_avl_tree metadata)
   (fun r -> A.varray r `star` ind_linked_avl_tree metadata)
   (requires fun h0 ->
@@ -127,9 +124,9 @@ let large_malloc' (metadata: ref (t a)) (size: size_t)
     Spec.size_of_tree t < c
   )
   (ensures fun _ r h1 ->
-    A.length r == U64.v size /\
+    A.length r == US.v size /\
     A.is_full_array r /\
-    A.asel r h1 == Seq.create (U64.v size) U8.zero)
+    A.asel r h1 == Seq.create (US.v size) U8.zero)
   =
   (**) let t = elim_vdep (vptr metadata) linked_avl_tree in
   (**) elim_vrefine (linked_tree t) is_avl;
@@ -139,9 +136,7 @@ let large_malloc' (metadata: ref (t a)) (size: size_t)
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  assume (US.fits_u64);
-  let size' = US.uint64_to_sizet size in
-  let ptr = mmap size' in
+  let ptr = mmap size in
   let md_v' = insert false cmp md_v (ptr, size) in
   write metadata md_v';
   (**) intro_vrefine (linked_tree md_v') is_avl;
@@ -174,7 +169,7 @@ let _size (metadata: ref (t a)) : Steel U64.t
   (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
   return size
 
-let large_free' (metadata: ref (t a)) (ptr: ptr_t)
+let large_free' (metadata: ref (t a)) (ptr: array U8.t)
   : Steel bool
   (A.varray ptr `star` ind_linked_avl_tree metadata)
   (fun b ->
@@ -192,12 +187,10 @@ let large_free' (metadata: ref (t a)) (ptr: ptr_t)
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  let size = find cmp md_v (ptr, 0UL) in
+  let size = find cmp md_v (ptr, 0sz) in
   if Some? size then (
     let size = Some?.v size in
-    assume (US.fits_u64);
-    let size' = US.uint64_to_sizet size in
-    let b = munmap ptr size' in
+    let b = munmap ptr size in
     if b then (
       let md_v' = delete cmp md_v (ptr, size) in
       write metadata md_v';
@@ -219,8 +212,8 @@ let large_free' (metadata: ref (t a)) (ptr: ptr_t)
     return b
   )
 
-let large_malloc (size: size_t)
-  : Steel (ptr_t)
+let large_malloc (size: US.t)
+  : Steel (array U8.t)
   emp (fun r -> if A.is_null r then emp else A.varray r)
   (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
@@ -243,7 +236,7 @@ let large_malloc (size: size_t)
     return r
   )
 
-let large_free (ptr: ptr_t)
+let large_free (ptr: array U8.t)
   : Steel bool
   (A.varray ptr)
   (fun b -> if b then emp else A.varray ptr)

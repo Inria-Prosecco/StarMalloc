@@ -20,12 +20,6 @@ open Main
 // AVL+mmap allocator
 open LargeAlloc
 
-
-assume
-val sizet_to_uint64 (x:US.t) : Pure U64.t
-  (requires True)
-  (ensures fun y -> U64.v y == US.v x % pow2 64)
-
 val malloc (size: US.t)
   : Steel (array U8.t)
   emp
@@ -37,7 +31,7 @@ val malloc (size: US.t)
 let malloc size =
   if US.lte size (US.uint32_to_sizet page_size)
   then slab_malloc (US.sizet_to_uint32 size)
-  else large_malloc (sizet_to_uint64 size)
+  else large_malloc size
 
 val free (ptr: array U8.t)
   : Steel bool

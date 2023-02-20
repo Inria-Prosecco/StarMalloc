@@ -3,7 +3,8 @@ module Map.M
 open Steel.Effect.Atomic
 open Steel.Effect
 
-module U = FStar.UInt64
+module US = FStar.SizeT
+module U64 = FStar.UInt64
 module I64 = FStar.Int64
 
 open Impl.Core
@@ -11,7 +12,7 @@ open Impl.Common
 
 #set-options "--ide_id_info_off"
 
-let a = Impl.Trees.M.a
+unfold let a = Aux.a
 //let unpack_tree = Impl.Trees.M.unpack_tree
 
 let spec_convert (#a #b: Type) (compare: cmp (a & b))
@@ -58,14 +59,14 @@ let delete
 
 let cardinal
   (ptr: t a)
-  : Steel (U.t)
+  : Steel (U64.t)
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun h0 s h1 ->
     v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-    U.v s == Spec.sot_wds (v_linked_tree ptr h0) /\
-    U.v s == Spec.size_of_tree (v_linked_tree ptr h0))
+    U64.v s == Spec.sot_wds (v_linked_tree ptr h0) /\
+    U64.v s == Spec.size_of_tree (v_linked_tree ptr h0))
   =
   Impl.Mono.sot_wds ptr
 
@@ -85,7 +86,7 @@ let mem
 let rec find
   (cmp: cmp a) (ptr: t a)
   (v: a)
-  : Steel (option U.t)
+  : Steel (option US.t)
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
   (requires fun h0 ->
@@ -126,7 +127,7 @@ let rec find
 let find2
   (cmp: cmp a) (ptr: t a)
   (v: a)
-  : Steel (U.t)
+  : Steel (U64.t)
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
   (requires fun h0 ->
