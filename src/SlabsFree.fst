@@ -32,8 +32,6 @@ open SteelVRefineDep
 module AL = ArrayList
 module ALG = ArrayListGen
 
-#reset-options "--fuel 1 --ifuel 1"
-
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
 let deallocate_slab_aux_cond
   (size_class: sc)
@@ -63,6 +61,8 @@ let deallocate_slab_aux_cond
   let r = is_empty_s size_class md in
   intro_slab_vprop size_class md md_as_seq arr;
   return r
+
+module FS = FStar.FiniteSet.Base
 
 inline_for_extraction noextract
 let deallocate_slab_aux_1_partial
@@ -101,12 +101,14 @@ let deallocate_slab_aux_1_partial
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 2ul
   )
   (ensures fun _ _ h1 ->
@@ -118,10 +120,8 @@ let deallocate_slab_aux_1_partial
     ) in
     md_count_v == dfst blob1)
   =
-  // required for selector equality propagation
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-  // TODO: Move this to precondition of the function
-  assume (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
+  assert (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
   (**) ALG.lemma_dataify_index #AL.status gs0 (US.v pos);
   (**) lemma_partition_and_pred_implies_mem3 (US.v idx1) (US.v idx2) (US.v idx3) gs0 (US.v pos);
   assert (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
@@ -132,6 +132,8 @@ let deallocate_slab_aux_1_partial
   AL.insert2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx2 (G.hide (US.v idx1)) (G.hide (US.v idx3')) pos 1ul;
+  (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v pos) (US.v idx3')) in
+  assume (ALG.partition #AL.status gs1 (US.v idx1) (US.v pos) (US.v idx3'));
   write r3 idx3';
   write r2 pos;
 
@@ -181,12 +183,14 @@ let deallocate_slab_aux_1_empty
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 2ul
   )
   (ensures fun _ _ h1 ->
@@ -198,10 +202,11 @@ let deallocate_slab_aux_1_empty
     ) in
     md_count_v == dfst blob1)
   =
-  // required for selector equality propagation
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-  // @Aymeric partition improvements required
-  assume (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
+  assert (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
+  (**) ALG.lemma_dataify_index #AL.status gs0 (US.v pos);
+  (**) lemma_partition_and_pred_implies_mem3 (US.v idx1) (US.v idx2) (US.v idx3) gs0 (US.v pos);
+  assert (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
 
   let idx3' = AL.remove3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -209,6 +214,8 @@ let deallocate_slab_aux_1_empty
   AL.insert1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3')) pos 0ul;
+  (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v pos) (US.v idx2) (US.v idx3')) in
+  assume (ALG.partition #AL.status gs1 (US.v pos) (US.v idx2) (US.v idx3'));
   write r3 idx3';
   write r1 pos;
 
@@ -263,6 +270,7 @@ let deallocate_slab_aux_1_fail
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     let md_blob : t_of (slab_vprop size_class
       (slab_array slab_region (US.sizet_to_uint32 pos))
       (md_bm_array md_bm_region (US.sizet_to_uint32 pos)))
@@ -276,7 +284,8 @@ let deallocate_slab_aux_1_fail
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 2ul
   )
   (ensures fun _ _ h1 ->
@@ -347,6 +356,7 @@ let deallocate_slab_aux_1
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     let arr' = slab_array slab_region (US.sizet_to_uint32 pos) in
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr') in
     same_base_array arr' ptr /\
@@ -358,7 +368,8 @@ let deallocate_slab_aux_1
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 2ul
   )
   (ensures fun _ _ h1 ->
@@ -456,12 +467,14 @@ let deallocate_slab_aux_2_empty
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 1ul
   )
   (ensures fun _ _ h1 ->
@@ -473,10 +486,11 @@ let deallocate_slab_aux_2_empty
     ) in
     md_count_v == dfst blob1)
   =
-  // required for selector equality propagation
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-  // @Aymeric partition improvements required
-  assume (ALG.mem #AL.status (US.v pos) (US.v idx2) gs0);
+  assert (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
+  (**) ALG.lemma_dataify_index #AL.status gs0 (US.v pos);
+  (**) lemma_partition_and_pred_implies_mem2 (US.v idx1) (US.v idx2) (US.v idx3) gs0 (US.v pos);
+  assert (ALG.mem #AL.status (US.v pos) (US.v idx2) gs0);
 
   let idx2' = AL.remove2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -484,6 +498,8 @@ let deallocate_slab_aux_2_empty
   AL.insert1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (G.hide (US.v idx2')) (G.hide (US.v idx3)) pos 0ul;
+  (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v pos) (US.v idx2') (US.v idx3)) in
+  assume (ALG.partition #AL.status gs1 (US.v pos) (US.v idx2') (US.v idx3));
   write r2 idx2';
   write r1 pos;
 
@@ -528,12 +544,14 @@ let deallocate_slab_aux_2_partial
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 1ul
   )
   (ensures fun _ _ h1 ->
@@ -596,6 +614,7 @@ let deallocate_slab_aux_2_fail
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     let md_blob : t_of (slab_vprop size_class
       (slab_array slab_region (US.sizet_to_uint32 pos))
       (md_bm_array md_bm_region (US.sizet_to_uint32 pos)))
@@ -609,7 +628,8 @@ let deallocate_slab_aux_2_fail
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.dataify gs0 `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 1ul
   )
   (ensures fun _ _ h1 ->
@@ -683,6 +703,7 @@ let deallocate_slab_aux_2
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     let arr' = slab_array slab_region (US.sizet_to_uint32 pos) in
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr') in
     same_base_array arr' ptr /\
@@ -694,7 +715,8 @@ let deallocate_slab_aux_2
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 1ul
   )
   (ensures fun _ _ h1 ->
@@ -806,13 +828,15 @@ let deallocate_slab_fail
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     (U32.v page_size) % (U32.v size_class) = 0 /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
     U32.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3)
    )
   (ensures fun _ _ _ -> True)
   =
@@ -870,6 +894,7 @@ let deallocate_slab'
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
     //diff' < (U32.v page_size) * (U32.v page_size) /\
@@ -882,7 +907,8 @@ let deallocate_slab'
     sel r3 h0 == idx3 /\
     U32.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3)
   )
   (ensures fun _ _ _ -> True)
   =
@@ -1007,6 +1033,20 @@ let deallocate_slab
   let idx1_ = read r1 in
   let idx2_ = read r2 in
   let idx3_ = read r3 in
+  sladmit ();
+  //change_equal_slprop
+  //  (ind_varraylist_aux pred1 pred2 pred3
+  //    (A.split_l md_region (u32_to_sz md_count_v_)) idxs)
+  //  (ind_varraylist_aux2 pred1 pred2 pred3
+  //    (A.split_l md_region (u32_to_sz md_count_v_)) idxs
+  //  `vrefine`
+  //  ind_varraylist_aux_refinement pred1 pred2 pred3
+  //    (A.split_l md_region (u32_to_sz md_count_v_)) idxs);
+  //elim_vrefine
+  //  (ind_varraylist_aux2 pred1 pred2 pred3
+  //    (A.split_l md_region (u32_to_sz md_count_v)) idxs)
+  //  (ind_varraylist_aux_refinement pred1 pred2 pred3
+  //    (A.split_l md_region (u32_to_sz md_count_v)) idxs);
 
   change_slprop_rel
     (AL.varraylist pred1 pred2 pred3
@@ -1024,7 +1064,7 @@ let deallocate_slab
       assert (snd (G.reveal idxs) = idx3_)
     );
 
-  let x' : Ghost.erased (Seq.lseq AL.status (U32.v md_count_v_)) = ALG.dataify (dsnd x) in
+  let x' : G.erased (Seq.lseq AL.status (U32.v md_count_v_)) = ALG.dataify (dsnd x) in
 
   change_equal_slprop
     (left_vprop_aux size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 md_count_v_ x)

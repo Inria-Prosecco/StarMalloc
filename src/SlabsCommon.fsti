@@ -372,13 +372,33 @@ val f_lemma
   (t_of (f size_class slab_region md_bm_region md_count_v md_region_lv i)
   == t size_class)
 
+let ind_varraylist_aux2
+  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
+  (idxs: (US.t & US.t) & US.t)
+  =
+  AL.varraylist pred1 pred2 pred3 r
+    (US.v (fst (fst idxs)))
+    (US.v (snd (fst idxs)))
+    (US.v (snd idxs))
+
+let ind_varraylist_aux_refinement
+  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
+  (idxs: (US.t & US.t) & US.t)
+  (s: t_of (ind_varraylist_aux2 pred1 pred2 pred3 r idxs))
+  : prop
+  =
+  ALG.partition #AL.status s
+    (US.v (fst (fst idxs)))
+    (US.v (snd (fst idxs)))
+    (US.v (snd idxs))
+
 let ind_varraylist_aux
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
   (idxs: (US.t & US.t) & US.t)
-  = AL.varraylist pred1 pred2 pred3 r
-      (US.v (fst (fst idxs)))
-      (US.v (snd (fst idxs)))
-      (US.v (snd idxs))
+  =
+  ind_varraylist_aux2 pred1 pred2 pred3 r idxs
+  `vrefine`
+  ind_varraylist_aux_refinement pred1 pred2 pred3 r idxs
 
 let ind_varraylist
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
@@ -509,12 +529,14 @@ val pack_3
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3
+    sel r3 h0 == idx3 /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3)
   )
   (ensures fun _ _ h1 ->
     let blob1

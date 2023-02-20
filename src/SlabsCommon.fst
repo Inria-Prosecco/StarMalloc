@@ -329,7 +329,7 @@ let f_lemma
     (slab_array slab_region i)
     (md_bm_array md_bm_region i)
 
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 let pack_3
   (#opened:_)
   (size_class: sc)
@@ -366,12 +366,14 @@ let pack_3
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3
+    sel r3 h0 == idx3 /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3)
   )
   (ensures fun _ _ h1 ->
     let blob1
@@ -382,6 +384,11 @@ let pack_3
     ) in
     md_count_v == dfst blob1)
   =
+  intro_vrefine
+    (ind_varraylist_aux2 pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3))
+    (ind_varraylist_aux_refinement pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3));
   intro_vdep
     (vptr r1 `star` vptr r2 `star` vptr r3)
     (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3))
