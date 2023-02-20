@@ -12,8 +12,7 @@ void* malloc(size_t size) {
   return StarMalloc_malloc(size);
 }
 
-// krmllib name conflict: cannot call function "free"
-void* _free(void* ptr) {
+void free(void* ptr) {
   bool r = StarMalloc_free(ptr);
   return;
 }
@@ -24,16 +23,16 @@ int main(){
   for (uint32_t i = 0; i < 256; ++i) {
     ptr = malloc(12);
     ptr[1] = 1;
-    _free(ptr);
+    free(ptr);
     ptr = malloc(37);
     ptr[1] = 1;
-    _free(ptr);
+    free(ptr);
     ptr = malloc(29);
     ptr[1] = 1;
-    _free(ptr);
+    free(ptr);
     ptr = malloc(4096*17+1);
     ptr[1] = 1;
-    _free(ptr);
+    free(ptr);
   }
   return 0;
 }
