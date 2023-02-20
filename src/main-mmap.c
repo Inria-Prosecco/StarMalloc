@@ -39,7 +39,7 @@ uint64_t* Aux_trees_malloc(uint64_t x) {
 }
 
 Impl_Core_node__Aux_a* Aux_trees_malloc2(Impl_Core_node__Aux_a x) {
-  Impl_Core_node__Aux_a* ptr = mmap_s(sizeof(Impl_Core_node__Aux_a));
+  Impl_Core_node__Aux_a* ptr = (Impl_Core_node__Aux_a*) mmap_s(sizeof(Impl_Core_node__Aux_a));
   *ptr = x;
   return ptr;
 }
