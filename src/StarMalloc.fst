@@ -79,7 +79,8 @@ let realloc (ptr: array U8.t) (new_size: US.t)
   =
   let old_size = getsize ptr in
   if old_size = 0sz then (
-    return (G.hide false, ptr)
+    sladmit ();
+    return (G.hide false, A.null #U8.t)
   ) else (
     let new_ptr = malloc new_size in
     if (A.is_null new_ptr) then (

@@ -7,6 +7,7 @@ int main(){
   uint32_t bound = 256ul;
   for (uint32_t i = 0; i < 256; ++i) {
     ptr = malloc(12);
+    ptr = realloc(ptr, 13);
     ptr[1] = 1;
     free(ptr);
     ptr = malloc(37);
