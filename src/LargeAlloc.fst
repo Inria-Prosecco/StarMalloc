@@ -222,8 +222,9 @@ let large_malloc (size: US.t)
   =
   L.acquire metadata.lock;
   let md_size = _size metadata.data in
-  //TODO: refine check with max size_t uint
-  if U64.lte md_size 100UL then (
+  let max = 18446744073709551615UL in
+  assert (U64.v max = Impl.Core.c);
+  if U64.lt md_size max then (
     //TODO: large_malloc' can return NULL due to mmap
     let ptr = large_malloc' metadata.data size in
     L.release metadata.lock;
