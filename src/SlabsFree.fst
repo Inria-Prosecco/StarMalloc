@@ -135,6 +135,11 @@ let deallocate_slab_aux_1_partial
   write r3 idx3';
   write r2 pos;
 
+  (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v pos) (US.v idx3')) in
+  (**) assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) gs0 `FStar.FiniteSet.Base.equal`
+          ALG.ptrs_all #AL.status (US.v idx1) (US.v pos) (US.v idx3') gs1);
+  (**) assert (ALG.partition #AL.status gs1 (US.v idx1) (US.v pos) (US.v idx3'));
+
   (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v pos) 1ul))
     idx1 pos idx3'
