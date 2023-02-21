@@ -1272,7 +1272,10 @@ let allocate_slab'
         md_count r1 r2 r3
         md_count_v md_region_lv
         idx1 idx2 idx3 in
-      admit(); // TODO: Need allocate_slab_aux_3 to give partition as a postcondition
+      let gs1 = gget (AL.varraylist pred1 pred2 pred3
+      (A.split_l md_region (u32_to_sz (U32.add md_count_v 1ul)))
+      (US.v idx1') (US.v idx2) (US.v idx3)) in
+      assume (ALG.partition #AL.status gs1 (US.v idx1') (US.v idx2) (US.v idx3));
       let r = allocate_slab_aux_1 size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3
