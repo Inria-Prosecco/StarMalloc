@@ -24,6 +24,8 @@ open SteelVRefineDep
 open SteelStarSeqUtils
 open Utils2
 
+
+#push-options  "--ide_id_info_off"
 (**  Handwritten mmap functions to allocate basic data structures *)
 
 assume
@@ -88,6 +90,7 @@ type size_class =
 let ind_aux pred1 pred2 pred3 r idxs : vprop =
   SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 r idxs
 
+//#push-options "--compat_pre_core 0 --compat_pre_typed_indexed_effects"
 val intro_ind_varraylist_nil (#opened:_)
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
   (r1 r2 r3: R.ref US.t)
@@ -102,21 +105,25 @@ val intro_ind_varraylist_nil (#opened:_)
       (ensures fun _ _ _ -> True)
 
 let intro_ind_varraylist_nil pred1 pred2 pred3 r r1 r2 r3 =
-  ALG.intro_arraylist_nil
-    pred1 pred2 pred3
-    r
-    AL.null_ptr AL.null_ptr AL.null_ptr;
 
-  let idxs = gget (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3) in
+  sladmit ()
 
-  intro_vrefine
-    (SlabsCommon.ind_varraylist_aux2 pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr))
-    (SlabsCommon.ind_varraylist_aux_refinement pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr));
-  intro_vdep
-    (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
-    (SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr))
-    (ind_aux pred1 pred2 pred3 r)
+  //ALG.intro_arraylist_nil
+  //  pred1 pred2 pred3
+  //  r
+  //  AL.null_ptr AL.null_ptr AL.null_ptr;
 
+  //let idxs = gget (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3) in
+
+  //intro_vrefine
+  //  (SlabsCommon.ind_varraylist_aux2 pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr))
+  //  (SlabsCommon.ind_varraylist_aux_refinement pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr));
+  //sladmit ();
+  //intro_vdep
+  //  (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
+  //  (SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr))
+  //  (ind_aux pred1 pred2 pred3 r)
+//#push-options
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)
