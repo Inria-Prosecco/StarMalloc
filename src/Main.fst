@@ -86,11 +86,7 @@ type size_class =
     }
 
 let ind_aux pred1 pred2 pred3 r idxs : vprop =
-      AL.varraylist pred1 pred2 pred3 r
-        (US.v (fst (fst idxs)))
-        (US.v (snd (fst idxs)))
-        (US.v (snd idxs))
-
+  SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 r idxs
 
 val intro_ind_varraylist_nil (#opened:_)
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
@@ -113,12 +109,14 @@ let intro_ind_varraylist_nil pred1 pred2 pred3 r r1 r2 r3 =
 
   let idxs = gget (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3) in
 
-  assert_norm (ind_aux pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr) ==
-          AL.varraylist pred1 pred2 pred3 r (US.v AL.null_ptr) (US.v AL.null_ptr) (US.v AL.null_ptr));
+  intro_vrefine
+    (SlabsCommon.ind_varraylist_aux2 pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr))
+    (SlabsCommon.ind_varraylist_aux_refinement pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr));
   intro_vdep
     (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
-    (AL.varraylist pred1 pred2 pred3 r (US.v AL.null_ptr) (US.v AL.null_ptr) (US.v AL.null_ptr))
+    (SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr))
     (ind_aux pred1 pred2 pred3 r)
+
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)
