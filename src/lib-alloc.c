@@ -30,7 +30,7 @@ void free(void *ptr) {
 
 void* realloc(void* ptr, size_t new_size) {
   if (ptr = NULL) {
-    return malloc(size);
+    return malloc(new_size);
   } else {
     void* new_ptr = StarMalloc_realloc(ptr, new_size);
     return new_ptr;

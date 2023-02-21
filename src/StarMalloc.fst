@@ -90,14 +90,19 @@ let realloc (ptr: array U8.t) (new_size: US.t)
     let new_ptr = malloc new_size in
     if (A.is_null new_ptr) then (
       sladmit ();
-      return (G.hide false, ptr)
+      return (G.hide false, A.null #U8.t)
     ) else (
       change_equal_slprop
         (if A.is_null new_ptr then emp else A.varray new_ptr)
         (A.varray new_ptr);
       let _ = memcpy ptr new_ptr old_size in
       let b = free ptr in
-      sladmit ();
-      return (G.hide b, new_ptr)
+      if b then (
+        sladmit ();
+        return (G.hide true, new_ptr)
+      ) else (
+        sladmit ();
+        return (G.hide false, A.null #U8.t)
+      )
     )
   )
