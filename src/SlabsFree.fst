@@ -1035,20 +1035,10 @@ let deallocate_slab
   let idx1_ = read r1 in
   let idx2_ = read r2 in
   let idx3_ = read r3 in
-  sladmit ();
-  //change_equal_slprop
-  //  (ind_varraylist_aux pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count_v_)) idxs)
-  //  (ind_varraylist_aux2 pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count_v_)) idxs
-  //  `vrefine`
-  //  ind_varraylist_aux_refinement pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count_v_)) idxs);
-  //elim_vrefine
-  //  (ind_varraylist_aux2 pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count_v)) idxs)
-  //  (ind_varraylist_aux_refinement pred1 pred2 pred3
-  //    (A.split_l md_region (u32_to_sz md_count_v)) idxs);
+
+  elim_vrefine
+    (ind_varraylist_aux2 pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v_)) idxs)
+    (ind_varraylist_aux_refinement pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v_)) idxs);
 
   change_slprop_rel
     (AL.varraylist pred1 pred2 pred3
