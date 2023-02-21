@@ -12,6 +12,8 @@ module I32 = FStar.Int32
 module U8 = FStar.UInt8
 module US = FStar.SizeT
 
+module P = Steel.FractionalPermission
+
 let array = Steel.ST.Array.array
 
 open Impl.Mono
@@ -225,7 +227,10 @@ let large_malloc (size: US.t)
     //TODO: large_malloc' can return NULL due to mmap
     let ptr = large_malloc' metadata.data size in
     L.release metadata.lock;
-    sladmit ();
+    A.varrayp_not_null ptr P.full_perm;
+    change_equal_slprop
+      (A.varray ptr)
+      (if A.is_null ptr then emp else A.varray ptr);
     return ptr
   ) else (
     L.release metadata.lock;
