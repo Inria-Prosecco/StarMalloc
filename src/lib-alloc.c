@@ -28,27 +28,18 @@ void free(void *ptr) {
   return;
 }
 
+void* realloc(void* ptr, size_t new_size) {
+  if (ptr = NULL) {
+    return malloc(size);
+  } else {
+    void* new_ptr = StarMalloc_realloc(ptr, new_size);
+    return new_ptr;
+  }
+}
+
 // TODO: does not enforce zeroing
 void* calloc(long unsigned int nb_elem, long unsigned int size_elem) {
   long unsigned int size = nb_elem * size_elem;
   void* ptr = malloc(size);
   return ptr;
-}
-
-void* realloc(void* ptr, size_t size) {
-  // why the spec would allow this, seriously...
-  //void* ptr2 = (void*) malloc (size);
-  if (ptr == NULL) {
-    return malloc(size);
-  }
-  void* ptr2 = (void*) malloc (size);
-  //printf("src: %p\n", ptr);
-  //printf("dst: %p\n", ptr2);
-  // size is incorrect here,
-  // need to know size of the previous allocation,
-  // otherwise a bus error can be raised
-  //puts("A");
-  memcpy(ptr2, ptr, size);
-  free(ptr);
-  return ptr2;
 }

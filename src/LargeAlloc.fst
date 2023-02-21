@@ -253,6 +253,51 @@ let large_free (ptr: array U8.t)
   L.release metadata.lock;
   return b
 
+let large_getsize' (metadata: ref (t a)) (ptr: array U8.t)
+  : Steel US.t
+  (A.varray ptr `star` ind_linked_avl_tree metadata)
+  (fun _ -> A.varray ptr `star` ind_linked_avl_tree metadata)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel ptr h1 == A.asel ptr h0 /\
+    h1 (ind_linked_avl_tree metadata)
+    ==
+    h0 (ind_linked_avl_tree metadata)
+  )
+  =
+  (**) let t = elim_vdep (vptr metadata) linked_avl_tree in
+  (**) elim_vrefine (linked_tree t) is_avl;
+  let md_v = read metadata in
+  (**) change_equal_slprop
+    (linked_tree t)
+    (linked_tree md_v);
+  (**) let h0 = get () in
+  (**) Spec.height_lte_size (v_linked_tree md_v h0);
+  let size = find cmp md_v (ptr, 0sz) in
+  if Some? size then (
+    let size = Some?.v size in
+    (**) intro_vrefine (linked_tree md_v) is_avl;
+    (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
+    return size
+  ) else (
+    (**) intro_vrefine (linked_tree md_v) is_avl;
+    (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
+    return 0sz
+  )
+
+let large_getsize (ptr: array U8.t)
+  : Steel US.t
+  (A.varray ptr) (fun _ -> A.varray ptr)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel ptr h1 == A.asel ptr h0
+  )
+  =
+  L.acquire metadata.lock;
+  let size = large_getsize' metadata.data ptr in
+  L.release metadata.lock;
+  return size
+
 (*)
 - mmap/munmap: some improvements ahead? (better spec)
   - mmap can fail -> null_or_varray instead of varray

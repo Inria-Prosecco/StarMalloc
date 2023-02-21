@@ -474,3 +474,22 @@ let slab_free ptr =
   else if (slab_free1 size_class2048 ptr) then slab_free2 size_class2048 ptr
   else if (slab_free1 size_class4096 ptr) then slab_free2 size_class4096 ptr
   else return false
+
+let slab_getsize (ptr: array U8.t)
+  : Steel US.t
+  (A.varray ptr) (fun _ -> A.varray ptr)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel ptr h1 == A.asel ptr h0
+  )
+  =
+  if (slab_free1 size_class16 ptr) then return 16sz
+  else if (slab_free1 size_class32 ptr) then return 32sz
+  else if (slab_free1 size_class64 ptr) then return 64sz
+  else if (slab_free1 size_class128 ptr) then return 128sz
+  else if (slab_free1 size_class256 ptr) then return 256sz
+  else if (slab_free1 size_class512 ptr) then return 512sz
+  else if (slab_free1 size_class1024 ptr) then return 1024sz
+  else if (slab_free1 size_class2048 ptr) then return 2048sz
+  else if (slab_free1 size_class4096 ptr) then return 4096sz
+  else return 0sz

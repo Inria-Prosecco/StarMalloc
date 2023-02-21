@@ -51,3 +51,53 @@ let free ptr =
     let b = large_free ptr in
     return b
   )
+
+let getsize (ptr: array U8.t)
+  : Steel US.t
+  (A.varray ptr) (fun _ -> A.varray ptr)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel ptr h1 == A.asel ptr h0
+  )
+  =
+  let s1 = slab_getsize ptr in
+  if s1 = 0sz then (
+    let s2 = large_getsize ptr in
+    return s2
+  ) else (
+    return s1
+  )
+
+assume
+val memcpy (dest src: array U8.t) (n: US.t)
+  : SteelT (array U8.t)
+  (A.varray dest `star` A.varray src)
+  (fun _ -> A.varray dest `star` A.varray src)
+
+module G = FStar.Ghost
+
+let realloc (ptr: array U8.t) (new_size: US.t)
+  : Steel (G.erased bool & array U8.t)
+  (A.varray ptr)
+  (fun r -> A.varray (snd r))
+  (requires fun _ -> A.is_full_array ptr)
+  (ensures fun _ _ _ -> True)
+  =
+  let old_size = getsize ptr in
+  if old_size = 0sz then (
+    return (G.hide false, ptr)
+  ) else (
+    let new_ptr = malloc new_size in
+    if (A.is_null new_ptr) then (
+      sladmit ();
+      return (G.hide false, ptr)
+    ) else (
+      change_equal_slprop
+        (if A.is_null new_ptr then emp else A.varray new_ptr)
+        (A.varray new_ptr);
+      let _ = memcpy ptr new_ptr old_size in
+      let b = free ptr in
+      sladmit ();
+      return (G.hide b, new_ptr)
+    )
+  )
