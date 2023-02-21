@@ -211,7 +211,7 @@ let allocate_slab_aux_1_partial
     ) in
     md_count_v == dfst blob1)
   =
-  (**) let _ = gget (AL.varraylist pred1 pred2 pred3
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     (US.v idx1) (US.v idx2) (US.v idx3)) in
   (**) ALG.lemma_head_not_null_mem pred1 pred2 pred3
@@ -223,13 +223,14 @@ let allocate_slab_aux_1_partial
   AL.insert2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx2 (Ghost.hide (US.v idx1')) (Ghost.hide (US.v idx3)) idx1 1ul;
-  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3
-    (A.split_l md_region (u32_to_sz md_count_v))
-    (US.v idx1') (US.v idx1) (US.v idx3)) in
-  assume (ALG.partition #AL.status gs0 (US.v idx1') (US.v idx1) (US.v idx3));
-
   write r1 idx1';
   write r2 idx1;
+
+  (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    (US.v idx1') (US.v idx1) (US.v idx3)) in
+  assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) gs0 `FStar.FiniteSet.Base.equal`
+          ALG.ptrs_all #AL.status (US.v idx1') (US.v idx1) (US.v idx3) gs1);
 
   (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
@@ -290,24 +291,24 @@ let allocate_slab_aux_1_full
     ) in
     md_count_v == dfst blob1)
   =
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
   (**) ALG.lemma_head_not_null_mem pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 idx2 idx3;
-  // required for selector equality propagation
-  (**) let _ = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-
   let idx1' = AL.remove1 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) idx1 in
   AL.insert3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx3 (Ghost.hide (US.v idx1')) (Ghost.hide (US.v idx2)) idx1 2ul;
-  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3
-    (A.split_l md_region (u32_to_sz md_count_v))
-    (US.v idx1') (US.v idx2) (US.v idx1)) in
-  assume (ALG.partition #AL.status gs0 (US.v idx1') (US.v idx2) (US.v idx1));
   write r1 idx1';
   write r3 idx1;
+
+  (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    (US.v idx1') (US.v idx2) (US.v idx1)) in
+  assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) gs0 `FStar.FiniteSet.Base.equal`
+          ALG.ptrs_all #AL.status (US.v idx1') (US.v idx2) (US.v idx1) gs1);
 
   (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
@@ -478,24 +479,24 @@ let allocate_slab_aux_2_full
     ) in
     md_count_v == dfst blob1)
   =
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
   (**) ALG.lemma_head_not_null_mem pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx1 idx2 idx3;
-  // required for selector equality propagation
-  (**) let __ = gget (AL.varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3)) in
-
   let idx2' = AL.remove2 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     (Ghost.hide (US.v idx1)) idx2 (Ghost.hide (US.v idx3)) idx2 in
   AL.insert3 #pred1 #pred2 #pred3
     (A.split_l md_region (u32_to_sz md_count_v))
     idx3 (Ghost.hide (US.v idx1)) (Ghost.hide (US.v idx2')) idx2 2ul;
-  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3
-    (A.split_l md_region (u32_to_sz md_count_v))
-    (US.v idx1) (US.v idx2') (US.v idx2)) in
-  assume (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2') (US.v idx2));
   write r2 idx2';
   write r3 idx2;
+
+  (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    (US.v idx1) (US.v idx2') (US.v idx2)) in
+  assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) gs0 `FStar.FiniteSet.Base.equal`
+          ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2') (US.v idx2) gs1);
 
   (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul))
