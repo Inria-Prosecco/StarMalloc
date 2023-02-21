@@ -183,7 +183,7 @@ bench/test-avl.c
 
 # test the allocator with a static binary
 test-alloc0bis: verify extract
-	gcc -O0 -pg -DKRML_VERIFIED_UINT128 \
+	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
   -pthread \

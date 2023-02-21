@@ -299,6 +299,14 @@ let large_getsize (ptr: array U8.t)
   L.release metadata.lock;
   return size
 
+assume
+val memcpy_u8 (dest src: array U8.t) (n: US.t)
+  : SteelT (array U8.t)
+  (A.varray dest `star` A.varray src)
+  (fun _ -> A.varray dest `star` A.varray src)
+
+
+
 (*)
 - mmap/munmap: some improvements ahead? (better spec)
   - mmap can fail -> null_or_varray instead of varray

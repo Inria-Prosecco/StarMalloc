@@ -68,12 +68,6 @@ let getsize (ptr: array U8.t)
     return s1
   )
 
-assume
-val memcpy (dest src: array U8.t) (n: US.t)
-  : SteelT (array U8.t)
-  (A.varray dest `star` A.varray src)
-  (fun _ -> A.varray dest `star` A.varray src)
-
 module G = FStar.Ghost
 
 let realloc (ptr: array U8.t) (new_size: US.t)
@@ -95,8 +89,8 @@ let realloc (ptr: array U8.t) (new_size: US.t)
       change_equal_slprop
         (if A.is_null new_ptr then emp else A.varray new_ptr)
         (A.varray new_ptr);
-      let new_size  = if US.lte new_size old_size then old_size else new_size in
-      let _ = memcpy ptr new_ptr new_size in
+      let new_size  = if US.lte new_size old_size then new_size else old_size in
+      let _ = memcpy_u8 new_ptr ptr new_size in
       let b = free ptr in
       if b then (
         sladmit ();
