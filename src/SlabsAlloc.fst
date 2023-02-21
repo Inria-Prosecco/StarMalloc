@@ -1213,12 +1213,14 @@ let allocate_slab'
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
   )
   (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
     U32.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
-    ALG.dataify (AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0) `Seq.equal` Ghost.reveal md_region_lv
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) /\
+    ALG.dataify gs0 `Seq.equal` Ghost.reveal md_region_lv
   )
   (ensures fun _ _ _ -> True)
   =
@@ -1270,6 +1272,7 @@ let allocate_slab'
         md_count r1 r2 r3
         md_count_v md_region_lv
         idx1 idx2 idx3 in
+      admit(); // TODO: Need allocate_slab_aux_3 to give partition as a postcondition
       let r = allocate_slab_aux_1 size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3
