@@ -29,6 +29,7 @@ void free(void *ptr) {
 }
 
 void* realloc(void* ptr, size_t new_size) {
+  if (! init_status) { krmlinit_globals(); init_status=1UL; }
   if (ptr = NULL) {
     return malloc(new_size);
   } else {

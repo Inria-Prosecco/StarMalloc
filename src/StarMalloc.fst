@@ -95,7 +95,8 @@ let realloc (ptr: array U8.t) (new_size: US.t)
       change_equal_slprop
         (if A.is_null new_ptr then emp else A.varray new_ptr)
         (A.varray new_ptr);
-      let _ = memcpy ptr new_ptr old_size in
+      let new_size  = if US.lte new_size old_size then old_size else new_size in
+      let _ = memcpy ptr new_ptr new_size in
       let b = free ptr in
       if b then (
         sladmit ();
