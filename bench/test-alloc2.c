@@ -4,8 +4,8 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-#define N_THREADS 256
-#define N_ALLOC 100000
+#define N_THREADS 12
+#define N_ALLOC 1000
 
 pthread_mutex_t m;
 pthread_t threads[N_THREADS];
@@ -22,6 +22,12 @@ void* impl1 (void* _) {
     //puts("Alloc 1/2\n");
     ptr = malloc(100);
     //puts("Alloc 2/2\n");
+    ptr[1] = 1ul;
+    ptr = realloc(ptr, 4097);
+    ptr[1] = 1ul;
+    ptr = realloc(ptr, 41898);
+    ptr[1] = 1ul;
+    ptr = realloc(ptr, 4);
     ptr[1] = 1ul;
     //puts("Free 1/2\n");
     free(ptr);
