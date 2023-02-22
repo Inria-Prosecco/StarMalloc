@@ -19,6 +19,7 @@ let spec_convert (#a: Type) (compare: Impl.Common.cmp a)
   //= Impl.Common.convert (convert compare)
   = Impl.Common.convert compare
 
+inline_for_extraction noextract
 let insert
   (r: bool) (ptr: t)
   (new_data: data)
@@ -39,6 +40,7 @@ let insert
   Spec.height_lte_size (v_linked_tree ptr h0);
   Impl.Mono.insert_avl r ptr new_data
 
+inline_for_extraction noextract
 let delete
   (ptr: t)
   (data_to_rm: data)
@@ -56,6 +58,7 @@ let delete
   =
   Impl.Mono.delete_avl ptr data_to_rm
 
+inline_for_extraction noextract
 let cardinal
   (ptr: t)
   : Steel (U64.t)
@@ -69,6 +72,7 @@ let cardinal
   =
   Impl.Mono.sot_wds ptr
 
+inline_for_extraction noextract
 let mem
   (ptr: t)
   (v: data)

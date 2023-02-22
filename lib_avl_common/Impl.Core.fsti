@@ -172,6 +172,7 @@ val pack_tree (#opened:inames) (#a: Type0)
         let h = sel hr h0 in
         v_linked_tree ptr h1 == Spec.Node x l r (U.v s) (U.v h)))
 
+inline_for_extraction noextract
 val unpack_tree (#a: Type0) (ptr: t a)
     : Steel (node a)
       (linked_tree ptr)
