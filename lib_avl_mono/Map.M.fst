@@ -14,13 +14,13 @@ open Impl.Trees.Types
 #set-options "--ide_id_info_off"
 //let unpack_tree = Impl.Trees.M.unpack_tree
 
-let spec_convert (#a: Type) (compare: cmp a)
+let spec_convert (#a: Type) (compare: Impl.Common.cmp a)
   : GTot (Spec.cmp a)
   //= Impl.Common.convert (convert compare)
   = Impl.Common.convert compare
 
 let insert
-  (r: bool) (cmp: cmp data) (ptr: t)
+  (r: bool) (ptr: t)
   (new_data: data)
   : Steel t
   (linked_tree ptr)
@@ -37,10 +37,10 @@ let insert
   =
   let h0 = get () in
   Spec.height_lte_size (v_linked_tree ptr h0);
-  Impl.Mono.insert_avl r cmp ptr new_data
+  Impl.Mono.insert_avl r ptr new_data
 
 let delete
-  (cmp: cmp data) (ptr: t)
+  (ptr: t)
   (data_to_rm: data)
   : Steel t
   (linked_tree ptr)
@@ -54,7 +54,7 @@ let delete
       (v_linked_tree ptr h0)
       data_to_rm)
   =
-  Impl.Mono.delete_avl cmp ptr data_to_rm
+  Impl.Mono.delete_avl ptr data_to_rm
 
 let cardinal
   (ptr: t)
@@ -70,7 +70,7 @@ let cardinal
   Impl.Mono.sot_wds ptr
 
 let mem
-  (cmp: cmp data) (ptr: t)
+  (ptr: t)
   (v: data)
   : Steel bool
   (linked_tree ptr)
@@ -80,10 +80,10 @@ let mem
   (ensures fun h0 b h1 ->
     v_linked_tree ptr h0 == v_linked_tree ptr h1)
   =
-  Impl.Mono.member cmp ptr v
+  Impl.Mono.member ptr v
 
 let rec find
-  (cmp: cmp data) (ptr: t)
+  (ptr: t)
   (v: data)
   : Steel (option US.t)
   (linked_tree ptr)
@@ -109,13 +109,13 @@ let rec find
     return (Some r)
   ) else (
     if I64.lt delta szero then (
-      let r = find cmp (get_left node) v in
+      let r = find (get_left node) v in
       pack_tree ptr
         (get_left node) (get_right node)
         (get_size node) (get_height node);
       return r
     ) else (
-      let r = find cmp (get_right node) v in
+      let r = find (get_right node) v in
       pack_tree ptr
         (get_left node) (get_right node)
         (get_size node) (get_height node);
@@ -124,7 +124,7 @@ let rec find
   ))
 
 let find2
-  (cmp: cmp data) (ptr: t)
+  (ptr: t)
   (v: data)
   : Steel (U64.t)
   (linked_tree ptr)
@@ -134,7 +134,7 @@ let find2
   (ensures fun h0 r h1 ->
     v_linked_tree ptr h1 == v_linked_tree ptr h0)
   =
-  let a = find cmp ptr v in
+  let a = find ptr v in
   if Some? a
   then return 1UL
   else return 0UL

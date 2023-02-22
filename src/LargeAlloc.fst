@@ -44,20 +44,6 @@ let munmap (ptr: array U8.t) (size: US.t)
   =
   Mman.munmap ptr size
 
-noextract
-assume
-val ptr_to_u64 (x: array U8.t) : U64.t
-
-let cmp (x y: data) : I64.t
-  =
-  let x = x.ptr in
-  let y = y.ptr in
-  let x = ptr_to_u64 x in
-  let y = ptr_to_u64 y in
-  if U64.gt x y then 1L
-  else if U64.eq x y then 0L
-  else -1L
-
 let create_leaf = Impl.Trees.M.create_leaf
 
 inline_for_extraction noextract
@@ -114,6 +100,7 @@ let init_mmap_md (_:unit)
 let metadata : mmap_md = init_mmap_md ()
 #pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 20"
 let large_malloc' (metadata: ref t) (size: US.t)
   : Steel (array U8.t)
   (ind_linked_avl_tree metadata)
@@ -138,11 +125,12 @@ let large_malloc' (metadata: ref t) (size: US.t)
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
   let ptr = mmap size in
-  let md_v' = insert false cmp md_v {ptr; size} in
+  let md_v' = insert false md_v {ptr; size} in
   write metadata md_v';
   (**) intro_vrefine (linked_tree md_v') is_avl;
   (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
   return ptr
+#pop-options
 
 inline_for_extraction noextract
 let _size (metadata: ref t) : Steel U64.t
@@ -188,7 +176,7 @@ let large_free' (metadata: ref t) (ptr: array U8.t)
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  let size = find cmp md_v {ptr; size= 0sz} in
+  let size = find md_v {ptr; size= 0sz} in
   if Some? size then (
     let size = Some?.v size in
     let b = munmap ptr size in
@@ -198,7 +186,7 @@ let large_free' (metadata: ref t) (ptr: array U8.t)
       (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
       return (not b)
     ) else (
-      let md_v' = delete cmp md_v {ptr; size} in
+      let md_v' = delete md_v {ptr; size} in
       write metadata md_v';
       (**) intro_vrefine (linked_tree md_v') is_avl;
       (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
@@ -274,7 +262,7 @@ let large_getsize' (metadata: ref t) (ptr: array U8.t)
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  let size = find cmp md_v {ptr; size=0sz} in
+  let size = find md_v {ptr; size=0sz} in
   if Some? size then (
     let size = Some?.v size in
     (**) intro_vrefine (linked_tree md_v) is_avl;

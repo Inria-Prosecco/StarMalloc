@@ -21,7 +21,7 @@ open Impl.Trees.M
 
 //@BST
 #push-options "--fuel 1 --ifuel 1"
-let rec member (cmp:cmp data) (ptr: t) (v: data)
+let rec member (ptr: t) (v: data)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
@@ -45,12 +45,12 @@ let rec member (cmp:cmp data) (ptr: t) (v: data)
         (get_size node) (get_height node);
       return true
     end else if I.lt delta szero then begin
-      let b = member cmp (get_left node) v in
+      let b = member (get_left node) v in
       (**) pack_tree ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       return b
     end else begin
-      let b = member cmp (get_right node) v in
+      let b = member (get_right node) v in
       (**) pack_tree ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       return b

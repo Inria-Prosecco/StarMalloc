@@ -89,7 +89,7 @@ let is_balanced_local (ptr: t)
 
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let rebalance_avl (cmp: cmp data) (ptr: t)
+let rebalance_avl (ptr: t)
   : Steel t (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
     Spec.Node? (v_linked_tree ptr h0)
@@ -201,7 +201,7 @@ let rebalance_avl (cmp: cmp data) (ptr: t)
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec insert_avl
-  (r:bool) (cmp:cmp data) (ptr: t) (new_data: data)
+  (r:bool) (ptr: t) (new_data: data)
   : Steel t (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
     Spec.size_of_tree (v_linked_tree ptr h0) < c /\
@@ -253,7 +253,7 @@ let rec insert_avl
       )
     ) else if I.gt delta szero then (
       let h0 = get () in
-      let new_left = insert_avl r cmp (get_left node) new_data in
+      let new_left = insert_avl r (get_left node) new_data in
       let h1 = get () in
       assert (v_linked_tree new_left h1
       == Spec.insert_avl r (convert cmp)
@@ -267,10 +267,10 @@ let rec insert_avl
       let new_ptr = merge_tree_no_alloc
         (get_data node) new_left (get_right node)
         (get_size node) (get_height node) ptr in
-      rebalance_avl cmp new_ptr
+      rebalance_avl new_ptr
     ) else (
       let h0 = get () in
-      let new_right = insert_avl r cmp (get_right node) new_data in
+      let new_right = insert_avl r (get_right node) new_data in
       let h1 = get () in
       assert (v_linked_tree new_right h1
       == Spec.insert_avl r (convert cmp)
@@ -284,13 +284,13 @@ let rec insert_avl
       let new_ptr = merge_tree_no_alloc
         (get_data node) (get_left node) new_right
         (get_size node) (get_height node) ptr in
-      rebalance_avl cmp new_ptr
+      rebalance_avl new_ptr
     )
   )
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let rec remove_leftmost_avl (cmp:cmp data) (ptr: t)
+let rec remove_leftmost_avl (ptr: t)
   : Steel (t & data)
   (linked_tree ptr)
   (fun r -> linked_tree (fst r))
@@ -320,12 +320,12 @@ let rec remove_leftmost_avl (cmp:cmp data) (ptr: t)
     return (get_right node, data)
   ) else (
     (**) not_null_is_node (get_left node);
-    let r0 = remove_leftmost_avl cmp (get_left node) in
+    let r0 = remove_leftmost_avl (get_left node) in
     let new_ptr = merge_tree_no_alloc
       (get_data node) (fst r0) (get_right node)
       (get_size node) (get_height node)
       ptr in
-    let new_ptr = rebalance_avl cmp new_ptr in
+    let new_ptr = rebalance_avl new_ptr in
     return (new_ptr, snd r0)
   )
 #pop-options
@@ -340,7 +340,7 @@ let cheight = Spec.cheight
 //#push-options "--fuel 1 --ifuel 1"
 inline_for_extraction noextract
 let delete_avl_aux0
-  (cmp:cmp data) (ptr: t) (data_to_rm: data)
+  (ptr: t) (data_to_rm: data)
   : Steel t
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
@@ -372,19 +372,19 @@ let delete_avl_aux0
     return (get_right node)
   ) else (
     not_null_is_node (get_right node);
-    let r0 = remove_leftmost_avl cmp (get_right node) in
+    let r0 = remove_leftmost_avl (get_right node) in
     let new_ptr = merge_tree_no_alloc (snd r0)
       (get_left node) (fst r0)
       (get_size node) (get_height node)
       ptr in
-    let new_ptr = rebalance_avl cmp new_ptr in
+    let new_ptr = rebalance_avl new_ptr in
     return new_ptr
   )
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
 let rec delete_avl
-  (cmp:cmp data) (ptr: t) (data_to_rm: data)
+  (ptr: t) (data_to_rm: data)
   : Steel t (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
@@ -403,11 +403,11 @@ let rec delete_avl
     pack_tree ptr
       (get_left node) (get_right node)
       (get_size node) (get_height node);
-    let ptr = delete_avl_aux0 cmp ptr data_to_rm in
+    let ptr = delete_avl_aux0 ptr data_to_rm in
     return ptr
   ) else if I.lt delta szero then (
     let h0 = get () in
-    let new_left = delete_avl cmp (get_left node) data_to_rm in
+    let new_left = delete_avl (get_left node) data_to_rm in
     let h1 = get () in
     assert (v_linked_tree new_left h1
     == Spec.delete_avl (convert cmp)
@@ -422,10 +422,10 @@ let rec delete_avl
       (get_data node) new_left (get_right node)
       (get_size node) (get_height node)
       ptr in
-    rebalance_avl cmp new_ptr
+    rebalance_avl new_ptr
   ) else (
     let h0 = get () in
-    let new_right = delete_avl cmp (get_right node) data_to_rm in
+    let new_right = delete_avl (get_right node) data_to_rm in
     let h1 = get () in
     assert (v_linked_tree new_right h1
     == Spec.delete_avl (convert cmp)
@@ -440,5 +440,5 @@ let rec delete_avl
       (get_data node) (get_left node) new_right
       (get_size node) (get_height node)
       ptr in
-    rebalance_avl cmp new_ptr
+    rebalance_avl new_ptr
   ))

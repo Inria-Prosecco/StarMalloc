@@ -10,6 +10,7 @@ open Impl.Core
 module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
+module I64 = FStar.Int64
 
 noextract inline_for_extraction
 let array = Steel.ST.Array.array
@@ -19,6 +20,21 @@ type data = { ptr: array U8.t; size: US.t}
 
 let node = node data
 let t = t data
+
+noextract
+assume
+val ptr_to_u64 (x: array U8.t) : U64.t
+
+inline_for_extraction noextract
+let cmp (x y: data) : I64.t
+  =
+  let x = x.ptr in
+  let y = y.ptr in
+  let x = ptr_to_u64 x in
+  let y = ptr_to_u64 y in
+  if U64.gt x y then 1L
+  else if U64.eq x y then 0L
+  else -1L
 
 noextract
 assume val trees_malloc (x: U64.t) : Steel (ref U64.t)
