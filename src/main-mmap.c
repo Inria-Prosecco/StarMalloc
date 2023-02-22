@@ -1,6 +1,6 @@
 #include "main-mmap.h"
 //#include "Mman.h"
-#include "Aux.h"
+#include "AVL.h"
 #include <sys/mman.h>
 
 static const size_t page_size = 4096UL;
@@ -38,20 +38,20 @@ uint64_t* Aux_trees_malloc(uint64_t x) {
   return ptr;
 }
 
-Impl_Core_node__Aux_a* Aux_trees_malloc2(Impl_Core_node__Aux_a x) {
-  Impl_Core_node__Aux_a* ptr = (Impl_Core_node__Aux_a*) mmap_s(sizeof(Impl_Core_node__Aux_a));
+Impl_Trees_Types_node* Impl_Trees_Types_trees_malloc2(Impl_Trees_Types_node x) {
+  Impl_Trees_Types_node* ptr = (Impl_Trees_Types_node*) mmap_s(sizeof(Impl_Trees_Types_node));
   *ptr = x;
   return ptr;
 }
 
-void Aux_trees_free(uint64_t* r) {
+void Impl_Trees_Types_trees_free(uint64_t* r) {
   return;
 }
 
-void Aux_trees_free2(Impl_Core_node__Aux_a* r) {
+void Impl_Trees_Types_trees_free2(Impl_Trees_Types_node* r) {
   return;
 }
 
-Impl_Core_node__Aux_a** mmap_ptr_metadata() {
-  return (Impl_Core_node__Aux_a**) mmap_s(sizeof(Impl_Core_node__Aux_a*));
+Impl_Trees_Types_node** mmap_ptr_metadata() {
+  return (Impl_Trees_Types_node**) mmap_s(sizeof(Impl_Trees_Types_node*));
 }
