@@ -118,6 +118,7 @@ let allocate_size_class_sl_lemma2
   = ()
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
 let allocate_size_class
   (scs: size_class_struct)
   : Steel (array U8.t)
@@ -157,6 +158,7 @@ module UP = FStar.PtrdiffT
 
 open Steel.ArrayArith
 
+inline_for_extraction noextract
 let deallocate_size_class
   (scs: size_class_struct)
   (ptr: array U8.t)

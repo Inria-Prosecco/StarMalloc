@@ -104,7 +104,6 @@ dist/ArrayList.c \
 dist/AVL.c \
 dist/krmlinit.c \
 dist/StarMalloc.c \
-dist/SizeClass.c \
 dist/Slabs.c \
 dist/SlotsAlloc.c \
 dist/SlotsFree.c \
