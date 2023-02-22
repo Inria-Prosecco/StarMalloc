@@ -72,6 +72,8 @@ extract: $(ALL_KRML_FILES)
     -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 		-bundle 'Map.\*,Impl.\*,Spec.\*'[rename=AVL] \
+		-bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
+		-bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
     -no-prefix Main \
     -no-prefix LargeAlloc \
 		-warn-error +9 \
@@ -84,6 +86,7 @@ test: verify extract
 
 FILES = \
 $(KRML_HOME)/krmllib/c/steel_spinlock.c \
+dist/ArrayList.h \
 dist/internal/ArrayList.h \
 dist/AVL.h \
 dist/internal/AVL.h \
@@ -92,8 +95,7 @@ dist/LargeAlloc.h \
 dist/Main.h \
 dist/StarMalloc.h \
 dist/SizeClass.h \
-dist/SlabsAlloc.h \
-dist/SlabsFree.h \
+dist/internal/Slabs.h \
 dist/SlotsAlloc.h \
 dist/SlotsFree.h \
 dist/Steel_SpinLock.h \
@@ -107,8 +109,7 @@ dist/LargeAlloc.c \
 dist/Main.c \
 dist/StarMalloc.c \
 dist/SizeClass.c \
-dist/SlabsAlloc.c \
-dist/SlabsFree.c \
+dist/Slabs.c \
 dist/SlotsAlloc.c \
 dist/SlotsFree.c \
 dist/Bitmap5.c \
