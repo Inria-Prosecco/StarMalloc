@@ -101,6 +101,7 @@ let metadata : mmap_md = init_mmap_md ()
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 20"
+inline_for_extraction noextract
 let large_malloc' (metadata: ref t) (size: US.t)
   : Steel (array U8.t)
   (ind_linked_avl_tree metadata)
@@ -158,6 +159,7 @@ let _size (metadata: ref t) : Steel U64.t
   (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
   return size
 
+inline_for_extraction noextract
 let large_free' (metadata: ref t) (ptr: array U8.t)
   : Steel bool
   (A.varray ptr `star` ind_linked_avl_tree metadata)
