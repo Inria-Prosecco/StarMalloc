@@ -33,6 +33,7 @@ module AL = ArrayList
 module ALG = ArrayListGen
 
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
 let deallocate_slab_aux_cond
   (size_class: sc)
   (md: slab_metadata)
@@ -319,6 +320,7 @@ let deallocate_slab_aux_1_fail
 #restart-solver
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
+inline_for_extraction noextract
 let deallocate_slab_aux_1
   (ptr: array U8.t)
   (size_class: sc)
@@ -668,6 +670,7 @@ let deallocate_slab_aux_2_fail
 #restart-solver
 
 #push-options "--z3rlimit 100"
+inline_for_extraction noextract
 let deallocate_slab_aux_2
   (ptr: array U8.t)
   (size_class: sc)
@@ -791,7 +794,7 @@ let deallocate_slab_aux_2
 #pop-options
 
 #restart-solver
-
+inline_for_extraction noextract
 let deallocate_slab_fail
   (ptr: array U8.t)
   (size_class: sc)
@@ -857,6 +860,7 @@ let deallocate_slab_fail
   return b
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
+inline_for_extraction noextract
 let deallocate_slab'
   (ptr: array U8.t)
   (size_class: sc)

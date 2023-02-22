@@ -18,7 +18,7 @@ open Impl.Trees.Types
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-//inline_for_extraction
+inline_for_extraction noextract
 let unpack_tree = unpack_tree #data
 
 //@Trees

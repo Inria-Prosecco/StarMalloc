@@ -289,23 +289,27 @@ let rec insert_avl
   )
 #pop-options
 
+noeq
+type result =
+  { ptr: t; data: data}
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec remove_leftmost_avl (ptr: t)
-  : Steel (t & data)
+  : Steel result
   (linked_tree ptr)
-  (fun r -> linked_tree (fst r))
+  (fun r -> linked_tree r.ptr)
   (requires fun h0 ->
     Spec.Node? (v_linked_tree ptr h0) /\
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 r h1 ->
     Spec.Node? (v_linked_tree ptr h0) /\
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0) /\
-    v_linked_tree (fst r) h1
+    v_linked_tree r.ptr h1
     == fst (Spec.remove_leftmost_avl
       (convert cmp) (v_linked_tree ptr h0)) /\
-    snd r == snd (Spec.remove_leftmost_avl
+    r.data == snd (Spec.remove_leftmost_avl
       (convert cmp) (v_linked_tree ptr h0)) /\
-    Spec.size_of_tree (v_linked_tree (fst r) h1)
+    Spec.size_of_tree (v_linked_tree r.ptr h1)
     == Spec.size_of_tree (v_linked_tree ptr h0) - 1 /\
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
   =
@@ -317,16 +321,16 @@ let rec remove_leftmost_avl (ptr: t)
     trees_free (get_size node);
     trees_free (get_height node);
     trees_free2 ptr;
-    return (get_right node, data)
+    return {ptr = get_right node; data}
   ) else (
     (**) not_null_is_node (get_left node);
     let r0 = remove_leftmost_avl (get_left node) in
     let new_ptr = merge_tree_no_alloc
-      (get_data node) (fst r0) (get_right node)
+      (get_data node) r0.ptr (get_right node)
       (get_size node) (get_height node)
       ptr in
     let new_ptr = rebalance_avl new_ptr in
-    return (new_ptr, snd r0)
+    return {ptr = new_ptr; data=r0.data}
   )
 #pop-options
 
@@ -373,8 +377,8 @@ let delete_avl_aux0
   ) else (
     not_null_is_node (get_right node);
     let r0 = remove_leftmost_avl (get_right node) in
-    let new_ptr = merge_tree_no_alloc (snd r0)
-      (get_left node) (fst r0)
+    let new_ptr = merge_tree_no_alloc r0.data
+      (get_left node) r0.ptr
       (get_size node) (get_height node)
       ptr in
     let new_ptr = rebalance_avl new_ptr in

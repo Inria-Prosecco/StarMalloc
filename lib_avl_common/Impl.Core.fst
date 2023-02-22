@@ -639,7 +639,7 @@ let unpack_tree_node_lemma_size (#a:Type0) (pt:t a) (t:wdm (node a)) (m:mem) : L
   )
   = unpack_tree_node_lemma pt t m
 
-
+inline_for_extraction noextract
 let unpack_tree_node (#a:Type0) (ptr:t a)
   : Steel (node a)
              (tree_node ptr)
