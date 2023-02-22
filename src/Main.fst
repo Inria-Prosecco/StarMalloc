@@ -398,7 +398,7 @@ let allocate_size_class scs =
 
 val slab_malloc (bytes:U32.t) : SteelT (array U8.t) emp (fun r -> if is_null r then emp else varray r)
 
-inline_for_extraction
+inline_for_extraction noextract
 let slab_malloc' (sc: size_class) (bytes: U32.t)
   : Steel
   (array U8.t)
@@ -434,7 +434,7 @@ val slab_free (ptr:array U8.t)
            (A.varray ptr)
            (fun b -> if b then emp else A.varray ptr)
 
-inline_for_extraction
+inline_for_extraction noextract
 let slab_free1 (sc: size_class) (ptr: array U8.t)
   : Steel bool
   (A.varray ptr)
@@ -456,7 +456,7 @@ let slab_free1 (sc: size_class) (ptr: array U8.t)
     sc.region_start
     sc.region_end
 
-inline_for_extraction
+inline_for_extraction noextract
 let slab_free2 (sc: size_class) (ptr: array U8.t)
   : Steel bool
   (A.varray ptr)
