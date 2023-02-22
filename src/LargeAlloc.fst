@@ -14,19 +14,17 @@ module US = FStar.SizeT
 
 module P = Steel.FractionalPermission
 
-let array = Steel.ST.Array.array
-
 open Impl.Mono
 open Map.M
 open Impl.Core
+open Impl.Trees.Types
 
 #set-options "--ide_id_info_off"
 
 // machine representation
-unfold let a = Aux.a
-
-let t = Impl.Core.t
-unfold let linked_tree = Impl.Core.linked_tree #a
+inline_for_extraction noextract
+unfold
+let linked_tree = Impl.Core.linked_tree #data
 
 noextract inline_for_extraction
 let mmap = Mman.mmap_s
@@ -50,10 +48,10 @@ noextract
 assume
 val ptr_to_u64 (x: array U8.t) : U64.t
 
-let cmp (x y: a) : I64.t
+let cmp (x y: data) : I64.t
   =
-  let x = fst x in
-  let y = fst y in
+  let x = x.ptr in
+  let y = y.ptr in
   let x = ptr_to_u64 x in
   let y = ptr_to_u64 y in
   if U64.gt x y then 1L
@@ -75,18 +73,18 @@ let find = Map.M.find
 
 open Steel.Reference
 
-let is_avl (x: wdm a) : prop
+let is_avl (x: wdm data) : prop
   = Spec.is_avl (spec_convert cmp) x == true
 
-let linked_avl_tree (tree: t a)
+let linked_avl_tree (tree: t)
   = linked_tree tree `vrefine` is_avl
 
-let ind_linked_avl_tree (metadata: ref (t a))
+let ind_linked_avl_tree (metadata: ref t)
   = vptr metadata `vdep` linked_avl_tree
 
 assume
 val mmap_ptr_metadata (_:unit)
-  : SteelT (ref (t a))
+  : SteelT (ref t)
   emp
   (fun r -> vptr r)
 
@@ -95,7 +93,7 @@ module L = Steel.SpinLock
 noeq
 type mmap_md =
   {
-    data: ref (t a);
+    data: ref t;
     lock : L.lock (ind_linked_avl_tree data);
   }
 
@@ -116,14 +114,14 @@ let init_mmap_md (_:unit)
 let metadata : mmap_md = init_mmap_md ()
 #pop-options
 
-let large_malloc' (metadata: ref (t a)) (size: US.t)
+let large_malloc' (metadata: ref t) (size: US.t)
   : Steel (array U8.t)
   (ind_linked_avl_tree metadata)
   (fun r -> A.varray r `star` ind_linked_avl_tree metadata)
   (requires fun h0 ->
     let blob0 : t_of (ind_linked_avl_tree metadata)
       = h0 (ind_linked_avl_tree metadata) in
-    let t : wdm a = dsnd blob0 in
+    let t : wdm data = dsnd blob0 in
     Spec.size_of_tree t < c
   )
   (ensures fun _ r h1 ->
@@ -140,21 +138,21 @@ let large_malloc' (metadata: ref (t a)) (size: US.t)
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
   let ptr = mmap size in
-  let md_v' = insert false cmp md_v (ptr, size) in
+  let md_v' = insert false cmp md_v {ptr; size} in
   write metadata md_v';
   (**) intro_vrefine (linked_tree md_v') is_avl;
   (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
   return ptr
 
 inline_for_extraction noextract
-let _size (metadata: ref (t a)) : Steel U64.t
+let _size (metadata: ref t) : Steel U64.t
   (ind_linked_avl_tree metadata)
   (fun _ -> ind_linked_avl_tree metadata)
   (requires fun _ -> True)
   (ensures fun h0 r h1 ->
     let blob0 : t_of (ind_linked_avl_tree metadata)
       = h0 (ind_linked_avl_tree metadata) in
-    let t : wdm a = dsnd blob0 in
+    let t : wdm data = dsnd blob0 in
     h1 (ind_linked_avl_tree metadata)
     ==
     h0 (ind_linked_avl_tree metadata) /\
@@ -172,7 +170,7 @@ let _size (metadata: ref (t a)) : Steel U64.t
   (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
   return size
 
-let large_free' (metadata: ref (t a)) (ptr: array U8.t)
+let large_free' (metadata: ref t) (ptr: array U8.t)
   : Steel bool
   (A.varray ptr `star` ind_linked_avl_tree metadata)
   (fun b ->
@@ -190,7 +188,7 @@ let large_free' (metadata: ref (t a)) (ptr: array U8.t)
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  let size = find cmp md_v (ptr, 0sz) in
+  let size = find cmp md_v {ptr; size= 0sz} in
   if Some? size then (
     let size = Some?.v size in
     let b = munmap ptr size in
@@ -200,7 +198,7 @@ let large_free' (metadata: ref (t a)) (ptr: array U8.t)
       (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
       return (not b)
     ) else (
-      let md_v' = delete cmp md_v (ptr, size) in
+      let md_v' = delete cmp md_v {ptr; size} in
       write metadata md_v';
       (**) intro_vrefine (linked_tree md_v') is_avl;
       (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
@@ -256,7 +254,7 @@ let large_free (ptr: array U8.t)
   L.release metadata.lock;
   return b
 
-let large_getsize' (metadata: ref (t a)) (ptr: array U8.t)
+let large_getsize' (metadata: ref t) (ptr: array U8.t)
   : Steel US.t
   (A.varray ptr `star` ind_linked_avl_tree metadata)
   (fun _ -> A.varray ptr `star` ind_linked_avl_tree metadata)
@@ -276,7 +274,7 @@ let large_getsize' (metadata: ref (t a)) (ptr: array U8.t)
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  let size = find cmp md_v (ptr, 0sz) in
+  let size = find cmp md_v {ptr; size=0sz} in
   if Some? size then (
     let size = Some?.v size in
     (**) intro_vrefine (linked_tree md_v) is_avl;

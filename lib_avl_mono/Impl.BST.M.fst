@@ -14,15 +14,14 @@ module I = FStar.Int64
 
 open Impl.Core
 open Impl.Common
+open Impl.Trees.Types
 open Impl.Trees.M
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-let a = Impl.Trees.M.a
-
 //@BST
 #push-options "--fuel 1 --ifuel 1"
-let rec member (cmp:cmp a) (ptr: t a) (v: a)
+let rec member (cmp:cmp data) (ptr: t) (v: data)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 ->
     Spec.is_bst (convert cmp) (v_linked_tree ptr h0))

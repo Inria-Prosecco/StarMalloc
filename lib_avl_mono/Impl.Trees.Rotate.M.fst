@@ -14,16 +14,15 @@ module I = FStar.Int64
 open Spec.Trees
 open Impl.Core
 open Impl.Common
+open Impl.Trees.Types
 open Impl.Trees.M
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-let a = Impl.Trees.M.a
-
 //@Trees (rotate*)
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 25"
-let rotate_left (ptr: t a)
-  : Steel (t a)
+let rotate_left (ptr: t)
+  : Steel t
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires (fun h0 ->
@@ -58,8 +57,8 @@ let rotate_left (ptr: t a)
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 25"
-let rotate_right (ptr: t a)
-  : Steel (t a)
+let rotate_right (ptr: t)
+  : Steel t
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires (fun h0 ->

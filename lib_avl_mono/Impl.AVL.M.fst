@@ -12,6 +12,7 @@ module I = FStar.Int64
 
 open Impl.Core
 open Impl.Common
+open Impl.Trees.Types
 open Impl.Trees.M
 open Impl.Trees.Rotate.M
 open Impl.Trees.Rotate2.M
@@ -20,11 +21,9 @@ open Impl.BST.M
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-let a = Impl.Trees.M.a
-
 //@AVL
 #push-options "--fuel 1 --ifuel 1"
-let rec is_balanced_global (ptr: t a)
+let rec is_balanced_global (ptr: t)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 -> True)
   (ensures (fun h0 b h1 ->
@@ -58,7 +57,7 @@ let rec is_balanced_global (ptr: t a)
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1"
-let is_balanced_local (ptr: t a)
+let is_balanced_local (ptr: t)
   : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
   (requires fun h0 -> True)
   (ensures (fun h0 b h1 ->
@@ -90,8 +89,8 @@ let is_balanced_local (ptr: t a)
 
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let rebalance_avl (cmp: cmp a) (ptr: t a)
-  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+let rebalance_avl (cmp: cmp data) (ptr: t)
+  : Steel t (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
     Spec.Node? (v_linked_tree ptr h0)
     ==>
@@ -202,8 +201,8 @@ let rebalance_avl (cmp: cmp a) (ptr: t a)
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec insert_avl
-  (r:bool) (cmp:cmp a) (ptr: t a) (new_data: a)
-  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+  (r:bool) (cmp:cmp data) (ptr: t) (new_data: data)
+  : Steel t (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
     Spec.size_of_tree (v_linked_tree ptr h0) < c /\
     Spec.height_of_tree (v_linked_tree ptr h0) < c /\
@@ -291,8 +290,8 @@ let rec insert_avl
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let rec remove_leftmost_avl (cmp:cmp a) (ptr: t a)
-  : Steel (t a & a)
+let rec remove_leftmost_avl (cmp:cmp data) (ptr: t)
+  : Steel (t & data)
   (linked_tree ptr)
   (fun r -> linked_tree (fst r))
   (requires fun h0 ->
@@ -315,9 +314,9 @@ let rec remove_leftmost_avl (cmp:cmp a) (ptr: t a)
   if is_null_t (get_left node) then (
     let data = get_data node in
     elim_linked_tree_leaf (get_left node);
-    Aux.trees_free (get_size node);
-    Aux.trees_free (get_height node);
-    Aux.trees_free2 ptr;
+    trees_free (get_size node);
+    trees_free (get_height node);
+    trees_free2 ptr;
     return (get_right node, data)
   ) else (
     (**) not_null_is_node (get_left node);
@@ -339,9 +338,10 @@ let cheight = Spec.cheight
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 //#push-options "--fuel 1 --ifuel 1"
+inline_for_extraction noextract
 let delete_avl_aux0
-  (cmp:cmp a) (ptr: t a) (data_to_rm: a)
-  : Steel (t a)
+  (cmp:cmp data) (ptr: t) (data_to_rm: data)
+  : Steel t
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
@@ -360,15 +360,15 @@ let delete_avl_aux0
   (**) let node = unpack_tree ptr in
   if is_null_t (get_right node) then (
     elim_linked_tree_leaf (get_right node);
-    Aux.trees_free (get_size node);
-    Aux.trees_free (get_height node);
-    Aux.trees_free2 ptr;
+    trees_free (get_size node);
+    trees_free (get_height node);
+    trees_free2 ptr;
     return (get_left node)
   ) else if is_null_t (get_left node) then (
     elim_linked_tree_leaf (get_left node);
-    Aux.trees_free (get_size node);
-    Aux.trees_free (get_height node);
-    Aux.trees_free2 ptr;
+    trees_free (get_size node);
+    trees_free (get_height node);
+    trees_free2 ptr;
     return (get_right node)
   ) else (
     not_null_is_node (get_right node);
@@ -384,8 +384,8 @@ let delete_avl_aux0
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
 let rec delete_avl
-  (cmp:cmp a) (ptr: t a) (data_to_rm: a)
-  : Steel (t a) (linked_tree ptr) (fun ptr' -> linked_tree ptr')
+  (cmp:cmp data) (ptr: t) (data_to_rm: data)
+  : Steel t (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
     Spec.is_avl (convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 ptr' h1 ->
@@ -442,4 +442,3 @@ let rec delete_avl
       ptr in
     rebalance_avl cmp new_ptr
   ))
-

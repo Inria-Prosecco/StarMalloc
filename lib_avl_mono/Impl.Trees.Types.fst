@@ -1,4 +1,4 @@
-module Aux
+module Impl.Trees.Types
 
 open Steel.Effect.Atomic
 open Steel.Effect
@@ -11,9 +11,14 @@ module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 
+noextract inline_for_extraction
 let array = Steel.ST.Array.array
 
-let a = array U8.t & US.t
+noeq
+type data = { ptr: array U8.t; size: US.t}
+
+let node = node data
+let t = t data
 
 noextract
 assume val trees_malloc (x: U64.t) : Steel (ref U64.t)
@@ -22,8 +27,8 @@ assume val trees_malloc (x: U64.t) : Steel (ref U64.t)
   (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
 
 noextract
-assume val trees_malloc2 (x: node a)
-  : Steel (ref (node a))
+assume val trees_malloc2 (x: node)
+  : Steel (ref node)
   emp (fun r -> vptr r)
   (requires fun _ -> True)
   (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
@@ -35,7 +40,7 @@ assume val trees_free (r: ref U64.t) : Steel unit
   (ensures fun _ _ _-> True)
 
 noextract
-assume val trees_free2 (r: ref (node a)) : Steel unit
+assume val trees_free2 (r: ref node) : Steel unit
   (vptr r) (fun _ -> emp)
   (requires fun _ -> True)
   (ensures fun _ _ _-> True)

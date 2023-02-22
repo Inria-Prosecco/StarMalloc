@@ -14,18 +14,16 @@ module M = FStar.Math.Lib
 
 open Impl.Core
 open Impl.Common
+open Impl.Trees.Types
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-open Aux
-let a = Aux.a
-
 //inline_for_extraction
-let unpack_tree = unpack_tree #a
+let unpack_tree = unpack_tree #data
 
 //@Trees
 inline_for_extraction noextract
-let create_leaf (_: unit) : Steel (t a)
+let create_leaf (_: unit) : Steel t
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
@@ -39,7 +37,7 @@ let create_leaf (_: unit) : Steel (t a)
 //@Trees
 #push-options "--fuel 1 --ifuel 1"
 inline_for_extraction noextract
-let create_tree (v: a) : Steel (t a)
+let create_tree (v: data) : Steel t
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
@@ -63,7 +61,7 @@ let create_tree (v: a) : Steel (t a)
 
 //@Trees
 inline_for_extraction noextract
-let sot_wds (ptr: t a)
+let sot_wds (ptr: t)
   : Steel U.t
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
@@ -109,7 +107,7 @@ let sot_wds (ptr: t a)
   )
 
 inline_for_extraction noextract
-let hot_wdh (ptr: t a)
+let hot_wdh (ptr: t)
   : Steel U.t
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
@@ -156,7 +154,7 @@ let hot_wdh (ptr: t a)
 
 
 //@Trees
-let merge_tree (v: a) (l r: t a) : Steel (t a)
+let merge_tree (v: data) (l r: t) : Steel t
   (linked_tree l `star` linked_tree r)
   (fun ptr -> linked_tree ptr)
   (requires fun h0 ->
@@ -191,8 +189,8 @@ let merge_tree (v: a) (l r: t a) : Steel (t a)
 
 inline_for_extraction noextract
 let merge_tree_no_alloc
-  (v: a) (l r: t a) (sr hr: ref U.t) (ptr: ref (node a))
-  : Steel (t a)
+  (v: data) (l r: t) (sr hr: ref U.t) (ptr: ref node)
+  : Steel t
   (linked_tree l `star`
   linked_tree r `star`
   vptr sr `star`

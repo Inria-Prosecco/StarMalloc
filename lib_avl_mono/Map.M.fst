@@ -9,21 +9,20 @@ module I64 = FStar.Int64
 
 open Impl.Core
 open Impl.Common
+open Impl.Trees.Types
 
 #set-options "--ide_id_info_off"
-
-unfold let a = Aux.a
 //let unpack_tree = Impl.Trees.M.unpack_tree
 
-let spec_convert (#a #b: Type) (compare: cmp (a & b))
-  : GTot (Spec.cmp (a & b))
+let spec_convert (#a: Type) (compare: cmp a)
+  : GTot (Spec.cmp a)
   //= Impl.Common.convert (convert compare)
   = Impl.Common.convert compare
 
 let insert
-  (r: bool) (cmp: cmp a) (ptr: t a)
-  (new_data: a)
-  : Steel (t a)
+  (r: bool) (cmp: cmp data) (ptr: t)
+  (new_data: data)
+  : Steel t
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
@@ -41,9 +40,9 @@ let insert
   Impl.Mono.insert_avl r cmp ptr new_data
 
 let delete
-  (cmp: cmp a) (ptr: t a)
-  (data_to_rm: a)
-  : Steel (t a)
+  (cmp: cmp data) (ptr: t)
+  (data_to_rm: data)
+  : Steel t
   (linked_tree ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
@@ -58,7 +57,7 @@ let delete
   Impl.Mono.delete_avl cmp ptr data_to_rm
 
 let cardinal
-  (ptr: t a)
+  (ptr: t)
   : Steel (U64.t)
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
@@ -71,8 +70,8 @@ let cardinal
   Impl.Mono.sot_wds ptr
 
 let mem
-  (cmp: cmp a) (ptr: t a)
-  (v: a)
+  (cmp: cmp data) (ptr: t)
+  (v: data)
   : Steel bool
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
@@ -84,8 +83,8 @@ let mem
   Impl.Mono.member cmp ptr v
 
 let rec find
-  (cmp: cmp a) (ptr: t a)
-  (v: a)
+  (cmp: cmp data) (ptr: t)
+  (v: data)
   : Steel (option US.t)
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
@@ -106,7 +105,7 @@ let rec find
     pack_tree ptr
       (get_left node) (get_right node)
       (get_size node) (get_height node);
-    let r = snd (get_data node) in
+    let r = (get_data node).size in
     return (Some r)
   ) else (
     if I64.lt delta szero then (
@@ -125,8 +124,8 @@ let rec find
   ))
 
 let find2
-  (cmp: cmp a) (ptr: t a)
-  (v: a)
+  (cmp: cmp data) (ptr: t)
+  (v: data)
   : Steel (U64.t)
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)

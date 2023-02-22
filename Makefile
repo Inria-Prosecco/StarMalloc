@@ -71,6 +71,7 @@ extract: $(ALL_KRML_FILES)
 	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
     -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
+		-bundle 'Impl.Trees.\*'[rename=AVL] \
     -no-prefix Main \
     -no-prefix LargeAlloc \
 		-warn-error +9 \
@@ -83,16 +84,11 @@ test: verify extract
 
 FILES = \
 $(KRML_HOME)/krmllib/c/steel_spinlock.c \
-dist/Aux.h \
 dist/ArrayList.h \
+dist/AVL.h \
 dist/Map_M.h \
 dist/Impl_AVL_M.h \
 dist/Impl_BST_M.h \
-dist/Impl_Test_Mono.h \
-dist/Impl_Trees_M.h \
-dist/Impl_Trees_Rotate3_M.h \
-dist/Impl_Trees_Rotate2_M.h \
-dist/Impl_Trees_Rotate_M.h \
 dist/krmlinit.h \
 dist/LargeAlloc.h \
 dist/Main.h \
@@ -107,14 +103,10 @@ dist/Bitmap5.h \
 dist/Utils2.h \
 dist/Mman.h \
 dist/ArrayList.c \
+dist/AVL.c \
 dist/Map_M.c \
 dist/Impl_AVL_M.c \
 dist/Impl_BST_M.c \
-dist/Impl_Test_Mono.c \
-dist/Impl_Trees_M.c \
-dist/Impl_Trees_Rotate3_M.c \
-dist/Impl_Trees_Rotate2_M.c \
-dist/Impl_Trees_Rotate_M.c \
 dist/krmlinit.c \
 dist/LargeAlloc.c \
 dist/Main.c \
