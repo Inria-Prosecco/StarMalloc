@@ -32,7 +32,7 @@ size_t *mmap_ptr_us() {
   return (size_t*) mmap_s(sizeof(size_t));
 }
 
-uint64_t* Aux_trees_malloc(uint64_t x) {
+uint64_t* Impl_Trees_Types_trees_malloc(uint64_t x) {
   uint64_t* ptr = mmap_u64(1);
   *ptr = x;
   return ptr;
