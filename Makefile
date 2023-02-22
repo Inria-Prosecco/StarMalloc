@@ -74,6 +74,7 @@ extract: $(ALL_KRML_FILES)
 		-bundle 'Map.\*,Impl.\*,Spec.\*'[rename=AVL] \
 		-bundle 'StarMalloc=Main,LargeAlloc'[rename=StarMalloc] \
 		-bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
+		-bundle 'SlotsFree,SlotsAlloc'[rename=Slots] \
 		-bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
     -no-prefix Main \
     -no-prefix LargeAlloc \
@@ -94,8 +95,7 @@ dist/krmlinit.h \
 dist/StarMalloc.h \
 dist/SizeClass.h \
 dist/internal/Slabs.h \
-dist/SlotsAlloc.h \
-dist/SlotsFree.h \
+dist/internal/Slots.h \
 dist/Steel_SpinLock.h \
 dist/Bitmap5.h \
 dist/Utils2.h \
@@ -105,8 +105,7 @@ dist/AVL.c \
 dist/krmlinit.c \
 dist/StarMalloc.c \
 dist/Slabs.c \
-dist/SlotsAlloc.c \
-dist/SlotsFree.c \
+dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 src/utils.c \
