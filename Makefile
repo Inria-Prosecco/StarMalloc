@@ -84,8 +84,9 @@ test: verify extract
 
 FILES = \
 $(KRML_HOME)/krmllib/c/steel_spinlock.c \
-dist/ArrayList.h \
+dist/internal/ArrayList.h \
 dist/AVL.h \
+dist/internal/AVL.h \
 dist/krmlinit.h \
 dist/LargeAlloc.h \
 dist/Main.h \
