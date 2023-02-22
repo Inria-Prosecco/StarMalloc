@@ -37,13 +37,14 @@ let mmap = Mman.mmap_s
 let munmap (ptr: array U8.t) (size: US.t)
   : Steel bool
     (A.varray ptr)
-    (fun b -> if b then emp else A.varray ptr)
+    (fun b -> if b then A.varray ptr else emp)
     (requires fun _ ->
       //A.length a == U64.v size_t /\
       A.is_full_array ptr
     )
     (ensures fun _ _ _ -> True)
-  = Mman.munmap ptr size
+  =
+  Mman.munmap ptr size
 
 noextract
 assume
@@ -193,16 +194,17 @@ let large_free' (metadata: ref (t a)) (ptr: array U8.t)
   if Some? size then (
     let size = Some?.v size in
     let b = munmap ptr size in
+    sladmit ();
     if b then (
+      (**) intro_vrefine (linked_tree md_v) is_avl;
+      (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
+      return (not b)
+    ) else (
       let md_v' = delete cmp md_v (ptr, size) in
       write metadata md_v';
       (**) intro_vrefine (linked_tree md_v') is_avl;
       (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
-      return b
-    ) else (
-      (**) intro_vrefine (linked_tree md_v) is_avl;
-      (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
-      return b
+      return (not b)
     )
   ) else (
     (**) intro_vrefine (linked_tree md_v) is_avl;

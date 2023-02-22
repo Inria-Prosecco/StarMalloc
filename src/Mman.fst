@@ -36,7 +36,7 @@ noextract
 assume val munmap (ptr: array U8.t) (size: US.t)
   : Steel bool
     (A.varray ptr)
-    (fun b -> if b then emp else A.varray ptr)
+    (fun b -> if b then A.varray ptr else emp)
     (requires fun _ ->
       //A.length a == U64.v size_t /\
       A.is_full_array ptr
