@@ -187,7 +187,7 @@ src/lib-alloc.c
 
 # test the compilation of the allocator as a shared library
 #gcc -g -O0 -DKRML_VERIFIED_UINT128
-lib: verify extract lib
+lib: verify extract patch
 	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
@@ -199,7 +199,7 @@ src/lib-alloc.c
 #-Wmissing-prototypes
 #-std=c17
 #-Wall -Wextra -Wcast-align=strict -Wcast-qual
-hardened_lib: verify extract
+hardened_lib: verify extract patch
 	gcc -DKRML_VERIFIED_UINT128 \
 	-pipe -O3 -flto -fPIC -fvisibility=hidden -fno-plt \
 	-fstack-clash-protection -fcf-protection -fstack-protector-strong \
