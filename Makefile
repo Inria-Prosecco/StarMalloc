@@ -66,6 +66,11 @@ obj/%.krml:
 
 ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
 
+patch:
+	touch dist/StarMalloc.c
+	sed 's/Steel_SpinLock_acquire(/pthread_mutex_lock(\&/g' -i dist/StarMalloc.c
+	sed 's/Steel_SpinLock_release(/pthread_mutex_unlock(\&/g' -i dist/StarMalloc.c
+
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
 	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
@@ -80,6 +85,7 @@ extract: $(ALL_KRML_FILES)
     -no-prefix LargeAlloc \
 		-warn-error +9 \
 		-add-include 'Steel_SpinLock:"krml/steel_types.h"' $^
+
 
 # test classic AVL trees
 test: verify extract
@@ -126,7 +132,7 @@ test-compile-alloc: verify extract
 $(FILES) src/lib-alloc.c
 
 # test the allocator with a static binary
-test-alloc0: verify extract
+test-alloc0: verify extract patch
 	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
@@ -164,7 +170,7 @@ bench/test-avl.c
 	./bench/a.out
 
 # test the allocator with a static binary
-test-alloc0bis: verify extract
+test-alloc0bis: verify extract patch
 	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
@@ -177,11 +183,11 @@ src/lib-alloc.c
 
 # test the compilation of the allocator as a shared library
 #gcc -g -O0 -DKRML_VERIFIED_UINT128
-lib: verify extract
+lib: verify extract lib
 	gcc -O2 -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
-	-pthread \
+	-pthread -lpthread \
 -shared -fPIC -o bench/starmalloc.so \
 $(FILES) \
 src/lib-alloc.c
