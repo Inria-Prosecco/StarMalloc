@@ -70,6 +70,10 @@ patch:
 	touch dist/StarMalloc.c
 	sed 's/Steel_SpinLock_acquire(/pthread_mutex_lock(\&/g' -i dist/StarMalloc.c
 	sed 's/Steel_SpinLock_release(/pthread_mutex_unlock(\&/g' -i dist/StarMalloc.c
+	sed 's/uint64_t x1 = Impl_Trees_Types_ptr_to_u64(x);/uintptr_t x1 = (uintptr_t) x;/g' -i dist/AVL.c
+	sed 's/uint64_t y1 = Impl_Trees_Types_ptr_to_u64(y);/uintptr_t y1 = (uintptr_t) y;/g' -i dist/AVL.c
+	sed 's/uint64_t x2 = ptr_to_u64(x1);/uintptr_t x2 = (uintptr_t) x1;/g' -i dist/LargeAlloc.c
+	sed 's/uint64_t y2 = ptr_to_u64(y1);/uintptr_t y2 = (uintptr_t) y1;/g' -i dist/LargeAlloc.c
 
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
