@@ -205,7 +205,7 @@ hardened_lib: verify extract
 	-fstack-clash-protection -fcf-protection -fstack-protector-strong \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
-	-pthread \
+	-pthread -lpthread \
 	-Wwrite-strings -Werror -march=native \
 	-Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
 -shared -fPIC -o bench/h_starmalloc.so \
