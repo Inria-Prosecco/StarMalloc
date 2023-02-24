@@ -7,6 +7,7 @@ open Steel.ArrayRef
 
 module A = Steel.Array
 module L = FStar.List.Tot
+module U32 = FStar.UInt32
 module US = FStar.SizeT
 module FS = FStar.FiniteSet.Base
 open FStar.FiniteSet.Ambient
@@ -29,9 +30,9 @@ val get_data (#a:Type0) (c:cell a) : a
 /// The + 1 is needed to handle the case where the metadata array will be full,
 /// and the metadata counter will be exactly metadata_max
 noextract inline_for_extraction
-let null : nat = 131073
+let null : nat = U32.v Utils2.page_size + 1
 noextract inline_for_extraction
-let null_ptr : US.t = US.of_u32 131073ul
+let null_ptr : US.t = US.of_u32 (U32.add Utils2.page_size 1ul)
 
 /// Erases the next and prev field to return a sequence of data
 val dataify (#a:Type)
@@ -340,17 +341,15 @@ val remove (#a:Type)
           (fun hd' -> varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)
           (requires fun h -> mem (US.v idx) (US.v hd1) (h (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)))
           (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            FS.remove (US.v idx) (ptrs_in (US.v hd1) (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))) /\
-            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
-            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
-            (~ (mem_all (US.v idx) (US.v hd') hd2 hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)))) /\
-            dataify (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))
+            let gs0 = h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3) in
+            ptrs_in (US.v hd') gs1 ==
+            FS.remove (US.v idx) (ptrs_in (US.v hd1) gs0) /\
+            ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
+            ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
+            (~ (mem_all (US.v idx) (US.v hd') hd2 hd3 gs1)) /\
+            dataify gs1 == dataify gs0
           )
-
 
 /// Requires that the element at offset [idx] does not belong to any dlist.
 /// If so, insert it at the head of list [hd1].
@@ -371,14 +370,13 @@ val insert (#a:Type)
           (requires fun h -> pred1 v /\
             (~ (mem_all (US.v idx) (US.v hd) hd2 hd3 (h (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)))))
           (ensures fun h0 hd' h1 ->
-            ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            FS.insert (US.v idx) (ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) /\
-            ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
-            ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
-            dataify (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            Seq.upd (dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) (US.v idx) v
+            let gs0 = h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3) in
+            ptrs_in (US.v idx) gs1 ==
+            FS.insert (US.v idx) (ptrs_in (US.v hd) gs0) /\
+            ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
+            ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
+            dataify gs1 == Seq.upd (dataify gs0) (US.v idx) v
           )
 
 /// If the doubly linked lists fit in the first [k] elements of the array, then
@@ -399,7 +397,11 @@ val extend (#a:Type)
           (requires fun _ ->
             k <> null_ptr /\ pred1 v)
           (ensures fun h0 _ h1 ->
-            dataify (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3))
-              ==
-            Seq.append (dataify (h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3))) (Seq.create 1 v)
+            let gs0 = h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
+            ptrs_in (US.v k) gs1 ==
+            FS.insert (US.v k) (ptrs_in (US.v hd) gs0) /\
+            ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
+            ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
+            dataify gs1 == Seq.append (dataify gs0) (Seq.create 1 v)
           )

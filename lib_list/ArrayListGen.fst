@@ -9,6 +9,7 @@ module A = Steel.Array
 module L = FStar.List.Tot
 module US = FStar.SizeT
 module FS = FStar.FiniteSet.Base
+module G = FStar.Ghost
 open FStar.FiniteSet.Ambient
 
 (** A library for doubly linked lists, that are located in memory in a contiguous region (an array) *)
@@ -1167,18 +1168,23 @@ let extend_aux (#a:Type) (#opened:_)
   (k:US.t{US.v k + 1 <= A.length r /\ US.fits (US.v k + 1)})
   (v:a)
   : SteelGhost unit opened
-          (varraylist pred1 pred2 pred3 (A.split_l r k) hd1 hd2 hd3 `star`
-            A.varray (A.split_l (A.split_r r k) 1sz))
-          (fun _ -> varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3)
-          (requires fun _ ->
-            k <> null_ptr /\ pred1 v)
-          (ensures fun h0 _ h1 ->
-            (~ (mem_all (US.v k) hd1 hd2 hd3
-              (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3)))) /\
-            Seq.slice (dataify (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3))) 0 (US.v k)
-              ==
-            dataify (h0 (varraylist pred1 pred2 pred3 (A.split_l r k) hd1 hd2 hd3))
-          )
+  (
+    varraylist pred1 pred2 pred3 (A.split_l r k) hd1 hd2 hd3 `star`
+    A.varray (A.split_l (A.split_r r k) 1sz)
+  )
+  (fun _ -> varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3)
+  (requires fun _ -> k <> null_ptr /\ pred1 v)
+  (ensures fun h0 _ h1 ->
+    let gs0 = h0 (varraylist pred1 pred2 pred3 (A.split_l r k) hd1 hd2 hd3) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3) in
+    ptrs_in hd1 gs1 == ptrs_in hd1 gs0 /\
+    ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
+    ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
+    (~ (mem_all (US.v k) hd1 hd2 hd3 gs1)) /\
+    Seq.slice (dataify gs1) 0 (US.v k)
+    ==
+    dataify gs0
+  )
   =
   (**) let s0 = gget (varraylist pred1 pred2 pred3 (A.split_l r k) hd1 hd2 hd3) in
 
@@ -1215,6 +1221,7 @@ let extend_aux (#a:Type) (#opened:_)
 #pop-options
 
 #restart-solver
+
 #push-options "--z3rlimit 100"
 let extend (#a:Type)
   (#pred1 #pred2 #pred3: a -> prop)
@@ -1230,21 +1237,37 @@ let extend (#a:Type)
           (requires fun _ ->
             k <> null_ptr /\ pred1 v)
           (ensures fun h0 _ h1 ->
-            dataify (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3))
-              ==
-            Seq.append (dataify (h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3))) (Seq.create 1 v)
+            let gs0 = h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
+            ptrs_in (US.v k) gs1 ==
+            FS.insert (US.v k) (ptrs_in (US.v hd) gs0) /\
+            ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
+            ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
+            dataify gs1 == Seq.append (dataify gs0) (Seq.create 1 v)
           )
   =
-  (**) let s0 = gget (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
-
-  extend_aux r (US.v hd) hd2 hd3 k v;
-
+  (**) let gs0 = gget (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
+  let p01 = G.hide (ptrs_in #a (US.v hd) gs0) in
+  let p02 = G.hide (ptrs_in #a hd2 gs0) in
+  let p03 = G.hide (ptrs_in #a hd3 gs0) in
+  extend_aux r (Ghost.hide (US.v hd)) hd2 hd3 k v;
+  (**) let gs1 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v hd) hd2 hd3) in
+  let p11 = G.hide (ptrs_in #a (US.v hd) gs1) in
+  let p12 = G.hide (ptrs_in #a hd2 gs1) in
+  let p13 = G.hide (ptrs_in #a hd3 gs1) in
+  assert (p11 `FS.equal` p01);
+  assert (p12 `FS.equal` p02);
+  assert (p13 `FS.equal` p03);
   insert (A.split_l r (k `US.add` 1sz)) hd hd2 hd3 k v;
-
-  (**) let s2 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
-
+  (**) let gs2 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
+  let p21 = G.hide (ptrs_in #a (US.v k) gs2) in
+  let p22 = G.hide (ptrs_in #a hd2 gs2) in
+  let p23 = G.hide (ptrs_in #a hd3 gs2) in
+  assert (p21 `FS.equal` FS.insert (US.v k) p11);
+  assert (p22 `FS.equal` p12);
+  assert (p23 `FS.equal` p13);
   // Final conclusion
   (**) Seq.lemma_eq_intro #a
-   (Seq.append (dataify (Ghost.reveal s0)) (Seq.create 1 v))
-   (dataify (Ghost.reveal s2))
+   (Seq.append (dataify (Ghost.reveal gs0)) (Seq.create 1 v))
+   (dataify (Ghost.reveal gs2))
 #pop-options

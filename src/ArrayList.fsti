@@ -66,15 +66,14 @@ val remove1
           (fun hd' -> varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)
           (requires fun h -> AL.mem (US.v idx) (US.v hd1) (h (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)))
           (ensures fun h0 hd' h1 ->
-            AL.ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            FS.remove (US.v idx) (AL.ptrs_in (US.v hd1) (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))) /\
-            AL.ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
-            AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)) /\
-            (~ (AL.mem_all (US.v idx) (US.v hd') hd2 hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)))) /\
-            AL.dataify (h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3)) ==
-            AL.dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3))
+            let gs0 = h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 r (US.v hd') hd2 hd3) in
+            AL.ptrs_in (US.v hd') gs1 ==
+            FS.remove (US.v idx) (AL.ptrs_in (US.v hd1) gs0) /\
+            AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
+            AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
+            (~ (AL.mem_all (US.v idx) (US.v hd') hd2 hd3 gs1)) /\
+            AL.dataify gs1 == AL.dataify gs0
           )
 
 inline_for_extraction noextract
@@ -90,15 +89,14 @@ val remove2
           (fun hd' -> varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)
           (requires fun h -> AL.mem (US.v idx) (US.v hd2) (h (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)))
           (ensures fun h0 hd' h1 ->
-            AL.ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            FS.remove (US.v idx) (AL.ptrs_in (US.v hd2) (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))) /\
-            AL.ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
-            AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)) /\
-            (~ (AL.mem_all (US.v idx) hd1 (US.v hd') hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)))) /\
-            AL.dataify (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3)) ==
-            AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3))
+            let gs0 = h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd') hd3) in
+            AL.ptrs_in (US.v hd') gs1 ==
+            FS.remove (US.v idx) (AL.ptrs_in (US.v hd2) gs0) /\
+            AL.ptrs_in hd1 gs1 == AL.ptrs_in hd1 gs0 /\
+            AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
+            (~ (AL.mem_all (US.v idx) hd1 (US.v hd') hd3 gs1)) /\
+            AL.dataify gs1 == AL.dataify gs0
           )
 
 inline_for_extraction noextract
@@ -114,15 +112,14 @@ val remove3
           (fun hd' -> varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))
           (requires fun h -> AL.mem (US.v idx) (US.v hd3) (h (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))))
           (ensures fun h0 hd' h1 ->
-            AL.ptrs_in (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            FS.remove (US.v idx) (AL.ptrs_in (US.v hd3) (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))) /\
-            AL.ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
-            AL.ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3))) /\
-            (~ (AL.mem_all (US.v idx) hd1 hd2 (US.v hd') (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))))) /\
-            AL.dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd'))) ==
-            AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)))
+            let gs0 = h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd3)) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd')) in
+            AL.ptrs_in (US.v hd') gs1 ==
+            FS.remove (US.v idx) (AL.ptrs_in (US.v hd3) gs0) /\
+            AL.ptrs_in hd1 gs1 == AL.ptrs_in hd1 gs0 /\
+            AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
+            (~ (AL.mem_all (US.v idx) hd1 hd2 (US.v hd') gs1)) /\
+            AL.dataify gs1 == AL.dataify gs0
           )
 
 inline_for_extraction noextract
@@ -139,14 +136,13 @@ val insert1
           (requires fun h -> pred1 v /\
             (~ (AL.mem_all (US.v idx) (US.v hd) hd2 hd3 (h (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)))))
           (ensures fun h0 hd' h1 ->
-            AL.ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            FS.insert (US.v idx) (AL.ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) /\
-            AL.ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
-            AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3)) /\
-            AL.dataify (h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3)) ==
-            Seq.upd (AL.dataify (h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3))) (US.v idx) v
+            let gs0 = h0 (varraylist pred1 pred2 pred3 r (US.v hd) hd2 hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 r (US.v idx) hd2 hd3) in
+            AL.ptrs_in (US.v idx) gs1 ==
+            FS.insert (US.v idx) (AL.ptrs_in (US.v hd) gs0) /\
+            AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
+            AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
+            AL.dataify gs1 == Seq.upd (AL.dataify gs0) (US.v idx) v
           )
 
 inline_for_extraction noextract
@@ -163,14 +159,13 @@ val insert2
           (requires fun h -> pred2 v /\
             (~ (AL.mem_all (US.v idx) hd1 (US.v hd) hd3 (h (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)))))
           (ensures fun h0 hd' h1 ->
-            AL.ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            FS.insert (US.v idx) (AL.ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))) /\
-            AL.ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
-            AL.ptrs_in hd3 (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            AL.ptrs_in hd3 (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3)) /\
-            AL.dataify (h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3)) ==
-            Seq.upd (AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3))) (US.v idx) v
+            let gs0 = h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd) hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 r hd1 (US.v idx) hd3) in
+            AL.ptrs_in (US.v idx) gs1 ==
+            FS.insert (US.v idx) (AL.ptrs_in (US.v hd) gs0) /\
+            AL.ptrs_in hd1 gs1 == AL.ptrs_in hd1 gs0 /\
+            AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
+            AL.dataify gs1 == Seq.upd (AL.dataify gs0) (US.v idx) v
           )
 
 inline_for_extraction noextract
@@ -187,14 +182,13 @@ val insert3
           (requires fun h -> pred3 v /\
             (~ (AL.mem_all (US.v idx) hd1 hd2 (US.v hd) (h (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))))))
           (ensures fun h0 hd' h1 ->
-            AL.ptrs_in (US.v idx) (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            FS.insert (US.v idx) (AL.ptrs_in (US.v hd) (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) /\
-            AL.ptrs_in hd1 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            AL.ptrs_in hd1 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
-            AL.ptrs_in hd2 (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            AL.ptrs_in hd2 (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd))) /\
-            AL.dataify (h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx))) ==
-            Seq.upd (AL.dataify (h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)))) (US.v idx) v
+            let gs0 = h0 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v hd)) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 r hd1 hd2 (US.v idx)) in
+            AL.ptrs_in (US.v idx) gs1 ==
+            FS.insert (US.v idx) (AL.ptrs_in (US.v hd) gs0) /\
+            AL.ptrs_in hd1 gs1 == AL.ptrs_in hd1 gs0 /\
+            AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
+            AL.dataify gs1 == Seq.upd (AL.dataify gs0) (US.v idx) v
           )
 
 inline_for_extraction noextract
@@ -214,7 +208,11 @@ val extend1
             k <> null_ptr /\ pred1 v)
           (ensures fun h0 _ h1 ->
             A.length_fits r;
-            AL.dataify (h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3))
-              `Seq.equal`
-            Seq.append (AL.dataify (h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3))) (Seq.create 1 v)
+            let gs0 = h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
+            AL.ptrs_in (US.v k) gs1 ==
+            FS.insert (US.v k) (AL.ptrs_in (US.v hd) gs0) /\
+            AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
+            AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
+            AL.dataify gs1 `Seq.equal` Seq.append (AL.dataify gs0) (Seq.create 1 v)
           )
