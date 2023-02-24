@@ -199,10 +199,11 @@ src/lib-alloc.c
 #-Wmissing-prototypes
 #-std=c17
 #-Wall -Wextra -Wcast-align=strict -Wcast-qual
+#-fvisibility=hidden
 hardened_lib: verify extract patch
 	gcc -DKRML_VERIFIED_UINT128 \
-	-pipe -O3 -flto -fPIC -fvisibility=hidden -fno-plt \
-	-fstack-clash-protection -fcf-protection -fstack-protector-strong \
+	-pipe -O3 -flto -fPIC \
+	-fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 	-pthread -lpthread \
