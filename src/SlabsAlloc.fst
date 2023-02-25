@@ -369,7 +369,9 @@ let allocate_slab_aux_1
     ) in
     md_count_v == dfst blob1)
   =
-  (**) ALG.lemma_head1_in_bounds pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) idx1 idx2 idx3;
+  (**) ALG.lemma_head1_in_bounds pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    idx1 (US.v idx2) (US.v idx3);
   (**) starseq_unpack_s
     #_
     #(pos:U32.t{U32.v pos < U32.v md_count_v})
@@ -615,7 +617,9 @@ let allocate_slab_aux_2
     ) in
     md_count_v == dfst blob1)
   =
-  (**) ALG.lemma_head2_in_bounds pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) idx1 idx2 idx3;
+  (**) ALG.lemma_head2_in_bounds pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    (US.v idx1) idx2 (US.v idx3);
   (**) starseq_unpack_s
     #_
     #(pos:U32.t{U32.v pos < U32.v md_count_v})
@@ -867,7 +871,9 @@ let allocate_slab_aux_3_1_varraylist
     (A.split_l md_region (u32_to_sz md_count_v))
     (US.v idx1) (US.v idx2) (US.v idx3)) in
   unpack_md_array md_region md_count_v;
-  ALG.lemma_head1_in_bounds pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) idx1 idx2 idx3;
+  ALG.lemma_head1_in_bounds pred1 pred2 pred3
+    (A.split_l md_region (u32_to_sz md_count_v))
+    idx1 (US.v idx2) (US.v idx3);
   A.length_fits md_region;
   AL.extend1 md_region idx1 (Ghost.hide (US.v idx2)) (Ghost.hide (US.v idx3)) (u32_to_sz md_count_v) 0ul;
   let gs1 = gget (AL.varraylist pred1 pred2 pred3
@@ -1265,7 +1271,7 @@ let allocate_slab'
   if (idx2 <> AL.null_ptr) then (
     ALG.lemma_head2_in_bounds pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
-      idx1 idx2 idx3;
+      (US.v idx1) idx2 (US.v idx3);
     // Lemma above used to derive
     assert (U32.v md_count_v <> AL.null);
 
@@ -1284,7 +1290,7 @@ let allocate_slab'
   ) else if (idx1 <> AL.null_ptr) then (
     ALG.lemma_head1_in_bounds pred1 pred2 pred3
       (A.split_l md_region (u32_to_sz md_count_v))
-      idx1 idx2 idx3;
+      idx1 (US.v idx2) (US.v idx3);
     // Lemma above used to derive
     assert (U32.v md_count_v <> AL.null);
 

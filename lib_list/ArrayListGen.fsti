@@ -30,9 +30,9 @@ val get_data (#a:Type0) (c:cell a) : a
 /// The + 1 is needed to handle the case where the metadata array will be full,
 /// and the metadata counter will be exactly metadata_max
 noextract inline_for_extraction
-let null : nat = U32.v Utils2.page_size + 1
+let null : nat = U32.v Utils2.metadata_max + 1
 noextract inline_for_extraction
-let null_ptr : US.t = US.of_u32 (U32.add Utils2.page_size 1ul)
+let null_ptr : US.t = US.of_u32 (U32.add Utils2.metadata_max 1ul)
 
 /// Erases the next and prev field to return a sequence of data
 val dataify (#a:Type)
@@ -165,15 +165,16 @@ val lemma_head_not_null_mem (#a:Type) (#opened:inames)
 val lemma_head1_in_bounds (#a:Type) (#opened:inames)
   (pred1 pred2 pred3: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3:US.t) :
+  (hd1: US.t)
+  (hd2 hd3: Ghost.erased nat) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)
+    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3)
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
       // Framing
-      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
-      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
+      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3) ==
+      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) hd2 hd3) /\
       // Functional property
       (hd1 == null_ptr \/ US.v hd1 < A.length r)
     )
@@ -183,15 +184,17 @@ val lemma_head1_in_bounds (#a:Type) (#opened:inames)
 val lemma_head2_in_bounds (#a:Type) (#opened:inames)
   (pred1 pred2 pred3: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3:US.t) :
+  (hd1: Ghost.erased nat)
+  (hd2: US.t)
+  (hd3: Ghost.erased nat) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
-    (fun _ -> varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3))
+    (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)
+    (fun _ -> varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3)
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
       // Framing
-      h0 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) ==
-      h1 (varraylist pred1 pred2 pred3 r (US.v hd1) (US.v hd2) (US.v hd3)) /\
+      h0 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3) ==
+      h1 (varraylist pred1 pred2 pred3 r hd1 (US.v hd2) hd3) /\
       // Functional property
       (hd2 == null_ptr \/ US.v hd2 < A.length r)
     )

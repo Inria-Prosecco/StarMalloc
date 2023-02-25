@@ -1076,6 +1076,7 @@ let remove #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   return hd'
 
 let insert #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
+  lemma_head1_in_bounds pred1 pred2 pred3 r hd hd2 hd3;
   (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
   (**) let gs0 = gget (A.varray r) in
 
