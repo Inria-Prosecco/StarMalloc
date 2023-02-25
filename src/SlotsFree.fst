@@ -260,7 +260,7 @@ let deallocate_slot_aux1
     let diff2 = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff2 /\
-    diff2 <= U32.v page_size - U32.v size_class /\
+    diff2 < U32.v page_size /\
     diff2 % (U32.v size_class) = 0 /\
     U32.v diff == diff2
   ))
@@ -305,7 +305,7 @@ let deallocate_slot_aux2
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff /\
-    diff <= U32.v page_size - U32.v size_class /\
+    diff < U32.v page_size /\
     diff % (U32.v size_class) == 0
   ))
   (ensures (
