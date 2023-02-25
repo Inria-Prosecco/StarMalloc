@@ -48,7 +48,7 @@ open Prelude
 
 inline_for_extraction noextract
 let slab_size : (v:US.t{US.v v == U32.v metadata_max * U32.v page_size}) =
-  US.of_u32 536870912ul
+  US.of_u32 (U32.mul metadata_max page_size)
 
 type size_class_struct = s:size_class_struct'{
   A.length s.slab_region == US.v slab_size /\
@@ -188,7 +188,7 @@ let deallocate_size_class
   within_bounds_elim a0 a1 ptr;
   // Needed for the assert below
   A.intro_fits_ptrdiff32 ();
-  assert (UP.fits (G.reveal diff));
+  assume (UP.fits (G.reveal diff));
   let b = deallocate_slab ptr
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region

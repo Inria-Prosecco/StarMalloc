@@ -74,6 +74,11 @@ patch:
 	sed 's/uint64_t y1 = Impl_Trees_Types_ptr_to_u64(y);/uintptr_t y1 = (uintptr_t) y;/g' -i dist/AVL.c
 	sed 's/uint64_t x2 = ptr_to_u64(x1);/uintptr_t x2 = (uintptr_t) x1;/g' -i dist/LargeAlloc.c
 	sed 's/uint64_t y2 = ptr_to_u64(y1);/uintptr_t y2 = (uintptr_t) y1;/g' -i dist/LargeAlloc.c
+	sed -i 's/FStar_SizeT_uint_to_t(FStar_UInt32_v(Utils2_metadata_max + (uint32_t)1U))/524288/g' dist/Slabs.c
+	sed -i 's/FStar_SizeT_uint_to_t(FStar_UInt32_v(Utils2_metadata_max + (uint32_t)1U))/524288/g' dist/ArrayList.c
+	sed -i 's/FStar_SizeT_uint_to_t(FStar_UInt32_v(Utils2_metadata_max + (uint32_t)1U))/524288/g' dist/StarMalloc.c
+	sed -i 's/FStar_SizeT_uint_to_t(FStar_UInt32_v(Utils2_metadata_max \* Utils2_page_size))/2147483648/g' dist/StarMalloc.c
+
 
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
