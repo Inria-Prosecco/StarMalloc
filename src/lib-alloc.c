@@ -26,7 +26,7 @@ void* malloc(size_t size) {
   if (! init_status) { krmlinit_globals(); init_status=1UL; }
   void* ptr = StarMalloc_malloc(size);
   //printf("malloc: %p, %lu\n", ptr, size);
-  return StarMalloc_malloc(size);
+  return ptr;
 }
 
 void free(void *ptr) {
