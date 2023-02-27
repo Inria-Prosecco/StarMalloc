@@ -47,8 +47,8 @@ type size_class_struct' = {
 open Prelude
 
 inline_for_extraction noextract
-let slab_size : (v:US.t{US.v v == U32.v metadata_max * U32.v page_size}) =
-  normalize_term (US.of_u32 (U32.mul metadata_max page_size))
+let slab_size : (v:US.t{US.v v == U32.v metadata_max * U32.v page_size})
+  = US.of_u32 2147483648ul
 
 type size_class_struct = s:size_class_struct'{
   A.length s.slab_region == US.v slab_size /\

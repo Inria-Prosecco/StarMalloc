@@ -32,7 +32,10 @@ val get_data (#a:Type0) (c:cell a) : a
 noextract inline_for_extraction
 let null : nat = U32.v Utils2.metadata_max + 1
 noextract inline_for_extraction
-let null_ptr : US.t = normalize_term (US.of_u32 (U32.add Utils2.metadata_max 1ul))
+let null_ptr : US.t = US.of_u32 524289ul
+
+let null_ptr_check () =
+  assert (US.v null_ptr == U32.v Utils2.metadata_max + 1)
 
 /// Erases the next and prev field to return a sequence of data
 val dataify (#a:Type)
