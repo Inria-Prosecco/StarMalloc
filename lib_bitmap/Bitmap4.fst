@@ -142,104 +142,6 @@ let array_to_bv2_index
   Seq.map_seq_index f s0 i
 
 noextract
-let get
-  (#n: nat)
-  (s: Seq.lseq U64.t n)
-  (i: U32.t{U32.v i < U64.n * n})
-  : bool
-  =
-  let i1 = U32.div i 64ul in
-  let i2 = U32.rem i 64ul in
-  let x = Seq.index s (U32.v i1) in
-  Bitmap3.get x i2
-
-let get_lemma
-  (#n: nat)
-  (s: Seq.lseq U64.t n)
-  (i: U32.t{U32.v i < U64.n * n})
-  : Lemma
-  (get s i = nth
-    (U64.v (Seq.index s (U32.v i / U64.n)))
-    (U64.n - (U32.v i % U64.n) - 1))
-  =
-  let i1 = U32.div i 64ul in
-  assert (U32.v i1 = U32.v i / U64.n);
-  let i2 = U32.rem i 64ul in
-  assert (U32.v i2 = U32.v i % U64.n);
-  let x = Seq.index s (U32.v i1) in
-  Bitmap3.bv_get_lemma x i2
-
-noextract
-let set
-  (#n: nat)
-  (s: Seq.lseq U64.t n)
-  (i: U32.t{U32.v i < U64.n * n})
-  : Seq.lseq U64.t n
-  =
-  let i1 = U32.div i 64ul in
-  assert (U32.v i1 = U32.v i / U64.n);
-  let i2 = U32.rem i 64ul in
-  assert (U32.v i2 = U32.v i % U64.n);
-  let x = Seq.index s (U32.v i1) in
-  let x' = Bitmap3.set x i2 in
-  Seq.upd s (U32.v i1) x'
-
-let set_lemma
-  (#n: nat)
-  (s: Seq.lseq U64.t n)
-  (i: U32.t{U32.v i < U64.n * n})
-  : Lemma
-  (requires
-    nth (U64.v (Seq.index s (U32.v i / U64.n)))
-        (U64.n - (U32.v i % U64.n) - 1) = false)
-  (ensures (
-    let s' = set s i in
-    nth (U64.v (Seq.index s' (U32.v i / U64.n)))
-        (U64.n - (U32.v i % U64.n) - 1) = true))
-  =
-  let i1 = U32.div i 64ul in
-  assert (U32.v i1 = U32.v i / U64.n);
-  let i2 = U32.rem i 64ul in
-  assert (U32.v i2 = U32.v i % U64.n);
-  let x = Seq.index s (U32.v i1) in
-  Bitmap3.bv_set_lemma x i2
-
-noextract
-let unset
-  (#n: nat)
-  (s: Seq.lseq U64.t n)
-  (i: U32.t{U32.v i < U64.n * n})
-  : Seq.lseq U64.t n
-  =
-  let i1 = U32.div i 64ul in
-  assert (U32.v i1 = U32.v i / U64.n);
-  let i2 = U32.rem i 64ul in
-  assert (U32.v i2 = U32.v i % U64.n);
-  let x = Seq.index s (U32.v i1) in
-  let x' = Bitmap3.unset x i2 in
-  Seq.upd s (U32.v i1) x'
-
-let unset_lemma
-  (#n: nat)
-  (s: Seq.lseq U64.t n)
-  (i: U32.t{U32.v i < U64.n * n})
-  : Lemma
-  (requires
-    nth (U64.v (Seq.index s (U32.v i / U64.n)))
-        (U64.n - (U32.v i % U64.n) - 1) = true)
-  (ensures (
-    let s' = unset s i in
-    nth (U64.v (Seq.index s' (U32.v i / U64.n)))
-        (U64.n - (U32.v i % U64.n) - 1) = false))
-  =
-  let i1 = U32.div i 64ul in
-  assert (U32.v i1 = U32.v i / U64.n);
-  let i2 = U32.rem i 64ul in
-  assert (U32.v i2 = U32.v i % U64.n);
-  let x = Seq.index s (U32.v i1) in
-  Bitmap3.bv_unset_lemma x i2
-
-noextract
 unfold
 let f_aux (k: nat{k < U64.n})
   : r:nat{r < U64.n}
@@ -571,3 +473,207 @@ let array_to_bv_lemma_upd_unset
     Seq2.append_upd2 bm0_12 bm0_3 (f #n i) false
   end
 #pop-options
+
+noextract
+let get
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : bool
+  =
+  let i1 = U32.div i 64ul in
+  let i2 = U32.rem i 64ul in
+  let x = Seq.index s (U32.v i1) in
+  Bitmap3.get x i2
+
+let get_lemma
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (get s i = nth
+    (U64.v (Seq.index s (U32.v i / U64.n)))
+    (U64.n - (U32.v i % U64.n) - 1))
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  Bitmap3.bv_get_lemma x i2
+
+module FU = FStar.UInt
+
+#push-options "--z3rlimit 50"
+let get_lemma2
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (let bm = Bitmap4.array_to_bv2 s in
+  let idx = f #n (U32.v i) in
+  let r = get s i in
+  r = Seq.index bm idx
+  )
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  let r = Bitmap3.get x i2 in
+  Bitmap3.bv_get_lemma x i2;
+  assert (r == FU.nth (U64.v (Seq.index s (U32.v i1))) (f_aux (U32.v i2)));
+  let i' = f #n (U32.v i) in
+  array_to_bv_lemma s i';
+  assert (r == Seq.index (array_to_bv s) i');
+  array_to_bv2_lemma s
+
+
+noextract
+let set
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Seq.lseq U64.t n
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  let x' = Bitmap3.set x i2 in
+  Seq.upd s (U32.v i1) x'
+
+let set_lemma2
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (requires (
+    let idx = f #n (U32.v i) in
+    let bm0 = Bitmap4.array_to_bv2 s in
+    Seq.index bm0 idx = false))
+  (ensures (
+    let idx = f #n (U32.v i) in
+    let s' = set s i in
+    let bm1 = Bitmap4.array_to_bv2 s in
+    let bm2 = Bitmap4.array_to_bv2 s' in
+    Seq.index bm2 idx = true /\
+    bm2 == Seq.upd bm1 idx true))
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  let x' = Bitmap3.set x i2 in
+  let s' = Seq.upd s (U32.v i1) x' in
+  let i' = f #n (U32.v i) in
+  let bm0 = Bitmap4.array_to_bv #n s in
+  let bm1 = Bitmap4.array_to_bv #n s' in
+  array_to_bv2_lemma s;
+  array_to_bv_lemma s i';
+  assert (Seq.index bm0 i' = false);
+  f_lemma #n (U32.v i);
+  assert (i' / U64.n = U32.v i1);
+  Bitmap3.bv_set_lemma x i2;
+  array_to_bv_lemma #n s' i';
+  array_to_bv2_lemma #n s';
+  assert (Seq.index bm1 i' = true);
+  array_to_bv_lemma_upd_set s s' (U32.v i);
+  Seq.lemma_eq_intro bm1 (Seq.upd bm0 i' true)
+
+let set_lemma
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (requires
+    nth (U64.v (Seq.index s (U32.v i / U64.n)))
+        (U64.n - (U32.v i % U64.n) - 1) = false)
+  (ensures (
+    let s' = set s i in
+    nth (U64.v (Seq.index s' (U32.v i / U64.n)))
+        (U64.n - (U32.v i % U64.n) - 1) = true))
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  Bitmap3.bv_set_lemma x i2
+
+noextract
+let unset
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Seq.lseq U64.t n
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  let x' = Bitmap3.unset x i2 in
+  Seq.upd s (U32.v i1) x'
+
+let unset_lemma2
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (requires (
+    let idx = f #n (U32.v i) in
+    let bm0 = Bitmap4.array_to_bv2 s in
+    Seq.index bm0 idx = true))
+  (ensures (
+    let idx = f #n (U32.v i) in
+    let s' = unset s i in
+    let bm1 = Bitmap4.array_to_bv2 s in
+    let bm2 = Bitmap4.array_to_bv2 s' in
+    Seq.index bm2 idx = false /\
+    bm2 == Seq.upd bm1 idx false))
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  let x' = Bitmap3.unset x i2 in
+  let s' = Seq.upd s (U32.v i1) x' in
+  let i' = f #n (U32.v i) in
+  let bm0 = Bitmap4.array_to_bv #n s in
+  let bm1 = Bitmap4.array_to_bv #n s' in
+  array_to_bv2_lemma s;
+  array_to_bv_lemma s i';
+  assert (Seq.index bm0 i' = true);
+  f_lemma #n (U32.v i);
+  assert (i' / U64.n = U32.v i1);
+  Bitmap3.bv_unset_lemma x i2;
+  array_to_bv_lemma #n s' i';
+  array_to_bv2_lemma #n s';
+  assert (Seq.index bm1 i' = false);
+  array_to_bv_lemma_upd_unset s s' (U32.v i);
+  Seq.lemma_eq_intro bm1 (Seq.upd bm0 i' false)
+
+let unset_lemma
+  (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i: U32.t{U32.v i < U64.n * n})
+  : Lemma
+  (requires
+    nth (U64.v (Seq.index s (U32.v i / U64.n)))
+        (U64.n - (U32.v i % U64.n) - 1) = true)
+  (ensures (
+    let s' = unset s i in
+    nth (U64.v (Seq.index s' (U32.v i / U64.n)))
+        (U64.n - (U32.v i % U64.n) - 1) = false))
+  =
+  let i1 = U32.div i 64ul in
+  assert (U32.v i1 = U32.v i / U64.n);
+  let i2 = U32.rem i 64ul in
+  assert (U32.v i2 = U32.v i % U64.n);
+  let x = Seq.index s (U32.v i1) in
+  Bitmap3.bv_unset_lemma x i2
