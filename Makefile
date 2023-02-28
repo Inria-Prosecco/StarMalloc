@@ -188,7 +188,7 @@ lib: verify extract patch
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 	-pthread -lpthread \
-        -std=c89 \
+        -std=gnu11 \
 -shared -fPIC -o bench/starmalloc.so \
 $(FILES) \
 src/lib-alloc.c
