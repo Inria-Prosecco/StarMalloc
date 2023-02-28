@@ -184,7 +184,7 @@ src/lib-alloc.c
 # test the compilation of the allocator as a shared library
 #gcc -g -O0 -DKRML_VERIFIED_UINT128
 lib: verify extract patch
-	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
+	gcc -O2 -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 	-pthread -lpthread \
