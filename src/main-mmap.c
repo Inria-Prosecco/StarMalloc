@@ -1,5 +1,4 @@
 #include "main-mmap.h"
-//#include "Mman.h"
 #include "internal/AVL.h"
 #include <sys/mman.h>
 
@@ -8,8 +7,6 @@ static const size_t max_slabs = 1024UL;
 
 uint8_t *mmap_s(size_t size) {
   return mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
-  //return mmap((uint64_t)0U, len, 3l, (int32_t)33, (int32_t)-1, (uint32_t)0U);
-  //return mmap(len);
 }
 
 uint8_t *mmap_u8(size_t len) {
