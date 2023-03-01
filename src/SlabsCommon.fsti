@@ -48,6 +48,7 @@ let halfp = Steel.FractionalPermission.half_perm Steel.FractionalPermission.full
 let pred1 (x: U32.t) : prop = U32.eq x 0ul == true
 let pred2 (x: U32.t) : prop = U32.eq x 1ul == true
 let pred3 (x: U32.t) : prop = U32.eq x 2ul == true
+let pred4 (x: U32.t) : prop = U32.eq x 3ul == true
 
 /// If the sequence is partitioned into three lists, then any
 /// element satisfying pred2 belongs to the second list.
@@ -55,25 +56,27 @@ let pred3 (x: U32.t) : prop = U32.eq x 2ul == true
 /// are mutually exclusive, which is why we include this lemma
 /// here instead of in the ArrayListGen library.
 let lemma_partition_and_pred_implies_mem2
-  (hd1 hd2 hd3:nat)
+  (hd1 hd2 hd3 hd4:nat)
   (s:Seq.seq AL.cell)
   (idx:nat{idx < Seq.length s})
   : Lemma
     (requires
       idx <> ALG.null /\
-      ALG.partition s hd1 hd2 hd3 /\
-      ALG.varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3 s /\
+      ALG.partition s hd1 hd2 hd3 hd4 /\
+      ALG.varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4 s /\
       pred2 (ALG.get_data (Seq.index s idx)))
     (ensures ALG.mem idx hd2 s)
   = ALG.lemma_mem_ptrs_in hd1 s idx;
     ALG.lemma_mem_ptrs_in hd2 s idx;
     ALG.lemma_mem_ptrs_in hd3 s idx;
+    ALG.lemma_mem_ptrs_in hd4 s idx;
     let open FStar.FiniteSet.Ambient in
     (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
-    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 s));
+    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 hd4 s));
     Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
     Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx
 
 /// If the sequence is partitioned into three lists, then any
 /// element satisfying pred3 belongs to the third list.
@@ -81,25 +84,27 @@ let lemma_partition_and_pred_implies_mem2
 /// are mutually exclusive, which is why we include this lemma
 /// here instead of in the ArrayListGen library.
 let lemma_partition_and_pred_implies_mem3
-  (hd1 hd2 hd3:nat)
+  (hd1 hd2 hd3 hd4:nat)
   (s:Seq.seq AL.cell)
   (idx:nat{idx < Seq.length s})
   : Lemma
     (requires
       idx <> ALG.null /\
-      ALG.partition s hd1 hd2 hd3 /\
-      ALG.varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3 s /\
+      ALG.partition s hd1 hd2 hd3 hd4 /\
+      ALG.varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4 s /\
       pred3 (ALG.get_data (Seq.index s idx)))
     (ensures ALG.mem idx hd3 s)
   = ALG.lemma_mem_ptrs_in hd1 s idx;
     ALG.lemma_mem_ptrs_in hd2 s idx;
     ALG.lemma_mem_ptrs_in hd3 s idx;
+    ALG.lemma_mem_ptrs_in hd4 s idx;
     let open FStar.FiniteSet.Ambient in
     (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
-    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 s));
+    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 hd4 s));
     Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
     Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx
 
 unfold
 let blob
@@ -127,6 +132,8 @@ let p_full (size_class: sc) : blob -> vprop
     slab_vprop size_class (snd b) (fst b)
     `VR2.vrefine`
     (fun ((|s,_|), _) -> is_full size_class s == true)
+
+val p_guard (size_class: sc) : blob -> vprop
 
 val p_empty_unpack (#opened:_)
   (sc: sc)
@@ -358,6 +365,7 @@ let f
   | 0ul -> p_empty size_class (md_bm_array md_bm_region i, slab_array slab_region i)
   | 1ul -> p_partial size_class (md_bm_array md_bm_region i, slab_array slab_region i)
   | 2ul -> p_full size_class (md_bm_array md_bm_region i, slab_array slab_region i)
+  | 3ul -> p_guard size_class (md_bm_array md_bm_region i, slab_array slab_region i)
 
 val t (size_class: sc) : Type0
 
@@ -373,48 +381,50 @@ val f_lemma
   == t size_class)
 
 let ind_varraylist_aux2
-  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
-  (idxs: (US.t & US.t) & US.t)
+  (pred1 pred2 pred3 pred4: AL.status -> prop) (r: A.array AL.cell)
+  (idxs: ((US.t & US.t) & US.t) & US.t)
   =
-  AL.varraylist pred1 pred2 pred3 r
-    (US.v (fst (fst idxs)))
+  AL.varraylist pred1 pred2 pred3 pred4 r
+    (US.v (fst (fst (fst idxs))))
+    (US.v (snd (fst (fst idxs))))
     (US.v (snd (fst idxs)))
     (US.v (snd idxs))
 
 let ind_varraylist_aux_refinement
-  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
-  (idxs: (US.t & US.t) & US.t)
-  (s: t_of (ind_varraylist_aux2 pred1 pred2 pred3 r idxs))
+  (pred1 pred2 pred3 pred4: AL.status -> prop) (r: A.array AL.cell)
+  (idxs: ((US.t & US.t) & US.t) & US.t)
+  (s: t_of (ind_varraylist_aux2 pred1 pred2 pred3 pred4 r idxs))
   : prop
   =
   ALG.partition #AL.status s
-    (US.v (fst (fst idxs)))
+    (US.v (fst (fst (fst idxs))))
+    (US.v (snd (fst (fst idxs))))
     (US.v (snd (fst idxs)))
     (US.v (snd idxs))
 
 let ind_varraylist_aux
-  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
-  (idxs: (US.t & US.t) & US.t)
+  (pred1 pred2 pred3 pred4: AL.status -> prop) (r: A.array AL.cell)
+  (idxs: ((US.t & US.t) & US.t) & US.t)
   =
-  ind_varraylist_aux2 pred1 pred2 pred3 r idxs
+  ind_varraylist_aux2 pred1 pred2 pred3 pred4 r idxs
   `vrefine`
-  ind_varraylist_aux_refinement pred1 pred2 pred3 r idxs
+  ind_varraylist_aux_refinement pred1 pred2 pred3 pred4 r idxs
 
 let ind_varraylist
   (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   =
-  (vptr r1 `star` vptr r2 `star` vptr r3) `vdep`
-  ind_varraylist_aux pred1 pred2 pred3 r
+  (vptr r1 `star` vptr r2 `star` vptr r3 `star` vptr r4) `vdep`
+  ind_varraylist_aux pred1 pred2 pred3 pred4 r
 
 let left_vprop1
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   =
   ind_varraylist pred1 pred2 pred3
     (A.split_l md_region (u32_to_sz md_count_v))
-    r1 r2 r3
+    r1 r2 r3 r4
 
 let left_vprop2
   (size_class: sc)
@@ -435,9 +445,9 @@ let left_vprop_aux
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (x: t_of (ind_varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) r1 r2 r3))
+  (x: t_of (ind_varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) r1 r2 r3 r4))
   = starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
@@ -450,12 +460,12 @@ let left_vprop
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   =
-  left_vprop1 md_region r1 r2 r3 md_count_v
+  left_vprop1 md_region r1 r2 r3 r4 md_count_v
   `vdep`
-  left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 md_count_v
+  left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 md_count_v
 
 unfold
 let vrefinedep_prop (x:U32.t) : prop =
@@ -480,13 +490,13 @@ let size_class_vprop_aux
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  empty_slabs partial_slabs full_slabs
+  empty_slabs partial_slabs full_slabs guard_slabs
   (v: U32.t{U32.v v <= U32.v metadata_max == true})
   : vprop
   =
   left_vprop size_class
     (A.split_r slab_region 0sz) md_bm_region md_region
-    empty_slabs partial_slabs full_slabs v `star`
+    empty_slabs partial_slabs full_slabs guard_slabs v `star`
   right_vprop
     (A.split_r slab_region 0sz) md_bm_region md_region v `star`
   A.varrayp (A.split_l slab_region 0sz) halfp
@@ -500,21 +510,20 @@ val pack_3
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
-  (idx1: US.t)
-  (idx2: US.t)
-  (idx3: US.t)
+  (idx1 idx2 idx3 idx4: US.t)
   : SteelGhost unit opened
   (
     vptr md_count `star`
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
-    (AL.varraylist pred1 pred2 pred3
+    vptr r4 `star`
+    (AL.varraylist pred1 pred2 pred3 pred4
       (A.split_l md_region (u32_to_sz md_count_v))
-      (US.v idx1) (US.v idx2) (US.v idx3)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
@@ -526,24 +535,28 @@ val pack_3
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
   )
   (requires fun h0 ->
-    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (u32_to_sz md_count_v))
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
     U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
+    sel r4 h0 == idx4 /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
-    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3)
+    ALG.partition #AL.status gs0
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)
   )
   (ensures fun _ _ h1 ->
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     ) in
     md_count_v == dfst blob1)
 
@@ -554,7 +567,7 @@ val pack_slab_starseq
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx: US.t{US.v idx < U32.v md_count_v})
@@ -593,6 +606,8 @@ val pack_slab_starseq
       (slab_array slab_region (US.sizet_to_uint32 idx))
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx))) in
     let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
+    //(v == 3ul ==> is_guard size_class md) /\
+    (v == 3ul ==> True) /\
     (v == 2ul ==> is_full size_class md) /\
     (v == 1ul ==> is_partial size_class md) /\
     (v == 0ul ==> is_empty size_class md) /\
@@ -607,14 +622,14 @@ val pack_right_and_refactor_vrefine_dep
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   : SteelGhost unit opened
   (
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
     `star`
     (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
     A.varrayp (A.split_l slab_region 0sz) halfp)
@@ -623,14 +638,14 @@ val pack_right_and_refactor_vrefine_dep
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4)
   )
   (requires fun h0 ->
     let blob0
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
     ) in
     md_count_v == dfst blob0)
   (ensures fun h0 _ h1 ->
@@ -638,13 +653,13 @@ val pack_right_and_refactor_vrefine_dep
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
     ) in
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     ) in
     dfst blob0 == dfst blob1
   )

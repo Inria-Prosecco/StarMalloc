@@ -1,5 +1,10 @@
 module SlabsCommon
 
+let p_guard (size_class: sc) : blob -> vprop
+  =
+  fun (b:blob) ->
+    slab_vprop size_class (snd b) (fst b)
+
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let p_empty_unpack (#opened:_)
   (sc: sc)
@@ -337,21 +342,20 @@ let pack_3
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
-  (idx1: US.t)
-  (idx2: US.t)
-  (idx3: US.t)
+  (idx1 idx2 idx3 idx4: US.t)
   : SteelGhost unit opened
   (
     vptr md_count `star`
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
-    (AL.varraylist pred1 pred2 pred3
+    vptr r4 `star`
+    (AL.varraylist pred1 pred2 pred3 pred4
       (A.split_l md_region (u32_to_sz md_count_v))
-      (US.v idx1) (US.v idx2) (US.v idx3)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)
@@ -363,36 +367,39 @@ let pack_3
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
   )
   (requires fun h0 ->
-    let gs0 = AL.v_arraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) h0 in
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (u32_to_sz md_count_v))
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
     U32.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
+    sel r4 h0 == idx4 /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
-    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3)
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)
   )
   (ensures fun _ _ h1 ->
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     ) in
     md_count_v == dfst blob1)
   =
   intro_vrefine
-    (ind_varraylist_aux2 pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3))
-    (ind_varraylist_aux_refinement pred1 pred2 pred3
-      (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3));
+    (ind_varraylist_aux2 pred1 pred2 pred3 pred4
+      (A.split_l md_region (u32_to_sz md_count_v)) (((idx1, idx2), idx3), idx4))
+    (ind_varraylist_aux_refinement pred1 pred2 pred3 pred4
+      (A.split_l md_region (u32_to_sz md_count_v)) (((idx1, idx2), idx3), idx4));
   intro_vdep
-    (vptr r1 `star` vptr r2 `star` vptr r3)
-    (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) ((idx1, idx2), idx3))
-    (ind_varraylist_aux pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)));
+    (vptr r1 `star` vptr r2 `star` vptr r3 `star` vptr r4)
+    (ind_varraylist_aux pred1 pred2 pred3 pred4 (A.split_l md_region (u32_to_sz md_count_v)) (((idx1, idx2), idx3), idx4))
+    (ind_varraylist_aux pred1 pred2 pred3 pred4 (A.split_l md_region (u32_to_sz md_count_v)));
 
   change_equal_slprop
     (starseq
@@ -404,15 +411,15 @@ let pack_3
     (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv));
 
   intro_vdep
-    (left_vprop1 md_region r1 r2 r3 md_count_v)
+    (left_vprop1 md_region r1 r2 r3 r4 md_count_v)
     (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
-    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 md_count_v);
+    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 md_count_v);
 
   intro_vrefinedep
     (vptr md_count)
     vrefinedep_prop
-    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3)
-    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 md_count_v)
+    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
+    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 md_count_v)
 #pop-options
 
 let lemma_slab_aux_starseq
@@ -442,6 +449,8 @@ let lemma_slab_aux_starseq
       assert (Seq.index md_region_lv (U32.v i) == Seq.index md_region_lv' (U32.v i))
   in Classical.forall_intro aux
 
+//checkpoint
+
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
 let pack_slab_starseq
   (#opened:_)
@@ -450,7 +459,7 @@ let pack_slab_starseq
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
   (idx: US.t{US.v idx < U32.v md_count_v})
@@ -489,6 +498,7 @@ let pack_slab_starseq
       (slab_array slab_region (US.sizet_to_uint32 idx))
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx))) in
     let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
+    (v == 3ul ==> True) /\
     (v == 2ul ==> is_full size_class md) /\
     (v == 1ul ==> is_partial size_class md) /\
     (v == 0ul ==> is_empty size_class md) /\
