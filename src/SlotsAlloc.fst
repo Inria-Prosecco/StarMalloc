@@ -838,15 +838,43 @@ let elim_slab_vprop (#opened:_)
   md_as_seq2
 #pop-options
 
+#push-options "--z3rlimit 30"
 let bound2_inv
   (size_class: sc)
   (md_as_seq: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
-  (requires slab_vprop_aux2 size_class md_as_seq)
+  (requires (
+    let bm = Bitmap4.array_to_bv2 md_as_seq in
+    let idx = Bitmap4.f #4 (U32.v pos) in
+    slab_vprop_aux2 size_class md_as_seq /\
+    Seq.index bm idx = false
+  ))
   (ensures slab_vprop_aux2 size_class (Bitmap4.set md_as_seq pos))
-  //TODO: refactor Bitmap5, move pure lemmas outside Steel functions
-  = admit ()
+  =
+  let bm = Bitmap4.array_to_bv2 md_as_seq in
+  let nb_slots_sc = nb_slots size_class in
+  let bound2 = bound2_gen nb_slots_sc (G.hide size_class) in
+  assert (zf_b (Seq.slice bm 0 (64 - U32.v bound2)));
+  let md_as_seq' = Bitmap4.set md_as_seq pos in
+  let bm' = Bitmap4.array_to_bv2 md_as_seq' in
+  let nb_slots_sc_rem = U32.rem nb_slots_sc 64ul in
+  if (U32.v size_class <= 64)
+  then (
+    assert (size_class = 16ul \/ size_class = 32ul \/ size_class = 64ul);
+    assert (U32.v nb_slots_sc_rem = 0);
+    Seq.lemma_empty (Seq.slice bm' 0 (64 - U32.v bound2))
+  ) else (
+    assert (U32.v size_class > 64);
+    assert (U32.v nb_slots_sc < 64);
+    assert (nb_slots_sc_rem = nb_slots_sc);
+    let idx = Bitmap4.f #4 (U32.v pos) in
+    Bitmap4.set_lemma2 md_as_seq pos;
+    Seq.lemma_eq_intro
+      (Seq.slice bm 0 (64 - U32.v bound2))
+      (Seq.slice bm' 0 (64 - U32.v bound2))
+  )
+#pop-options
 
 let allocate_slot
   (size_class: sc)
