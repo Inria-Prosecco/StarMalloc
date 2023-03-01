@@ -1,10 +1,5 @@
 module SlabsCommon
 
-let p_guard (size_class: sc) : blob -> vprop
-  =
-  fun (b:blob) ->
-    slab_vprop size_class (snd b) (fst b)
-
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let p_empty_unpack (#opened:_)
   (sc: sc)
@@ -97,6 +92,37 @@ let p_full_unpack (#opened:_)
   VR2.elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
     (fun ((|s,_|), _) -> is_full sc s == true)
+
+let p_guard_unpack (#opened:_)
+  (sc: sc)
+  (b1 b2: blob)
+  : SteelGhost unit opened
+  ((p_guard sc) b1)
+  (fun _ -> slab_vprop sc (snd b2) (fst b2))
+  (requires fun _ -> b1 == b2)
+  (ensures fun h0 _ h1 ->
+    let blob1
+      : t_of (slab_vprop sc (snd b2) (fst b2))
+      = h1 (slab_vprop sc (snd b2) (fst b2)) in
+    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    b1 == b2 /\
+    is_guard sc (snd b1) /\
+    h0 ((p_guard sc) b1)
+    ==
+    h1 (slab_vprop sc (snd b2) (fst b2))
+  )
+  =
+  sladmit ();
+  change_slprop_rel
+    ((p_guard sc) b1)
+    (slab_vprop sc (snd b2) (fst b2)
+    `VR2.vrefine`
+    (fun ((|s,_|), _) -> is_guard sc (snd b1)))
+    (fun x y -> x == y)
+    (fun _ -> ());
+  VR2.elim_vrefine
+    (slab_vprop sc (snd b2) (fst b2))
+    (fun ((|s,_|), _) -> is_guard sc (snd b1))
 
 let p_empty_pack (#opened:_)
   (sc: sc)
@@ -197,6 +223,38 @@ let p_full_pack (#opened:_)
     (fun x y -> x == y)
     (fun _ -> ())
 
+let p_guard_pack (#opened:_)
+  (sc: sc)
+  (b1: blob)
+  (b2: blob)
+  : SteelGhost unit opened
+  (slab_vprop sc (snd b1) (fst b1))
+  (fun _ -> (p_guard sc) b2)
+  (requires fun h0 ->
+    let blob0
+      : t_of (slab_vprop sc (snd b1) (fst b1))
+      = h0 (slab_vprop sc (snd b1) (fst b1)) in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    is_guard sc (snd b1) /\
+    b1 == b2
+  )
+  (ensures fun h0 _ h1 ->
+    b1 == b2 /\
+    h1 ((p_guard sc) b2)
+    ==
+    h0 (slab_vprop sc (snd b1) (fst b1))
+  )
+  =
+  VR2.intro_vrefine
+    (slab_vprop sc (snd b1) (fst b1))
+    (fun ((|s,_|), _) -> is_guard sc (snd b1));
+  change_slprop_rel
+    (slab_vprop sc (snd b1) (fst b1)
+    `VR2.vrefine`
+    (fun ((|s,_|), _) -> is_guard sc (snd b1)))
+    ((p_guard sc) b2)
+    (fun x y -> x == y)
+    (fun _ -> ())
 #pop-options
 
 

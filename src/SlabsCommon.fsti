@@ -24,6 +24,7 @@ module ALG = ArrayListGen
 open Prelude
 open Utils2
 open SlotsAlloc
+open Guards
 open SteelStarSeqUtils
 open FStar.Mul
 
@@ -133,7 +134,12 @@ let p_full (size_class: sc) : blob -> vprop
     `VR2.vrefine`
     (fun ((|s,_|), _) -> is_full size_class s == true)
 
-val p_guard (size_class: sc) : blob -> vprop
+let p_guard (size_class) : blob -> vprop
+  =
+  fun (b:blob) ->
+    slab_vprop size_class (snd b) (fst b)
+    `VR2.vrefine`
+    (fun ((|s,_|), _) -> is_guard size_class (snd b))
 
 val p_empty_unpack (#opened:_)
   (sc: sc)
@@ -190,6 +196,25 @@ val p_full_unpack (#opened:_)
     b1 == b2 /\
     is_full sc v1 /\
     h0 ((p_full sc) b1)
+    ==
+    h1 (slab_vprop sc (snd b2) (fst b2))
+  )
+
+val p_guard_unpack (#opened:_)
+  (sc: sc)
+  (b1 b2: blob)
+  : SteelGhost unit opened
+  ((p_guard sc) b1)
+  (fun _ -> slab_vprop sc (snd b2) (fst b2))
+  (requires fun _ -> b1 == b2)
+  (ensures fun h0 _ h1 ->
+    let blob1
+      : t_of (slab_vprop sc (snd b2) (fst b2))
+      = h1 (slab_vprop sc (snd b2) (fst b2)) in
+    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    b1 == b2 /\
+    is_guard sc (snd b1) /\
+    h0 ((p_guard sc) b1)
     ==
     h1 (slab_vprop sc (snd b2) (fst b2))
   )
@@ -256,6 +281,28 @@ val p_full_pack (#opened:_)
   (ensures fun h0 _ h1 ->
     b1 == b2 /\
     h1 ((p_full sc) b2)
+    ==
+    h0 (slab_vprop sc (snd b1) (fst b1))
+  )
+
+val p_guard_pack (#opened:_)
+  (sc: sc)
+  (b1: blob)
+  (b2: blob)
+  : SteelGhost unit opened
+  (slab_vprop sc (snd b1) (fst b1))
+  (fun _ -> (p_guard sc) b2)
+  (requires fun h0 ->
+    let blob0
+      : t_of (slab_vprop sc (snd b1) (fst b1))
+      = h0 (slab_vprop sc (snd b1) (fst b1)) in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    is_guard sc (snd b1) /\
+    b1 == b2
+  )
+  (ensures fun h0 _ h1 ->
+    b1 == b2 /\
+    h1 ((p_guard sc) b2)
     ==
     h0 (slab_vprop sc (snd b1) (fst b1))
   )
