@@ -982,46 +982,47 @@ val noop (#opened:inames) (#p:vprop) (_:unit)
 let noop () = noop ()
 
 /// Create an arraylist with
-let intro_arraylist_nil #a #opened pred1 pred2 pred3 r hd1 hd2 hd3 =
+let intro_arraylist_nil #a #opened pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 =
   intro_vrefine
     (A.varray r)
-    (varraylist_refine pred1 pred2 pred3 (US.v hd1) (US.v hd2) (US.v hd3))
+    (varraylist_refine pred1 pred2 pred3 pred4 (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
 
-let lemma_head_not_null_mem  pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
+let lemma_head_not_null_mem pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 = noop ()
 
-let lemma_head1_in_bounds pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
+let lemma_head1_in_bounds pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 = noop ()
 
-let lemma_head2_in_bounds pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
+let lemma_head2_in_bounds pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 = noop ()
 
-let lemma_head1_implies_pred1 pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
+#push-options "--fuel 1 --ifuel 1"
+let lemma_head1_implies_pred1 pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 = noop ()
 
-let lemma_head2_implies_pred2 pred1 pred2 pred3 r hd1 hd2 hd3 = noop ()
+let lemma_head2_implies_pred2 pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 = noop ()
 
-let permute12 pred1 pred2 pred3 r hd1 hd2 hd3 =
+let permute12 pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 =
   elim_vrefine _ _;
   intro_vrefine _ _
 
-let permute13 pred1 pred2 pred3 r hd1 hd2 hd3 =
+let permute13 pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 =
   elim_vrefine _ _;
   intro_vrefine _ _
 
-let permute23 pred1 pred2 pred3 r hd1 hd2 hd3 =
+let permute14 pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4 =
   elim_vrefine _ _;
   intro_vrefine _ _
 
 /// Reads at index [idx] in the array.
-let read_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+let read_in_place #a #pred1 #pred2 #pred3 #pred4 r hd1 hd2 hd3 hd4 idx =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4);
   let res = A.index r idx in
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4);
   (**) return res.data
 
 /// Updates the `data` field of the cell at index [idx] in the array [r] with [v]
 /// We define three different functions, depending on which list the element
 /// belongs to. In all three cases, we require [v] to satisfy the predicate
 /// corresponding to a given list
-let write_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+let write_in_place #a #pred1 #pred2 #pred3 #pred4 r hd1 hd2 hd3 hd4 idx v =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4);
   let c = A.index r idx in
   (**) let gs = gget (A.varray r) in
   A.upd r idx (write_data c v);
@@ -1031,14 +1032,17 @@ let write_in_place #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx v =
   (**) lemma_mem_ptrs_in hd1 gs (US.v idx);
   (**) lemma_mem_ptrs_in hd2 gs (US.v idx);
   (**) lemma_mem_ptrs_in hd3 gs (US.v idx);
+  (**) lemma_mem_ptrs_in hd4 gs (US.v idx);
   // Framing of the hd2 and hd3 dlists
   (**) lemma_dlist_frame pred2 gs hd2 (US.v idx) (write_data c v);
   (**) lemma_dlist_frame pred3 gs hd3 (US.v idx) (write_data c v);
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3)
+  (**) lemma_dlist_frame pred4 gs hd4 (US.v idx) (write_data c v);
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4)
 
+#push-options "--z3rlimit 30"
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
-let remove #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd1) hd2 hd3);
+let remove #a #pred1 #pred2 #pred3 #pred4 r hd1 hd2 hd3 hd4 idx =
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 (US.v hd1) hd2 hd3 hd4);
   (**) let gs0 = gget (A.varray r) in
 
   // Derive that idx is not in the two other lists, through disjointness and belonging to
@@ -1046,6 +1050,7 @@ let remove #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) lemma_mem_ptrs_in (US.v hd1) gs0 (US.v idx);
   (**) lemma_mem_ptrs_in hd2 gs0 (US.v idx);
   (**) lemma_mem_ptrs_in hd3 gs0 (US.v idx);
+  (**) lemma_mem_ptrs_in hd4 gs0 (US.v idx);
 
   let cell = A.index r idx in
   (**) lemma_mem_valid_or_null_next_prev pred1 (US.v hd1) gs0 (US.v idx);
@@ -1069,15 +1074,16 @@ let remove #a #pred1 #pred2 #pred3 r hd1 hd2 hd3 idx =
   (**) lemma_remove_spec pred1 (US.v hd1) gs0 (US.v idx);
   (**) lemma_remove_spec_frame pred1 pred2 (US.v hd1) hd2 gs0 (US.v idx);
   (**) lemma_remove_spec_frame pred1 pred3 (US.v hd1) hd3 gs0 (US.v idx);
+  (**) lemma_remove_spec_frame pred1 pred4 (US.v hd1) hd4 gs0 (US.v idx);
 
   (**) lemma_remove_spec_dataify pred1 (US.v hd1) gs0 (US.v idx);
 
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd') hd2 hd3);
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 (US.v hd') hd2 hd3 hd4);
   return hd'
 
-let insert #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
-  lemma_head1_in_bounds pred1 pred2 pred3 r hd hd2 hd3;
-  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v hd) hd2 hd3);
+let insert #a #pred1 #pred2 #pred3 #pred4 r hd hd2 hd3 hd4 idx v =
+  lemma_head1_in_bounds pred1 pred2 pred3 pred4 r hd hd2 hd3 hd4;
+  (**) elim_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 (US.v hd) hd2 hd3 hd4);
   (**) let gs0 = gget (A.varray r) in
 
   let cell = {data = v; prev = null_ptr; next = hd} in
@@ -1094,10 +1100,12 @@ let insert #a #pred1 #pred2 #pred3 r hd hd2 hd3 idx v =
   (**) lemma_insert_spec pred1 gs0 hd idx v;
   (**) lemma_insert_spec_frame pred1 pred2 gs0 hd idx hd2 v;
   (**) lemma_insert_spec_frame pred1 pred3 gs0 hd idx hd3 v;
+  (**) lemma_insert_spec_frame pred1 pred4 gs0 hd idx hd4 v;
 
   (**) lemma_insert_spec_dataify pred1 gs0 hd idx v;
 
-  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 (US.v idx) hd2 hd3)
+  (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 (US.v idx) hd2 hd3 hd4)
+#pop-options
 
 /// An implementation of a map_seq_slice lemma currently not in F* ulib, specialized for `cell a`
 let dataify_slice (#a:Type)
@@ -1161,35 +1169,37 @@ let lemma_extend_dlist (#a:Type0)
       )
   = lemma_extend_dlist' pred hd s null FS.emptyset s' n
 
+#pop-options
 #push-options "--z3rlimit 50"
 let extend_aux (#a:Type) (#opened:_)
-  (#pred1 #pred2 #pred3: a -> prop)
+  (#pred1 #pred2 #pred3 #pred4: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3:Ghost.erased nat)
+  (hd1 hd2 hd3 hd4:Ghost.erased nat)
   (k:US.t{US.v k + 1 <= A.length r /\ US.fits (US.v k + 1)})
   (v:a)
   : SteelGhost unit opened
   (
-    varraylist pred1 pred2 pred3 (A.split_l r k) hd1 hd2 hd3 `star`
+    varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4 `star`
     A.varray (A.split_l (A.split_r r k) 1sz)
   )
-  (fun _ -> varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3)
+  (fun _ -> varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3 hd4)
   (requires fun _ -> k <> null_ptr /\ pred1 v)
   (ensures fun h0 _ h1 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 (A.split_l r k) hd1 hd2 hd3) in
-    let gs1 = h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3) in
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3 hd4) in
     ptrs_in hd1 gs1 == ptrs_in hd1 gs0 /\
     ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
     ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
-    (~ (mem_all (US.v k) hd1 hd2 hd3 gs1)) /\
+    ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
+    (~ (mem_all (US.v k) hd1 hd2 hd3 hd4 gs1)) /\
     Seq.slice (dataify gs1) 0 (US.v k)
     ==
     dataify gs0
   )
   =
-  (**) let s0 = gget (varraylist pred1 pred2 pred3 (A.split_l r k) hd1 hd2 hd3) in
+  (**) let s0 = gget (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4) in
 
-  (**) elim_vrefine (A.varray (A.split_l r k)) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+  (**) elim_vrefine (A.varray (A.split_l r k)) (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4);
   (**) let gs0 = gget (A.varray (A.split_l r k)) in
 
   (**) A.ghost_join (A.split_l r k) (A.split_l (A.split_r r k) 1sz) ();
@@ -1202,19 +1212,22 @@ let extend_aux (#a:Type) (#opened:_)
   (**) lemma_extend_dlist pred1 hd1 (Ghost.reveal gs0) (Ghost.reveal gs1) (US.v k);
   (**) lemma_extend_dlist pred2 hd2 (Ghost.reveal gs0) (Ghost.reveal gs1) (US.v k);
   (**) lemma_extend_dlist pred3 hd3 (Ghost.reveal gs0) (Ghost.reveal gs1) (US.v k);
-  (**) assert (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3 (Ghost.reveal gs1));
+  (**) lemma_extend_dlist pred4 hd4 (Ghost.reveal gs0) (Ghost.reveal gs1) (US.v k);
+  (**) assert (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4 (Ghost.reveal gs1));
 
   (**) lemma_mem_ptrs_in hd1 (Ghost.reveal gs0) (US.v k);
   (**) lemma_mem_ptrs_in hd2 (Ghost.reveal gs0) (US.v k);
   (**) lemma_mem_ptrs_in hd3 (Ghost.reveal gs0) (US.v k);
+  (**) lemma_mem_ptrs_in hd4 (Ghost.reveal gs0) (US.v k);
   (**) lemma_mem_ptrs_in hd1 (Ghost.reveal gs1) (US.v k);
   (**) lemma_mem_ptrs_in hd2 (Ghost.reveal gs1) (US.v k);
   (**) lemma_mem_ptrs_in hd3 (Ghost.reveal gs1) (US.v k);
-  (**) assert (~ (mem_all (US.v k) hd1 hd2 hd3 gs1));
+  (**) lemma_mem_ptrs_in hd4 (Ghost.reveal gs1) (US.v k);
+  (**) assert (~ (mem_all (US.v k) hd1 hd2 hd3 hd4 gs1));
 
-  (**) intro_vrefine (A.varray (A.split_l r (k `US.add` 1sz))) (varraylist_refine pred1 pred2 pred3 hd1 hd2 hd3);
+  (**) intro_vrefine (A.varray (A.split_l r (k `US.add` 1sz))) (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4);
 
-  (**) let s1 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3) in
+  (**) let s1 = gget (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) hd1 hd2 hd3 hd4) in
   // Derived from the postcondition of join
   (**) assert (Ghost.reveal s0 `Seq.equal` Seq.slice #(cell a) (Ghost.reveal s1) 0 (US.v k));
   // Move the slice out of dataify
@@ -1225,48 +1238,54 @@ let extend_aux (#a:Type) (#opened:_)
 
 #push-options "--z3rlimit 100"
 let extend (#a:Type)
-  (#pred1 #pred2 #pred3: a -> prop)
+  (#pred1 #pred2 #pred3 #pred4: a -> prop)
   (r:A.array (cell a))
   (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
-  (hd2 hd3:Ghost.erased nat)
+  (hd2 hd3 hd4:Ghost.erased nat)
   (k:US.t{US.v k + 1 <= A.length r /\ US.fits (US.v k + 1)})
   (v:a)
   : Steel unit
-          (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3 `star`
+          (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) (US.v hd) hd2 hd3 hd4 `star`
             A.varray (A.split_l (A.split_r r k) 1sz))
-          (fun _ -> varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3)
+          (fun _ -> varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3 hd4)
           (requires fun _ ->
             k <> null_ptr /\ pred1 v)
           (ensures fun h0 _ h1 ->
-            let gs0 = h0 (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
-            let gs1 = h1 (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
+            let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) (US.v hd) hd2 hd3 hd4) in
+            let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3 hd4) in
             ptrs_in (US.v k) gs1 ==
             FS.insert (US.v k) (ptrs_in (US.v hd) gs0) /\
             ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
             ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
+            ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
             dataify gs1 == Seq.append (dataify gs0) (Seq.create 1 v)
           )
   =
-  (**) let gs0 = gget (varraylist pred1 pred2 pred3 (A.split_l r k) (US.v hd) hd2 hd3) in
+  (**) let gs0 = gget (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) (US.v hd) hd2 hd3 hd4) in
   let p01 = G.hide (ptrs_in #a (US.v hd) gs0) in
   let p02 = G.hide (ptrs_in #a hd2 gs0) in
   let p03 = G.hide (ptrs_in #a hd3 gs0) in
-  extend_aux r (Ghost.hide (US.v hd)) hd2 hd3 k v;
-  (**) let gs1 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v hd) hd2 hd3) in
+  let p04 = G.hide (ptrs_in #a hd4 gs0) in
+  extend_aux r (Ghost.hide (US.v hd)) hd2 hd3 hd4 k v;
+  (**) let gs1 = gget (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v hd) hd2 hd3 hd4) in
   let p11 = G.hide (ptrs_in #a (US.v hd) gs1) in
   let p12 = G.hide (ptrs_in #a hd2 gs1) in
   let p13 = G.hide (ptrs_in #a hd3 gs1) in
+  let p14 = G.hide (ptrs_in #a hd4 gs1) in
   assert (p11 `FS.equal` p01);
   assert (p12 `FS.equal` p02);
   assert (p13 `FS.equal` p03);
-  insert (A.split_l r (k `US.add` 1sz)) hd hd2 hd3 k v;
-  (**) let gs2 = gget (varraylist pred1 pred2 pred3 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3) in
+  assert (p14 `FS.equal` p04);
+  insert (A.split_l r (k `US.add` 1sz)) hd hd2 hd3 hd4 k v;
+  (**) let gs2 = gget (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3 hd4) in
   let p21 = G.hide (ptrs_in #a (US.v k) gs2) in
   let p22 = G.hide (ptrs_in #a hd2 gs2) in
   let p23 = G.hide (ptrs_in #a hd3 gs2) in
+  let p24 = G.hide (ptrs_in #a hd4 gs2) in
   assert (p21 `FS.equal` FS.insert (US.v k) p11);
   assert (p22 `FS.equal` p12);
   assert (p23 `FS.equal` p13);
+  assert (p24 `FS.equal` p14);
   // Final conclusion
   (**) Seq.lemma_eq_intro #a
    (Seq.append (dataify (Ghost.reveal gs0)) (Seq.create 1 v))
