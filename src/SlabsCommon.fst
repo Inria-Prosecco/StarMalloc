@@ -104,25 +104,23 @@ let p_guard_unpack (#opened:_)
     let blob1
       : t_of (slab_vprop sc (snd b2) (fst b2))
       = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
     b1 == b2 /\
-    is_guard sc (snd b1) /\
+    is_guard sc (snd b1) (fst b1) blob1 /\
     h0 ((p_guard sc) b1)
     ==
     h1 (slab_vprop sc (snd b2) (fst b2))
   )
   =
-  sladmit ();
   change_slprop_rel
     ((p_guard sc) b1)
     (slab_vprop sc (snd b2) (fst b2)
     `VR2.vrefine`
-    (fun ((|s,_|), _) -> is_guard sc (snd b1)))
+    is_guard sc (snd b2) (fst b2))
     (fun x y -> x == y)
     (fun _ -> ());
   VR2.elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
-    (fun ((|s,_|), _) -> is_guard sc (snd b1))
+    (is_guard sc (snd b2) (fst b2))
 
 let p_empty_pack (#opened:_)
   (sc: sc)
@@ -234,8 +232,7 @@ let p_guard_pack (#opened:_)
     let blob0
       : t_of (slab_vprop sc (snd b1) (fst b1))
       = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
-    is_guard sc (snd b1) /\
+    is_guard sc (snd b1) (fst b1) blob0 /\
     b1 == b2
   )
   (ensures fun h0 _ h1 ->
@@ -247,16 +244,15 @@ let p_guard_pack (#opened:_)
   =
   VR2.intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
-    (fun ((|s,_|), _) -> is_guard sc (snd b1));
+    (is_guard sc (snd b1) (fst b1));
   change_slprop_rel
     (slab_vprop sc (snd b1) (fst b1)
     `VR2.vrefine`
-    (fun ((|s,_|), _) -> is_guard sc (snd b1)))
+    is_guard sc (snd b1) (fst b1))
     ((p_guard sc) b2)
     (fun x y -> x == y)
     (fun _ -> ())
 #pop-options
-
 
 inline_for_extraction noextract
 let slab_array
@@ -507,8 +503,6 @@ let lemma_slab_aux_starseq
       assert (Seq.index md_region_lv (U32.v i) == Seq.index md_region_lv' (U32.v i))
   in Classical.forall_intro aux
 
-//checkpoint
-
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
 let pack_slab_starseq
   (#opened:_)
@@ -556,7 +550,9 @@ let pack_slab_starseq
       (slab_array slab_region (US.sizet_to_uint32 idx))
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx))) in
     let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
-    (v == 3ul ==> True) /\
+    (v == 3ul ==> is_guard size_class
+      (slab_array slab_region (US.sizet_to_uint32 idx))
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx)) md_blob) /\
     (v == 2ul ==> is_full size_class md) /\
     (v == 1ul ==> is_partial size_class md) /\
     (v == 0ul ==> is_empty size_class md) /\
@@ -565,7 +561,17 @@ let pack_slab_starseq
   (ensures fun h0 _ h1 -> True)
   =
   SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v idx);
-  if U32.eq v 2ul then (
+  if U32.eq v 3ul then (
+    p_guard_pack size_class
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx),
+      slab_array slab_region (US.sizet_to_uint32 idx))
+      (md_bm_array md_bm_region (US.sizet_to_uint32 idx),
+      slab_array slab_region (US.sizet_to_uint32 idx));
+    change_equal_slprop
+      (p_guard size_class (md_bm_array md_bm_region (US.sizet_to_uint32 idx), slab_array slab_region (US.sizet_to_uint32 idx)))
+      (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v)
+        (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v idx)))
+  ) else if U32.eq v 2ul then (
     p_full_pack size_class
       (md_bm_array md_bm_region (US.sizet_to_uint32 idx),
       slab_array slab_region (US.sizet_to_uint32 idx))
@@ -620,14 +626,14 @@ let pack_right_and_refactor_vrefine_dep
   (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
-  (r1 r2 r3: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   : SteelGhost unit opened
   (
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
     `star`
     (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
     A.varrayp (A.split_l slab_region 0sz) halfp)
@@ -636,14 +642,14 @@ let pack_right_and_refactor_vrefine_dep
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4)
   )
   (requires fun h0 ->
     let blob0
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
     ) in
     md_count_v == dfst blob0)
   (ensures fun h0 _ h1 ->
@@ -651,13 +657,13 @@ let pack_right_and_refactor_vrefine_dep
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3)
+      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
     ) in
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     ) in
     dfst blob0 == dfst blob1
   )
@@ -665,7 +671,7 @@ let pack_right_and_refactor_vrefine_dep
   let md_count_v' = elim_vrefinedep
     (vptr md_count)
     vrefinedep_prop
-    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3) in
+    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4) in
   assert (G.reveal md_count_v' == md_count_v);
   change_equal_slprop
     (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v)
@@ -673,8 +679,8 @@ let pack_right_and_refactor_vrefine_dep
   intro_vrefinedep
     (vptr md_count)
     vrefinedep_prop
-    (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3)
-    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 (G.reveal md_count_v') `star`
+    (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4)
+    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4 (G.reveal md_count_v') `star`
     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region (G.reveal md_count_v') `star`
     A.varrayp (A.split_l slab_region 0sz) halfp)
 #pop-options
