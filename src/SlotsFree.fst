@@ -203,15 +203,13 @@ let deallocate_slot_aux
     v2 == v1)
   =
   assert_norm (4 < FI.max_int U16.n);
-
   let bm1 = G.hide (a2bv (Bitmap4.set md_as_seq pos)) in
   let bm2 = G.hide (a2bv md_as_seq) in
-  //TODO: add bitmap lemma
-  assume (G.reveal bm1 == Seq.upd (G.reveal bm2) (Bitmap5.f #4 (U32.v pos)) true);
+  let idx = G.hide (Bitmap4.f #4 (U32.v pos)) in
+  Bitmap4.set_lemma2 md_as_seq pos;
+  assert (G.reveal bm1 == Seq.upd (G.reveal bm2) (G.reveal idx) true);
   SeqUtils.lemma_upd_bij bm2 bm1 (Bitmap5.f #4 (U32.v pos)) true;
   assert (G.reveal bm2 == Seq.upd (G.reveal bm1) (Bitmap5.f #4 (U32.v pos)) false);
-  //TODO
-  //Bitmap5.bm_unset #4 md pos;
   apply_starseq_upd2
     size_class
     md
@@ -394,6 +392,26 @@ let deallocate_slot'_aux0
         (U32.v pos)))
 
 
+let set_unset_bij
+  (size_class: sc)
+  (md_as_seq1 md_as_seq2: Seq.lseq U64.t 4)
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Lemma
+  (requires md_as_seq2 = Bitmap4.set md_as_seq1 pos)
+  (ensures  md_as_seq1 = Bitmap4.unset md_as_seq2 pos)
+  =
+  admit ()
+
+let unset_set_bij
+  (size_class: sc)
+  (md_as_seq1 md_as_seq2: Seq.lseq U64.t 4)
+  (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
+  : Lemma
+  (requires md_as_seq2 = Bitmap4.unset md_as_seq1 pos)
+  (ensures  md_as_seq1 = Bitmap4.set md_as_seq2 pos)
+  =
+  admit ()
+
 let deallocate_slot'_aux1
   (#opened: _)
   (size_class: sc)
@@ -426,8 +444,8 @@ let deallocate_slot'_aux1
   )
   (ensures fun _ _ _ -> True)
   =
-  //TODO: add bitmap lemma
-  assume (Bitmap4.set (G.reveal md_as_seq2) pos == G.reveal md_as_seq1);
+  unset_set_bij size_class (G.reveal md_as_seq1) (G.reveal md_as_seq2) pos;
+  assert (Bitmap4.set (G.reveal md_as_seq2) pos == G.reveal md_as_seq1);
   starseq_weakening
     #_
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
@@ -471,8 +489,8 @@ let deallocate_slot'_aux2
   )
   (ensures fun _ _ _ -> True)
   =
-  //TODO: add bitmap lemma
-  assume (Bitmap4.unset (G.reveal md_as_seq2) pos == G.reveal md_as_seq1);
+  set_unset_bij size_class (G.reveal md_as_seq1) (G.reveal md_as_seq2) pos;
+  assert (Bitmap4.unset (G.reveal md_as_seq2) pos == G.reveal md_as_seq1);
   starseq_weakening
     #_
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
@@ -564,7 +582,8 @@ let deallocate_slot'
       deallocate_slot'_aux0 size_class md_as_seq2 (A.split_r arr 0sz) pos ptr;
       deallocate_slot'_aux1 size_class md_as_seq md_as_seq2 (A.split_r arr 0sz) pos;
       deallocate_slot_aux size_class md md_as_seq2 (A.split_r arr 0sz) pos;
-      assume (G.reveal md_as_seq == Bitmap4.set (G.reveal md_as_seq2) pos);
+      unset_set_bij size_class (G.reveal md_as_seq) (G.reveal md_as_seq2) pos;
+      assert (G.reveal md_as_seq == Bitmap4.set (G.reveal md_as_seq2) pos);
       deallocate_slot'_aux2 size_class md_as_seq2 md_as_seq (A.split_r arr 0sz) pos;
       return (true, G.hide pos)
     ) else (
