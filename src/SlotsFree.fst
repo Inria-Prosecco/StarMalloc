@@ -391,26 +391,66 @@ let deallocate_slot'_aux0
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
         (U32.v pos)))
 
+let array_to_bv2_inj (#n: nat)
+  (s1 s2: Seq.lseq U64.t n)
+  : Lemma
+  (requires Bitmap4.array_to_bv2 s1 == Bitmap4.array_to_bv2 s2)
+  (ensures s1 == s2)
+  = admit ()
 
 let set_unset_bij
   (size_class: sc)
   (md_as_seq1 md_as_seq2: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
-  (requires md_as_seq2 = Bitmap4.set md_as_seq1 pos)
-  (ensures  md_as_seq1 = Bitmap4.unset md_as_seq2 pos)
+  (requires (
+    let idx = Bitmap4.f #4 (U32.v pos) in
+    let bm0 = Bitmap4.array_to_bv2 md_as_seq1 in
+    Seq.index bm0 idx = false /\
+    md_as_seq2 = Bitmap4.set md_as_seq1 pos))
+  (ensures md_as_seq1 == Bitmap4.unset md_as_seq2 pos)
   =
-  admit ()
+  let md_as_seq3 = Bitmap4.unset md_as_seq2 pos in
+  let bm1 = Bitmap4.array_to_bv2 md_as_seq1 in
+  let bm2 = Bitmap4.array_to_bv2 md_as_seq2 in
+  let bm3 = Bitmap4.array_to_bv2 md_as_seq3 in
+  let idx = Bitmap4.f #4 (U32.v pos) in
+  Bitmap4.set_lemma2 #4 md_as_seq1 pos;
+  assert (bm2 == Seq.upd bm1 idx true);
+  Bitmap4.unset_lemma2 #4 md_as_seq2 pos;
+  assert (bm3 == Seq.upd bm2 idx false);
+  Seq.lemma_eq_intro bm1 bm3;
+  assert (bm1 == bm3);
+  array_to_bv2_inj
+    md_as_seq1
+    (Bitmap4.unset md_as_seq2 pos)
 
 let unset_set_bij
   (size_class: sc)
   (md_as_seq1 md_as_seq2: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
-  (requires md_as_seq2 = Bitmap4.unset md_as_seq1 pos)
+  (requires (
+    let idx = Bitmap4.f #4 (U32.v pos) in
+    let bm0 = Bitmap4.array_to_bv2 md_as_seq1 in
+    Seq.index bm0 idx = true /\
+    md_as_seq2 = Bitmap4.unset md_as_seq1 pos))
   (ensures  md_as_seq1 = Bitmap4.set md_as_seq2 pos)
   =
-  admit ()
+  let md_as_seq3 = Bitmap4.set md_as_seq2 pos in
+  let bm1 = Bitmap4.array_to_bv2 md_as_seq1 in
+  let bm2 = Bitmap4.array_to_bv2 md_as_seq2 in
+  let bm3 = Bitmap4.array_to_bv2 md_as_seq3 in
+  let idx = Bitmap4.f #4 (U32.v pos) in
+  Bitmap4.unset_lemma2 #4 md_as_seq1 pos;
+  assert (bm2 == Seq.upd bm1 idx false);
+  Bitmap4.set_lemma2 #4 md_as_seq2 pos;
+  assert (bm3 == Seq.upd bm2 idx true);
+  Seq.lemma_eq_intro bm1 bm3;
+  assert (bm1 == bm3);
+  array_to_bv2_inj
+    md_as_seq1
+    (Bitmap4.set md_as_seq2 pos)
 
 let deallocate_slot'_aux1
   (#opened: _)
@@ -705,47 +745,7 @@ let deallocate_slot
 #pop-options
 
 (*)
-- [ok] ptrdiff
-- [ok] uintptr_t
-- [ok-ish] deallocate_slot_aux
-  - bv lemma
-  - starseq lemma
-- [ok-ish] deallocate_slot
-
-sides:
-[ok] - remove src/Slots remaining admit with src/Slots2 lemma
-[~ok]- remove Slots2 admits + aux lemmas (some work ahead!)
-  [ok] - remove dubious coercions
-  - add bitmap lemmas
-- merge extraction to main when extractable
-
-roadmap:
-[ok] - add has_free_slot & co extractable versions (with proper spec ofc)
-[~ok] - add full_slabs list: src/Slabs, src/SizeClass
-  [ok] - patch allocate_slab_aux_1
-  [sk] - patch allocate_slab_aux_2 (later)
-  [~ok] - allocate_slot_refined (src/Slabs):
-    [ok] - improve spec
-    postcond is is_partial \/ is_full (as nb_slots size_class > 1, exclusive for now)
-    [ok-ish] - remove admit
-    [sk] - prove Utils2 lemma
-
-- mandatory lemmas
-  - array_to_pieces
-  - slab_to_slots
-  - slots_to_slab
-  - flattening lemma
-  (large ghost seq will be used to keep information for flattened state, hopefully no issue with starseq)
-
 - complications
   - remove expected_size, add a split for each slot
   - ptrdiff on live arrays: add a split 0 arr everywhere
   - page_size % size_class <> 0: take it into account
-
-- deallocation
-  - src/Slabs2
-  - src/SizeClass2: within_bound
-
-- initialization to Steel
-- sizeclass selection
-- mmap flags check
