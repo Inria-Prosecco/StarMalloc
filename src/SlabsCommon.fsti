@@ -458,7 +458,7 @@ let ind_varraylist_aux
   ind_varraylist_aux_refinement pred1 pred2 pred3 pred4 r idxs
 
 let ind_varraylist
-  (pred1 pred2 pred3: AL.status -> prop) (r: A.array AL.cell)
+  (pred1 pred2 pred3 pred4: AL.status -> prop) (r: A.array AL.cell)
   (r1 r2 r3 r4: ref US.t)
   =
   (vptr r1 `star` vptr r2 `star` vptr r3 `star` vptr r4) `vdep`
@@ -469,7 +469,7 @@ let left_vprop1
   (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
   =
-  ind_varraylist pred1 pred2 pred3
+  ind_varraylist pred1 pred2 pred3 pred4
     (A.split_l md_region (u32_to_sz md_count_v))
     r1 r2 r3 r4
 
@@ -494,7 +494,7 @@ let left_vprop_aux
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (r1 r2 r3 r4: ref US.t)
   (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (x: t_of (ind_varraylist pred1 pred2 pred3 (A.split_l md_region (u32_to_sz md_count_v)) r1 r2 r3 r4))
+  (x: t_of (ind_varraylist pred1 pred2 pred3 pred4 (A.split_l md_region (u32_to_sz md_count_v)) r1 r2 r3 r4))
   = starseq
       #(pos:U32.t{U32.v pos < U32.v md_count_v})
       #(t size_class)

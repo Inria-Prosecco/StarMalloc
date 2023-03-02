@@ -1008,8 +1008,6 @@ let deallocate_slab'
       md_count_v md_region_lv idx1 idx2 idx3 idx4
   )
 
-// checkpoint
-
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 150"
 let deallocate_slab
   (ptr: array U8.t)
