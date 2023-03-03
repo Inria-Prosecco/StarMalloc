@@ -1393,7 +1393,7 @@ let allocate_slab
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3 r4: ref US.t)
-  : SteelT (array U8.t)
+  : Steel (array U8.t)
   (
     vrefinedep
       (vptr md_count)

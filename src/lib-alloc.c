@@ -6,7 +6,7 @@
 
 static uint32_t init_status = 0UL;
 
-uint8_t* memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
+uint8_t* StarMalloc_memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
   return (uint8_t*) memcpy((void*) dest, (void*) src, n);
 }
 
@@ -23,11 +23,7 @@ void free(void *ptr) {
 
 void* realloc(void* ptr, size_t new_size) {
   if (! init_status) { krmlinit_globals(); init_status=1UL; }
-  if (ptr == NULL) {
-    return malloc(new_size);
-  } else {
-    return StarMalloc_realloc(ptr, new_size);
-  }
+  return StarMalloc_realloc(ptr, new_size);
 }
 
 /* TODO: does not enforce zeroing */
