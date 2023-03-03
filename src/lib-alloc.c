@@ -27,8 +27,8 @@ void* realloc(void* ptr, size_t new_size) {
 }
 
 /* TODO: does not enforce zeroing */
-void* calloc(long unsigned int nb_elem, long unsigned int size_elem) {
-  long unsigned int size = nb_elem * size_elem;
+void* calloc(size_t nb_elem, size_t size_elem) {
+  size_t size = nb_elem * size_elem;
   void* ptr = malloc(size);
   return ptr;
 }
