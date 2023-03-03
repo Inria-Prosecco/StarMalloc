@@ -139,7 +139,9 @@ let allocate_size_class
     (if (A.is_null r) then emp else A.varray r) `star`
     size_class_vprop scs)
   (requires fun h0 -> True)
-  (ensures fun h0 _ h1 -> True)
+  (ensures fun h0 r h1 ->
+    not (A.is_null r) ==> A.length r == U32.v scs.size
+  )
   =
   change_slprop_rel
     (size_class_vprop scs)

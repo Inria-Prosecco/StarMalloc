@@ -246,11 +246,13 @@ let vrefinedep_ext
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects --fuel 0 --ifuel 0"
 noextract inline_for_extraction
 let init_struct (sc:sc)
-  : SteelT size_class_struct
+  : Steel size_class_struct
   emp
   (fun scs -> size_class_vprop scs `star`
     A.varrayp (A.split_l scs.slab_region 0sz) halfp `star`
     A.varray (A.split_r scs.slab_region slab_size))
+  (requires fun _ -> True)
+  (ensures fun _ r _ -> U32.eq r.size sc)
   =
   intro_fits_u32 ();
   let slab_region = mmap_u8 (u32_to_sz (U32.mul metadata_max page_size)) in
@@ -349,46 +351,86 @@ let init_struct (sc:sc)
   return scs
 
 noextract inline_for_extraction
-let init (sc:sc) : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) =
+let init (sc:sc) : SteelTop size_class false (fun _ -> emp)
+  (fun _ r _ -> U32.eq r.data.size sc) =
   let data = init_struct sc in
   let lock = L.new_lock (size_class_vprop data) in
   let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
   let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
   {data; lock; region_start; region_end}
 
-let init16 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 16ul
-let init32 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 32ul
-let init64 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 64ul
+let size_class16_t = r:size_class{U32.eq r.data.size 16ul}
+let size_class32_t = r:size_class{U32.eq r.data.size 32ul}
+let size_class64_t = r:size_class{U32.eq r.data.size 64ul}
+let size_class128_t = r:size_class{U32.eq r.data.size 128ul}
+let size_class256_t = r:size_class{U32.eq r.data.size 256ul}
+let size_class512_t = r:size_class{U32.eq r.data.size 512ul}
+let size_class1024_t = r:size_class{U32.eq r.data.size 1024ul}
+let size_class2048_t = r:size_class{U32.eq r.data.size 2048ul}
+let size_class4096_t = r:size_class{U32.eq r.data.size 4096ul}
 
-let init128 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 128ul
-let init256 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 256ul
-let init512 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 512ul
+let init16 () : SteelTop size_class16_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 16ul)
+  = init 16ul
+let init32 () : SteelTop size_class32_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 32ul)
+  = init 32ul
+let init64 () : SteelTop size_class64_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 64ul)
+  = init 64ul
 
-let init1024 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 1024ul
-let init2048 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 2048ul
-let init4096 () : SteelTop size_class false (fun _ -> emp) (fun _ _ _ -> True) = init 4096ul
+let init128 () : SteelTop size_class128_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 128ul)
+  = init 128ul
+let init256 () : SteelTop size_class256_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 256ul)
+  = init 256ul
+let init512 () : SteelTop size_class512_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 512ul)
+  = init 512ul
+
+let init1024 () : SteelTop size_class1024_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 1024ul)
+  = init 1024ul
+let init2048 () : SteelTop size_class2048_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 2048ul)
+  = init 2048ul
+let init4096 () : SteelTop size_class4096_t
+  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 4096ul)
+  = init 4096ul
 
 
 // Intentional top-level effect for initialization, we temporarily disable the corresponding warning
 // for these definitions
+
+#reset-options "--fuel 1 --ifuel 1"
+
+#push-options "--print_implicits"
+
 #push-options "--warn_error '-272'"
-let size_class16 : size_class = init16 ()
-let size_class32 : size_class = init32 ()
-let size_class64 : size_class = init64 ()
 
-let size_class128 : size_class = init128 ()
-let size_class256 : size_class = init256 ()
-let size_class512 : size_class = init512 ()
+let size_class16 : size_class16_t = init16 ()
+let size_class32 : size_class32_t = init32 ()
+let size_class64 : size_class64_t = init64 ()
 
-let size_class1024 : size_class = init1024 ()
-let size_class2048 : size_class = init2048 ()
-let size_class4096 : size_class = init4096 ()
+let size_class128 : size_class128_t = init128 ()
+let size_class256 : size_class256_t = init256 ()
+let size_class512 : size_class512_t = init512 ()
+
+let size_class1024 : size_class1024_t = init1024 ()
+let size_class2048 : size_class2048_t = init2048 ()
+let size_class4096 : size_class4096_t = init4096 ()
 #pop-options
 
 let null_or_varray (#a:Type) (r:array a) : vprop = if is_null r then emp else varray r
 
 inline_for_extraction noextract
-let return_null () : SteelT (array U8.t) emp (fun r -> null_or_varray r)
+let return_null ()
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ -> is_null r)
   = [@inline_let]
     let r = null in
     change_equal_slprop emp (null_or_varray r);
@@ -402,45 +444,73 @@ val allocate_size_class
   (size_class_vprop scs)
   (fun r -> null_or_varray r `star` size_class_vprop scs)
   (requires fun h0 -> True)
-  (ensures fun h0 _ h1 -> True)
+  (ensures fun h0 r h1 -> not (is_null r) ==> A.length r == U32.v scs.size)
 
 let allocate_size_class scs =
   let r = SizeClass.allocate_size_class scs in
   change_equal_slprop (if is_null r then emp else varray r) (null_or_varray r);
   return r
 
-val slab_malloc (bytes:U32.t) : SteelT (array U8.t) emp (fun r -> if is_null r then emp else varray r)
+val slab_malloc (bytes:U32.t)
+  : Steel (array U8.t)
+  emp
+  (fun r -> if is_null r then emp else varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
 
+#restart-solver
+
+#push-options "--fuel 1 --ifuel 1 --query_stats --split_queries"
 inline_for_extraction noextract
 let slab_malloc' (sc: size_class) (bytes: U32.t)
   : Steel
   (array U8.t)
   emp (fun r -> if is_null r then emp else varray r)
-  //TODO: (requires fun _ -> U32.lte bytes sc.data.size)
-  (requires fun _ -> True)
-  (ensures fun _ _ _ -> True)
+  (requires fun _ ->
+    U32.v bytes <= U32.v sc.data.size
+  )
+  (ensures fun _ r _ ->
+    not (is_null r) ==> (
+      A.length r == U32.v sc.data.size /\
+      A.length r >= U32.v bytes
+  ))
   =
   L.acquire sc.lock;
   let ptr = allocate_size_class sc.data in
   L.release sc.lock;
   return ptr
+#pop-options
 
 #restart-solver
 
-#push-options "--fuel 1 --ifuel 1"
+#reset-options
 
+#push-options "--z3rlimit 100"
 let slab_malloc bytes =
-  if bytes = 0ul then return_null ()
-  else if bytes `U32.lte` 16ul then slab_malloc' size_class16 bytes
-  else if bytes `U32.lte` 32ul then slab_malloc' size_class32 bytes
-  else if bytes `U32.lte` 64ul then slab_malloc' size_class64 bytes
-  else if bytes `U32.lte` 128ul then slab_malloc' size_class128 bytes
-  else if bytes `U32.lte` 256ul then slab_malloc' size_class256 bytes
-  else if bytes `U32.lte` 512ul then slab_malloc' size_class512 bytes
-  else if bytes `U32.lte` 1024ul then slab_malloc' size_class1024 bytes
-  else if bytes `U32.lte` 2048ul then slab_malloc' size_class2048 bytes
-  else if bytes `U32.lte` 4096ul then slab_malloc' size_class4096 bytes
-  else return_null ()
+  if bytes = 0ul then (
+    return_null ()
+  ) else if bytes `U32.lte` 16ul then (
+    slab_malloc' size_class16 bytes
+  ) else if bytes `U32.lte` 32ul then (
+    slab_malloc' size_class32 bytes
+  ) else if bytes `U32.lte` 64ul then (
+    slab_malloc' size_class64 bytes
+  ) else if bytes `U32.lte` 128ul then (
+    slab_malloc' size_class128 bytes
+  ) else if bytes `U32.lte` 256ul then (
+    slab_malloc' size_class256 bytes
+  ) else if bytes `U32.lte` 512ul then (
+    slab_malloc' size_class512 bytes
+  ) else if bytes `U32.lte` 1024ul then (
+    slab_malloc' size_class1024 bytes
+  ) else if bytes `U32.lte` 2048ul then (
+    slab_malloc' size_class2048 bytes
+  ) else if bytes `U32.lte` 4096ul then (
+    slab_malloc' size_class4096 bytes
+  ) else (
+    return_null ()
+  )
+#pop-options
 
 val slab_free (ptr:array U8.t)
   : SteelT bool

@@ -371,14 +371,16 @@ let allocate_slab_aux_1
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)
   )
-  (ensures fun _ _ h1 ->
+  (ensures fun _ r h1 ->
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     ) in
-    md_count_v == dfst blob1)
+    md_count_v == dfst blob1 /\
+    A.length r == U32.v size_class
+  )
   =
   (**) ALG.lemma_head1_in_bounds pred1 pred2 pred3 pred4
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -633,14 +635,16 @@ let allocate_slab_aux_2
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)
   )
-  (ensures fun _ _ h1 ->
+  (ensures fun _ r h1 ->
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     ) in
-    md_count_v == dfst blob1)
+    md_count_v == dfst blob1 /\
+    A.length r == U32.v size_class
+  )
   =
   (**) ALG.lemma_head2_in_bounds pred1 pred2 pred3 pred4
     (A.split_l md_region (u32_to_sz md_count_v))
@@ -1299,7 +1303,9 @@ let allocate_slab'
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv
   )
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ r _ ->
+    not (A.is_null r) ==> A.length r == U32.v size_class
+  )
   =
   if (idx2 <> AL.null_ptr) then (
     ALG.lemma_head2_in_bounds pred1 pred2 pred3 pred4
@@ -1400,6 +1406,10 @@ let allocate_slab
       (vptr md_count)
       vrefinedep_prop
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4)
+  )
+  (requires fun _ -> True)
+  (ensures fun _ r _ ->
+    not (A.is_null r) ==> A.length r == U32.v size_class
   )
   =
   let md_count_v

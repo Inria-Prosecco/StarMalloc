@@ -25,7 +25,9 @@ val malloc (size: US.t)
   emp
   (fun r -> if A.is_null r then emp else A.varray r)
   (requires fun _ -> True)
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ r _ ->
+    not (A.is_null r) ==> A.length r >= US.v size
+  )
 
 let malloc size =
   if US.lte size (US.uint32_to_sizet page_size)
@@ -67,6 +69,15 @@ let getsize (ptr: array U8.t)
   ) else (
     return s1
   )
+
+
+assume
+val memcpy_u8 (dest src: array U8.t) (n: US.t)
+  : SteelT (array U8.t)
+  (A.varray dest `star` A.varray src)
+  (fun _ -> A.varray dest `star` A.varray src)
+
+
 
 module G = FStar.Ghost
 

@@ -460,7 +460,7 @@ let get_slot_as_returned_value
   (requires fun h0 ->
     let bm = a2bv md_as_seq in
     Seq.index bm (Bitmap5.f #4 (U32.v pos)) = false)
-  (ensures fun h0 _ h1 -> True)
+  (ensures fun h0 r h1 -> A.length r == U32.v size_class)
   =
   starseq_upd_aux_lemma3 size_class (G.reveal md_as_seq) arr pos;
   change_slprop_rel
@@ -519,7 +519,7 @@ let allocate_slot_aux
     A.asel md h0 == G.reveal md_as_seq /\
     Seq.index bm0 idx = false
   )
-  (ensures fun h0 _ h1 ->
+  (ensures fun h0 r h1 ->
     v_starseq_len
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
       #(option (Seq.lseq U8.t (U32.v size_class)))
@@ -552,7 +552,8 @@ let allocate_slot_aux
     let v2 = A.asel md h1 in
     //let idx = Bitmap5.f #4 (U32.v pos) in
     v2 == Bitmap4.set v1 pos /\
-    blob2 == Seq.upd blob1 (U32.v pos) None)
+    blob2 == Seq.upd blob1 (U32.v pos) None /\
+    A.length r == U32.v size_class)
   =
   assert_norm (4 < FI.max_int U16.n);
   Bitmap5.bm_set #(Ghost.hide 4) md pos;
@@ -566,9 +567,6 @@ let allocate_slot_aux
   let r = get_slot_as_returned_value
     size_class md_as_seq arr pos in
   return r
-
-//TODO: FIXME @SizeT lib
-//assert (US.fits 256): impossible?
 
 let f_lemma (#n: nat)
   (q:nat{q < n})
@@ -888,14 +886,15 @@ let allocate_slot
       = h0 (slab_vprop size_class arr md) in
     let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     has_free_slot size_class v0)
-  (ensures fun h0 _ h1 ->
+  (ensures fun h0 r h1 ->
     let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
     let blob1 : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
     let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
-    not (is_empty size_class v1))
+    not (is_empty size_class v1) /\
+    A.length r == U32.v size_class)
     //U32.v (G.reveal (snd r)) < U64.n * 4 /\
     //v1 == Bitmap4.set v0 (G.reveal (snd r)))
     //TODO: is it worth having such a precise spec?

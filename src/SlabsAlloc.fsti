@@ -24,7 +24,7 @@ val allocate_slab
   (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
   (md_count: ref U32.t)
   (r1 r2 r3 r4: ref US.t)
-  : SteelT (array U8.t)
+  : Steel (array U8.t)
   (
     vrefinedep
       (vptr md_count)
@@ -37,4 +37,8 @@ val allocate_slab
       (vptr md_count)
       vrefinedep_prop
       (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4)
+  )
+  (requires fun _ -> True)
+  (ensures fun _ r _ ->
+    not (A.is_null r) ==> A.length r == U32.v size_class
   )

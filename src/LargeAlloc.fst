@@ -208,11 +208,13 @@ let large_malloc (size: US.t)
   : Steel (array U8.t)
   emp (fun r -> if A.is_null r then emp else A.varray r)
   (requires fun _ -> True)
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ r _ ->
+    not (A.is_null r) ==> A.length r == US.v size
+  )
   =
   L.acquire metadata.lock;
   let md_size = _size metadata.data in
-  let max = 18446744073709551615UL in
+  [@inline_let] let max = 18446744073709551615UL in
   assert (U64.v max = Impl.Core.c);
   if U64.lt md_size max then (
     //TODO: large_malloc' can return NULL due to mmap
@@ -288,13 +290,6 @@ let large_getsize (ptr: array U8.t)
   let size = large_getsize' metadata.data ptr in
   L.release metadata.lock;
   return size
-
-assume
-val memcpy_u8 (dest src: array U8.t) (n: US.t)
-  : SteelT (array U8.t)
-  (A.varray dest `star` A.varray src)
-  (fun _ -> A.varray dest `star` A.varray src)
-
 
 
 (*)
