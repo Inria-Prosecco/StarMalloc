@@ -23,10 +23,10 @@ include SlabsCommon
 val deallocate_slab
   (ptr: array U8.t)
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
   : Steel bool
   (

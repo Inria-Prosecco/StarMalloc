@@ -10,11 +10,10 @@ open FStar.Mul
 inline_for_extraction
 let page_size: U32.t = 4096ul
 
-// LATER: this should likely be a sizet
 inline_for_extraction
-val metadata_max: v:U32.t{FStar.UInt.size (U32.v v * U32.v page_size) 32}
+val metadata_max: v:US.t{US.fits (US.v v * U32.v page_size)}
 
 noextract inline_for_extraction
-val alg_null: v:nat{v = U32.v metadata_max + 1}
+val alg_null: v:nat{v = US.v metadata_max + 1}
 noextract inline_for_extraction
-val alg_null_sizet: v:US.t{US.v v = U32.v metadata_max + 1}
+val alg_null_sizet: v:US.t{US.v v = US.v metadata_max + 1}

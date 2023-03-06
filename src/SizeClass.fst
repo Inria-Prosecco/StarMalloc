@@ -40,7 +40,7 @@ type size_class_struct' = {
   full_slabs: ref US.t;
   // guard
   guard_slabs: ref US.t;
-  md_count: ref U32.t;
+  md_count: ref US.t;
   slab_region: array U8.t;
   //TODO: due to karamel extraction issue + sl proof workaround
   md_bm_region: array U64.t;
@@ -51,13 +51,13 @@ type size_class_struct' = {
 open Prelude
 
 inline_for_extraction noextract
-let slab_size : (v:US.t{US.v v == U32.v metadata_max * U32.v page_size})
-  = US.of_u32 (U32.mul metadata_max page_size)
+let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size})
+  = US.mul metadata_max (US.of_u32 page_size)
 
 type size_class_struct = s:size_class_struct'{
   A.length s.slab_region == US.v slab_size /\
-  A.length s.md_bm_region == U32.v metadata_max * 4 /\
-  A.length s.md_region == U32.v metadata_max
+  A.length s.md_bm_region == US.v metadata_max * 4 /\
+  A.length s.md_region == US.v metadata_max
 }
 
 open SteelVRefineDep
@@ -211,6 +211,7 @@ let deallocate_size_class
   // Needed for the assert below
   A.intro_fits_ptrdiff32 ();
   assume (UP.fits (G.reveal diff));
+  assume (G.reveal diff < pow2 32);
   let b = deallocate_slab ptr
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region

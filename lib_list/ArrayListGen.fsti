@@ -35,7 +35,7 @@ noextract inline_for_extraction
 let null_ptr : US.t = Config.alg_null_sizet
 
 let null_ptr_check () =
-  assert (US.v null_ptr == U32.v Config.metadata_max + 1)
+  assert (US.v null_ptr == US.v Config.metadata_max + 1)
 
 /// Erases the next and prev field to return a sequence of data
 val dataify (#a:Type)

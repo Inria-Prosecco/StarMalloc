@@ -87,6 +87,23 @@ let init_u32_refined (len: nat)
     = Seq.map_seq f s in
   s'
 
+module US = FStar.SizeT
+
+noextract
+let init_us_refined (len: nat)
+  : Pure (Seq.lseq (k:US.t{US.v k < len}) len)
+  (requires US.fits len)
+  (ensures fun r -> Seq.length r = len)
+  =
+  let s : Seq.lseq (k:nat{k < len}) len
+    = Seq.init len (fun k -> k) in
+  let f : (k:nat{k < len}) -> (k':US.t{US.v k' < len})
+    = fun k -> US.uint_to_t k in
+  Seq.map_seq_len f s;
+  let s' : Seq.lseq (k:US.t{US.v k < len}) len
+    = Seq.map_seq f s in
+  s'
+
 let init_u32_refined_index (len: nat) (i:nat{i < len})
   : Lemma
   (requires FStar.UInt.size len U32.n)
@@ -98,6 +115,20 @@ let init_u32_refined_index (len: nat) (i:nat{i < len})
     = fun k -> U32.uint_to_t k in
   Seq.map_seq_len f s;
   Seq.map_seq_index f s i
+
+let init_us_refined_index (len: nat) (i:nat{i < len})
+  : Lemma
+  (requires US.fits len)
+  (ensures Seq.index (init_us_refined len) i = US.uint_to_t i)
+  =
+  let s : Seq.lseq (k:nat{k < len}) len
+    = Seq.init len (fun k -> k) in
+  let f : (k:nat{k < len}) -> (k':US.t{US.v k' < len})
+    = fun k -> US.uint_to_t k in
+  Seq.map_seq_len f s;
+  Seq.map_seq_index f s i
+
+
 
 let map_seq_slice_aux (#a #b:Type)
   (f: a -> Tot b)

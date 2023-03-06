@@ -2,8 +2,15 @@ module Config
 
 open Prelude
 
-let metadata_max = 131072ul
+open FStar.Mul
 
-let alg_null = U32.v metadata_max + 1
+inline_for_extraction noextract
+let metadata_max' = 131072ul
 
-let alg_null_sizet = US.of_u32 (U32.add metadata_max 1ul)
+let metadata_max =
+  US.fits_u32_implies_fits (U32.v page_size * U32.v metadata_max');
+  US.of_u32 metadata_max'
+
+let alg_null = US.v metadata_max + 1
+
+let alg_null_sizet = US.add metadata_max 1sz

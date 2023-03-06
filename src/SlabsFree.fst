@@ -69,15 +69,15 @@ module FS = FStar.FiniteSet.Base
 inline_for_extraction noextract
 let deallocate_slab_aux_1_partial
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < U32.v md_count_v})
+  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < US.v md_count_v})
   : Steel unit
   (
     vptr md_count `star`
@@ -86,14 +86,14 @@ let deallocate_slab_aux_1_partial
     vptr r3 `star`
     vptr r4 `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v pos) 1ul))
       (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v pos) 1ul))
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
+      (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (fun _ ->
     vrefinedep
@@ -103,9 +103,9 @@ let deallocate_slab_aux_1_partial
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -125,7 +125,7 @@ let deallocate_slab_aux_1_partial
     md_count_v == dfst blob1)
   =
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
   //assert (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
   (**) ALG.lemma_dataify_index #AL.status gs0 (US.v pos);
@@ -133,16 +133,16 @@ let deallocate_slab_aux_1_partial
   assert (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
 
   let idx3' = AL.remove3 #pred1 #pred2 #pred3 #pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (G.hide (US.v idx1)) (G.hide (US.v idx2)) idx3 (G.hide (US.v idx4)) pos in
   AL.insert2 #pred1 #pred2 #pred3 #pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     idx2 (G.hide (US.v idx1)) (G.hide (US.v idx3')) (G.hide (US.v idx4)) pos 1ul;
   write r3 idx3';
   write r2 pos;
 
   (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (US.v idx1) (US.v pos) (US.v idx3') (US.v idx4)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0 `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v idx1) (US.v pos) (US.v idx3') (US.v idx4) gs1);
@@ -155,15 +155,15 @@ let deallocate_slab_aux_1_partial
 inline_for_extraction noextract
 let deallocate_slab_aux_1_empty
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < U32.v md_count_v})
+  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < US.v md_count_v})
   : Steel unit
   (
     vptr md_count `star`
@@ -172,14 +172,14 @@ let deallocate_slab_aux_1_empty
     vptr r3 `star`
     vptr r4 `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v pos) 0ul))
       (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v pos) 0ul))
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
+      (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (fun _ ->
     vrefinedep
@@ -189,9 +189,9 @@ let deallocate_slab_aux_1_empty
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -211,7 +211,7 @@ let deallocate_slab_aux_1_empty
     md_count_v == dfst blob1)
   =
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
   //assert (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
   (**) ALG.lemma_dataify_index #AL.status gs0 (US.v pos);
@@ -219,16 +219,16 @@ let deallocate_slab_aux_1_empty
   assert (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
 
   let idx3' = AL.remove3 #pred1 #pred2 #pred3 #pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (G.hide (US.v idx1)) (G.hide (US.v idx2)) idx3 (G.hide (US.v idx4)) pos in
   AL.insert1 #pred1 #pred2 #pred3 #pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3')) (G.hide (US.v idx4)) pos 0ul;
   write r3 idx3';
   write r1 pos;
 
   (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (US.v pos) (US.v idx2) (US.v idx3') (US.v idx4)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0 `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v pos) (US.v idx2) (US.v idx3') (US.v idx4) gs1);
@@ -241,40 +241,40 @@ inline_for_extraction noextract
 let deallocate_slab_aux_1_fail
   (#opened:_)
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < U32.v md_count_v})
+  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < US.v md_count_v})
   : SteelGhost unit opened
   (
     slab_vprop size_class
-      (slab_array slab_region (US.sizet_to_uint32 pos))
-      (md_bm_array md_bm_region (US.sizet_to_uint32 pos)) `star`
+      (slab_array slab_region pos)
+      (md_bm_array md_bm_region pos) `star`
     (vptr md_count `star`
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
     vptr r4 `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) 0 (US.v pos)) `star`
+      (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) 0 (US.v pos)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v pos + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v md_count_v)))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) (US.v pos + 1) (Seq.length (SeqUtils.init_us_refined (US.v md_count_v)))))
   )
   (fun _ ->
     vrefinedep
@@ -284,17 +284,17 @@ let deallocate_slab_aux_1_fail
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
     let md_blob : t_of (slab_vprop size_class
-      (slab_array slab_region (US.sizet_to_uint32 pos))
-      (md_bm_array md_bm_region (US.sizet_to_uint32 pos)))
+      (slab_array slab_region pos)
+      (md_bm_array md_bm_region pos))
     = h0 (slab_vprop size_class
-      (slab_array slab_region (US.sizet_to_uint32 pos))
-      (md_bm_array md_bm_region (US.sizet_to_uint32 pos))) in
+      (slab_array slab_region pos)
+      (md_bm_array md_bm_region pos)) in
     let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
     is_full size_class md /\
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -314,19 +314,19 @@ let deallocate_slab_aux_1_fail
     md_count_v == dfst blob1)
   =
   p_full_pack size_class
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos))
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos));
-  SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v pos);
+    (md_bm_array md_bm_region pos, slab_array slab_region pos)
+    (md_bm_array md_bm_region pos, slab_array slab_region pos);
+  SeqUtils.init_us_refined_index (US.v md_count_v) (US.v pos);
   change_equal_slprop
-    (p_full size_class (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos)))
-    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v pos)));
+    (p_full size_class (md_bm_array md_bm_region pos, slab_array slab_region pos))
+    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v pos)));
   starseq_pack_s
     #_
-    #(pos:U32.t{U32.v pos < U32.v md_count_v})
+    #(pos:US.t{US.v pos < US.v md_count_v})
     #(t size_class)
     (f size_class slab_region md_bm_region md_count_v md_region_lv)
     (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-    (SeqUtils.init_u32_refined (U32.v md_count_v))
+    (SeqUtils.init_us_refined (US.v md_count_v))
     (US.v pos);
   pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4
     md_count_v md_region_lv
@@ -339,15 +339,15 @@ inline_for_extraction noextract
 let deallocate_slab_aux_1
   (ptr: array U8.t)
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (pos: US.t{US.v pos < U32.v md_count_v})
+  (pos: US.t{US.v pos < US.v md_count_v})
   : Steel bool
   (
     A.varray ptr `star`
@@ -357,14 +357,14 @@ let deallocate_slab_aux_1
     vptr r3 `star`
     vptr r4 `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
+      (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
@@ -375,15 +375,15 @@ let deallocate_slab_aux_1
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
-    let arr' = slab_array slab_region (US.sizet_to_uint32 pos) in
+    let arr' = slab_array slab_region pos in
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr') in
     same_base_array arr' ptr /\
     0 <= diff /\
     diff < U32.v page_size /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -404,28 +404,28 @@ let deallocate_slab_aux_1
   =
   (**) starseq_unpack_s
     #_
-    #(pos:U32.t{U32.v pos < U32.v md_count_v})
+    #(pos:US.t{US.v pos < US.v md_count_v})
     #(t size_class)
     (f size_class slab_region md_bm_region md_count_v md_region_lv)
     (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-    (SeqUtils.init_u32_refined (U32.v md_count_v))
+    (SeqUtils.init_us_refined (US.v md_count_v))
     (US.v pos);
-  (**) SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v pos);
+  (**) SeqUtils.init_us_refined_index (US.v md_count_v) (US.v pos);
   (**) change_equal_slprop
-    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v pos)))
-    (p_full size_class (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos)));
+    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v pos)))
+    (p_full size_class (md_bm_array md_bm_region pos, slab_array slab_region pos));
   (**) p_full_unpack size_class
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos))
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos));
+    (md_bm_array md_bm_region pos, slab_array slab_region pos)
+    (md_bm_array md_bm_region pos, slab_array slab_region pos);
   let b = deallocate_slot size_class
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos))
-    (slab_array slab_region (US.sizet_to_uint32 pos))
+    (md_bm_array md_bm_region pos)
+    (slab_array slab_region pos)
     ptr in
   if b then (
     // deallocation success, slab no longer full
     let cond = deallocate_slab_aux_cond size_class
-      (md_bm_array md_bm_region (US.sizet_to_uint32 pos))
-      (slab_array slab_region (US.sizet_to_uint32 pos)) in
+      (md_bm_array md_bm_region pos)
+      (slab_array slab_region pos) in
     if cond then (
       pack_slab_starseq size_class
         slab_region md_bm_region md_region md_count r1 r2 r3 r4
@@ -451,18 +451,20 @@ let deallocate_slab_aux_1
   )
 #pop-options
 
+// checkpoint
+
 inline_for_extraction noextract
 let deallocate_slab_aux_2_empty
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
-  (r1 r2 r3 r4:  ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
+  (r1 r2 r3 r4: ref US.t)
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < U32.v md_count_v})
+  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < US.v md_count_v})
   : Steel unit
   (
     vptr md_count `star`
@@ -471,14 +473,14 @@ let deallocate_slab_aux_2_empty
     vptr r3 `star`
     vptr r4 `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v pos) 0ul))
       (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v pos) 0ul))
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
+      (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (fun _ ->
     vrefinedep
@@ -488,9 +490,9 @@ let deallocate_slab_aux_2_empty
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -510,7 +512,7 @@ let deallocate_slab_aux_2_empty
     md_count_v == dfst blob1)
   =
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
   //assert (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
   (**) ALG.lemma_dataify_index #AL.status gs0 (US.v pos);
@@ -518,16 +520,16 @@ let deallocate_slab_aux_2_empty
   assert (ALG.mem #AL.status (US.v pos) (US.v idx2) gs0);
 
   let idx2' = AL.remove2 #pred1 #pred2 #pred3 #pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (G.hide (US.v idx1)) idx2 (G.hide (US.v idx3)) (G.hide (US.v idx4)) pos in
   AL.insert1 #pred1 #pred2 #pred3 #pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     idx1 (G.hide (US.v idx2')) (G.hide (US.v idx3)) (G.hide (US.v idx4)) pos 0ul;
   write r2 idx2';
   write r1 pos;
 
   (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
-    (A.split_l md_region (u32_to_sz md_count_v))
+    (A.split_l md_region md_count_v)
     (US.v pos) (US.v idx2') (US.v idx3) (US.v idx4)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0 `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v pos) (US.v idx2') (US.v idx3) (US.v idx4) gs1);
@@ -539,15 +541,15 @@ let deallocate_slab_aux_2_empty
 inline_for_extraction noextract
 let deallocate_slab_aux_2_partial
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (pos: US.t{US.v pos < U32.v md_count_v})
+  (pos: US.t{US.v pos < US.v md_count_v})
   : Steel unit
   (
     vptr md_count `star`
@@ -556,14 +558,14 @@ let deallocate_slab_aux_2_partial
     vptr r3 `star`
     vptr r4 `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
       (f_lemma size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
+      (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (fun _ ->
     vrefinedep
@@ -573,9 +575,9 @@ let deallocate_slab_aux_2_partial
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -602,40 +604,41 @@ inline_for_extraction noextract
 let deallocate_slab_aux_2_fail
   (#opened:_)
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < U32.v md_count_v})
+  (pos: US.t{pos <> AL.null_ptr /\ US.v pos < US.v md_count_v})
   : SteelGhost unit opened
   (
     slab_vprop size_class
-      (slab_array slab_region (US.sizet_to_uint32 pos))
-      (md_bm_array md_bm_region (US.sizet_to_uint32 pos)) `star`
+      (slab_array slab_region pos)
+      (md_bm_array md_bm_region pos) `star`
     (vptr md_count `star`
     vptr r1 `star`
     vptr r2 `star`
     vptr r3 `star`
     vptr r4 `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) 0 (US.v pos)) `star`
+      (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) 0 (US.v pos)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (Seq.slice (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v pos + 1) (Seq.length (SeqUtils.init_u32_refined (U32.v md_count_v)))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) (US.v pos + 1)
+        (Seq.length (SeqUtils.init_us_refined (US.v md_count_v)))))
   )
   (fun _ ->
     vrefinedep
@@ -645,17 +648,17 @@ let deallocate_slab_aux_2_fail
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
     let md_blob : t_of (slab_vprop size_class
-      (slab_array slab_region (US.sizet_to_uint32 pos))
-      (md_bm_array md_bm_region (US.sizet_to_uint32 pos)))
+      (slab_array slab_region pos)
+      (md_bm_array md_bm_region pos))
     = h0 (slab_vprop size_class
-      (slab_array slab_region (US.sizet_to_uint32 pos))
-      (md_bm_array md_bm_region (US.sizet_to_uint32 pos))) in
+      (slab_array slab_region pos)
+      (md_bm_array md_bm_region pos)) in
     let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
     is_partial size_class md /\
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -675,19 +678,19 @@ let deallocate_slab_aux_2_fail
     md_count_v == dfst blob1)
   =
   p_partial_pack size_class
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos))
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos));
-  SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v pos);
+    (md_bm_array md_bm_region pos, slab_array slab_region pos)
+    (md_bm_array md_bm_region pos, slab_array slab_region pos);
+  SeqUtils.init_us_refined_index (US.v md_count_v) (US.v pos);
   change_equal_slprop
-    (p_partial size_class (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos)))
-    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v pos)));
+    (p_partial size_class (md_bm_array md_bm_region pos, slab_array slab_region pos))
+    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v pos)));
   starseq_pack_s
     #_
-    #(pos:U32.t{U32.v pos < U32.v md_count_v})
+    #(pos:US.t{US.v pos < US.v md_count_v})
     #(t size_class)
     (f size_class slab_region md_bm_region md_count_v md_region_lv)
     (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-    (SeqUtils.init_u32_refined (U32.v md_count_v))
+    (SeqUtils.init_us_refined (US.v md_count_v))
     (US.v pos);
   pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4
     md_count_v md_region_lv
@@ -700,15 +703,15 @@ inline_for_extraction noextract
 let deallocate_slab_aux_2
   (ptr: array U8.t)
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (pos: US.t{US.v pos < U32.v md_count_v})
+  (pos: US.t{US.v pos < US.v md_count_v})
   : Steel bool
   (
     A.varray ptr `star`
@@ -718,14 +721,14 @@ let deallocate_slab_aux_2
     vptr r3 `star`
     vptr r4 `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
+      (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
@@ -736,15 +739,15 @@ let deallocate_slab_aux_2
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
-    let arr' = slab_array slab_region (US.sizet_to_uint32 pos) in
+    let arr' = slab_array slab_region pos in
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr') in
     same_base_array arr' ptr /\
     0 <= diff /\
     diff < U32.v page_size /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
@@ -765,28 +768,28 @@ let deallocate_slab_aux_2
   =
   (**) starseq_unpack_s
     #_
-    #(pos:U32.t{U32.v pos < U32.v md_count_v})
+    #(pos:US.t{US.v pos < US.v md_count_v})
     #(t size_class)
     (f size_class slab_region md_bm_region md_count_v md_region_lv)
     (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-    (SeqUtils.init_u32_refined (U32.v md_count_v))
+    (SeqUtils.init_us_refined (US.v md_count_v))
     (US.v pos);
-  (**) SeqUtils.init_u32_refined_index (U32.v md_count_v) (US.v pos);
+  (**) SeqUtils.init_us_refined_index (US.v md_count_v) (US.v pos);
   (**) change_equal_slprop
-    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_u32_refined (U32.v md_count_v)) (US.v pos)))
-    (p_partial size_class (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos)));
+    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v pos)))
+    (p_partial size_class (md_bm_array md_bm_region pos, slab_array slab_region pos));
   (**) p_partial_unpack size_class
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos))
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos), slab_array slab_region (US.sizet_to_uint32 pos));
+    (md_bm_array md_bm_region pos, slab_array slab_region pos)
+    (md_bm_array md_bm_region pos, slab_array slab_region pos);
   let b = deallocate_slot size_class
-    (md_bm_array md_bm_region (US.sizet_to_uint32 pos))
-    (slab_array slab_region (US.sizet_to_uint32 pos))
+    (md_bm_array md_bm_region pos)
+    (slab_array slab_region pos)
     ptr in
   if b then (
     // deallocation success, slab no longer full
     let cond = deallocate_slab_aux_cond size_class
-      (md_bm_array md_bm_region (US.sizet_to_uint32 pos))
-      (slab_array slab_region (US.sizet_to_uint32 pos)) in
+      (md_bm_array md_bm_region pos)
+      (slab_array slab_region pos) in
     if cond then (
       (**) pack_slab_starseq size_class
         slab_region md_bm_region md_region md_count r1 r2 r3 r4
@@ -802,14 +805,14 @@ let deallocate_slab_aux_2
       assert (Seq.upd (G.reveal md_region_lv) (US.v pos) 1ul `Seq.equal` md_region_lv);
     (**) starseq_weakening
       #_
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v pos) 1ul))
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v pos) 1ul))
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_u32_refined (U32.v md_count_v))
-      (SeqUtils.init_u32_refined (U32.v md_count_v));
+      (SeqUtils.init_us_refined (US.v md_count_v))
+      (SeqUtils.init_us_refined (US.v md_count_v));
       deallocate_slab_aux_2_partial size_class
         slab_region md_bm_region md_region md_count r1 r2 r3 r4
         md_count_v md_region_lv idx1 idx2 idx3 idx4 pos;
@@ -829,13 +832,13 @@ inline_for_extraction noextract
 let deallocate_slab_fail
   (ptr: array U8.t)
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
   : Steel bool
   (
@@ -847,14 +850,14 @@ let deallocate_slab_fail
     vptr r4 `star`
     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
       (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_u32_refined (U32.v md_count_v)) `star`
+      (SeqUtils.init_us_refined (US.v md_count_v)) `star`
     A.varrayp (A.split_l slab_region 0sz) halfp
   )
   (fun b ->
@@ -866,14 +869,14 @@ let deallocate_slab_fail
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
     (U32.v page_size) % (U32.v size_class) = 0 /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
     sel r4 h0 == idx4 /\
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)
@@ -899,13 +902,13 @@ inline_for_extraction noextract
 let deallocate_slab'
   (ptr: array U8.t)
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: U32.t{U32.v md_count_v <= U32.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (U32.v md_count_v)))
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
   (diff: UP.t)
   : Steel bool
@@ -918,14 +921,14 @@ let deallocate_slab'
     vptr r4 `star`
     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v})
+      #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
       (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_u32_refined (U32.v md_count_v)) `star`
+      (SeqUtils.init_us_refined (US.v md_count_v)) `star`
     A.varrayp (A.split_l slab_region 0sz) halfp
   )
   (fun b ->
@@ -937,7 +940,7 @@ let deallocate_slab'
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
@@ -950,7 +953,7 @@ let deallocate_slab'
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
     sel r4 h0 == idx4 /\
-    U32.v md_count_v <> AL.null /\
+    US.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)
@@ -959,12 +962,9 @@ let deallocate_slab'
   =
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert_norm (4 < FI.max_int 16);
-  let diff_u32 = US.sizet_to_uint32 diff_sz in
-  assert (U32.v diff_u32 == UP.v diff);
-  let pos = U32.div diff_u32 page_size in
-  let pos' = u32_to_sz pos in
+  let pos = US.div diff_sz (u32_to_sz page_size) in
   // check diff/page_size < md_count
-  if U32.lt pos md_count_v then (
+  if US.lt pos md_count_v then (
     A.ptr_shift_zero (A.ptr_of slab_region);
     let r = slab_array slab_region pos in
     assert (same_base_array ptr (slab_array slab_region pos));
@@ -972,17 +972,17 @@ let deallocate_slab'
     assert (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array (A.split_r slab_region 0sz) pos)) < U32.v page_size);
     // selector equality propagation
     let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v))
+      (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
-    ALG.lemma_dataify_index #AL.status gs0 (U32.v pos);
+    ALG.lemma_dataify_index #AL.status gs0 (US.v pos);
     let status1 = AL.read_in_place
-        (A.split_l md_region (u32_to_sz md_count_v))
-        (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (u32_to_sz pos) in
+        (A.split_l md_region md_count_v)
+        (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) pos in
     if (U32.eq status1 2ul) then (
       let b = deallocate_slab_aux_1 ptr size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3 r4
-        md_count_v md_region_lv idx1 idx2 idx3 idx4 pos' in
+        md_count_v md_region_lv idx1 idx2 idx3 idx4 pos in
       pack_right_and_refactor_vrefine_dep
         size_class slab_region md_bm_region md_region md_count
         r1 r2 r3 r4 md_count_v;
@@ -991,7 +991,7 @@ let deallocate_slab'
       let b = deallocate_slab_aux_2 ptr size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3 r4
-        md_count_v md_region_lv idx1 idx2 idx3 idx4 pos' in
+        md_count_v md_region_lv idx1 idx2 idx3 idx4 pos in
       pack_right_and_refactor_vrefine_dep
         size_class slab_region md_bm_region md_region md_count
         r1 r2 r3 r4 md_count_v;
@@ -1013,10 +1013,10 @@ let deallocate_slab'
 let deallocate_slab
   (ptr: array U8.t)
   (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = U32.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = U32.v metadata_max})
-  (md_count: ref U32.t)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
   : Steel bool
   (
@@ -1068,14 +1068,14 @@ let deallocate_slab
   change_equal_slprop
     (left_vprop1 md_region r1 r2 r3 r4 md_count_v_)
     (ind_varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v_))
+      (A.split_l md_region md_count_v_)
        r1 r2 r3 r4);
 
   let idxs
     : G.erased _
     = elim_vdep
       (vptr r1 `star` vptr r2 `star` vptr r3 `star` vptr r4)
-      (ind_varraylist_aux pred1 pred2 pred3 pred4 (A.split_l md_region (u32_to_sz md_count_v_)))
+      (ind_varraylist_aux pred1 pred2 pred3 pred4 (A.split_l md_region md_count_v_))
   in
   let idx1_ = read r1 in
   let idx2_ = read r2 in
@@ -1084,19 +1084,19 @@ let deallocate_slab
 
   elim_vrefine
     (ind_varraylist_aux2 pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v_)) idxs)
+      (A.split_l md_region md_count_v_) idxs)
     (ind_varraylist_aux_refinement pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v_)) idxs);
+      (A.split_l md_region md_count_v_) idxs);
 
   change_slprop_rel
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v_))
+      (A.split_l md_region md_count_v_)
       (US.v (fst (fst (fst (G.reveal idxs)))))
       (US.v (snd (fst (fst (G.reveal idxs)))))
       (US.v (snd (fst (G.reveal idxs))))
       (US.v (snd (G.reveal idxs))))
     (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (u32_to_sz md_count_v_))
+      (A.split_l md_region md_count_v_)
       (US.v idx1_) (US.v idx2_) (US.v idx3_) (US.v idx4_))
     (fun x y -> x == y)
     (fun _ ->
@@ -1106,16 +1106,16 @@ let deallocate_slab
       assert (snd (G.reveal idxs) = idx4_)
     );
 
-  let x' : G.erased (Seq.lseq AL.status (U32.v md_count_v_)) = ALG.dataify (dsnd x) in
+  let x' : G.erased (Seq.lseq AL.status (US.v md_count_v_)) = ALG.dataify (dsnd x) in
 
   change_equal_slprop
     (left_vprop_aux size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4 md_count_v_ x)
     (starseq
-      #(pos:U32.t{U32.v pos < U32.v md_count_v_})
+      #(pos:US.t{US.v pos < US.v md_count_v_})
       #(t size_class)
       (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v_ x')
       (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v_ x')
-      (SeqUtils.init_u32_refined (U32.v md_count_v_)));
+      (SeqUtils.init_us_refined (US.v md_count_v_)));
   let diff = A.ptrdiff ptr (A.split_l slab_region 0sz) in
 
   let b = deallocate_slab' ptr size_class
