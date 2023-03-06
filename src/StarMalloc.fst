@@ -14,6 +14,7 @@ module SAA = Steel.ArrayArith
 
 open Prelude
 open Utils2
+open Config
 
 // slab allocator
 open Main

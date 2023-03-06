@@ -22,7 +22,10 @@ module AL = ArrayList
 module ALG = ArrayListGen
 
 open Prelude
+
+open Config
 open Utils2
+
 open SlotsAlloc
 open SteelStarSeqUtils
 open FStar.Mul

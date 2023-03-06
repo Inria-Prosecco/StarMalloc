@@ -22,6 +22,7 @@ module AL = ArrayList
 module ALG = ArrayListGen
 
 open Prelude
+open Config
 open Utils2
 open SlotsAlloc
 open Guards
@@ -321,6 +322,8 @@ val slab_array
     same_base_array r slab_region /\
     A.offset (A.ptr_of r) == A.offset (A.ptr_of slab_region) + U32.v md_count * U32.v page_size
   )
+
+#push-options "--print_implicits"
 
 val pack_slab_array (#opened:_)
   (slab_region: array U8.t{A.length slab_region = U32.v metadata_max * U32.v page_size})

@@ -30,12 +30,12 @@ val get_data (#a:Type0) (c:cell a) : a
 /// The + 1 is needed to handle the case where the metadata array will be full,
 /// and the metadata counter will be exactly metadata_max
 noextract inline_for_extraction
-let null : nat = U32.v Utils2.metadata_max + 1
+let null : nat = Config.alg_null
 noextract inline_for_extraction
-let null_ptr : US.t = US.of_u32 524289ul
+let null_ptr : US.t = Config.alg_null_sizet
 
 let null_ptr_check () =
-  assert (US.v null_ptr == U32.v Utils2.metadata_max + 1)
+  assert (US.v null_ptr == U32.v Config.metadata_max + 1)
 
 /// Erases the next and prev field to return a sequence of data
 val dataify (#a:Type)

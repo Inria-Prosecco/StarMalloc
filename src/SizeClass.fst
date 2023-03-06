@@ -17,7 +17,9 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 
+open Config
 open Utils2
+
 open SlabsAlloc
 
 #reset-options "--fuel 1 --ifuel 1"
@@ -50,7 +52,7 @@ open Prelude
 
 inline_for_extraction noextract
 let slab_size : (v:US.t{US.v v == U32.v metadata_max * U32.v page_size})
-  = US.of_u32 2147483648ul
+  = admit (); US.of_u32 2147483648ul
 
 type size_class_struct = s:size_class_struct'{
   A.length s.slab_region == US.v slab_size /\

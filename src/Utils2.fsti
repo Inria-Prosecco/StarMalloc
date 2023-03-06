@@ -11,6 +11,8 @@ open Steel.Effect
 open Steel.Reference
 module A = Steel.Array
 
+open Config
+
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
 
@@ -19,10 +21,6 @@ unfold let same_base_array (#a: Type) (arr1 arr2: array a)
   A.base (A.ptr_of arr1) == A.base (A.ptr_of arr2)
 
 unfold let slab_metadata = r:array U64.t{A.length r = 4}
-
-//TODO: should not be hardcoded
-let page_size = 4096ul
-let metadata_max = 524288ul
 
 noextract
 let min_sc = 64

@@ -11,6 +11,8 @@ module U64 = FStar.UInt64
 
 module A = Steel.Array
 
+open Config
+
 val is_guard
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})

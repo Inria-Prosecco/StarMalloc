@@ -14,6 +14,8 @@ module A = Steel.Array
 
 open FStar.Mul
 open SteelVRefineDep
+
+open Config
 open Utils2
 
 include SlabsCommon

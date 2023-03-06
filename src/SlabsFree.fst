@@ -21,6 +21,7 @@ module SM = Steel.Memory
 module AL = ArrayList
 
 open Prelude
+open Config
 open Utils2
 open SlotsAlloc
 open SlotsFree
