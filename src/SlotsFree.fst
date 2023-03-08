@@ -392,13 +392,6 @@ let deallocate_slot'_aux0
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
         (U32.v pos)))
 
-let array_to_bv2_inj (#n: nat)
-  (s1 s2: Seq.lseq U64.t n)
-  : Lemma
-  (requires Bitmap4.array_to_bv2 s1 == Bitmap4.array_to_bv2 s2)
-  (ensures s1 == s2)
-  = admit ()
-
 let set_unset_bij
   (size_class: sc)
   (md_as_seq1 md_as_seq2: Seq.lseq U64.t 4)
@@ -422,7 +415,7 @@ let set_unset_bij
   assert (bm3 == Seq.upd bm2 idx false);
   Seq.lemma_eq_intro bm1 bm3;
   assert (bm1 == bm3);
-  array_to_bv2_inj
+  Bitmap4.array_to_bv2_inj
     md_as_seq1
     (Bitmap4.unset md_as_seq2 pos)
 
@@ -449,7 +442,7 @@ let unset_set_bij
   assert (bm3 == Seq.upd bm2 idx true);
   Seq.lemma_eq_intro bm1 bm3;
   assert (bm1 == bm3);
-  array_to_bv2_inj
+  Bitmap4.array_to_bv2_inj
     md_as_seq1
     (Bitmap4.set md_as_seq2 pos)
 

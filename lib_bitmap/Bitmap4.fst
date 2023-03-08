@@ -298,6 +298,237 @@ let array_to_bv_lemma_upd_set_aux4
     (to_vec #64 (U64.v x))
 #pop-options
 
+let array_to_bv2_singleton_index
+  (s: Seq.lseq U64.t 1)
+  (i: nat{i < U64.n})
+  : Lemma
+  (Seq.index (array_to_bv2 s) i
+  == nth (U64.v (Seq.index s 0)) i)
+  =
+  assert (i / U64.n == 0);
+  assert (i % U64.n == i);
+  array_to_bv2_index #1 s i
+
+let array_to_bv2_singleton_index2
+  (s: Seq.lseq U64.t 1)
+  : Lemma
+  (array_to_bv2 s
+  == to_vec #64 (U64.v (Seq.index s 0)))
+  =
+  Classical.forall_intro (array_to_bv2_singleton_index s);
+  Seq.lemma_eq_intro
+    (array_to_bv2 s)
+    (to_vec #64 (U64.v (Seq.index s 0)))
+
+let array_to_bv2_slice
+  (#n: nat)
+  (s0: Seq.lseq U64.t n)
+  (i: nat)
+  : Lemma
+  (requires
+    i < n
+  )
+  (ensures (
+    let bm0 = array_to_bv2 s0 in
+    let x = Seq.index s0 i in
+    Seq.slice bm0 (i*64) ((i+1)*64)
+    =
+    to_vec #64 (U64.v x)))
+  =
+  array_to_bv_lemma_upd_set_aux4 s0 (i*64)
+
+#push-options "--print_implicits"
+
+let array_to_bv2_append_aux1 (#n1 #n2: nat)
+  (s1: Seq.lseq U64.t n1)
+  (s2: Seq.lseq U64.t n2)
+  (i: nat{i < U64.n * n1})
+  : Lemma
+  (let n = n1 + n2 in
+  let s = Seq.append s1 s2 in
+  let f0 = fun (i:nat{i < U64.n*n})
+       -> nth (U64.v (Seq.index s (i/U64.n))) (i%U64.n) in
+  let w0 = init_nat (U64.n * n) in
+  let w01 = Seq.slice w0 0 (U64.n * n1) in
+  f0 (Seq.index w01 i)
+  ==
+  Seq.index (array_to_bv2 #n1 s1) i)
+  =
+  let n = n1 + n2 in
+  let s = Seq.append s1 s2 in
+  let f0 = fun (i:nat{i < U64.n*n})
+       -> nth (U64.v (Seq.index s (i/U64.n))) (i%U64.n) in
+  let w0 = init_nat (U64.n * n) in
+  let f1 = fun (i:nat{i < U64.n*n1})
+       -> nth (U64.v (Seq.index s1 (i/U64.n))) (i%U64.n) in
+  let w1 = init_nat (U64.n * n1) in
+  assert_norm (array_to_bv2 #n1 s1 == Seq.map_seq f1 w1);
+  Seq.map_seq_index f1 w1 i;
+  assert (Seq.index (array_to_bv2 #n1 s1) i == f1 (Seq.index w1 i));
+  init_nat_index (U64.n * n) i;
+  init_nat_index (U64.n * n1) i;
+  lemma_index_slice w0 0 (U64.n * n1) i;
+  lemma_index_slice s 0 n1 (i/U64.n)
+
+let array_to_bv2_append_aux2 (#n1 #n2: nat)
+  (s1: Seq.lseq U64.t n1)
+  (s2: Seq.lseq U64.t n2)
+  (i: nat{i < U64.n * n2})
+  : Lemma
+  (let n = n1 + n2 in
+  let s = Seq.append s1 s2 in
+  let f0 = fun (i:nat{i < U64.n*n})
+       -> nth (U64.v (Seq.index s (i/U64.n))) (i%U64.n) in
+  let w0 = init_nat (U64.n * n) in
+  let w02 = Seq.slice w0 (U64.n * n1) (U64.n * n) in
+  f0 (Seq.index w02 i)
+  ==
+  Seq.index (array_to_bv2 #n2 s2) i)
+  =
+  let n = n1 + n2 in
+  let s = Seq.append s1 s2 in
+  let f0 = fun (i:nat{i < U64.n*n})
+       -> nth (U64.v (Seq.index s (i/U64.n))) (i%U64.n) in
+  let w0 = init_nat (U64.n * n) in
+  let f2 = fun (i:nat{i < U64.n*n2})
+       -> nth (U64.v (Seq.index s2 (i/U64.n))) (i%U64.n) in
+  let w2 = init_nat (U64.n * n2) in
+  assert_norm (array_to_bv2 #n2 s2 == Seq.map_seq f2 w2);
+  Seq.map_seq_index f2 w2 i;
+  assert (Seq.index (array_to_bv2 #n2 s2) i == f2 (Seq.index w2 i));
+  init_nat_index (U64.n * n) (U64.n * n1 + i);
+  init_nat_index (U64.n * n2) i;
+  lemma_index_slice w0 (U64.n * n1) (U64.n * n) i;
+  lemma_index_slice s n1 n (i/U64.n)
+
+let array_to_bv2_append (#n1 #n2: nat)
+  (s1: Seq.lseq U64.t n1)
+  (s2: Seq.lseq U64.t n2)
+  : Lemma
+  (array_to_bv2 #(n1+n2) (Seq.append s1 s2)
+  ==
+  Seq.append (array_to_bv2 #n1 s1) (array_to_bv2 #n2 s2))
+  =
+  let n = n1 + n2 in
+  let s = Seq.append s1 s2 in
+  assert (Seq.length s == n);
+  let f0 = fun (i:nat{i < U64.n*n})
+       -> nth (U64.v (Seq.index s (i/U64.n))) (i%U64.n) in
+  let w0 = init_nat (U64.n * n) in
+  let r0 = Seq.map_seq f0 w0 in
+  assert_norm (r0 == array_to_bv2 #n s);
+  let f1 = fun (i:nat{i < U64.n*n1})
+       -> nth (U64.v (Seq.index s1 (i/U64.n))) (i%U64.n) in
+  let w1 = init_nat (U64.n * n1) in
+  let r1 = Seq.map_seq f1 w1 in
+  assert_norm (r1 == array_to_bv2 #n1 s1);
+  let f2 = fun (i:nat{i < U64.n*n2})
+       -> nth (U64.v (Seq.index s2 (i/U64.n))) (i%U64.n) in
+  let w2 = init_nat (U64.n * n2) in
+  let r2 = Seq.map_seq f2 w2 in
+  assert_norm (r2 == array_to_bv2 #n2 s2);
+  Seq.lemma_split w0 (U64.n * n1);
+  let w01 = Seq.slice w0 0 (U64.n * n1) in
+  let w02 = Seq.slice w0 (U64.n * n1) (U64.n * n) in
+  Classical.forall_intro (array_to_bv2_append_aux1 #n1 #n2 s1 s2);
+  Seq.map_seq_len f0 w01;
+  Classical.forall_intro (Seq.map_seq_index f0 w01);
+  Seq.lemma_eq_intro (array_to_bv2 #n1 s1) (Seq.map_seq f0 w01);
+  assert (r1 == Seq.map_seq f0 w01);
+
+  Classical.forall_intro (array_to_bv2_append_aux2 #n1 #n2 s1 s2);
+  Seq.map_seq_len f0 w02;
+  Classical.forall_intro (Seq.map_seq_index f0 w02);
+  Seq.lemma_eq_intro (array_to_bv2 #n2 s2) (Seq.map_seq f0 w02);
+
+  assert (r2 == Seq.map_seq f0 w02);
+  Seq.map_seq_append f0 w01 w02
+
+let rec array_to_bv2_slice2 (#n: nat)
+  (s: Seq.lseq U64.t n)
+  (i j:nat)
+  : Lemma
+  (requires
+    0 <= i /\ i < j /\ j <= n)
+  (ensures
+    array_to_bv2 #(j-i) (Seq.slice s i j)
+    ==
+    Seq.slice (array_to_bv2 s) (i*64) (j*64))
+  (decreases (j-i))
+  =
+  match (j - i) with
+  | 0 -> Seq.lemma_empty (array_to_bv2 #(j-i) (Seq.slice s i j))
+  | 1 ->
+    array_to_bv2_slice #n s i;
+    assert (Seq.slice (array_to_bv2 s) (i*64) ((i+1)*64)
+    == to_vec #64 (U64.v (Seq.index s i)));
+    array_to_bv2_singleton_index2 (Seq.slice s i j)
+  | _ ->
+    let s11 = array_to_bv2 #(j-1-i) (Seq.slice s i (j-1)) in
+    let s12 = Seq.slice (array_to_bv2 s) (i*64) ((j-1)*64) in
+    let s21 = array_to_bv2 #1 (Seq.slice s (j-1) j) in
+    let s22 = Seq.slice (array_to_bv2 s) ((j-1)*64) (j*64) in
+    array_to_bv2_slice2 #n s i (j-1);
+    array_to_bv2_slice2 #n s (j-1) j;
+    assert (s11 == s12);
+    assert (s21 == s22);
+    let s1 = array_to_bv2 #(j-i) (Seq.slice s i j) in
+    let s2 = Seq.slice (array_to_bv2 s) (i*64) (j*64) in
+    // 1
+    Seq.lemma_split (Seq.slice s i j) (j-1-i);
+    array_to_bv2_append #(j-1-i) #1
+      (Seq.slice s i (j-1))
+      (Seq.slice s (j-1) j);
+    assert (s1 == Seq.append s11 s21);
+    // 2
+    Seq.lemma_split s2 ((j-1-i)*64);
+    assert (s2 == Seq.append s12 s22)
+
+let rec array_to_bv2_inj (#n: nat)
+  (s1 s2: Seq.lseq U64.t n)
+  : Lemma
+  (requires array_to_bv2 s1 == array_to_bv2 s2)
+  (ensures s1 == s2)
+  (decreases n)
+  = match n with
+  | 0 -> Seq.lemma_empty s1; Seq.lemma_empty s2
+  | 1 ->
+    let bm1 = array_to_bv2 s1 in
+    let bm2 = array_to_bv2 s2 in
+    let x1 = Seq.index s1 0 in
+    let x2 = Seq.index s2 0 in
+    Classical.forall_intro (array_to_bv2_singleton_index s1);
+    Classical.forall_intro (array_to_bv2_singleton_index s2);
+    assert (forall (i:nat{i < U64.n}).
+      Seq.index bm1 i == nth (U64.v x1) i
+    );
+    assert (forall (i:nat{i < U64.n}).
+      Seq.index bm2 i == nth (U64.v x2) i
+    );
+    assert (forall (i:nat{i < U64.n}).
+      Seq.index bm1 i == Seq.index (to_vec #64 (U64.v x1)) i
+    );
+    assert (forall (i:nat{i < U64.n}).
+      Seq.index bm2 i == Seq.index (to_vec #64 (U64.v x2)) i
+    );
+    Seq.lemma_eq_intro
+      (to_vec #64 (U64.v x1))
+      (to_vec #64 (U64.v x2));
+    to_vec_lemma_2 (U64.v x1) (U64.v x2);
+    assert (x1 == x2);
+    Seq.lemma_eq_intro s1 s2
+  | n ->
+    let s11,s12 = Seq.split s1 1 in
+    let s21,s22 = Seq.split s2 1 in
+    Seq.lemma_split s1 1;
+    Seq.lemma_split s2 1;
+    array_to_bv2_slice2 #n s1 0 1;
+    array_to_bv2_slice2 #n s2 0 1;
+    array_to_bv2_slice2 #n s1 1 n;
+    array_to_bv2_slice2 #n s2 1 n;
+    array_to_bv2_inj #1 s11 s21;
+    array_to_bv2_inj #(n-1) s12 s22
+
 #push-options "--z3rlimit 80"
 let array_to_bv_lemma_upd_set
   (#n: nat)
@@ -510,7 +741,7 @@ let get_lemma2
   (s: Seq.lseq U64.t n)
   (i: U32.t{U32.v i < U64.n * n})
   : Lemma
-  (let bm = Bitmap4.array_to_bv2 s in
+  (let bm = array_to_bv2 s in
   let idx = f #n (U32.v i) in
   let r = get s i in
   r = Seq.index bm idx
@@ -552,13 +783,13 @@ let set_lemma2
   : Lemma
   (requires (
     let idx = f #n (U32.v i) in
-    let bm0 = Bitmap4.array_to_bv2 s in
+    let bm0 = array_to_bv2 s in
     Seq.index bm0 idx = false))
   (ensures (
     let idx = f #n (U32.v i) in
     let s' = set s i in
-    let bm1 = Bitmap4.array_to_bv2 s in
-    let bm2 = Bitmap4.array_to_bv2 s' in
+    let bm1 = array_to_bv2 s in
+    let bm2 = array_to_bv2 s' in
     Seq.index bm2 idx = true /\
     bm2 == Seq.upd bm1 idx true))
   =
@@ -570,8 +801,8 @@ let set_lemma2
   let x' = Bitmap3.set x i2 in
   let s' = Seq.upd s (U32.v i1) x' in
   let i' = f #n (U32.v i) in
-  let bm0 = Bitmap4.array_to_bv #n s in
-  let bm1 = Bitmap4.array_to_bv #n s' in
+  let bm0 = array_to_bv #n s in
+  let bm1 = array_to_bv #n s' in
   array_to_bv2_lemma s;
   array_to_bv_lemma s i';
   assert (Seq.index bm0 i' = false);
@@ -626,13 +857,13 @@ let unset_lemma2
   : Lemma
   (requires (
     let idx = f #n (U32.v i) in
-    let bm0 = Bitmap4.array_to_bv2 s in
+    let bm0 = array_to_bv2 s in
     Seq.index bm0 idx = true))
   (ensures (
     let idx = f #n (U32.v i) in
     let s' = unset s i in
-    let bm1 = Bitmap4.array_to_bv2 s in
-    let bm2 = Bitmap4.array_to_bv2 s' in
+    let bm1 = array_to_bv2 s in
+    let bm2 = array_to_bv2 s' in
     Seq.index bm2 idx = false /\
     bm2 == Seq.upd bm1 idx false))
   =
@@ -644,8 +875,8 @@ let unset_lemma2
   let x' = Bitmap3.unset x i2 in
   let s' = Seq.upd s (U32.v i1) x' in
   let i' = f #n (U32.v i) in
-  let bm0 = Bitmap4.array_to_bv #n s in
-  let bm1 = Bitmap4.array_to_bv #n s' in
+  let bm0 = array_to_bv #n s in
+  let bm1 = array_to_bv #n s' in
   array_to_bv2_lemma s;
   array_to_bv_lemma s i';
   assert (Seq.index bm0 i' = true);
