@@ -30,5 +30,6 @@ void* realloc(void* ptr, size_t new_size) {
 void* calloc(size_t nb_elem, size_t size_elem) {
   size_t size = nb_elem * size_elem;
   void* ptr = malloc(size);
+  memset(ptr, 0, size);
   return ptr;
 }
