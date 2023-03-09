@@ -209,9 +209,7 @@ let deallocate_size_class
   let a1 = A.split_r scs.slab_region slab_size in
   within_bounds_elim a0 a1 ptr;
   // Needed for the assert below
-  A.intro_fits_ptrdiff32 ();
   assume (UP.fits (G.reveal diff));
-  assume (G.reveal diff < pow2 32);
   let b = deallocate_slab ptr
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region

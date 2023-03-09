@@ -944,8 +944,7 @@ let deallocate_slab'
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
-    //diff' < (U32.v page_size) * (U32.v page_size) /\
-    UP.v diff < pow2 32 /\
+    //UP.v diff < US.v metadata_max * U32.v page_size /\
     UP.v diff == diff' /\
     same_base_array ptr slab_region /\
     (U32.v page_size) % (U32.v size_class) = 0 /\
@@ -1036,7 +1035,7 @@ let deallocate_slab
   (requires fun _ ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
-    diff' < pow2 32 /\
+    //diff' < US.v metadata_max * U32.v page_size /\
     same_base_array ptr slab_region /\
     UP.fits diff' /\
     (U32.v page_size) % (U32.v size_class) = 0)
