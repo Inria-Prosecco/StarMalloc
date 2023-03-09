@@ -113,11 +113,6 @@ let slab_vprop_aux_lemma
   =
   assert (Seq.length (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) == U32.v (nb_slots size_class));
   ()
-  //assert (
-  //t_of (slab_vprop_aux size_class arr md_as_seq)
-  //==
-  //Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class))
-  //)
 
 let slab_vprop_aux2
   (size_class: sc)
