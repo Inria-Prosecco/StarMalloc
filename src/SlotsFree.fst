@@ -664,7 +664,6 @@ let deallocate_slot
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
   let r = deallocate_slot' size_class md md_as_seq arr ptr in
-  admit ();
   if (fst r) then (
     change_equal_slprop
       (if (fst r) then
@@ -695,7 +694,8 @@ let deallocate_slot
         (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
    //TODO: refactor Bitmap5, move pure lemmas outside Steel functions
-    admit ();
+    assume (not (is_full size_class (Bitmap4.unset md_as_seq (snd r))));
+    assume (slab_vprop_aux2  size_class (Bitmap4.unset md_as_seq (snd r)));
     intro_slab_vprop size_class md (G.hide (Bitmap4.unset md_as_seq (snd r))) arr;
     change_equal_slprop
       emp
