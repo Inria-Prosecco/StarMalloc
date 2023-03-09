@@ -193,33 +193,30 @@ val intro_right_vprop_empty (#opened:_)
     (ensures fun _ _ _ -> True)
 
 let intro_right_vprop_empty slab_region md_bm_region md_region =
-  sladmit ()
-  //change_equal_slprop
-  //  (A.varray (A.split_r slab_region 0sz))
-  //  (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size))));
-  //change_equal_slprop
-  //  (A.varray (A.split_r md_bm_region 0sz))
-  //  (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz)));
-  //change_equal_slprop
-  //  (A.varray (A.split_r md_region 0sz))
-  //  (A.varray (A.split_r md_region (u32_to_sz 0ul)));
-  //intro_vrefine
-  //  (A.varray (A.split_r slab_region 0sz)) zf_u8;
-  //intro_vrefine
-  //  (A.varray (A.split_r md_bm_region 0sz)) zf_u64;
-  //assert_norm ((A.varray (A.split_r slab_region 0sz)
-  //    `vrefine` zf_u8) `star`
-  //  (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul 0ul 4ul)))
-  //    `vrefine` zf_u64) `star`
-  //  A.varray (A.split_r md_region (u32_to_sz 0ul)) ==
-  //  (right_vprop slab_region md_bm_region md_region 0ul));
-  //change_equal_slprop
-  //  ((A.varray (A.split_r slab_region (u32_to_sz (U32.mul 0ul page_size)))
-  //    `vrefine` zf_u8) `star`
-  //  (A.varray (A.split_r md_bm_region (u32_to_sz (U32.mul 0ul 4ul)))
-  //    `vrefine` zf_u64) `star`
-  //  A.varray (A.split_r md_region (u32_to_sz 0ul)))
-  //  (right_vprop slab_region md_bm_region md_region 0ul)
+  change_equal_slprop
+    (A.varray (A.split_r slab_region 0sz))
+    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size))));
+  change_equal_slprop
+    (A.varray (A.split_r md_bm_region 0sz))
+    (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz)));
+  intro_vrefine
+    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size)))) zf_u8;
+  intro_vrefine
+    (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz))) zf_u64;
+  assert_norm (
+    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size)))
+      `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz))
+      `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region 0sz) ==
+    (right_vprop slab_region md_bm_region md_region 0sz));
+  change_equal_slprop
+    ((A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size)))
+      `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz))
+      `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region 0sz))
+    (right_vprop slab_region md_bm_region md_region 0sz)
 
 let vrefinedep_ext
   (v: vprop)
