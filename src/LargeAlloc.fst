@@ -159,6 +159,7 @@ let _size (metadata: ref t) : Steel U64.t
   (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
   return size
 
+#push-options "--z3rlimit 30"
 inline_for_extraction noextract
 let large_free' (metadata: ref t) (ptr: array U8.t)
   : Steel bool
@@ -182,7 +183,9 @@ let large_free' (metadata: ref t) (ptr: array U8.t)
   if Some? size then (
     let size = Some?.v size in
     let b = munmap ptr size in
-    sladmit ();
+    change_equal_slprop
+      (if b then A.varray ptr else emp)
+      (if (not b) then emp else A.varray ptr);
     if b then (
       (**) intro_vrefine (linked_tree md_v) is_avl;
       (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
@@ -203,6 +206,7 @@ let large_free' (metadata: ref t) (ptr: array U8.t)
       (if b then emp else A.varray ptr);
     return b
   )
+#pop-options
 
 let large_malloc (size: US.t)
   : Steel (array U8.t)
