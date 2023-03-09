@@ -554,26 +554,53 @@ let array_to_bv_slice
   =
   Bitmap4.array_to_bv_lemma_upd_set_aux4 s0 (i*64)
 
+let lemma_nth_to_neq
+  (x: U64.t)
+  (i: nat{i < 64})
+  : Lemma
+  (requires FU.nth (U64.v x) i = true)
+  (ensures x <> 0UL)
+  =
+  if x = 0UL
+  then (
+    assert (FU.nth #64 (U64.v x) i = true);
+    FU.zero_to_vec_lemma #64 i;
+    assert (FU.nth #64 0 i = false);
+    assert (FU.to_vec #64 (U64.v x) =!= FU.to_vec #64 0);
+    FU.to_vec_lemma_1 #64 (U64.v x) 0
+  ) else ()
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
 open FStar.UInt
 let set_lemma_nonempty
   (size_class: sc)
   (md_as_seq1: Seq.lseq U64.t 4)
   (md_as_seq2: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U64.n * 4})
-  //: Steel unit opened
-  //(A.varray md) (fun _ -> A.varray md)
   : Lemma
-  (requires
+  (requires (
+    let idx = Bitmap4.f #4 (U32.v pos) in
+    let bm1 = Bitmap4.array_to_bv2 md_as_seq1 in
     md_as_seq2 == Bitmap4.set md_as_seq1 pos /\
-    U32.v pos < U32.v (nb_slots size_class))
+    Seq.index bm1 idx = false /\
+    U32.v pos < U32.v (nb_slots size_class)))
   (ensures not (is_empty size_class md_as_seq2))
   =
-  admit ();
+  Bitmap4.set_lemma2 #4 md_as_seq1 pos;
+  let idx = Bitmap4.f #4 (U32.v pos) in
+  let bm2 = Bitmap4.array_to_bv2 md_as_seq2 in
+  assert (Seq.index bm2 idx = true);
   let i1 = U32.div pos 64ul in
   let i2 = U32.rem pos 64ul in
-  assert (Seq.index md_as_seq2 (U32.v i1) == Bitmap3.set (Seq.index md_as_seq1 (U32.v i1)) i2);
-  assert (Seq.index md_as_seq2 (U32.v i1) <> 0UL);
-  ()
+  assert (U32.v i1 * 64 <= idx /\ idx < (U32.v i1 + 1) * 64);
+  array_to_bv_slice #4 md_as_seq2 (U32.v i1);
+  Seq.lemma_index_slice bm2 (U32.v i1 * 64) ((U32.v i1+1) * 64) (idx - U32.v i1 * 64);
+  let x = Seq.index md_as_seq2 (U32.v i1) in
+  assert (FU.nth #64 (U64.v x) (idx - U32.v i1 * 64) = true);
+  lemma_nth_to_neq x (idx - U32.v i1 * 64);
+  assert (x <> 0UL);
+  assert (Seq.index md_as_seq2 (U32.v i1) <> 0UL)
+#pop-options
 
 let set_lemma_nonfull
   (size_class: sc)
