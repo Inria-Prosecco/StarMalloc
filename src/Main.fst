@@ -54,12 +54,6 @@ val mmap_u64 (len: US.t)
       A.asel a h1 == Seq.create (US.v len) U64.zero
     )
 
-//assume
-//val mmap_ptr_u32 (_:unit)
-//  : SteelT (R.ref U32.t)
-//    emp
-//    (fun r -> R.vptr r)
-
 assume
 val mmap_ptr_us (_:unit)
   : SteelT (R.ref US.t)
@@ -108,25 +102,18 @@ val intro_ind_varraylist_nil (#opened:_)
       (ensures fun _ _ _ -> True)
 
 let intro_ind_varraylist_nil pred1 pred2 pred3 pred4 r r1 r2 r3 r4 =
-
-  sladmit ()
-
-  //ALG.intro_arraylist_nil
-  //  pred1 pred2 pred3
-  //  r
-  //  AL.null_ptr AL.null_ptr AL.null_ptr;
-
-  //let idxs = gget (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3) in
-
-  //intro_vrefine
-  //  (SlabsCommon.ind_varraylist_aux2 pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr))
-  //  (SlabsCommon.ind_varraylist_aux_refinement pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr));
-  //sladmit ();
-  //intro_vdep
-  //  (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3)
-  //  (SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 r ((AL.null_ptr, AL.null_ptr), AL.null_ptr))
-  //  (ind_aux pred1 pred2 pred3 r)
-//#push-options
+  ALG.intro_arraylist_nil
+    pred1 pred2 pred3 pred4
+    r
+    AL.null_ptr AL.null_ptr AL.null_ptr AL.null_ptr;
+  let idxs = gget (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4) in
+  intro_vrefine
+    (SlabsCommon.ind_varraylist_aux2 pred1 pred2 pred3 pred4 r (((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr))
+    (SlabsCommon.ind_varraylist_aux_refinement pred1 pred2 pred3 pred4 r (((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr));
+  intro_vdep
+    (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4)
+    (SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 pred4 r (((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr))
+    (ind_aux pred1 pred2 pred3 pred4 r)
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)
