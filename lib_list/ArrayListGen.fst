@@ -1168,8 +1168,8 @@ let lemma_extend_dlist (#a:Type0)
         ptrs_in hd s == ptrs_in hd s'
       )
   = lemma_extend_dlist' pred hd s null FS.emptyset s' n
-
 #pop-options
+
 #push-options "--z3rlimit 50"
 let extend_aux (#a:Type) (#opened:_)
   (#pred1 #pred2 #pred3 #pred4: a -> prop)
@@ -1233,6 +1233,8 @@ let extend_aux (#a:Type) (#opened:_)
   // Move the slice out of dataify
   (**) dataify_slice #a (Ghost.reveal s1) (US.v k)
 #pop-options
+
+let _ = ()
 
 #restart-solver
 
