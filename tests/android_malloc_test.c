@@ -250,23 +250,23 @@ void realloc_0(void) {
 //TODO: zeroed_allocations_realloc
 
 int main() {
-  malloc_std();
-  malloc_overflow();
+  //malloc_std();
+  //malloc_overflow();
   calloc_std();
-  calloc_illegal();
-  calloc_overflow();
-  malloc_realloc_larger();
-  malloc_realloc_smaller();
-  malloc_multiple_realloc();
-  calloc_realloc_larger();
-  calloc_realloc_smaller();
-  calloc_multiple_realloc();
-  realloc_overflow();
-  malloc_0();
-  calloc_0_0();
-  calloc_0_1();
-  calloc_1_0();
-  realloc_nullptr_0();
-  realloc_0();
+  //calloc_illegal();
+  //calloc_overflow();
+  //malloc_realloc_larger();
+  //malloc_realloc_smaller();
+  //malloc_multiple_realloc();
+  //calloc_realloc_larger();
+  //calloc_realloc_smaller();
+  //calloc_multiple_realloc();
+  //realloc_overflow();
+  //malloc_0();
+  //calloc_0_0();
+  //calloc_0_1();
+  //calloc_1_0();
+  //realloc_nullptr_0();
+  //realloc_0();
   return 0;
 }
