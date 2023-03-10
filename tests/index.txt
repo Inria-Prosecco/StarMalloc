@@ -1,0 +1,5 @@
+- android_malloc_test :
+https://android.googlesource.com/platform/bionic/+/master/tests/malloc_test.cpp
+
+- mimalloc_test :
+https://github.com/microsoft/mimalloc/blob/master/test/test-api.c
