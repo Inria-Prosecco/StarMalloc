@@ -89,23 +89,11 @@ patch: extract
 
 # test classic AVL trees
 test: verify extract
-	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I dist -lbsd \
+	clang -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I dist -lbsd \
 	-o bench/a.out dist/Impl_Test.c
 
 FILES = \
 $(KRML_HOME)/krmllib/c/steel_spinlock.c \
-dist/ArrayList.h \
-dist/internal/ArrayList.h \
-dist/internal/AVL.h \
-dist/krmlinit.h \
-dist/StarMalloc.h \
-dist/SizeClass.h \
-dist/internal/Slabs.h \
-dist/internal/Slots.h \
-dist/Steel_SpinLock.h \
-dist/Bitmap5.h \
-dist/Utils2.h \
-dist/Mman.h \
 dist/ArrayList.c \
 dist/AVL.c \
 dist/krmlinit.c \
@@ -115,17 +103,16 @@ dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 src/utils.c \
-src/main-mmap.h \
 src/main-mmap.c
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)
 test-tree: verify extract
-	gcc -O2 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	clang -O2 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 	-o bench/mavl.out $(FILES) src/lib-alloc.c bench/test2.c
 
 # test the compilation of the allocator
 test-compile-alloc: verify extract
-	gcc -DKRML_VERIFIED_UINT128 \
+	clang -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 -o bench/a.out \
@@ -133,7 +120,7 @@ $(FILES) src/lib-alloc.c
 
 # test the allocator with a static binary
 test-alloc0: verify extract patch
-	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
+	clang -O0 -g -DKRML_VERIFIED_UINT126 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 -o bench/a.out \
@@ -143,7 +130,7 @@ src/lib-alloc.c
 	./bench/a.out
 
 test-both: verify extract
-	gcc -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
+	clang -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 -o bench/a.out \
@@ -152,7 +139,7 @@ bench/test-both.c
 	./bench/a.out
 
 test-slab: verify extract
-	gcc -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
+	clang -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 -o bench/a.out \
@@ -161,7 +148,7 @@ bench/test-slab.c
 	./bench/a.out
 
 test-mmap: verify extract
-	gcc -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
+	clang -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 -o bench/a.out \
@@ -171,7 +158,7 @@ bench/test-avl.c
 
 # test the allocator with a static binary
 test-alloc0bis: verify extract patch
-	gcc -O0 -g -DKRML_VERIFIED_UINT128 \
+	clang -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
   -pthread \
@@ -182,23 +169,24 @@ src/lib-alloc.c
 	./bench/a.out
 
 # test the compilation of the allocator as a shared library
-#gcc -g -O0 -DKRML_VERIFIED_UINT128
+#clang -g -O0 -DKRML_VERIFIED_UINT128
 lib: verify extract patch
-	gcc -O2 -DKRML_VERIFIED_UINT128 \
+	clang -O2 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
 	-pthread -lpthread \
         -std=gnu11 \
--shared -fPIC -o bench/starmalloc.so \
+-shared -fPIC \
 $(FILES) \
-src/lib-alloc.c
+src/lib-alloc.c \
+-o bench/starmalloc.so
 
 #-Wmissing-prototypes
 #-std=c17
 #-Wall -Wextra -Wcast-align=strict -Wcast-qual
 #-fvisibility=hidden
 hardened_lib: verify extract patch
-	gcc -DKRML_VERIFIED_UINT128 \
+	clang -DKRML_VERIFIED_UINT128 \
 	-pipe -O3 -flto -fPIC \
 	-fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
 	-I $(KRML_HOME)/include \
@@ -212,30 +200,30 @@ src/lib-alloc.c
 
 # test the allocator as a shared library with a simple program
 test-alloc1: test-compile-alloc-lib
-	gcc -O0 bench/test-alloc.c -o bench/alloc.a.out
+	clang -O0 bench/test-alloc.c -o bench/alloc.a.out
 	LD_PRELOAD=bench/malloc.so ./bench/alloc.a.out
 # test the allocator as a shared library with zathura
 test-alloc2: test-compile-alloc-lib
-	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
+	clang -O0 bench/test-alloc2.c -o bench/alloc.a.out
 	LD_PRELOAD=bench/malloc.so ./bench/alloc.a.out
 
 test-alloc2bis: test-compile-alloc-lib
-	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
+	clang -O0 bench/test-alloc2.c -o bench/alloc.a.out
 	LD_PRELOAD= ./bench/alloc.a.out
 
 #test-alloc2ter: test-compile-alloc-lib
-#	gcc -O0 bench/test-alloc2.c -o bench/alloc.a.out
+#	clang -O0 bench/test-alloc2.c -o bench/alloc.a.out
 #	LD_PRELOAD=../hardened_malloc/out/libhardened_malloc.so ./bench/alloc.a.out
 
 test-alloc3: test-compile-alloc-lib
 	LD_PRELOAD=bench/malloc.so zathura
 
 test-array: verify extract
-	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist -lbsd \
+	clang -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist -lbsd \
 	-o bench/array.a.out bench/test-array.c
 
 testopt: verify extract
-	gcc -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist -lbsd -O2 \
+	clang -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist -lbsd -O2 \
 	-o bench/a.out bench/test.c
 testocaml:
 	ocamlopt -o bench/ocaml.a.out bench/bench.ml

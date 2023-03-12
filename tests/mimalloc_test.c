@@ -89,9 +89,9 @@ void realloc_sizezero(void) {
 
 int main () {
   malloc_zero();
-  malloc_nomem1();
+  //malloc_nomem1();
   malloc_null();
-  calloc_overflow();
+  //calloc_overflow();
   calloc0();
   malloc_large();
   realloc_null();

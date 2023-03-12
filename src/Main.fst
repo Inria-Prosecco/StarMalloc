@@ -471,9 +471,7 @@ let slab_malloc' (sc: size_class) (bytes: U32.t)
 
 #push-options "--z3rlimit 100"
 let slab_malloc bytes =
-  if bytes = 0ul then (
-    return_null ()
-  ) else if bytes `U32.lte` 16ul then (
+  if bytes `U32.lte` 16ul then (
     slab_malloc' size_class16 bytes
   ) else if bytes `U32.lte` 32ul then (
     slab_malloc' size_class32 bytes
