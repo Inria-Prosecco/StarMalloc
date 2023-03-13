@@ -25,7 +25,7 @@
       steel-experiments = pkgs.clangStdenv.mkDerivation {
         name = "steel-experiments";
         src = ./.;
-        enableParallelBuilding = false;
+        enableParallelBuilding = true;
         buildInputs = [ fstar karamel ];
         FSTAR_HOME = fstar;
         KRML_HOME = karamel;
