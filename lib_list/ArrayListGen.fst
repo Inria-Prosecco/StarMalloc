@@ -1278,6 +1278,9 @@ let extend (#a:Type)
   assert (p12 `FS.equal` p02);
   assert (p13 `FS.equal` p03);
   assert (p14 `FS.equal` p04);
+  assert (Seq.equal #a
+    (Seq.slice (dataify (G.reveal gs1)) 0 (US.v k))
+    (dataify (G.reveal gs0)));
   insert (A.split_l r (k `US.add` 1sz)) hd hd2 hd3 hd4 k v;
   (**) let gs2 = gget (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3 hd4) in
   let p21 = G.hide (ptrs_in #a (US.v k) gs2) in
@@ -1288,8 +1291,11 @@ let extend (#a:Type)
   assert (p22 `FS.equal` p12);
   assert (p23 `FS.equal` p13);
   assert (p24 `FS.equal` p14);
+  assert (Seq.equal #a
+    (Seq.slice (dataify (G.reveal gs2)) 0 (US.v k))
+    (dataify (G.reveal gs0)));
   // Final conclusion
   (**) Seq.lemma_eq_intro #a
-   (Seq.append (dataify (Ghost.reveal gs0)) (Seq.create 1 v))
-   (dataify (Ghost.reveal gs2))
+   (Seq.append (dataify (G.reveal gs0)) (Seq.create 1 v))
+   (dataify (G.reveal gs2))
 #pop-options
