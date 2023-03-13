@@ -610,6 +610,7 @@ let lemma_nth_nonfull
   =
   let bound2 = nb_slots size_class in
   full_n_decomposition1 bound2;
+  assert (U32.v bound2 < 64);
   let full_n = full_n bound2 in
   if x = full_n
   then (
