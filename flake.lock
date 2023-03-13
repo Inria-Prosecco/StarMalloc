@@ -15,117 +15,74 @@
       }
     },
     "fstar-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1674158912,
-        "narHash": "sha256-vC0bZqs95NmLC99TqSm9wFa+IJSHbkijKBidP5lxugU=",
-        "owner": "fstarlang",
-        "repo": "fstar",
-        "rev": "38e694d4bc4b212f0792eaa53911d9a9592c036e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "fstarlang",
-        "repo": "fstar",
-        "type": "github"
-      }
-    },
-    "hacl": {
       "inputs": {
-        "flake-utils": [
-          "hacl-nix",
-          "flake-utils"
-        ],
-        "fstar-src": [
-          "hacl-nix",
-          "fstar-src"
-        ],
-        "hacl-nix": [
-          "hacl-nix"
-        ],
-        "karamel-src": [
-          "hacl-nix",
-          "karamel-src"
-        ],
+        "flake-utils": "flake-utils",
         "nixpkgs": [
-          "hacl-nix",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1674144627,
-        "narHash": "sha256-t6q7tCNgPSalHSQtEpNIdpjEmFIAgxlyfy3wo6fA740=",
-        "owner": "hacl-star",
-        "repo": "hacl-star",
-        "rev": "17d4b3d0fb3f8a56af4e5463d88c78c25a8d4571",
+        "lastModified": 1678361721,
+        "narHash": "sha256-8WAGSX0RQDeKNWVJyY/1vVMU9H5uh0coWcBp59aFrsA=",
+        "owner": "FStarLang",
+        "repo": "FStar",
+        "rev": "1c088bca6afbcf79a7a4eaec73bf21fc8128e8b5",
         "type": "github"
       },
       "original": {
-        "owner": "hacl-star",
-        "repo": "hacl-star",
+        "owner": "FStarLang",
+        "repo": "FStar",
         "type": "github"
       }
     },
-    "hacl-nix": {
+    "krml-src": {
       "inputs": {
-        "flake-utils": "flake-utils",
-        "fstar-src": "fstar-src",
-        "hacl": "hacl",
-        "karamel-src": "karamel-src",
-        "nixpkgs": "nixpkgs"
+        "flake-utils": [
+          "fstar-src",
+          "flake-utils"
+        ],
+        "fstar": [
+          "fstar-src"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
-        "lastModified": 1674174633,
-        "narHash": "sha256-ZxASH5NB02881h3yjkTl42KzSJy44llaIvrOi1eXUvU=",
-        "owner": "hacl-star",
-        "repo": "hacl-nix",
-        "rev": "536c8dd7754aec77762a90256a76d47fd86e658c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hacl-star",
-        "repo": "hacl-nix",
-        "type": "github"
-      }
-    },
-    "karamel-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1674124138,
-        "narHash": "sha256-ODG1PPWOmMwjbwelQ0DT+rQKd43ucglTh0VUpop2nmk=",
-        "owner": "fstarlang",
+        "lastModified": 1677084714,
+        "narHash": "sha256-yjeq6lUpJpqRmL9UIBSoFLbi8TLNY7vsCH2E1SrSfYI=",
+        "owner": "FStarLang",
         "repo": "karamel",
-        "rev": "6c0b9df50738e9746fc080fc924f425ac162ed58",
+        "rev": "bd359d86d59401b001788468fa7366e741836c02",
         "type": "github"
       },
       "original": {
-        "owner": "fstarlang",
+        "owner": "FStarLang",
         "repo": "karamel",
         "type": "github"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1669140675,
-        "narHash": "sha256-npzfyfLECsJWgzK/M4gWhykP2DNAJTYjgY2BWkz/oEQ=",
-        "owner": "NixOS",
+        "lastModified": 1678470307,
+        "narHash": "sha256-OEeMUr3ueLIXyW/OaFUX5jUdimyQwMg/7e+/Q0gC/QE=",
+        "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "2788904d26dda6cfa1921c5abb7a2466ffe3cb8c",
+        "rev": "0c4800d579af4ed98ecc47d464a5e7b0870c4b1f",
         "type": "github"
       },
       "original": {
-        "id": "nixpkgs",
+        "owner": "nixos",
         "ref": "nixos-unstable",
-        "type": "indirect"
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "root": {
       "inputs": {
-        "hacl-nix": "hacl-nix",
-        "nixpkgs": [
-          "hacl-nix",
-          "nixpkgs"
-        ]
+        "fstar-src": "fstar-src",
+        "krml-src": "krml-src",
+        "nixpkgs": "nixpkgs"
       }
     }
   },

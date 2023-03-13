@@ -6,6 +6,10 @@ ifeq (,$(KRML_HOME))
   $(error KRML_HOME is not defined)
 endif
 
+ifndef FSTAR_ULIB
+  FSTAR_ULIB := $(shell if test -d "$(FSTAR_HOME)/ulib" ; then echo "$(FSTAR_HOME)/ulib" ; else echo "$(FSTAR_HOME)/lib/fstar" ; fi)
+endif
+
 PROJECT_HOME ?= .
 
 # Prettifying output, except if we are in verbose mode
@@ -28,8 +32,8 @@ SOURCE_DIRS = \
 
 INCLUDE_DIRS = \
   $(SOURCE_DIRS) \
-  $(FSTAR_HOME)/ulib/.cache \
-  $(FSTAR_HOME)/ulib/experimental
+  $(FSTAR_ULIB)/.cache \
+  $(FSTAR_ULIB)/experimental
 
 FSTAR_INCLUDES = $(addprefix --include ,$(INCLUDE_DIRS))
 
