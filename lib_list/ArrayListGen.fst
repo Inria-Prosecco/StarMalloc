@@ -1276,6 +1276,8 @@ open Utils2
 
 open Config
 
+#restart-solver
+
 #push-options "--compat_pre_typed_indexed_effects --query_stats --z3rlimit 50"
 let extend_insert_aux (#a: Type)
   (#pred1 #pred2 #pred3 #pred4: a -> prop)
@@ -1362,6 +1364,8 @@ let extend_insert_aux (#a: Type)
   assert (Seq.equal #a (dataify gs1) (dataify gs1'));
   return ()
 
+
+
 #restart-solver
 
 let extend_insert_aux2 (#a: Type)
@@ -1420,25 +1424,39 @@ let extend_insert_aux2 (#a: Type)
       ~ (mem_all (US.v k + j) (US.v k + US.v i + 1) hd2 hd3 hd4 gs))
   )
   =
-  //let gs0 = gget (varraylist pred1 pred2 pred3 pred4
-  //  (A.split_l r (k `US.add` n1))
-  //  (US.v k + US.v i) hd2 hd3 hd4) in
+  let gs0 = gget (varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k + US.v i) hd2 hd3 hd4) in
   //assume (G.reveal (set (US.v k) (US.v k + US.v i + 2))
   //== FS.union (FS.singleton (US.v k + US.v i + 1))
   //            (G.reveal (set (US.v k) (US.v k + US.v i + 1))));
-  admit ();
   extend_insert_aux #a #pred1 #pred2 #pred3 #pred4
-    r n1 n2 k i hd2 hd3 hd4 v1
-  //let gs1 = gget (varraylist pred1 pred2 pred3 pred4
-  //  (A.split_l r (k `US.add` n1))
-  //  (US.v k + US.v i + 1) hd2 hd3 hd4) in
+    r n1 n2 k i hd2 hd3 hd4 v1;
+  let gs1 = gget (varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k + US.v i + 1) hd2 hd3 hd4) in
+  assert (ptrs_in #a (US.v k + US.v i + 1) gs1 `FS.equal`
+       FS.insert (US.v k + US.v i + 1)
+         (ptrs_in #a (US.v k + US.v i) gs0));
   //assume (FS.insert (US.v k + US.v i + 1)
   //  (G.reveal (set (US.v k) (US.v k + US.v i + 1)))
   //  ==
   //  G.reveal (set (US.v k) (US.v k + US.v i + 2)));
-  //assert (ptrs_in #a (US.v k + US.v i + 1) gs1 `FS.equal`
-  //     FS.insert (US.v k + US.v i + 1)
-  //       (ptrs_in #a (US.v k + US.v i) gs0))
+  //assert (dataify (G.reveal gs1) == Seq.upd (dataify (G.reveal gs0)) (US.v k + US.v i + 1) v1);
+  //assume (ptrs_in #a (US.v k + US.v i + 1) gs1
+  //    == FS.union
+  //      (set (US.v k) (US.v k + US.v i + 2))
+  //      (ptrs_in #a (US.v k) gs0));
+  admit ();
+  ///le
+  //  Seq.slice (dataify gs) 0 (US.v k + US.v i + 1)
+  //  == Seq.append
+  //    (Seq.slice (G.reveal (dataify gs0)) 0 (US.v k))
+  //    (Seq.create (US.v i + 1) v1) /\
+
+
+  //admit ()
+  ()
 
 let slpred
   (#a: Type)
