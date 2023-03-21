@@ -191,7 +191,7 @@ hardened_lib: verify extract patch
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
 	-pthread -lpthread \
-	-Wwrite-strings -Werror -march=native \
+	-Wwrite-strings -Wno-c++17-extensions -Werror -march=native \
 	-Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
 -shared -fPIC \
 $(FILES) \
