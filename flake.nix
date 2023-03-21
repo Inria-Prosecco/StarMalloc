@@ -29,13 +29,13 @@
         buildInputs = [ fstar karamel ];
         FSTAR_HOME = fstar;
         KRML_HOME = karamel;
-        buildTarget = "lib";
+        #buildTarget = "lib";
         installPhase = "cp bench/starmalloc.so $out";
+        buildFlags = [ "lib" ];
         #buildPhase = ''
         ##  echo "${fstar}"
         ##  echo "${karamel}"
-        ##  make lib -j 1
-        ##  make obj/Utils2.fsti.checked
+        #make lib -j 1
         #'';
       };
     in
