@@ -21,7 +21,7 @@
       pkgs = import nixpkgs { inherit system; };
       z3 = fstar-src.packages.${system}.z3;
       fstar = fstar-src.packages.${system}.fstar;
-      karamel = krml-src.packages.${system}.karamel;
+      karamel = krml-src.packages.${system}.karamel.home;
       steel-experiments = pkgs.clangStdenv.mkDerivation {
         name = "steel-experiments";
         src = ./.;
@@ -30,7 +30,7 @@
         FSTAR_HOME = fstar;
         KRML_HOME = karamel;
         buildTarget = "lib";
-        installPhase = "touch $out";
+        installPhase = "cp bench/starmalloc.so $out";
         #buildPhase = ''
         ##  echo "${fstar}"
         ##  echo "${karamel}"

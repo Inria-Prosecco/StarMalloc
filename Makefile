@@ -87,11 +87,11 @@ patch: extract
 
 # test classic AVL trees
 test: verify extract
-	$(CC) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I dist -lbsd \
+	$(CC) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_LIB)/dist/generic -I dist -lbsd \
 	-o bench/a.out dist/Impl_Test.c
 
 FILES = \
-$(KRML_HOME)/krmllib/c/steel_spinlock.c \
+$(KRML_LIB)/c/steel_spinlock.c \
 dist/ArrayList.c \
 dist/AVL.c \
 dist/krmlinit.c \
@@ -105,14 +105,14 @@ src/main-mmap.c
 
 # test AVL trees suited for allocator metadata (no malloc, manual mmap)
 test-tree: verify extract
-	$(CC) -O2 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	$(CC) -O2 -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_LIB)/dist/minimal -I dist \
 	-o bench/mavl.out $(FILES) src/lib-alloc.c bench/test2.c
 
 # test the compilation of the allocator
 test-compile-alloc: verify extract
 	$(CC) -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-I $(KRML_LIB)/dist/minimal -I dist \
 -o bench/a.out \
 $(FILES) src/lib-alloc.c
 
@@ -120,7 +120,7 @@ $(FILES) src/lib-alloc.c
 test-alloc0: verify extract patch
 	$(CC) -O0 -g -DKRML_VERIFIED_UINT126 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-I $(KRML_LIB)/dist/minimal -I dist \
 -o bench/a.out \
 $(FILES) \
 bench/test-alloc.c \
@@ -130,7 +130,7 @@ src/lib-alloc.c
 test-both: verify extract
 	$(CC) -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-I $(KRML_LIB)/dist/minimal -I dist \
 -o bench/a.out \
 $(FILES) \
 bench/test-both.c
@@ -139,7 +139,7 @@ bench/test-both.c
 test-slab: verify extract
 	$(CC) -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-I $(KRML_LIB)/dist/minimal -I dist \
 -o bench/a.out \
 $(FILES) \
 bench/test-slab.c
@@ -148,7 +148,7 @@ bench/test-slab.c
 test-mmap: verify extract
 	$(CC) -pthread -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-I $(KRML_LIB)/dist/minimal -I dist \
 -o bench/a.out \
 $(FILES) \
 bench/test-avl.c
@@ -158,7 +158,7 @@ bench/test-avl.c
 test-alloc0bis: verify extract patch
 	$(CC) -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-I $(KRML_LIB)/dist/minimal -I dist \
   -pthread \
 -o bench/a.out \
 $(FILES) \
@@ -172,7 +172,7 @@ lib: verify extract patch
 	echo "using ${CC} compiler"
 	$(CC) -O2 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-I $(KRML_LIB)/dist/minimal -I dist \
 	-pthread -lpthread \
         -std=gnu11 \
 -shared -fPIC \
@@ -189,7 +189,7 @@ hardened_lib: verify extract patch
 	-pipe -O3 -flto -fPIC \
 	-fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
 	-I $(KRML_HOME)/include \
-	-I $(KRML_HOME)/krmllib/dist/minimal -I dist \
+	-I $(KRML_LIB)/dist/minimal -I dist \
 	-pthread -lpthread \
 	-Wwrite-strings -Werror -march=native \
 	-Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
@@ -219,11 +219,11 @@ test-alloc3: test-compile-alloc-lib
 	LD_PRELOAD=bench/malloc.so zathura
 
 test-array: verify extract
-	$(CC) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist -lbsd \
+	$(CC) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_LIB)/dist/minimal -I dist -lbsd \
 	-o bench/array.a.out bench/test-array.c
 
 testopt: verify extract
-	$(CC) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -I dist -lbsd -O2 \
+	$(CC) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_LIB)/dist/minimal -I dist -lbsd -O2 \
 	-o bench/a.out bench/test.c
 testocaml:
 	ocamlopt -o bench/ocaml.a.out bench/bench.ml
@@ -241,6 +241,6 @@ bench: testopt testocaml testcpp
 #ALL_O_FILES=$(subst .c,.o,$(ALL_C_FILES))
 #
 #$(ALL_O_FILES): %.o: %.c
-#	$(CC) $(CFLAGS) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal -o $@ -c $<
+#	$(CC) $(CFLAGS) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_LIB)/dist/minimal -o $@ -c $<
 
 .PHONY: all world verify clean depend hints obj test

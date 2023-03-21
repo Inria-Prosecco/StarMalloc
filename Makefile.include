@@ -10,6 +10,10 @@ ifndef FSTAR_ULIB
   FSTAR_ULIB := $(shell if test -d "$(FSTAR_HOME)/ulib" ; then echo "$(FSTAR_HOME)/ulib" ; else echo "$(FSTAR_HOME)/lib/fstar" ; fi)
 endif
 
+ifndef KRML_LIB
+  KRML_LIB := $(shell if test -d "$(KRML_HOME)/krmllib" ; then echo "$(KRML_HOME)/krmllib" ; else echo "$(KRML_HOME)/lib/krml" ; fi)
+endif
+
 PROJECT_HOME ?= .
 
 # Prettifying output, except if we are in verbose mode
