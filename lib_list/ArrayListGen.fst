@@ -1789,68 +1789,73 @@ let extend_insert (#a: Type)
   (n2: US.t{US.v n2 < US.v n1})
   (r: A.array (cell a))
   (hd1: US.t{hd1 = null_ptr \/ US.v hd1 < A.length r})
-  (hd2 hd3 hd4: G.erased nat)
+  (hd2 hd3 hd4: US.t)
   (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1) /\ k <> null_ptr})
   (v1: a)
   : Steel unit
   (varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
-    (US.v k) hd2 hd3 hd4)
+    (US.v k) (US.v hd2) (US.v hd3) (US.v hd4))
   (fun _ -> varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
-    (US.v k + US.v n2) hd2 hd3 hd4)
+    (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4))
   (requires fun h0 ->
     let gs0 = h0 (varraylist pred1 pred2 pred3 pred4
       (A.split_l r (k `US.add` n1))
-      (US.v k) hd2 hd3 hd4) in
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4)) in
     pred1 v1 /\
     A.length r <= US.v metadata_max /\
     (forall (j:nat{1 <= j /\ j < US.v n1}).
-      ~ (mem_all (US.v k + j) (US.v k) hd2 hd3 hd4 gs0))
+      ~ (mem_all (US.v k + j) (US.v k) (US.v hd2) (US.v hd3) (US.v hd4) gs0))
   )
   (ensures fun h0 _ h1 ->
     let gs0 = h0 (varraylist pred1 pred2 pred3 pred4
-      (A.split_l r (k `US.add` n1)) (US.v k) hd2 hd3 hd4) in
+      (A.split_l r (k `US.add` n1))
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4)) in
     let gs1 = h1 (varraylist pred1 pred2 pred3 pred4
-      (A.split_l r (k `US.add` n1)) (US.v k + US.v n2) hd2 hd3 hd4) in
+      (A.split_l r (k `US.add` n1))
+      (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4)) in
     //False /\
     ptrs_in (US.v k + US.v n2) gs1
     == FS.union
       (set (US.v k) (US.v k + US.v n2 + 1))
       (ptrs_in (US.v k) gs0) /\
-    ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
-    ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
-    ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
+    ptrs_in (US.v hd2) gs1 == ptrs_in (US.v hd2) gs0 /\
+    ptrs_in (US.v hd3) gs1 == ptrs_in (US.v hd3) gs0 /\
+    ptrs_in (US.v hd4) gs1 == ptrs_in (US.v hd4) gs0 /\
     Seq.slice (dataify gs1) 0 (US.v k + US.v n2 + 1)
     == Seq.append
       (Seq.slice (G.reveal (dataify gs0)) 0 (US.v k + 1))
       (Seq.create (US.v n2) v1) /\
     (forall (j:nat{US.v n2 + 1 <= j /\ j < US.v n1}).
-      ~ (mem_all (US.v k + j) (US.v k + US.v n2) hd2 hd3 hd4 gs1)) /\
+      ~ (mem_all (US.v k + j) (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4) gs1)) /\
     True
   )
   =
+  lemma_head_not_null_mem #a pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    k hd2 hd3 hd4;
   change_slprop_rel
     (varraylist pred1 pred2 pred3 pred4
       (A.split_l r (k `US.add` n1))
-      (US.v k) hd2 hd3 hd4)
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4))
     (varraylist pred1 pred2 pred3 pred4
       (A.split_l r (k `US.add` n1))
-      (US.v k + 0) hd2 hd3 hd4)
+      (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4))
     (fun x y -> x == y)
     (fun _ -> admit ());
   assume (t_of (varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
-    (US.v k + 0) hd2 hd3 hd4)
+    (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4))
     ==
     Seq.lseq (cell a) (US.v (k `US.add` n1)));
   let gs0
   : G.erased (t_of (varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
-    (US.v k + 0) hd2 hd3 hd4))
+    (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4)))
   = gget (varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
-    (US.v k + 0) hd2 hd3 hd4) in
+    (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4)) in
   Seq.lemma_empty (Seq.create 0 v1);
   append_null_is_eq #a (Seq.slice (dataify gs0) 0 (US.v k + 1));
   assert (Seq.slice (dataify gs0) 0 (US.v k + 1)
@@ -1858,10 +1863,6 @@ let extend_insert (#a: Type)
     (Seq.slice (dataify gs0) 0 (US.v k + 1))
     (Seq.create 0 v1));
   lemma_set_singleton (US.v k);
-  //lemma_head_not_null_mem #a pred1 pred2 pred3 pred4
-  //  (A.split_l r (k `US.add` n1))
-  //  k (US.uint_to_t hd2) (US.uint_to_t hd3) (US.uint_to_t hd4);
-  assume (mem #a (US.v k) (US.v k) gs0);
   lemma_mem_ptrs_in #a (US.v k) (G.reveal gs0) (US.v k);
   assert (FS.mem (US.v k) (ptrs_in #a (US.v k) gs0));
   lemma_set_union (ptrs_in #a (US.v k) gs0) (US.v k);
@@ -1869,12 +1870,29 @@ let extend_insert (#a: Type)
     == FS.union
       (set (US.v k) (US.v k + 1))
       (ptrs_in #a (US.v k) gs0));
-  assert (selpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k v1 (G.reveal gs0) 0 (G.reveal gs0));
+  assert (selpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r (US.v hd2) (US.v hd3) (US.v hd4) k v1 (G.reveal gs0) 0 (G.reveal gs0));
+  change_slprop_rel
+    (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4))
+    (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r (US.v hd2) (US.v hd3) (US.v hd4) k 0)
+    (fun x y -> x == y)
+    (fun _ -> admit ());
   for_loop_full
     0sz n2
-    (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k)
-    (selpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k v1 (G.reveal gs0))
-    (extend_insert_aux4 #a #pred1 #pred2 #pred3 #pred4 r n1 n2 k hd2 hd3 hd4 v1 gs0)
+    (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r (US.v hd2) (US.v hd3) (US.v hd4) k)
+    (selpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r (US.v hd2) (US.v hd3) (US.v hd4) k v1 (G.reveal gs0))
+    (extend_insert_aux4 #a #pred1 #pred2 #pred3 #pred4 r n1 n2 k (US.v hd2) (US.v hd3) (US.v hd4) v1 gs0);
+  change_slprop_rel
+    (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r (US.v hd2) (US.v hd3) (US.v hd4) k (US.v n2))
+    (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4))
+    (fun x y -> x == y)
+    (fun _ -> admit ())
+
+
+
 
 let a = 42
 
