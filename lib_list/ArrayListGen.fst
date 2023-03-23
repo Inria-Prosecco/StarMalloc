@@ -1617,12 +1617,12 @@ let extend_insert_aux3 (#a: Type0)
     ptrs_in hd2 gs == ptrs_in hd2 gs0 /\
     ptrs_in hd3 gs == ptrs_in hd3 gs0 /\
     ptrs_in hd4 gs == ptrs_in hd4 gs0 /\
-    (forall (j:nat{US.v i + 2 <= j /\ j < US.v n1}).
-      ~ (mem_all (US.v k + j) (US.v k + US.v i + 1) hd2 hd3 hd4 gs)) /\
     Seq.slice (dataify gs) 0 (US.v k + US.v i + 2)
     == Seq.append
       (Seq.slice (G.reveal (dataify gs0)) 0 (US.v k + 1))
       (Seq.create (US.v i + 1) v1) /\
+    (forall (j:nat{US.v i + 2 <= j /\ j < US.v n1}).
+      ~ (mem_all (US.v k + j) (US.v k + US.v i + 1) hd2 hd3 hd4 gs)) /\
     True
   )
   =
@@ -1673,6 +1673,9 @@ let selpred
   (forall (j:nat{i + 1 <= j /\ j < US.v n1}).
     ~ (mem_all #a (US.v k + j) (US.v k + i) hd2 hd3 hd4 gs))
 
+#restart-solver
+
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 75"
 let extend_insert_aux4 (#a: Type)
   (#pred1 #pred2 #pred3 #pred4: a -> prop)
   (r: A.array (cell a){A.length r <= US.v metadata_max})
@@ -1724,26 +1727,34 @@ let extend_insert_aux4 (#a: Type)
       (G.reveal gs1));
   extend_insert_aux3 #a #pred1 #pred2 #pred3 #pred4
     r n1 n2 k i hd2 hd3 hd4 v1 gs0;
-  //let gs2 = gget (varraylist pred1 pred2 pred3 pred4
+  //let gs2 : G.erased (t_of (varraylist pred1 pred2 pred3 pred4
+  //    (A.split_l r (k `US.add` n1))
+  //    (US.v k + US.v i + 1) hd2 hd3 hd4))
+  //    = gget (varraylist pred1 pred2 pred3 pred4
   //    (A.split_l r (k `US.add` n1))
   //    (US.v k + US.v i + 1) hd2 hd3 hd4) in
-  sladmit ()
   //assert (selpred #a #pred1 #pred2 #pred3 #pred4
   //    n1 n2 r hd2 hd3 hd4 k
   //    v1 gs0
   //    (US.v i + 1)
   //    (G.reveal gs2));
   //admit ();
-  //    //gsh1
-  //rewrite_slprop
-  //  (varraylist pred1 pred2 pred3 pred4
-  //    (A.split_l r (k `US.add` n1))
-  //    (US.v k + US.v i + 1) hd2 hd3 hd4)
-  //  (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1))
-  //  (fun _ -> admit ());
-  //let gs3 = gget (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) in
-  //assume (Seq.equal #a gs2 gs3);
-  //admit ()
+  change_slprop_rel
+    (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k + US.v i + 1) hd2 hd3 hd4)
+    (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1))
+    (fun x y ->
+      let y : t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) = y  in
+      Seq.equal #a y x)
+    (fun _ -> admit ());
+  let gs3 = gget (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) in
+  assert (selpred #a #pred1 #pred2 #pred3 #pred4
+      n1 n2 r hd2 hd3 hd4 k
+      v1 gs0
+      (US.v i + 1)
+      (G.reveal gs3));
+  admit ()
   ////admit ()
   ////let gs3 = gget (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) in
   ////assume (Seq.equal #a gs2 gs3)
@@ -1844,11 +1855,9 @@ let extend_insert (#a: Type)
       (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4))
     (fun x y -> x == y)
     (fun _ -> admit ());
-  assume (t_of (varraylist pred1 pred2 pred3 pred4
+  varraylist_type pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
-    (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4))
-    ==
-    Seq.lseq (cell a) (US.v (k `US.add` n1)));
+    (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4);
   let gs0
   : G.erased (t_of (varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
@@ -1856,6 +1865,9 @@ let extend_insert (#a: Type)
   = gget (varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
     (US.v k + 0) (US.v hd2) (US.v hd3) (US.v hd4)) in
+  let gs0
+  : G.erased (Seq.lseq (cell a) (US.v (k `US.add` n1)))
+  = G.hide (G.reveal gs0 <: Seq.lseq (cell a) (US.v (k `US.add` n1))) in
   Seq.lemma_empty (Seq.create 0 v1);
   append_null_is_eq #a (Seq.slice (dataify gs0) 0 (US.v k + 1));
   assert (Seq.slice (dataify gs0) 0 (US.v k + 1)
@@ -1890,9 +1902,6 @@ let extend_insert (#a: Type)
       (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4))
     (fun x y -> x == y)
     (fun _ -> admit ())
-
-
-
 
 let a = 42
 
