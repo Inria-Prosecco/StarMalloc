@@ -1547,16 +1547,11 @@ let extend_insert_aux2 (#a: Type0)
       (Seq.slice (G.reveal (dataify gs0)) 0 (US.v k + 1))
       (Seq.create (US.v i + 1) v1) /\
     True
-    //(forall (j:nat{US.v i + 1 <= j /\ j < US.v n1}).
-    //  ~ (mem_all (US.v k + j) (US.v k + US.v i) hd2 hd3 hd4 gs0)) /\
   )
   =
   let gs1 = gget (varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
     (US.v k + US.v i) hd2 hd3 hd4) in
-  //assume (G.reveal (set (US.v k) (US.v k + US.v i + 2))
-  //== FS.union (FS.singleton (US.v k + US.v i + 1))
-  //            (G.reveal (set (US.v k) (US.v k + US.v i + 1))));
   extend_insert_aux #a #pred1 #pred2 #pred3 #pred4
     r n1 n2 k i hd2 hd3 hd4 v1;
   let gs2 = gget (varraylist pred1 pred2 pred3 pred4
@@ -1755,7 +1750,37 @@ let extend_insert_aux4 (#a: Type)
 
 #restart-solver
 
+//TODO: move to SeqUtils
+let append_null_is_eq (#a: Type)
+  (s: Seq.seq a)
+  : Lemma
+  (s == Seq.append s Seq.empty)
+  =
+  Seq.lemma_split s (Seq.length s)
 
+//TODO: dedicated set lib?
+let lemma_set_singleton
+  (k: nat)
+  : Lemma
+  (G.reveal (set k (k+1)) == FS.singleton k)
+  =
+  assert (set k (k+1) == set_aux k (k+1) (k+1));
+  let s' = set_aux k (k+1) k in
+  assert (s' `FS.equal` FS.emptyset);
+  let s = FS.insert k s' in
+  assert (s `FS.equal` FS.singleton k);
+  assert (set_aux k (k+1) (k+1) == G.hide s)
+
+//TODO: dedicated set lib
+let lemma_set_union
+  (#a: eqtype)
+  (s: FS.set a)
+  (v: a)
+  : Lemma
+  (requires FS.mem v s)
+  (ensures FS.union (FS.singleton v) s == s)
+  =
+  assert (s `FS.equal` FS.union (FS.singleton v) s)
 
 #push-options "--compat_pre_typed_indexed_effects --fuel 1 --ifuel 1"
 let extend_insert (#a: Type)
@@ -1765,7 +1790,7 @@ let extend_insert (#a: Type)
   (r: A.array (cell a))
   (hd1: US.t{hd1 = null_ptr \/ US.v hd1 < A.length r})
   (hd2 hd3 hd4: G.erased nat)
-  (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1)})
+  (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1) /\ k <> null_ptr})
   (v1: a)
   : Steel unit
   (varraylist pred1 pred2 pred3 pred4
@@ -1826,7 +1851,25 @@ let extend_insert (#a: Type)
   = gget (varraylist pred1 pred2 pred3 pred4
     (A.split_l r (k `US.add` n1))
     (US.v k + 0) hd2 hd3 hd4) in
-  assume (selpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k v1 (G.reveal gs0) 0 (G.reveal gs0));
+  Seq.lemma_empty (Seq.create 0 v1);
+  append_null_is_eq #a (Seq.slice (dataify gs0) 0 (US.v k + 1));
+  assert (Seq.slice (dataify gs0) 0 (US.v k + 1)
+  == Seq.append
+    (Seq.slice (dataify gs0) 0 (US.v k + 1))
+    (Seq.create 0 v1));
+  lemma_set_singleton (US.v k);
+  //lemma_head_not_null_mem #a pred1 pred2 pred3 pred4
+  //  (A.split_l r (k `US.add` n1))
+  //  k (US.uint_to_t hd2) (US.uint_to_t hd3) (US.uint_to_t hd4);
+  assume (mem #a (US.v k) (US.v k) gs0);
+  lemma_mem_ptrs_in #a (US.v k) (G.reveal gs0) (US.v k);
+  assert (FS.mem (US.v k) (ptrs_in #a (US.v k) gs0));
+  lemma_set_union (ptrs_in #a (US.v k) gs0) (US.v k);
+  assert (ptrs_in #a (US.v k) gs0
+    == FS.union
+      (set (US.v k) (US.v k + 1))
+      (ptrs_in #a (US.v k) gs0));
+  assert (selpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k v1 (G.reveal gs0) 0 (G.reveal gs0));
   for_loop_full
     0sz n2
     (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k)
