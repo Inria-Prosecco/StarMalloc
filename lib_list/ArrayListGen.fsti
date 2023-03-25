@@ -440,30 +440,90 @@ val insert (#a:Type)
     dataify gs1 == Seq.upd (dataify gs0) (US.v idx) v
   )
 
-/// If the doubly linked lists fit in the first [k] elements of the array, then
-/// they also fit in the [k] + 1 first elements of the array, and we inserted
-/// element [k] in the first list
-inline_for_extraction noextract
-val extend (#a:Type)
+val extend_aux (#a:Type) (#opened:_)
   (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (n: US.t)
   (r:A.array (cell a))
-  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
-  (hd2 hd3 hd4:Ghost.erased nat)
-  (k:US.t{US.v k + 1 <= A.length r /\ US.fits (US.v k + 1)})
+  (hd1 hd2 hd3 hd4:Ghost.erased nat)
+  (k:US.t{US.v k + US.v n <= A.length r /\ US.fits (US.v k + US.v n)})
   (v:a)
-  : Steel unit
-  (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) (US.v hd) hd2 hd3 hd4 `star`
-    A.varray (A.split_l (A.split_r r k) 1sz))
-  (fun _ -> varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3 hd4)
-  (requires fun _ ->
-    k <> null_ptr /\ pred1 v)
+  : SteelGhost unit opened
+  (
+    varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4 `star`
+    A.varray (A.split_l (A.split_r r k) n)
+  )
+  (fun _ -> varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n))
+    hd1 hd2 hd3 hd4)
+  (requires fun _ -> k <> null_ptr /\ pred1 v)
   (ensures fun h0 _ h1 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) (US.v hd) hd2 hd3 hd4) in
-    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3 hd4) in
-    ptrs_in (US.v k) gs1 ==
-    FS.insert (US.v k) (ptrs_in (US.v hd) gs0) /\
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` n)) hd1 hd2 hd3 hd4) in
+    ptrs_in hd1 gs1 == ptrs_in hd1 gs0 /\
     ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
     ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
     ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
-    dataify gs1 == Seq.append (dataify gs0) (Seq.create 1 v)
+    (~ (mem_all (US.v k) hd1 hd2 hd3 hd4 gs1)) /\
+    Seq.slice (dataify gs1) 0 (US.v k)
+    ==
+    dataify gs0
+  )
+
+module G = FStar.Ghost
+
+val set (bound1 bound2: nat)
+  : Pure (G.erased (FS.set nat))
+  (requires bound1 <= bound2)
+  (ensures fun r ->
+    forall (k:nat{bound1 <= k /\ k < bound2}). FS.mem k r
+  )
+
+open Config
+
+val extend_insert (#a: Type)
+  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (n1: US.t{2 <= US.v n1})
+  (n2: US.t{US.v n2 < US.v n1})
+  (r: A.array (cell a))
+  (hd1: US.t{hd1 = null_ptr \/ US.v hd1 < A.length r})
+  (hd2 hd3 hd4: US.t)
+  (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1) /\ k <> null_ptr})
+  (v1: a)
+  : Steel unit
+  (varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k) (US.v hd2) (US.v hd3) (US.v hd4))
+  (fun _ -> varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4))
+  (requires fun h0 ->
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4)) in
+    pred1 v1 /\
+    A.length r <= US.v metadata_max /\
+    (forall (j:nat{1 <= j /\ j < US.v n1}).
+      ~ (mem_all (US.v k + j) (US.v k) (US.v hd2) (US.v hd3) (US.v hd4) gs0))
+  )
+  (ensures fun h0 _ h1 ->
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4)) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4)) in
+    ptrs_in (US.v k + US.v n2) gs1
+    == FS.union
+      (set (US.v k) (US.v k + US.v n2 + 1))
+      (ptrs_in (US.v k) gs0) /\
+    ptrs_in (US.v hd2) gs1 == ptrs_in (US.v hd2) gs0 /\
+    ptrs_in (US.v hd3) gs1 == ptrs_in (US.v hd3) gs0 /\
+    ptrs_in (US.v hd4) gs1 == ptrs_in (US.v hd4) gs0 /\
+    Seq.slice (dataify gs1) 0 (US.v k + US.v n2 + 1)
+    == Seq.append
+      (Seq.slice (G.reveal (dataify gs0)) 0 (US.v k + 1))
+      (Seq.create (US.v n2) v1) /\
+    (forall (j:nat{US.v n2 + 1 <= j /\ j < US.v n1}).
+      ~ (mem_all (US.v k + j) (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4) gs1)) /\
+    True
   )

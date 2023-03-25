@@ -226,29 +226,92 @@ val insert4
             AL.dataify gs1 == Seq.upd (AL.dataify gs0) (US.v idx) v
           )
 
-inline_for_extraction noextract
-val extend1
+//TODO: hide function body
+let extend_aux (#opened:_)
   (#pred1 #pred2 #pred3 #pred4: status -> prop)
+  (n: US.t)
   (r:A.array cell)
-  (hd:US.t{hd == null_ptr \/ US.v hd < A.length r})
-  (hd2 hd3 hd4:Ghost.erased nat)
-  (k:US.t{US.v k + 1 <= A.length r /\ US.fits (US.v k + 1)})
-  (v: status)
+  (hd1 hd2 hd3 hd4:Ghost.erased nat)
+  (k:US.t{US.v k + US.v n <= A.length r /\ US.fits (US.v k + US.v n)})
+  (v:status)
+  : SteelGhost unit opened
+  (
+    varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4 `star`
+    A.varray (A.split_l (A.split_r r k) n)
+  )
+  (fun _ -> varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n))
+    hd1 hd2 hd3 hd4)
+  (requires fun _ -> k <> null_ptr /\ pred1 v)
+  (ensures fun h0 _ h1 ->
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` n)) hd1 hd2 hd3 hd4) in
+    AL.ptrs_in hd1 gs1 == AL.ptrs_in hd1 gs0 /\
+    AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
+    AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
+    AL.ptrs_in hd4 gs1 == AL.ptrs_in hd4 gs0 /\
+    (~ (AL.mem_all (US.v k) hd1 hd2 hd3 hd4 gs1)) /\
+    Seq.slice (AL.dataify gs1) 0 (US.v k)
+    ==
+    AL.dataify gs0
+  )
+  =
+  AL.extend_aux #status #_ #pred1 #pred2 #pred3 #pred4
+    n r hd1 hd2 hd3 hd4 k v
+
+open Config
+
+module G = FStar.Ghost
+
+//TODO: hide function body
+let extend_insert
+  (#pred1 #pred2 #pred3 #pred4: status -> prop)
+  (n1: US.t{2 <= US.v n1})
+  (n2: US.t{US.v n2 < US.v n1})
+  (r: A.array cell)
+  (hd1: US.t{hd1 = null_ptr \/ US.v hd1 < A.length r})
+  (hd2 hd3 hd4: US.t)
+  (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1) /\ k <> null_ptr})
+  (v1: status)
   : Steel unit
-          (AL.varraylist pred1 pred2 pred3 pred4 (A.split_l r k) (US.v hd) hd2 hd3 hd4 `star`
-            A.varray (A.split_l (A.split_r r k) 1sz))
-          (fun _ ->
-            AL.varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3 hd4)
-          (requires fun _ ->
-            k <> null_ptr /\ pred1 v)
-          (ensures fun h0 _ h1 ->
-            A.length_fits r;
-            let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) (US.v hd) hd2 hd3 hd4) in
-            let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` 1sz)) (US.v k) hd2 hd3 hd4) in
-            AL.ptrs_in (US.v k) gs1 ==
-            FS.insert (US.v k) (AL.ptrs_in (US.v hd) gs0) /\
-            AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
-            AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
-            AL.ptrs_in hd4 gs1 == AL.ptrs_in hd4 gs0 /\
-            AL.dataify gs1 `Seq.equal` Seq.append (AL.dataify gs0) (Seq.create 1 v)
-          )
+  (varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k) (US.v hd2) (US.v hd3) (US.v hd4))
+  (fun _ -> varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4))
+  (requires fun h0 ->
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4)) in
+    pred1 v1 /\
+    A.length r <= US.v metadata_max /\
+    (forall (j:nat{1 <= j /\ j < US.v n1}).
+      ~ (AL.mem_all (US.v k + j) (US.v k) (US.v hd2) (US.v hd3) (US.v hd4) gs0))
+  )
+  (ensures fun h0 _ h1 ->
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4)) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4
+      (A.split_l r (k `US.add` n1))
+      (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4)) in
+    AL.ptrs_in (US.v k + US.v n2) gs1
+    == FS.union
+      (AL.set (US.v k) (US.v k + US.v n2 + 1))
+      (AL.ptrs_in (US.v k) gs0) /\
+    AL.ptrs_in (US.v hd2) gs1 == AL.ptrs_in (US.v hd2) gs0 /\
+    AL.ptrs_in (US.v hd3) gs1 == AL.ptrs_in (US.v hd3) gs0 /\
+    AL.ptrs_in (US.v hd4) gs1 == AL.ptrs_in (US.v hd4) gs0 /\
+    Seq.slice (AL.dataify gs1) 0 (US.v k + US.v n2 + 1)
+    == Seq.append
+      (Seq.slice (G.reveal (AL.dataify gs0)) 0 (US.v k + 1))
+      (Seq.create (US.v n2) v1) /\
+    (forall (j:nat{US.v n2 + 1 <= j /\ j < US.v n1}).
+      ~ (AL.mem_all (US.v k + j) (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4) gs1)) /\
+    True
+  )
+  =
+  AL.extend_insert #status #pred1 #pred2 #pred3 #pred4
+    n1 n2 r hd1 hd2 hd3 hd4 k v1
+

@@ -261,6 +261,7 @@ let insert4
   insert r hd hd2 hd3 hd1 idx v;
   AL.permute14 pred4 pred2 pred3 pred1 r (US.v idx) hd2 hd3 hd1
 
+(*)
 let extend
   (#pred1 #pred2 #pred3 #pred4: status -> prop)
   (r:A.array cell)
