@@ -246,14 +246,14 @@ let extend_aux (#opened:_)
   (ensures fun h0 _ h1 ->
     let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4) in
     let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` n)) hd1 hd2 hd3 hd4) in
-    AL.ptrs_in hd1 gs1 == AL.ptrs_in hd1 gs0 /\
-    AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
-    AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
-    AL.ptrs_in hd4 gs1 == AL.ptrs_in hd4 gs0 /\
+    AL.ptrs_in hd1 (Seq.slice gs1 0 (US.v k)) == AL.ptrs_in hd1 gs0 /\
+    AL.ptrs_in hd2 (Seq.slice gs1 0 (US.v k)) == AL.ptrs_in hd2 gs0 /\
+    AL.ptrs_in hd3 (Seq.slice gs1 0 (US.v k)) == AL.ptrs_in hd3 gs0 /\
+    AL.ptrs_in hd4 (Seq.slice gs1 0 (US.v k)) == AL.ptrs_in hd4 gs0 /\
     (~ (AL.mem_all (US.v k) hd1 hd2 hd3 hd4 gs1)) /\
-    Seq.slice (AL.dataify gs1) 0 (US.v k)
+    Seq.slice gs1 0 (US.v k)
     ==
-    AL.dataify gs0
+    gs0
   )
   =
   AL.extend_aux #status #_ #pred1 #pred2 #pred3 #pred4

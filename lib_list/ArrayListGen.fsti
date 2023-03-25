@@ -464,9 +464,9 @@ val extend_aux (#a:Type) (#opened:_)
     ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
     ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
     (~ (mem_all (US.v k) hd1 hd2 hd3 hd4 gs1)) /\
-    Seq.slice (dataify gs1) 0 (US.v k)
+    Seq.slice gs1 0 (US.v k)
     ==
-    dataify gs0
+    gs0
   )
 
 module G = FStar.Ghost
