@@ -1644,6 +1644,52 @@ let slpred
     (A.split_l r (k `US.add` n1))
     (US.v k + i) hd2 hd3 hd4
 
+let varraylist_type (#a:Type) (pred1 pred2 pred3 pred4: a -> prop) (r:A.array (cell a)) (hd1 hd2 hd3 hd4:nat)
+  : Lemma
+  (t_of (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
+  == (x:Seq.lseq (cell a) (A.length r){
+    varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4 x
+  }))
+  =
+  assert_norm (t_of (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
+  == (x:Seq.lseq (cell a) (A.length r){
+    varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4 x
+  }))
+
+let slpred_type
+  (#a: Type)
+  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (n1: US.t{2 <= US.v n1})
+  (n2: US.t{US.v n2 < US.v n1})
+  (r: A.array (cell a))
+  (hd2 hd3 hd4: G.erased nat)
+  (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1)})
+  (i: nat{0 <= i /\ i <= US.v n2})
+  : Lemma
+  (t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k i)
+  == (x:Seq.lseq (cell a)
+    (US.v (k `US.add` n1))
+    {
+    varraylist_refine pred1 pred2 pred3 pred4 (US.v k + i) hd2 hd3 hd4 x
+  }))
+  =
+  assert (t_of (varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k + i) hd2 hd3 hd4)
+  ==
+  t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k i));
+  varraylist_type #a pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` n1)) (US.v k + i) hd2 hd3 hd4;
+  assert (A.length (A.split_l r (k `US.add` n1)) == US.v (k `US.add` n1));
+  assert_norm (
+    (x:Seq.lseq (cell a) (US.v (k `US.add` n1)){
+      varraylist_refine pred1 pred2 pred3 pred4 (US.v k + i) hd2 hd3 hd4 x
+    })
+    ==
+    (x:Seq.lseq (cell a) (A.length (A.split_l r (k `US.add` n1))){
+      varraylist_refine pred1 pred2 pred3 pred4 (US.v k + i) hd2 hd3 hd4 x
+    })
+  )
+
 let selpred
   (#a: Type)
   (#pred1 #pred2 #pred3 #pred4: a -> prop)
@@ -1673,9 +1719,61 @@ let selpred
   (forall (j:nat{i + 1 <= j /\ j < US.v n1}).
     ~ (mem_all #a (US.v k + j) (US.v k + i) hd2 hd3 hd4 gs))
 
+let selpred2
+  (#a: Type)
+  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (n1: US.t{2 <= US.v n1})
+  (n2: US.t{US.v n2 < US.v n1})
+  (r: A.array (cell a))
+  (hd2 hd3 hd4: G.erased nat)
+  (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1)})
+  (v1: a{pred1 v1})
+  (gs0: G.erased (Seq.lseq (cell a) (US.v (k `US.add` n1))))
+  (i: nat{0 <= i /\ i <= US.v n2})
+  (gs: G.erased (Seq.lseq (cell a) (US.v (k `US.add` n1))))
+  : prop
+  =
+  ptrs_in #a (US.v k + i) gs
+    == FS.union
+      (set (US.v k) (US.v k + i + 1))
+      (ptrs_in #a (US.v k) gs0) /\
+  ptrs_in #a hd2 gs == ptrs_in #a hd2 gs0 /\
+  ptrs_in #a hd3 gs == ptrs_in #a hd3 gs0 /\
+  ptrs_in #a hd4 gs == ptrs_in #a hd4 gs0 /\
+  Seq.slice (dataify gs) 0 (US.v k + i + 1)
+  == Seq.append
+    (Seq.slice (G.reveal (dataify gs0)) 0 (US.v k + 1))
+    (Seq.create i v1) /\
+  (forall (j:nat{i + 1 <= j /\ j < US.v n1}).
+    ~ (mem_all #a (US.v k + j) (US.v k + i) hd2 hd3 hd4 gs))
+
 #restart-solver
 
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 75"
+let selpred_equiv_selpred2
+  (#a: Type)
+  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (n1: US.t{2 <= US.v n1})
+  (n2: US.t{US.v n2 < US.v n1})
+  (r: A.array (cell a))
+  (hd2 hd3 hd4: G.erased nat)
+  (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1)})
+  (v1: a{pred1 v1})
+  (gs0: G.erased (Seq.lseq (cell a) (US.v (k `US.add` n1))))
+  (i: nat{0 <= i /\ i <= US.v n2})
+  (gs1: t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k i))
+  (gs2: G.erased (Seq.lseq (cell a) (US.v (k `US.add` n1))))
+  : Lemma
+  (requires G.reveal gs2 == gs1)
+  (ensures
+  selpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k v1 gs0 i gs1
+  <==>
+  selpred2 #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k v1 gs0 i gs2)
+  =
+  ()
+
+#restart-solver
+
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100 --ifuel 1 --fuel 1 --split_queries"
 let extend_insert_aux4 (#a: Type)
   (#pred1 #pred2 #pred3 #pred4: a -> prop)
   (r: A.array (cell a){A.length r <= US.v metadata_max})
@@ -1690,33 +1788,24 @@ let extend_insert_aux4 (#a: Type)
   (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i))
   (fun _ -> slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1))
   (requires fun h ->
-    //let gs : t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i))
-    //= h (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i)) in
     selpred #a #pred1 #pred2 #pred3 #pred4
       n1 n2 r hd2 hd3 hd4 k
       v1 gs0
       (US.v i)
-      //gs
       (h (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i)))
   )
   (ensures fun h0 _ h1 ->
-    //let gsh0 : t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i))
-    //= h0 (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i)) in
-    //let gsh1 : t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1))
-    //= h1 (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) in
     selpred #a #pred1 #pred2 #pred3 #pred4
       n1 n2 r hd2 hd3 hd4 k
       v1 gs0
       (US.v i)
       (h0 (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i)))
-      //gsh0
     /\
     selpred #a #pred1 #pred2 #pred3 #pred4
       n1 n2 r hd2 hd3 hd4 k
       v1 gs0
       (US.v i + 1)
       (h1 (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)))
-      //gsh1
   )
   =
   let gs1 = gget (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i)) in
@@ -1727,37 +1816,55 @@ let extend_insert_aux4 (#a: Type)
       (G.reveal gs1));
   extend_insert_aux3 #a #pred1 #pred2 #pred3 #pred4
     r n1 n2 k i hd2 hd3 hd4 v1 gs0;
-  //let gs2 : G.erased (t_of (varraylist pred1 pred2 pred3 pred4
-  //    (A.split_l r (k `US.add` n1))
-  //    (US.v k + US.v i + 1) hd2 hd3 hd4))
-  //    = gget (varraylist pred1 pred2 pred3 pred4
-  //    (A.split_l r (k `US.add` n1))
-  //    (US.v k + US.v i + 1) hd2 hd3 hd4) in
-  //assert (selpred #a #pred1 #pred2 #pred3 #pred4
-  //    n1 n2 r hd2 hd3 hd4 k
-  //    v1 gs0
-  //    (US.v i + 1)
-  //    (G.reveal gs2));
-  //admit ();
+  varraylist_type pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k + US.v i + 1) hd2 hd3 hd4;
+  slpred_type #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1);
+  let gs2
+  : G.erased (t_of (varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k + US.v i + 1) hd2 hd3 hd4))
+  = gget (varraylist pred1 pred2 pred3 pred4
+    (A.split_l r (k `US.add` n1))
+    (US.v k + US.v i + 1) hd2 hd3 hd4) in
+  let gs21
+  : G.erased (Seq.lseq (cell a) (US.v (k `US.add` n1)))
+  = G.hide (G.reveal gs2 <: Seq.lseq (cell a) (US.v (k `US.add` n1))) in
+  let gs22
+  : G.erased (t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)))
+  = G.hide (G.reveal gs21 <: t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1))) in
+  selpred_equiv_selpred2 #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k v1 gs0 (US.v i + 1) (G.reveal gs22) gs21;
+  assert (selpred #a #pred1 #pred2 #pred3 #pred4
+    n1 n2 r hd2 hd3 hd4 k
+    v1 gs0
+    (US.v i + 1)
+    (G.reveal gs22));
   change_slprop_rel
     (varraylist pred1 pred2 pred3 pred4
       (A.split_l r (k `US.add` n1))
       (US.v k + US.v i + 1) hd2 hd3 hd4)
     (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1))
     (fun x y ->
-      let y : t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) = y  in
-      Seq.equal #a y x)
+      let x : Seq.lseq (cell a) (US.v (k `US.add` n1)) = x in
+      let x : t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) = x in
+      x == y)
     (fun _ -> admit ());
-  let gs3 = gget (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) in
+  let gs3
+  : G.erased (t_of (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)))
+  = gget (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) in
   assert (selpred #a #pred1 #pred2 #pred3 #pred4
-      n1 n2 r hd2 hd3 hd4 k
-      v1 gs0
-      (US.v i + 1)
-      (G.reveal gs3));
-  admit ()
-  ////admit ()
-  ////let gs3 = gget (slpred #a #pred1 #pred2 #pred3 #pred4 n1 n2 r hd2 hd3 hd4 k (US.v i + 1)) in
-  ////assume (Seq.equal #a gs2 gs3)
+    n1 n2 r hd2 hd3 hd4 k
+    v1 gs0
+    (US.v i + 1)
+    (G.reveal gs22));
+  assert (G.reveal gs22 == G.reveal gs3);
+  assert (selpred #a #pred1 #pred2 #pred3 #pred4
+    n1 n2 r hd2 hd3 hd4 k
+    v1 gs0
+    (US.v i + 1)
+    (G.reveal gs3));
+  ()
+#pop-options
 
 #restart-solver
 

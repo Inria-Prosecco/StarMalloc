@@ -139,18 +139,6 @@ let varraylist_refine (#a:Type)
 let varraylist (#a:Type) (pred1 pred2 pred3 pred4: a -> prop) (r:A.array (cell a)) (hd1 hd2 hd3 hd4:nat) : vprop
   = A.varray r `vrefine` (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4)
 
-let varraylist_type (#a:Type) (pred1 pred2 pred3 pred4: a -> prop) (r:A.array (cell a)) (hd1 hd2 hd3 hd4:nat)
-  : Lemma
-  (t_of (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
-  == (x:Seq.lseq (cell a) (A.length r){
-    varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4 x
-  }))
-  =
-  assert_norm (t_of (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
-  == (x:Seq.lseq (cell a) (A.length r){
-    varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4 x
-  }))
-
 /// Create an arraylist with an empty sequence
 val intro_arraylist_nil (#a:Type) (#opened:inames)
   (pred1 pred2 pred3 pred4: a -> prop)
