@@ -1088,7 +1088,7 @@ module FS = FStar.FiniteSet.Base
 inline_for_extraction noextract
 let allocate_slab_aux_3_2
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max /\ US.fits (US.v md_count_v + US.v guard_pages_interval - 1)})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (idx1 idx2 idx3 idx4: US.t)
   : Steel unit
   (
@@ -1155,7 +1155,6 @@ let allocate_slab_aux_3_2
   let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
-  assume (US.v idx1 < A.length md_region);
   assert (~ (ALG.mem_all #AL.status (US.v md_count_v + 0) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0));
   assert (~ (ALG.mem_all #AL.status (US.v md_count_v) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0));
   AL.insert1
@@ -1167,7 +1166,7 @@ let allocate_slab_aux_3_2
     guard_pages_interval
     (US.sub guard_pages_interval 2sz)
     md_region
-    idx1 idx2 idx3 idx4
+    idx2 idx3 idx4
     md_count_v
     0ul;
   let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
