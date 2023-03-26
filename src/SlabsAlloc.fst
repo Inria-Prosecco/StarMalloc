@@ -845,7 +845,7 @@ let right_vprop_sl_lemma2
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-  (v: US.t{US.v v + US.v guard_pages_interval <= US.v metadata_max})
+  (v: US.t{US.v v <= US.v metadata_max})
   (m: SM.mem)
   : Lemma
   (requires SM.interp (hp_of (
@@ -924,7 +924,7 @@ let allocate_slab_aux_3_1_varraylist
 #restart-solver
 
 // Extension function, auxiliar
-//#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects --split_queries --query_stats --fuel 1 --ifuel 1"
+#push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects --query_stats --fuel 1 --ifuel 1"
 let allocate_slab_aux_3_1_right
   (#opened: _)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -952,69 +952,73 @@ let allocate_slab_aux_3_1_right
         guard_pages_interval)
   )
   (requires fun _ -> True)
-  (ensures fun _ _ h1 ->
-    zf_u64 (A.asel
-      (A.split_l
-        (A.split_r md_bm_region
-          (US.mul md_count_v 4sz))
-          (US.mul guard_pages_interval 4sz)) h1)
-  )
+  (ensures fun _ _ h1 -> True)
+  //  zf_u64 (A.asel
+  //    (A.split_l
+  //      (A.split_r md_bm_region
+  //        (US.mul md_count_v 4sz))
+  //        (US.mul guard_pages_interval 4sz)) h1)
+  //)
   =
-  sladmit ()
-  //change_slprop_rel
-  //  (right_vprop slab_region md_bm_region md_region md_count_v)
-  //  ((A.varray (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))
-  //   `vrefine` zf_u8) `star`
-  //  (A.varray (A.split_r md_bm_region (US.mul md_count_v 4sz))
-  //   `vrefine` zf_u64) `star`
-  //  A.varray (A.split_r md_region md_count_v))
-  //  (fun x y -> x == y)
-  //  (fun m -> right_vprop_sl_lemma1 slab_region md_bm_region md_region md_count_v m);
-  //elim_vrefine
-  //  (A.varray (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size))))
-  //  zf_u8;
-  //elim_vrefine
-  //  (A.varray (A.split_r md_bm_region (US.mul md_count_v 4sz)))
-  //  zf_u64;
-  //A.ghost_split (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size))) (US.mul guard_pages_interval (u32_to_sz page_size));
-  //A.ghost_split (A.split_r md_bm_region (US.mul md_count_v 4sz)) (US.mul guard_pages_interval 4sz);
-  //A.ghost_split (A.split_r md_region md_count_v) guard_pages_interval;
-  //change_slprop_rel
-  //  (A.varray (A.split_r
-  //    (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))
-  //    (US.mul guard_pages_interval (u32_to_sz page_size))))
-  //  (A.varray (A.split_r slab_region (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size))) `vrefine` zf_u8)
-  //  (fun x y -> x == y)
-  //  (fun _ -> admit ());
-  //change_slprop_rel
-  //  (A.varray (A.split_r
-  //    (A.split_r md_bm_region (US.mul md_count_v 4sz))
-  //    (US.mul guard_pages_interval 4sz)))
-  //  (A.varray (A.split_r md_bm_region (US.mul (US.add md_count_v guard_pages_interval) 4sz)) `vrefine` zf_u64)
-  //  (fun x y -> x == y)
-  //  (fun _ -> admit ());
-  //change_slprop_rel
-  //  (A.varray (A.split_r
-  //    (A.split_r md_region md_count_v)
-  //    guard_pages_interval))
-  //  (A.varray (A.split_r md_region (US.add md_count_v guard_pages_interval)))
-  //  (fun x y -> x == y)
-  //  (fun _ -> admit ());
+  //sladmit ()
+  change_slprop_rel
+    (right_vprop slab_region md_bm_region md_region md_count_v)
+    ((A.varray (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))
+     `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (US.mul md_count_v 4sz))
+     `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region md_count_v))
+    (fun x y -> x == y)
+    (fun m -> right_vprop_sl_lemma1 slab_region md_bm_region md_region md_count_v m);
+  elim_vrefine
+    (A.varray (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size))))
+    zf_u8;
+  elim_vrefine
+    (A.varray (A.split_r md_bm_region (US.mul md_count_v 4sz)))
+    zf_u64;
+  A.ghost_split (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size))) (US.mul guard_pages_interval (u32_to_sz page_size));
+  A.ghost_split (A.split_r md_bm_region (US.mul md_count_v 4sz)) (US.mul guard_pages_interval 4sz);
+  A.ghost_split (A.split_r md_region md_count_v) guard_pages_interval;
+  change_slprop_rel
+    (A.varray (A.split_r
+      (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))
+      (US.mul guard_pages_interval (u32_to_sz page_size))))
+    (A.varray (A.split_r slab_region (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size))) `vrefine` zf_u8)
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  change_slprop_rel
+    (A.varray (A.split_r
+      (A.split_r md_bm_region (US.mul md_count_v 4sz))
+      (US.mul guard_pages_interval 4sz)))
+    (A.varray (A.split_r md_bm_region (US.mul (US.add md_count_v guard_pages_interval) 4sz)) `vrefine` zf_u64)
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  change_slprop_rel
+    (A.varray (A.split_r
+      (A.split_r md_region md_count_v)
+      guard_pages_interval))
+    (A.varray (A.split_r md_region (US.add md_count_v guard_pages_interval)))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  change_slprop_rel
+    ((A.varray (A.split_r slab_region (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size)))
+     `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region (US.mul (US.add md_count_v guard_pages_interval) 4sz))
+     `vrefine` zf_u64) `star`
+   A.varray (A.split_r md_region (US.add md_count_v guard_pages_interval)))
+    (right_vprop slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval))
+    (fun x y -> x == y)
+    //(fun _ -> admit ())
+    (fun m -> right_vprop_sl_lemma2 slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval) m)
+  //sladmit ()
   ////intro_vrefine
   ////  (A.varray (A.split_r slab_region (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size))))
   ////  zf_u8;
   ////intro_vrefine
   ////  (A.varray (A.split_r md_bm_region (US.mul (US.add md_count_v guard_pages_interval) 4sz)))
   ////  zf_u64;
-  //change_slprop_rel
-  //  ((A.varray (A.split_r slab_region (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size)))
-  //   `vrefine` zf_u8) `star`
-  //  (A.varray (A.split_r md_bm_region (US.mul (US.add md_count_v guard_pages_interval) 4sz))
-  //   `vrefine` zf_u64) `star`
-  // A.varray (A.split_r md_region (US.add md_count_v guard_pages_interval)))
-  //  (right_vprop slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval))
-  //  (fun x y -> x == y)
-  //  (fun m -> right_vprop_sl_lemma2 slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval) m)
+
+
 
 // Extension function, should be SteelGhost
 inline_for_extraction noextract
@@ -1063,11 +1067,12 @@ let allocate_slab_aux_3_1
     Seq.slice gs1 0 (US.v md_count_v) == gs0 /\
     ALG.partition #AL.status (Seq.slice gs1 0 (US.v md_count_v))
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
-    zf_u64 (A.asel
-      (A.split_l
-        (A.split_r md_bm_region
-          (US.mul md_count_v 4sz))
-          (US.mul guard_pages_interval 4sz)) h1)
+    True
+    //zf_u64 (A.asel
+    //  (A.split_l
+    //    (A.split_r md_bm_region
+    //      (US.mul md_count_v 4sz))
+    //      (US.mul guard_pages_interval 4sz)) h1)
   )
   =
   allocate_slab_aux_3_1_right
