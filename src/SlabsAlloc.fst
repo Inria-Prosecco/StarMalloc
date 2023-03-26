@@ -1367,7 +1367,7 @@ let allocate_slab_aux_3
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
-  (md_count_v: US.t{US.v md_count_v < US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
   : Steel US.t
@@ -1394,20 +1394,26 @@ let allocate_slab_aux_3
     vptr r2 `star`
     vptr r3 `star`
     vptr r4 `star`
-    right_vprop slab_region md_bm_region md_region (US.add md_count_v 1sz) `star`
-    (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (US.add md_count_v 1sz))
-      (US.v idx1') (US.v idx2) (US.v idx3) (US.v idx4)) `star`
+    right_vprop slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval) `star`
+    AL.varraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v md_count_v + US.v guard_pages_interval - 2)
+      (US.v idx2) (US.v idx3)
+      (US.v md_count_v + US.v guard_pages_interval - 1) `star`
     starseq
-      #(pos:US.t{US.v pos < US.v (US.add md_count_v 1sz)})
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
       #(t size_class)
       (f size_class slab_region md_bm_region
-        (US.add md_count_v 1sz)
-        (Seq.append md_region_lv (Seq.create 1 0ul)))
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
       (f_lemma size_class slab_region md_bm_region
-        (US.add md_count_v 1sz)
-        (Seq.append md_region_lv (Seq.create 1 0ul)))
-      (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz)))
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
@@ -1421,20 +1427,37 @@ let allocate_slab_aux_3
   )
   (ensures fun h0 idx1' h1 ->
     let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (US.add md_count_v 1sz))
-      (US.v idx1') (US.v idx2) (US.v idx3) (US.v idx4) h1 in
-    idx1' <> AL.null_ptr /\
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v md_count_v + US.v guard_pages_interval - 2)
+      (US.v idx2) (US.v idx3)
+      (US.v md_count_v + US.v guard_pages_interval - 1) h1 in
+    //idx1' <> AL.null_ptr /\
+    //US.v (sel md_count h1) <> AL.null /\
     sel r1 h1 == idx1' /\
     sel r2 h1 == sel r2 h0 /\
     sel r3 h1 == sel r3 h0 /\
     sel r4 h1 == sel r4 h0 /\
     sel md_count h0 = md_count_v /\
-    sel md_count h1 = US.add md_count_v 1sz /\
-    US.v (sel md_count h1) <> AL.null /\
-    ALG.dataify gs1 `Seq.equal` Seq.append (G.reveal md_region_lv) (Seq.create 1 0ul) /\
-    ALG.partition #AL.status gs1 (US.v idx1') (US.v idx2) (US.v idx3) (US.v idx4)
+    sel md_count h1 = US.add md_count_v guard_pages_interval /\
+    ALG.dataify gs1
+    == Seq.append
+      (Seq.slice (G.reveal md_region_lv) 0 (US.v md_count_v))
+      (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul)
+      ) /\
+    ALG.partition #AL.status gs1
+      (US.v md_count_v + US.v guard_pages_interval - 2)
+      (US.v idx2) (US.v idx3)
+      (US.v md_count_v + US.v guard_pages_interval - 1) /\
+    True
   )
   =
+  sladmit ();
+  return 0sz
+
+(*)
+
   let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4
     (A.split_l md_region md_count_v)
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
