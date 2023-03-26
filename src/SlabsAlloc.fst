@@ -1067,6 +1067,8 @@ let allocate_slab_aux_3_1
     Seq.slice gs1 0 (US.v md_count_v) == gs0 /\
     ALG.partition #AL.status (Seq.slice gs1 0 (US.v md_count_v))
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
+    (forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
+      ~ (ALG.mem_all #AL.status (US.v md_count_v + j) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs1)) /\
     True
     //zf_u64 (A.asel
     //  (A.split_l
@@ -1078,7 +1080,8 @@ let allocate_slab_aux_3_1
   allocate_slab_aux_3_1_right
     slab_region md_bm_region md_region md_count_v idx1 idx2 idx3 idx4;
   allocate_slab_aux_3_1_varraylist
-    md_region md_count_v idx1 idx2 idx3 idx4
+    md_region md_count_v idx1 idx2 idx3 idx4;
+  admit ()
 
 #restart-solver
 
@@ -1370,7 +1373,7 @@ let allocate_slab_aux_3
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  : Steel US.t
+  : Steel unit//US.t
   (
     vptr md_count `star`
     vptr r1 `star`
@@ -1388,7 +1391,7 @@ let allocate_slab_aux_3
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
       (SeqUtils.init_us_refined (US.v md_count_v))
   )
-  (fun idx1' ->
+  (fun _ ->
     vptr md_count `star`
     vptr r1 `star`
     vptr r2 `star`
@@ -1425,7 +1428,7 @@ let allocate_slab_aux_3
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1 ) (US.v idx2) (US.v idx3) (US.v idx4)
   )
-  (ensures fun h0 idx1' h1 ->
+  (ensures fun h0 _ h1 ->
     let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v guard_pages_interval - 2)
@@ -1433,19 +1436,19 @@ let allocate_slab_aux_3
       (US.v md_count_v + US.v guard_pages_interval - 1) h1 in
     //idx1' <> AL.null_ptr /\
     //US.v (sel md_count h1) <> AL.null /\
-    sel r1 h1 == idx1' /\
+    sel r1 h1 == US.sub (US.add md_count_v guard_pages_interval) 2sz /\
     sel r2 h1 == sel r2 h0 /\
     sel r3 h1 == sel r3 h0 /\
-    sel r4 h1 == sel r4 h0 /\
+    sel r4 h1 == US.sub (US.add md_count_v guard_pages_interval)  1sz /\
     sel md_count h0 = md_count_v /\
     sel md_count h1 = US.add md_count_v guard_pages_interval /\
-    ALG.dataify gs1
-    == Seq.append
-      (Seq.slice (G.reveal md_region_lv) 0 (US.v md_count_v))
-      (Seq.append
-        (Seq.create (US.v guard_pages_interval - 1) 0ul)
-        (Seq.create 1 3ul)
-      ) /\
+    //ALG.dataify gs1
+    //== Seq.append
+    //  (Seq.slice (G.reveal md_region_lv) 0 (US.v md_count_v))
+    //  (Seq.append
+    //    (Seq.create (US.v guard_pages_interval - 1) 0ul)
+    //    (Seq.create 1 3ul)
+    //  ) /\
     ALG.partition #AL.status gs1
       (US.v md_count_v + US.v guard_pages_interval - 2)
       (US.v idx2) (US.v idx3)
@@ -1453,26 +1456,24 @@ let allocate_slab_aux_3
     True
   )
   =
-  sladmit ();
-  return 0sz
-
-(*)
-
   let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4
     (A.split_l md_region md_count_v)
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
-
   allocate_slab_aux_3_1
     slab_region md_bm_region md_region md_count_v
     idx1 idx2 idx3 idx4;
-  allocate_slab_aux_3_2 size_class
+  allocate_slab_aux_3_2
+    md_region md_count_v
+    idx1 idx2 idx3 idx4;
+  allocate_slab_aux_3_3 size_class
     slab_region md_bm_region md_region md_count_v md_region_lv;
 
   let v = read md_count in
-  write md_count (US.add v 1sz);
-  write r1 md_count_v;
+  write md_count (US.add v guard_pages_interval);
+  write r1 (US.sub (US.add v guard_pages_interval) 2sz);
+  write r4 (US.sub (US.add v guard_pages_interval) 1sz);
 
-  return md_count_v
+  return ()
 #pop-options
 
 module P = Steel.FractionalPermission
