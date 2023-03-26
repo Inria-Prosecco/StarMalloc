@@ -269,7 +269,6 @@ let extend_insert
   (n1: US.t{2 <= US.v n1})
   (n2: US.t{US.v n2 < US.v n1})
   (r: A.array cell)
-  (hd1: US.t{hd1 = null_ptr \/ US.v hd1 < A.length r})
   (hd2 hd3 hd4: US.t)
   (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1) /\ k <> null_ptr})
   (v1: status)
@@ -313,5 +312,4 @@ let extend_insert
   )
   =
   AL.extend_insert #status #pred1 #pred2 #pred3 #pred4
-    n1 n2 r hd1 hd2 hd3 hd4 k v1
-
+    n1 n2 r hd2 hd3 hd4 k v1
