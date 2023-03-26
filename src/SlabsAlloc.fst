@@ -1429,6 +1429,9 @@ let allocate_slab_aux_3
     ALG.partition #AL.status gs0 (US.v idx1 ) (US.v idx2) (US.v idx3) (US.v idx4)
   )
   (ensures fun h0 _ h1 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
     let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v guard_pages_interval - 2)
@@ -1442,13 +1445,14 @@ let allocate_slab_aux_3
     sel r4 h1 == US.sub (US.add md_count_v guard_pages_interval)  1sz /\
     sel md_count h0 = md_count_v /\
     sel md_count h1 = US.add md_count_v guard_pages_interval /\
-    //ALG.dataify gs1
-    //== Seq.append
-    //  (Seq.slice (G.reveal md_region_lv) 0 (US.v md_count_v))
-    //  (Seq.append
-    //    (Seq.create (US.v guard_pages_interval - 1) 0ul)
-    //    (Seq.create 1 3ul)
-    //  ) /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.dataify gs1
+    == Seq.append
+      (G.reveal md_region_lv)
+      (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul)
+      ) /\
     ALG.partition #AL.status gs1
       (US.v md_count_v + US.v guard_pages_interval - 2)
       (US.v idx2) (US.v idx3)
@@ -1472,6 +1476,7 @@ let allocate_slab_aux_3
   write md_count (US.add v guard_pages_interval);
   write r1 (US.sub (US.add v guard_pages_interval) 2sz);
   write r4 (US.sub (US.add v guard_pages_interval) 1sz);
+  admit ();
 
   return ()
 #pop-options
@@ -1529,7 +1534,9 @@ let allocate_slab'
     US.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
-    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    True
+    //US.fits (US.v md_count_v + US.v guard_pages_interval)
   )
   (ensures fun _ r _ ->
     not (A.is_null r) ==> A.length r == U32.v size_class
@@ -1576,19 +1583,27 @@ let allocate_slab'
   ) else (
 
     let md_count_v' = read md_count in
-    let b = US.lt md_count_v' metadata_max in
+    let b = US.lte (US.add md_count_v' guard_pages_interval)  metadata_max in
     if b then (
-      let idx1' = allocate_slab_aux_3 size_class
+      allocate_slab_aux_3 size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3 r4
         md_count_v md_region_lv
-        idx1 idx2 idx3 idx4 in
+        idx1 idx2 idx3 idx4;
+      sladmit ();
       let r = allocate_slab_aux_1 size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3 r4
-        (US.add md_count_v 1sz)
-        (G.hide (Seq.append (G.reveal md_region_lv) (Seq.create 1 0ul)))
-        idx1' idx2 idx3 idx4 in
+        (US.add md_count_v guard_pages_interval)
+        (G.hide (Seq.append
+          (G.reveal md_region_lv)
+          (Seq.append
+            (Seq.create (US.v guard_pages_interval - 1) 0ul)
+            (Seq.create 1 3ul)
+          )))
+        (US.sub (US.add md_count_v guard_pages_interval) 2sz)
+        idx2 idx3
+        (US.sub (US.add md_count_v guard_pages_interval) 1sz) in
       pack_right_and_refactor_vrefine_dep
         size_class slab_region md_bm_region md_region md_count
         r1 r2 r3 r4 (US.add md_count_v 1sz);
