@@ -1201,63 +1201,74 @@ let allocate_slab_aux_3_2
     (fun _ -> admit ());
   admit ()
 
-let lemma_slab_aux_3_2
+let lemma_slab_aux_3_3
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-  (md_count_v: US.t{US.v md_count_v < US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   : Lemma
-    (let f1 = (f size_class slab_region md_bm_region md_count_v md_region_lv) in
-     let f2 = (f size_class slab_region md_bm_region
-      (US.add md_count_v 1sz)
-      (Seq.append md_region_lv (Seq.create 1 0ul))) in
-     let s1 = (SeqUtils.init_us_refined (US.v md_count_v)) in
-     let s2 = (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz))) 0 (US.v md_count_v)) in
-
+    (let f1 = f size_class slab_region md_bm_region md_count_v md_region_lv in
+     let f2 = f size_class slab_region md_bm_region
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))) in
+     let s1 = SeqUtils.init_us_refined (US.v md_count_v) in
+     let s2 = Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v) in
      forall (k:nat{k < Seq.length s1}). f1 (Seq.index s1 k) == f2 (Seq.index s2 k))
-  = let md_region_lv' = Seq.append md_region_lv (Seq.create 1 0ul) in
-    let f1 = (f size_class slab_region md_bm_region md_count_v md_region_lv) in
-    let f2 = (f size_class slab_region md_bm_region
-     (US.add md_count_v 1sz) md_region_lv') in
-    let s1 = (SeqUtils.init_us_refined (US.v md_count_v)) in
-    let s2 = (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz))) 0 (US.v md_count_v)) in
+  =
+  let md_region_lv' = Seq.append
+    md_region_lv
+    (Seq.append
+      (Seq.create (US.v guard_pages_interval - 1) 0ul)
+      (Seq.create 1 3ul)) in
+  let f1 = f size_class slab_region md_bm_region md_count_v md_region_lv in
+  let f2 = f size_class slab_region md_bm_region (US.add md_count_v guard_pages_interval) md_region_lv' in
+  let s1 = SeqUtils.init_us_refined (US.v md_count_v) in
+  let s2 = Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v) in
 
-    let aux (k:nat{k < Seq.length s1}) : Lemma (f1 (Seq.index s1 k) == f2 (Seq.index s2 k))
-      = SeqUtils.init_us_refined_index (US.v md_count_v) k;
-        SeqUtils.init_us_refined_index (US.v (US.add md_count_v 1sz)) k
-    in Classical.forall_intro aux
+  let aux (k:nat{k < Seq.length s1}) : Lemma (f1 (Seq.index s1 k) == f2 (Seq.index s2 k))
+    = SeqUtils.init_us_refined_index (US.v md_count_v) k;
+      SeqUtils.init_us_refined_index (US.v (US.add md_count_v guard_pages_interval)) k
+  in Classical.forall_intro aux
 
-let lemma_slab_aux_3_2_bis
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
-  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
-  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-  (md_count_v: US.t{US.v md_count_v < US.v metadata_max})
-  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-  : Lemma
-    (p_empty size_class (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v) ==
-     f size_class slab_region md_bm_region
-      (US.add md_count_v 1sz)
-      (Seq.append md_region_lv (Seq.create 1 0ul))
-      (Seq.index (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz))) (US.v md_count_v)))
-  = SeqUtils.init_us_refined_index (US.v (US.add md_count_v 1sz)) (US.v md_count_v)
+//let lemma_slab_aux_3_3_bis
+//  (size_class: sc)
+//  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+//  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+//  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+//  (md_count_v: US.t{US.v md_count_v < US.v metadata_max})
+//  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+//  : Lemma
+//    (p_empty size_class (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v) ==
+//     f size_class slab_region md_bm_region
+//      (US.add md_count_v 1sz)
+//      (Seq.append md_region_lv (Seq.create 1 0ul))
+//      (Seq.index (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz))) (US.v md_count_v)))
+//  = SeqUtils.init_us_refined_index (US.v (US.add md_count_v 1sz)) (US.v md_count_v)
 
 #restart-solver
 
 open Helpers
-let allocate_slab_aux_3_2 (#opened:_)
+let allocate_slab_aux_3_3 (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-  (md_count_v: US.t{US.v md_count_v < US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   : SteelGhost unit opened
   (
-    A.varray (slab_array slab_region md_count_v) `star`
-    A.varray (md_bm_array md_bm_region md_count_v) `star`
+    A.varray (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul guard_pages_interval (u32_to_sz page_size))) `star`
+    A.varray (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
@@ -1267,73 +1278,83 @@ let allocate_slab_aux_3_2 (#opened:_)
   )
   (fun _ ->
     starseq
-      #(pos:US.t{US.v pos < US.v (US.add md_count_v 1sz)})
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
       #(t size_class)
       (f size_class slab_region md_bm_region
-        (US.add md_count_v 1sz)
-        (Seq.append md_region_lv (Seq.create 1 0ul)))
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
       (f_lemma size_class slab_region md_bm_region
-        (US.add md_count_v 1sz)
-        (Seq.append md_region_lv (Seq.create 1 0ul)))
-      (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz)))
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
   )
   (requires fun h0 ->
-    zf_u64 (A.asel (md_bm_array md_bm_region md_count_v) h0)
+    //zf_u64 (A.asel (md_bm_array md_bm_region md_count_v) h0)
+    True
   )
   (ensures fun _ _ _ -> True)
   =
-  lemma_slab_aux_3_2 size_class slab_region md_bm_region md_region md_count_v md_region_lv;
+  lemma_slab_aux_3_3 size_class slab_region md_bm_region md_region md_count_v md_region_lv;
 
   starseq_weakening_ref
     #_
     #(pos:US.t{US.v pos < US.v md_count_v})
-    #(pos:US.t{US.v pos < US.v (US.add md_count_v 1sz)})
+    #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
     #(t size_class)
     (f size_class slab_region md_bm_region md_count_v md_region_lv)
     (f size_class slab_region md_bm_region
-      (US.add md_count_v 1sz)
-      (Seq.append md_region_lv (Seq.create 1 0ul)))
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))))
     (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
     (f_lemma size_class slab_region md_bm_region
-      (US.add md_count_v 1sz)
-      (Seq.append md_region_lv (Seq.create 1 0ul)))
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))))
     (SeqUtils.init_us_refined (US.v md_count_v))
-    (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz))) 0 (US.v md_count_v));
+    (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v));
+  sladmit ()
 
-  // required for selector equality propagation
-  let md_as_seq = gget (A.varray (md_bm_array md_bm_region md_count_v)) in
-  assert (G.reveal md_as_seq == Seq.create 4 0UL);
-  A.ghost_split (slab_array slab_region md_count_v) 0sz;
-  slab_to_slots size_class (A.split_r (slab_array slab_region md_count_v) 0sz);
-  empty_md_is_properly_zeroed size_class;
-  intro_slab_vprop size_class
-    (md_bm_array md_bm_region md_count_v)
-    (Seq.create 4 0UL)
-    (slab_array slab_region md_count_v);
-  p_empty_pack size_class
-    (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v)
-    (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v);
+  //// required for selector equality propagation
+  //let md_as_seq = gget (A.varray (md_bm_array md_bm_region md_count_v)) in
+  //assert (G.reveal md_as_seq == Seq.create 4 0UL);
+  //A.ghost_split (slab_array slab_region md_count_v) 0sz;
+  //slab_to_slots size_class (A.split_r (slab_array slab_region md_count_v) 0sz);
+  //empty_md_is_properly_zeroed size_class;
+  //intro_slab_vprop size_class
+  //  (md_bm_array md_bm_region md_count_v)
+  //  (Seq.create 4 0UL)
+  //  (slab_array slab_region md_count_v);
+  //p_empty_pack size_class
+  //  (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v)
+  //  (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v);
 
-  SeqUtils.init_us_refined_index (US.v (US.add md_count_v 1sz)) (US.v md_count_v);
-  change_equal_slprop
-    (p_empty size_class (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v))
-    (f size_class slab_region md_bm_region
-      (US.add md_count_v 1sz)
-      (Seq.append md_region_lv (Seq.create 1 0ul))
-      (Seq.index (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz))) (US.v md_count_v)));
+  //SeqUtils.init_us_refined_index (US.v (US.add md_count_v 1sz)) (US.v md_count_v);
+  //change_equal_slprop
+  //  (p_empty size_class (md_bm_array md_bm_region md_count_v, slab_array slab_region md_count_v))
+  //  (f size_class slab_region md_bm_region
+  //    (US.add md_count_v 1sz)
+  //    (Seq.append md_region_lv (Seq.create 1 0ul))
+  //    (Seq.index (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz))) (US.v md_count_v)));
 
-  starseq_add_singleton_s
-    #_
-    #(pos:US.t{US.v pos < US.v (US.add md_count_v 1sz)})
-    #(t size_class)
-    (f size_class slab_region md_bm_region
-      (US.add md_count_v 1sz)
-      (Seq.append md_region_lv (Seq.create 1 0ul)))
-    (f_lemma size_class slab_region md_bm_region
-      (US.add md_count_v 1sz)
-      (Seq.append md_region_lv (Seq.create 1 0ul)))
-    (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz)))
-    (US.v md_count_v)
+  //starseq_add_singleton_s
+  //  #_
+  //  #(pos:US.t{US.v pos < US.v (US.add md_count_v 1sz)})
+  //  #(t size_class)
+  //  (f size_class slab_region md_bm_region
+  //    (US.add md_count_v 1sz)
+  //    (Seq.append md_region_lv (Seq.create 1 0ul)))
+  //  (f_lemma size_class slab_region md_bm_region
+  //    (US.add md_count_v 1sz)
+  //    (Seq.append md_region_lv (Seq.create 1 0ul)))
+  //  (SeqUtils.init_us_refined (US.v (US.add md_count_v 1sz)))
+  //  (US.v md_count_v)
 
 #restart-solver
 
