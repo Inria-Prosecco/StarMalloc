@@ -1080,6 +1080,75 @@ let allocate_slab_aux_3_1
   allocate_slab_aux_3_1_varraylist
     md_region md_count_v idx1 idx2 idx3 idx4
 
+#restart-solver
+
+// Insertion function
+inline_for_extraction noextract
+let allocate_slab_aux_3_2
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max /\ US.fits (US.v md_count_v + US.v guard_pages_interval - 1)})
+  (idx1 idx2 idx3 idx4: US.t)
+  : Steel unit
+  (
+    AL.varraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)
+  )
+  (fun _ ->
+    AL.varraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v md_count_v + US.v (US.sub guard_pages_interval 1sz)) (US.v idx2) (US.v idx3) (US.v idx4)
+  )
+  (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
+  //  //US.v md_count_v <> AL.null /\
+    //ALG.partition #AL.status (Seq.slice gs0 0 (US.v md_count_v))
+    //  (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
+    (forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
+      ~ (ALG.mem_all #AL.status (US.v md_count_v + j) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0))
+  )
+  (ensures fun h0 _ h1 -> True)
+  //  let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4
+  //    (A.split_l md_region md_count_v)
+  //    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h0 in
+  //  let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4
+  //    (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+  //    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) h1 in
+  //  Seq.length gs1 == US.v md_count_v + US.v guard_pages_interval /\
+  //  Seq.slice gs1 0 (US.v md_count_v) == gs0 /\
+  //  ALG.partition #AL.status (Seq.slice gs1 0 (US.v md_count_v))
+  //    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
+  //  True
+  //  //zf_u64 (A.asel
+  //  //  (A.split_l
+  //  //    (A.split_r md_bm_region
+  //  //      (US.mul md_count_v 4sz))
+  //  //      (US.mul guard_pages_interval 4sz)) h1)
+  //)
+  =
+  let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
+  assume (US.v idx1 < A.length md_region);
+  assert (~ (ALG.mem_all #AL.status (US.v md_count_v + 0) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0));
+  assert (~ (ALG.mem_all #AL.status (US.v md_count_v) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0));
+  AL.insert1
+    (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+    idx1 (US.v idx2) (US.v idx3) (US.v idx4)
+    md_count_v
+    0ul;
+  AL.extend_insert
+    guard_pages_interval
+    (US.sub guard_pages_interval 1sz)
+    md_region
+    idx1 idx2 idx3 idx4
+    md_count_v
+    0ul
+
+
+
 let lemma_slab_aux_3_2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})

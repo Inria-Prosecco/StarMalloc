@@ -21,4 +21,4 @@ val alg_null_sizet: v:US.t{US.v v = US.v metadata_max + 1}
 inline_for_extraction
 val enable_guard_pages: bool
 inline_for_extraction
-val guard_pages_interval: US.t
+val guard_pages_interval: v:US.t{US.v v >= 2}
