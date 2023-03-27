@@ -941,7 +941,12 @@ let split_r_r (#opened:_) (#a: Type)
     A.asel (A.split_r arr (US.add k1 k2)) h1
   )
   =
-  sladmit ()
+  A.ptr_base_offset_inj
+    (A.ptr_of (A.split_r (A.split_r arr k1) k2))
+    (A.ptr_of (A.split_r arr (US.add k1 k2)));
+  change_equal_slprop
+    (A.varray (A.split_r (A.split_r arr k1) k2))
+    (A.varray (A.split_r arr (US.add k1 k2)))
 
 let split_r_r_mul (#opened:_) (#a: Type)
   (k1: US.t)
