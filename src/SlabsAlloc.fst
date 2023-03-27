@@ -926,42 +926,46 @@ let allocate_slab_aux_3_1_varraylist
 let split_r_r (#opened:_) (#a: Type)
   (k1: US.t)
   (k2: US.t{US.fits (US.v k1 + US.v k2)})
-  (n: US.t{US.fits ((US.v k1 + US.v k2) * US.v n)})
+  (arr: array a{US.v (US.add k1 k2) <= A.length arr})
+  : SteelGhost unit opened
+  (A.varray (
+    A.split_r (A.split_r arr k1) k2
+  ))
+  (fun _ -> A.varray (
+    A.split_r arr (US.add k1 k2)
+  ))
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel (A.split_r (A.split_r arr k1) k2) h0
+    ==
+    A.asel (A.split_r arr (US.add k1 k2)) h1
+  )
+  =
+  sladmit ()
+
+let split_r_r_mul (#opened:_) (#a: Type)
+  (k1: US.t)
+  (k2: US.t{US.fits (US.v k1 + US.v k2)})
+  (n: US.t{US.fits (US.v n * (US.v k1 + US.v k2))})
   (arr: array a{US.v (US.mul (US.add k1 k2) n) <= A.length arr})
   : SteelGhost unit opened
   (A.varray (
-    A.split_r (A.split_r arr
-      (US.mul k1 n))
-      (US.mul k2 n)
+    A.split_r (A.split_r arr (US.mul k1 n)) (US.mul k2 n)
   ))
   (fun _ -> A.varray (
     A.split_r arr (US.mul (US.add k1 k2) n)
   ))
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
-    A.asel (A.split_r arr (US.mul (US.add k1 k2) n)) h1
+    A.asel (A.split_r (A.split_r arr (US.mul k1 n)) (US.mul k2 n)) h0
     ==
-    A.asel (A.split_r (A.split_r arr
-      (US.mul k1 n))
-      (US.mul k2 n)) h0
+    A.asel (A.split_r arr (US.mul (US.add k1 k2) n)) h1
   )
   =
-  assume (
-    A.split_r (A.split_r arr
-      (US.mul k1 n))
-      (US.mul k2 n)
-    ==
-    A.split_r arr (US.mul (US.add k1 k2) n)
-  );
+  split_r_r (US.mul k1 n) (US.mul k2 n) arr;
   change_equal_slprop
-    (A.varray (
-      A.split_r (A.split_r arr
-        (US.mul k1 n))
-        (US.mul k2 n)
-    ))
-    (A.varray (
-      A.split_r arr (US.mul (US.add k1 k2) n)
-    ))
+    (A.varray (A.split_r arr (US.add (US.mul k1 n) (US.mul k2 n))))
+    (A.varray (A.split_r arr (US.mul (US.add k1 k2) n)))
 
 // Extension function, auxiliar
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects --query_stats --fuel 1 --ifuel 1"
@@ -1028,8 +1032,14 @@ let allocate_slab_aux_3_1_right_aux
   A.ghost_split
     (A.split_r md_region md_count_v)
     guard_pages_interval;
-  split_r_r md_count_v guard_pages_interval (u32_to_sz page_size) slab_region;
-  split_r_r md_count_v guard_pages_interval 4sz md_bm_region;
+  split_r_r_mul md_count_v guard_pages_interval
+    (u32_to_sz page_size) slab_region;
+  split_r_r_mul md_count_v guard_pages_interval
+    4sz md_bm_region;
+  split_r_r
+    md_count_v
+    guard_pages_interval
+    md_region;
   intro_vrefine
     (A.varray (A.split_r slab_region
       (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size))))
@@ -1037,12 +1047,7 @@ let allocate_slab_aux_3_1_right_aux
   intro_vrefine
     (A.varray (A.split_r md_bm_region
       (US.mul (US.add md_count_v guard_pages_interval) 4sz)))
-    zf_u64;
-  change_slprop_rel
-    (A.varray (A.split_r (A.split_r md_region md_count_v) guard_pages_interval))
-    (A.varray (A.split_r md_region (US.add md_count_v guard_pages_interval)))
-    (fun x y -> x == y)
-    (fun _ -> admit ())
+    zf_u64
 
 let allocate_slab_aux_3_1_right
   (#opened: _)
