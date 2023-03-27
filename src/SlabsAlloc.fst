@@ -1278,6 +1278,19 @@ let allocate_slab_aux_3_2
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3) (US.v idx4)) in
+  assert (forall (j:nat{US.v (US.sub guard_pages_interval 2sz) + 1 <= j /\ j < US.v guard_pages_interval}).
+      ~ (ALG.mem_all #AL.status (US.v md_count_v + j)
+      (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
+      (US.v idx2) (US.v idx3) (US.v idx4) gs1));
+  assume (~ (ALG.mem_all #AL.status
+    (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) + 1)
+    (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
+    (US.v idx2) (US.v idx3) (US.v idx4) gs0));
+  assert (
+    US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz)
+    ==
+    US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) + 1
+  );
   assume (~ (ALG.mem_all #AL.status
     (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
     (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
@@ -1414,6 +1427,7 @@ let allocate_slab_aux_3_3_1 (#opened:_)
     (SeqUtils.init_us_refined (US.v md_count_v))
     (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v))
 
+//TODO: main remaining difficulty
 let allocate_slab_aux_3_3_2 (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -1511,9 +1525,52 @@ let allocate_slab_aux_3_3 (#opened:_)
   allocate_slab_aux_3_3_2 size_class
     slab_region md_bm_region md_region
     md_count_v md_region_lv;
+  rewrite_slprop
+    (starseq
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (f_lemma size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v)) `star`
+     starseq
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (f_lemma size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) (US.v md_count_v) (US.v md_count_v + US.v guard_pages_interval)))
+    (starseq
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (f_lemma size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))))
+    (fun _ -> admit ())
   // TODO: add missing starseq lemma
   // using map_seq_append should work
-  sladmit ()
 
   //// required for selector equality propagation
   //let md_as_seq = gget (A.varray (md_bm_array md_bm_region md_count_v)) in
