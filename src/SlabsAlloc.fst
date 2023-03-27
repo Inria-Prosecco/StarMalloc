@@ -1204,7 +1204,7 @@ let allocate_slab_aux_3_2
     (fun _ -> admit ());
   admit ()
 
-let lemma_slab_aux_3_3
+let lemma_slab_aux_3_3_1
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -1255,6 +1255,106 @@ let lemma_slab_aux_3_3
 #restart-solver
 
 open Helpers
+let allocate_slab_aux_3_3_1 (#opened:_)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  : SteelGhost unit opened
+  (
+    starseq
+      #(pos:US.t{US.v pos < US.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_us_refined (US.v md_count_v))
+  )
+  (fun _ ->
+    starseq
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (f_lemma size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v))
+  )
+  (requires fun _ -> True)
+  (ensures fun _ _ _ -> True)
+  =
+  lemma_slab_aux_3_3_1 size_class slab_region md_bm_region md_region md_count_v md_region_lv;
+
+  starseq_weakening_ref
+    #_
+    #(pos:US.t{US.v pos < US.v md_count_v})
+    #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+    #(t size_class)
+    (f size_class slab_region md_bm_region md_count_v md_region_lv)
+    (f size_class slab_region md_bm_region
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))))
+    (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+    (f_lemma size_class slab_region md_bm_region
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))))
+    (SeqUtils.init_us_refined (US.v md_count_v))
+    (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v))
+
+let allocate_slab_aux_3_3_2 (#opened:_)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  : SteelGhost unit opened
+  (
+    A.varray (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul guard_pages_interval (u32_to_sz page_size))) `star`
+    A.varray (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))
+  )
+  (fun _ ->
+    starseq
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (f_lemma size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) (US.v md_count_v) (US.v md_count_v + US.v guard_pages_interval))
+  )
+  (requires fun h0 ->
+    zf_u64 (A.asel (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz)) h0)
+  )
+  (ensures fun _ _ _ -> True)
+  = sladmit ()
+
 let allocate_slab_aux_3_3 (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -1296,32 +1396,21 @@ let allocate_slab_aux_3_3 (#opened:_)
       (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
   )
   (requires fun h0 ->
-    //zf_u64 (A.asel (md_bm_array md_bm_region md_count_v) h0)
-    True
+    zf_u64 (A.asel (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz)) h0)
   )
   (ensures fun _ _ _ -> True)
   =
-  lemma_slab_aux_3_3 size_class slab_region md_bm_region md_region md_count_v md_region_lv;
-
-  starseq_weakening_ref
-    #_
-    #(pos:US.t{US.v pos < US.v md_count_v})
-    #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
-    #(t size_class)
-    (f size_class slab_region md_bm_region md_count_v md_region_lv)
-    (f size_class slab_region md_bm_region
-      (US.add md_count_v guard_pages_interval)
-      (Seq.append md_region_lv (Seq.append
-        (Seq.create (US.v guard_pages_interval - 1) 0ul)
-        (Seq.create 1 3ul))))
-    (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-    (f_lemma size_class slab_region md_bm_region
-      (US.add md_count_v guard_pages_interval)
-      (Seq.append md_region_lv (Seq.append
-        (Seq.create (US.v guard_pages_interval - 1) 0ul)
-        (Seq.create 1 3ul))))
-    (SeqUtils.init_us_refined (US.v md_count_v))
-    (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v));
+  allocate_slab_aux_3_3_1 size_class
+    slab_region md_bm_region md_region
+    md_count_v md_region_lv;
+  allocate_slab_aux_3_3_2 size_class
+    slab_region md_bm_region md_region
+    md_count_v md_region_lv;
+  // TODO: add missing starseq lemma
+  // using map_seq_append should work
   sladmit ()
 
   //// required for selector equality propagation
@@ -1534,9 +1623,7 @@ let allocate_slab'
     US.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
-    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
-    True
-    //US.fits (US.v md_count_v + US.v guard_pages_interval)
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv
   )
   (ensures fun _ r _ ->
     not (A.is_null r) ==> A.length r == U32.v size_class
