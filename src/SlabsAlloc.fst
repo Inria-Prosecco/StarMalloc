@@ -1164,19 +1164,26 @@ let allocate_slab_aux_3_1
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
     (forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
       ~ (ALG.mem_all #AL.status (US.v md_count_v + j) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs1)) /\
-    True
-    //zf_u64 (A.asel
-    //  (A.split_l
-    //    (A.split_r md_bm_region
-    //      (US.mul md_count_v 4sz))
-    //      (US.mul guard_pages_interval 4sz)) h1)
+    zf_u64 (A.asel
+      (A.split_l
+        (A.split_r md_bm_region
+          (US.mul md_count_v 4sz))
+          (US.mul guard_pages_interval 4sz)) h1)
   )
   =
   allocate_slab_aux_3_1_right
-    slab_region md_bm_region md_region md_count_v idx1 idx2 idx3 idx4;
+    slab_region md_bm_region md_region md_count_v;
   allocate_slab_aux_3_1_varraylist
     md_region md_count_v idx1 idx2 idx3 idx4;
-  admit ()
+  let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
+  //TODO: extend_aux should propagate some facts about
+  // ptrs_in ... (Seq.slice gs1 0 (US.v md_count_v))
+  // ==
+  // ptrs_in ... gs1
+  assume (forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
+      ~ (ALG.mem_all #AL.status (US.v md_count_v + j) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs1))
 
 #restart-solver
 
