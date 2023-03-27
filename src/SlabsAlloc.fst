@@ -1428,6 +1428,110 @@ let allocate_slab_aux_3_3_1 (#opened:_)
     (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v))
 
 //TODO: main remaining difficulty
+let allocate_slab_aux_3_3_2_1 (#opened:_)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  : SteelGhost unit opened
+  (
+    A.varray (A.split_l (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul guard_pages_interval (u32_to_sz page_size)))
+      (US.mul (US.sub guard_pages_interval 1sz) (u32_to_sz  page_size))) `star`
+    A.varray (A.split_l (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))
+      (US.mul (US.sub guard_pages_interval 1sz) 4sz))
+    //A.varray (A.split_l
+    //  (A.split_r slab_region
+    //    (US.mul md_count_v (u32_to_sz page_size)))
+    //    (US.mul (US.sub guard_pages_interval 1sz) (u32_to_sz page_size))) `star`
+    //A.varray (A.split_l
+    //  (A.split_r md_bm_region
+    //    (US.mul md_count_v 4sz))
+    //    (US.mul (US.sub guard_pages_interval 1sz) 4sz))
+  )
+  (fun _ ->
+    starseq
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (f_lemma size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
+        (US.v md_count_v)
+        (US.v md_count_v + US.v guard_pages_interval - 1)
+      )
+  )
+  (requires fun h0 ->
+    zf_u64 (A.asel (A.split_l (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))
+      (US.mul (US.sub guard_pages_interval 1sz) 4sz)) h0)
+  )
+  (ensures fun _ _ _ -> True)
+  = sladmit ()
+
+//TODO: main remaining difficulty
+//TODO: should not be SteelGhost
+//this function is the one that will set the trap
+let allocate_slab_aux_3_3_2_2 (#opened:_)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  : SteelGhost unit opened
+  (
+    A.varray (A.split_r (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul guard_pages_interval (u32_to_sz page_size)))
+      (US.mul (US.sub guard_pages_interval 1sz) (u32_to_sz  page_size))) `star`
+    A.varray (A.split_r (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))
+      (US.mul (US.sub guard_pages_interval 1sz) 4sz))
+  )
+  (fun _ ->
+    starseq
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (f_lemma size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
+        (US.v md_count_v + US.v guard_pages_interval - 1)
+        (US.v md_count_v + US.v guard_pages_interval)
+      )
+  )
+  (requires fun h0 -> True)
+  (ensures fun h0 _ h1 -> True)
+  =
+  sladmit ()
+
 let allocate_slab_aux_3_3_2 (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -1460,7 +1564,10 @@ let allocate_slab_aux_3_3_2 (#opened:_)
         (Seq.append md_region_lv (Seq.append
           (Seq.create (US.v guard_pages_interval - 1) 0ul)
           (Seq.create 1 3ul))))
-      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) (US.v md_count_v) (US.v md_count_v + US.v guard_pages_interval))
+      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
+        (US.v md_count_v)
+        (US.v md_count_v + US.v guard_pages_interval)
+      )
   )
   (requires fun h0 ->
     zf_u64 (A.asel (A.split_l
@@ -1469,7 +1576,30 @@ let allocate_slab_aux_3_3_2 (#opened:_)
         (US.mul guard_pages_interval 4sz)) h0)
   )
   (ensures fun _ _ _ -> True)
-  = sladmit ()
+  =
+  let md_bm_region0 = gget (A.varray (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))) in
+  zf_u64_split md_bm_region0 ((US.v guard_pages_interval - 1) * 4);
+  A.ghost_split
+    (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul guard_pages_interval (u32_to_sz page_size)))
+    (US.mul (US.sub guard_pages_interval 1sz) (u32_to_sz page_size));
+  A.ghost_split
+    (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))
+    (US.mul (US.sub guard_pages_interval 1sz) 4sz);
+  allocate_slab_aux_3_3_2_1 size_class
+    slab_region md_bm_region md_region md_count_v md_region_lv;
+  allocate_slab_aux_3_3_2_2 size_class
+    slab_region md_bm_region md_region md_count_v md_region_lv;
+  //TODO: starseq_append_pack
+  sladmit ()
 
 let allocate_slab_aux_3_3 (#opened:_)
   (size_class: sc)
