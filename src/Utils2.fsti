@@ -511,6 +511,18 @@ let zf_u64_slice
   =
   Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) 0UL)
 
+let zf_u64_split
+  (arr: Seq.seq U64.t)
+  (i:nat{i <= Seq.length arr})
+  : Lemma
+  (requires zf_u64 arr)
+  (ensures
+    zf_u64 (fst (Seq.split arr i)) /\
+    zf_u64 (snd (Seq.split arr i)))
+  =
+  zf_u64_slice arr 0 i;
+  zf_u64_slice arr i (Seq.length arr)
+
 let zf_u8
   (arr: Seq.seq U8.t)
   : prop
@@ -526,6 +538,17 @@ let zf_u8_slice
   =
   Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) 0z)
 
+let zf_u8_split
+  (arr: Seq.seq U8.t)
+  (i:nat{i <= Seq.length arr})
+  : Lemma
+  (requires zf_u8 arr)
+  (ensures
+    zf_u8 (fst (Seq.split arr i)) /\
+    zf_u8 (snd (Seq.split arr i)))
+  =
+  zf_u8_slice arr 0 i;
+  zf_u8_slice arr i (Seq.length arr)
 
 open FStar.Mul
 //TODO: FStar.Math.Lemmas.multiple_division_lemma

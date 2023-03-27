@@ -923,15 +923,133 @@ let allocate_slab_aux_3_1_varraylist
 
 #restart-solver
 
+let split_r_r (#opened:_) (#a: Type)
+  (k1: US.t)
+  (k2: US.t{US.fits (US.v k1 + US.v k2)})
+  (n: US.t{US.fits ((US.v k1 + US.v k2) * US.v n)})
+  (arr: array a{US.v (US.mul (US.add k1 k2) n) <= A.length arr})
+  : SteelGhost unit opened
+  (A.varray (
+    A.split_r (A.split_r arr
+      (US.mul k1 n))
+      (US.mul k2 n)
+  ))
+  (fun _ -> A.varray (
+    A.split_r arr (US.mul (US.add k1 k2) n)
+  ))
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel (A.split_r arr (US.mul (US.add k1 k2) n)) h1
+    ==
+    A.asel (A.split_r (A.split_r arr
+      (US.mul k1 n))
+      (US.mul k2 n)) h0
+  )
+  =
+  assume (
+    A.split_r (A.split_r arr
+      (US.mul k1 n))
+      (US.mul k2 n)
+    ==
+    A.split_r arr (US.mul (US.add k1 k2) n)
+  );
+  change_equal_slprop
+    (A.varray (
+      A.split_r (A.split_r arr
+        (US.mul k1 n))
+        (US.mul k2 n)
+    ))
+    (A.varray (
+      A.split_r arr (US.mul (US.add k1 k2) n)
+    ))
+
 // Extension function, auxiliar
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects --query_stats --fuel 1 --ifuel 1"
+let allocate_slab_aux_3_1_right_aux
+  (#opened: _)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
+  : SteelGhost unit opened
+  (
+    A.varray (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size))) `star`
+    A.varray (A.split_r md_bm_region (US.mul md_count_v 4sz)) `star`
+    A.varray (A.split_r md_region md_count_v)
+  )
+  (fun _ ->
+    ((A.varray (A.split_r slab_region
+      (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size))) `vrefine` zf_u8) `star`
+    (A.varray (A.split_r md_bm_region
+      (US.mul (US.add md_count_v guard_pages_interval) 4sz)) `vrefine` zf_u64) `star`
+    A.varray (A.split_r md_region
+      (US.add md_count_v guard_pages_interval))) `star`
+    A.varray (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul guard_pages_interval (u32_to_sz page_size))) `star`
+    A.varray (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz)) `star`
+    A.varray (A.split_l
+      (A.split_r md_region
+        md_count_v)
+        guard_pages_interval)
+  )
+  (requires fun h0 ->
+    zf_u8 (A.asel
+      (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))
+      h0
+    ) /\
+    zf_u64 (A.asel
+      (A.split_r md_bm_region (US.mul md_count_v 4sz))
+      h0
+    )
+  )
+  (ensures fun _ _ h1 ->
+    zf_u64 (A.asel
+      (A.split_l
+        (A.split_r md_bm_region
+          (US.mul md_count_v 4sz))
+          (US.mul guard_pages_interval 4sz)) h1)
+  )
+  =
+  let slab_region0 = gget (A.varray (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))) in
+  let md_bm_region0 = gget (A.varray (A.split_r md_bm_region (US.mul md_count_v 4sz))) in
+  zf_u8_split slab_region0 (US.v guard_pages_interval * U32.v page_size);
+  zf_u64_split md_bm_region0 (US.v guard_pages_interval * 4);
+  A.ghost_split
+    (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))
+    (US.mul guard_pages_interval (u32_to_sz page_size));
+  A.ghost_split
+    (A.split_r md_bm_region (US.mul md_count_v 4sz))
+    (US.mul guard_pages_interval 4sz);
+  A.ghost_split
+    (A.split_r md_region md_count_v)
+    guard_pages_interval;
+  split_r_r md_count_v guard_pages_interval (u32_to_sz page_size) slab_region;
+  split_r_r md_count_v guard_pages_interval 4sz md_bm_region;
+  intro_vrefine
+    (A.varray (A.split_r slab_region
+      (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size))))
+    zf_u8;
+  intro_vrefine
+    (A.varray (A.split_r md_bm_region
+      (US.mul (US.add md_count_v guard_pages_interval) 4sz)))
+    zf_u64;
+  change_slprop_rel
+    (A.varray (A.split_r (A.split_r md_region md_count_v) guard_pages_interval))
+    (A.varray (A.split_r md_region (US.add md_count_v guard_pages_interval)))
+    (fun x y -> x == y)
+    (fun _ -> admit ())
+
 let allocate_slab_aux_3_1_right
   (#opened: _)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
-  (idx1 idx2 idx3 idx4: US.t)
   : SteelGhost unit opened
   (
     right_vprop slab_region md_bm_region md_region md_count_v
@@ -952,15 +1070,14 @@ let allocate_slab_aux_3_1_right
         guard_pages_interval)
   )
   (requires fun _ -> True)
-  (ensures fun _ _ h1 -> True)
-  //  zf_u64 (A.asel
-  //    (A.split_l
-  //      (A.split_r md_bm_region
-  //        (US.mul md_count_v 4sz))
-  //        (US.mul guard_pages_interval 4sz)) h1)
-  //)
+  (ensures fun _ _ h1 ->
+    zf_u64 (A.asel
+      (A.split_l
+        (A.split_r md_bm_region
+          (US.mul md_count_v 4sz))
+          (US.mul guard_pages_interval 4sz)) h1)
+  )
   =
-  //sladmit ()
   change_slprop_rel
     (right_vprop slab_region md_bm_region md_region md_count_v)
     ((A.varray (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))
@@ -976,30 +1093,8 @@ let allocate_slab_aux_3_1_right
   elim_vrefine
     (A.varray (A.split_r md_bm_region (US.mul md_count_v 4sz)))
     zf_u64;
-  A.ghost_split (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size))) (US.mul guard_pages_interval (u32_to_sz page_size));
-  A.ghost_split (A.split_r md_bm_region (US.mul md_count_v 4sz)) (US.mul guard_pages_interval 4sz);
-  A.ghost_split (A.split_r md_region md_count_v) guard_pages_interval;
-  change_slprop_rel
-    (A.varray (A.split_r
-      (A.split_r slab_region (US.mul md_count_v (u32_to_sz page_size)))
-      (US.mul guard_pages_interval (u32_to_sz page_size))))
-    (A.varray (A.split_r slab_region (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size))) `vrefine` zf_u8)
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  change_slprop_rel
-    (A.varray (A.split_r
-      (A.split_r md_bm_region (US.mul md_count_v 4sz))
-      (US.mul guard_pages_interval 4sz)))
-    (A.varray (A.split_r md_bm_region (US.mul (US.add md_count_v guard_pages_interval) 4sz)) `vrefine` zf_u64)
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  change_slprop_rel
-    (A.varray (A.split_r
-      (A.split_r md_region md_count_v)
-      guard_pages_interval))
-    (A.varray (A.split_r md_region (US.add md_count_v guard_pages_interval)))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+  allocate_slab_aux_3_1_right_aux
+    slab_region md_bm_region md_region md_count_v;
   change_slprop_rel
     ((A.varray (A.split_r slab_region (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size)))
      `vrefine` zf_u8) `star`
@@ -1008,17 +1103,7 @@ let allocate_slab_aux_3_1_right
    A.varray (A.split_r md_region (US.add md_count_v guard_pages_interval)))
     (right_vprop slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval))
     (fun x y -> x == y)
-    //(fun _ -> admit ())
     (fun m -> right_vprop_sl_lemma2 slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval) m)
-  //sladmit ()
-  ////intro_vrefine
-  ////  (A.varray (A.split_r slab_region (US.mul (US.add md_count_v guard_pages_interval) (u32_to_sz page_size))))
-  ////  zf_u8;
-  ////intro_vrefine
-  ////  (A.varray (A.split_r md_bm_region (US.mul (US.add md_count_v guard_pages_interval) 4sz)))
-  ////  zf_u64;
-
-
 
 // Extension function, should be SteelGhost
 inline_for_extraction noextract
