@@ -1488,14 +1488,14 @@ let allocate_slab_aux_3_3_2_1 (#opened:_)
 //TODO: main remaining difficulty
 //TODO: should not be SteelGhost
 //this function is the one that will set the trap
-let allocate_slab_aux_3_3_2_2 (#opened:_)
+let allocate_slab_aux_3_3_2_2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-  : SteelGhost unit opened
+  : Steel unit
   (
     A.varray (A.split_r (A.split_l
       (A.split_r slab_region
@@ -1532,14 +1532,14 @@ let allocate_slab_aux_3_3_2_2 (#opened:_)
   =
   sladmit ()
 
-let allocate_slab_aux_3_3_2 (#opened:_)
+let allocate_slab_aux_3_3_2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-  : SteelGhost unit opened
+  : Steel unit
   (
     A.varray (A.split_l
       (A.split_r slab_region
@@ -1601,14 +1601,14 @@ let allocate_slab_aux_3_3_2 (#opened:_)
   //TODO: starseq_append_pack
   sladmit ()
 
-let allocate_slab_aux_3_3 (#opened:_)
+let allocate_slab_aux_3_3
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-  : SteelGhost unit opened
+  : Steel unit
   (
     A.varray (A.split_l
       (A.split_r slab_region

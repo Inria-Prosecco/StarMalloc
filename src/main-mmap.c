@@ -29,6 +29,12 @@ size_t *mmap_ptr_us() {
   return (size_t*) mmap_s(sizeof(size_t));
 }
 
+//TODO: check for mprotect return value
+void mmap_trap (uint8_t* ptr, size_t len) {
+  mprotect((void*) ptr, len, PROT_NONE);
+  return;
+}
+
 uint64_t* Impl_Trees_Types_trees_malloc(uint64_t x) {
   uint64_t* ptr = mmap_u64(1);
   *ptr = x;

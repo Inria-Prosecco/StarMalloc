@@ -15,5 +15,7 @@ uint32_t *mmap_ptr_u32(void);
 
 size_t *mmap_ptr_us(void);
 
+void mmap_trap (uint8_t* ptr, size_t len);
+
 #endif // MAIN_MMAP_H_
 

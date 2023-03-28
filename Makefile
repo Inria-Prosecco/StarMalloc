@@ -76,6 +76,7 @@ extract: $(ALL_KRML_FILES)
 		-bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
     -no-prefix Main \
     -no-prefix LargeAlloc \
+    -no-prefix Guards \
 		-warn-error +9 \
 		-add-include 'Steel_SpinLock:"krml/steel_types.h"' $^
 
