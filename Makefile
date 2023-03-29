@@ -166,11 +166,11 @@ bench/test-alloc2.c \
 src/lib-alloc.c
 	./bench/a.out
 
-# test the compilation of the allocator as a shared library
-#clang -g -O0 -DKRML_VERIFIED_UINT128
+# foptimize-strlen = gcc issue culprit
 lib: verify extract patch
 	echo "using ${CC} compiler"
-	$(CC) -O2 -g -DKRML_VERIFIED_UINT128 \
+	$(CC) -O3 -fno-optimize-strlen \
+	-DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
 	-pthread -lpthread \
