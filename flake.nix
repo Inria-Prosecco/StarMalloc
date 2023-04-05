@@ -22,7 +22,7 @@
       z3 = fstar-src.packages.${system}.z3;
       fstar = fstar-src.packages.${system}.fstar;
       karamel = krml-src.packages.${system}.karamel.home;
-      steel-experiments = pkgs.clangStdenv.mkDerivation {
+      steel-experiments = pkgs.stdenv.mkDerivation {
         name = "steel-experiments";
         src = ./.;
         enableParallelBuilding = true;
