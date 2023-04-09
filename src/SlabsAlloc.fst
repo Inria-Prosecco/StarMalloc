@@ -1477,11 +1477,16 @@ let split_l_l_mul (#opened:_) (#a: Type)
     A.split_l arr (US.mul k1 n)
   ))
   (requires fun _ -> True)
-  (ensures fun h0 _ h1 -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel (A.split_l (A.split_l arr (US.mul k2 n)) (US.mul k1 n)) h0
+    ==
+    A.asel (A.split_l arr (US.mul k1 n)) h1
+  )
   =
   split_l_l (US.mul k1 n) (US.mul k2 n) arr
 
-let allocate_slab_aux_3_3_2_1_aux (#opened:_)
+//TODO: main remaining difficulty
+let rec allocate_slab_aux_3_3_2_1_aux (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -1526,12 +1531,43 @@ let allocate_slab_aux_3_3_2_1_aux (#opened:_)
     //  (US.mul i 4sz)) h0)
   )
   (ensures fun _ _ _ -> True)
+  (decreases US.v i)
   =
-  sladmit ()
+  match US.v i with
+  | 0 ->
+    //normalization to emp
+    sladmit ()
+  | _ ->
+    A.ghost_split (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul i (u32_to_sz page_size)))
+      (US.mul (US.sub i 1sz) (u32_to_sz page_size));
+    A.ghost_split (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul i 4sz))
+      (US.mul (US.sub i 1sz) 4sz);
+    split_l_l_mul
+      (US.sub i 1sz)
+      i
+      (u32_to_sz page_size)
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)));
+    split_l_l_mul
+      (US.sub i 1sz)
+      i
+      4sz
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz));
+    allocate_slab_aux_3_3_2_1_aux size_class
+      slab_region md_bm_region md_region
+      md_count_v md_region_lv
+      (US.sub i 1sz);
+    //dedicated lemma
+    //close starseq
+    sladmit ()
 
- //sladmit ()
-
-//TODO: main remaining difficulty
 let allocate_slab_aux_3_3_2_1 (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -1681,6 +1717,8 @@ let allocate_slab_aux_3_3_2_2
   (requires fun h0 -> True)
   (ensures fun h0 _ h1 -> True)
   =
+  //normalization
+  //intro guard pages
   sladmit ()
 
 let allocate_slab_aux_3_3_2
