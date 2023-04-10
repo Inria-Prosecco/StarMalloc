@@ -347,7 +347,8 @@ val md_bm_array
     US.v md_count < US.v metadata_max)
   (ensures fun r ->
     A.length r = 4 /\
-    same_base_array r md_bm_region
+    same_base_array r md_bm_region /\
+    A.offset (A.ptr_of r) == A.offset (A.ptr_of md_bm_region) + US.v md_count * 4
   )
 
 val pack_md_bm_array (#opened:_)
