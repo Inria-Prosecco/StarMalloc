@@ -1799,6 +1799,8 @@ let allocate_slab_aux_3_3_2_1 (#opened:_)
       US.v guard_pages_interval - 1
     ))
 
+open Guards
+
 //TODO: this function is the one that will set the trap
 //use slab_to_slots as above + mprotect wrapper
 let allocate_slab_aux_3_3_2_2
@@ -1840,11 +1842,62 @@ let allocate_slab_aux_3_3_2_2
         (US.v md_count_v + US.v guard_pages_interval)
       )
   )
-  (requires fun h0 -> True)
+  (requires fun h0 ->
+    zf_u64 (A.asel (A.split_r (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))
+      (US.mul (US.sub guard_pages_interval 1sz) 4sz)) h0))
   (ensures fun h0 _ h1 -> True)
   =
   //normalization
-  //intro guard pages
+  A.ptr_base_offset_inj
+    (A.ptr_of (A.split_r (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul guard_pages_interval (u32_to_sz page_size)))
+      (US.mul (US.sub guard_pages_interval 1sz) (u32_to_sz  page_size))))
+    (A.ptr_of (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))));
+  change_equal_slprop
+    (A.varray(A.split_r (A.split_l
+      (A.split_r slab_region
+        (US.mul md_count_v (u32_to_sz page_size)))
+        (US.mul guard_pages_interval (u32_to_sz page_size)))
+      (US.mul (US.sub guard_pages_interval 1sz) (u32_to_sz  page_size))))
+    (A.varray (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))));
+  A.ptr_base_offset_inj
+    (A.ptr_of (A.split_r (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))
+      (US.mul (US.sub guard_pages_interval 1sz) 4sz)))
+    (A.ptr_of (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz))));
+  change_equal_slprop
+    (A.varray (A.split_r (A.split_l
+      (A.split_r md_bm_region
+        (US.mul md_count_v 4sz))
+        (US.mul guard_pages_interval 4sz))
+      (US.mul (US.sub guard_pages_interval 1sz) 4sz)))
+    (A.varray (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz))));
+  let md_as_seq = gget (A.varray (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))) in
+  assert (G.reveal md_as_seq == Seq.create 4 0UL);
+  A.ghost_split (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))) 0sz;
+  slab_to_slots size_class (A.split_r (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))) 0sz);
+  empty_md_is_properly_zeroed size_class;
+  intro_slab_vprop size_class
+    (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
+    (Seq.create 4 0UL)
+    (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
+  mmap_trap size_class
+    (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
+    (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
+    (u32_to_sz page_size);
+  p_guard_pack size_class
+    (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
+    slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
+    (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
+    slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
+  //intro guard pages: set the trap
   sladmit ()
 
 let allocate_slab_aux_3_3_2
