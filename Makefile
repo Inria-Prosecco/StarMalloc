@@ -169,7 +169,7 @@ src/lib-alloc.c
 # foptimize-strlen = gcc issue culprit
 lib: verify extract patch
 	echo "using ${CC} compiler"
-	$(CC) -O3 -fno-optimize-strlen \
+	$(CC) -O3 \
 	-DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \

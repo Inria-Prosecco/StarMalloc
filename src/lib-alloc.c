@@ -11,6 +11,10 @@ uint8_t* StarMalloc_memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
   return (uint8_t*) memcpy((void*) dest, (void*) src, n);
 }
 
+uint8_t* StarMalloc_memset_u8(uint8_t* dest, uint8_t v, size_t n) {
+  return (uint8_t*) memset((void*) dest, v, n);
+}
+
 void* malloc(size_t size) {
   if (! init_status) {
     pthread_mutex_lock(&m);
@@ -48,19 +52,6 @@ void* realloc(void* ptr, size_t new_size) {
 }
 
 void* calloc(size_t nb_elem, size_t size_elem) {
-  //if (! init_status) {
-  //  pthread_mutex_lock(&m);
-  //  krmlinit_globals();
-  //  init_status=1UL;
-  //  pthread_mutex_unlock(&m);
-  //}
-  size_t size = nb_elem * size_elem;
-  void* ptr = malloc(size);
-  //size_t approx_size = StarMalloc_getsize(ptr);
-  //printf("size/approx_size: %lu/%lu\n", size, approx_size);
-  memset(ptr, 0, size);
-  //for (size_t i = 0; i < size; i++) {
-  //  temp_ptr[i] = 0;
-  //}
-  return ptr;
+  uint8_t* ptr = StarMalloc_calloc(nb_elem, size_elem);
+  return (void*) ptr;
 }

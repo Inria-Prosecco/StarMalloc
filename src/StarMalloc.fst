@@ -183,3 +183,52 @@ let realloc (ptr: array U8.t) (new_size: US.t)
       )
     )
   )
+
+assume
+val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
+  : Steel (array U8.t)
+  (A.varray dest)
+  (fun _ -> A.varray dest)
+  (requires fun _ ->
+    A.length dest >= US.v n
+  )
+  (ensures fun h0 r h1 ->
+    A.length dest >= US.v n /\
+    Seq.slice (A.asel dest h1) 0 (US.v n)
+    ==
+    Seq.create (US.v n) c
+  )
+
+let calloc (size1 size2: US.t)
+  : Steel (array U8.t & G.erased bool)
+  emp
+  (fun r -> if (snd r) then emp else A.varray (fst r))
+  (requires fun _ -> US.fits (US.v size1 * US.v size2))
+  (ensures fun _ r h1 ->
+    let size = US.v size1 * US.v size2 in
+    G.reveal (snd r) = A.is_null (fst r) /\
+    not (snd r) ==> A.length (fst r) >= size /\
+    True
+    //not (snd r) ==> zf_u8 (Seq.slice (A.asel (fst r) h1) 0 size)
+  )
+  =
+  let size = US.mul size1 size2 in
+  let ptr = malloc size in
+  if A.is_null ptr
+  then (
+    [@inline_let] let b = true in
+    change_equal_slprop
+      (if A.is_null ptr then emp else A.varray ptr)
+      (if b then emp else A.varray ptr);
+    return (ptr, G.hide b)
+  ) else (
+    [@inline_let] let b = false in
+    change_equal_slprop
+      (if A.is_null ptr then emp else A.varray ptr)
+      (A.varray ptr);
+    let _ = memset_u8 ptr 0z size in
+    change_equal_slprop
+      (A.varray ptr)
+      (if b then emp else A.varray ptr);
+    return (ptr, G.hide b)
+  )
