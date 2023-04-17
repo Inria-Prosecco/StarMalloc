@@ -147,6 +147,7 @@ let split3_pow2_yay2 (#n: pos) (vr: bv_t n) (m: nat{m < n})
   split3_pow2_yay vr m;
   ()
 
+#push-options "--fuel 0 --ifuel 0"
 let logor_one_add (#n: pos) (a:uint_t n) (b:uint_t n) (m:nat{m < n})
   : Lemma
   (requires
@@ -196,6 +197,7 @@ let logor_one_add (#n: pos) (a:uint_t n) (b:uint_t n) (m:nat{m < n})
   assert(r = r2);
   assert (from_vec vb = b);
   assert (r = b + 1 * a)
+#pop-options
 
 let spec_bv_set (#n:pos) (b:uint_t n) (m:nat{m < n})
   : Lemma

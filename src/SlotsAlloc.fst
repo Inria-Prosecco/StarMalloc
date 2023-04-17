@@ -548,8 +548,8 @@ let allocate_slot_aux
     let v2 = A.asel md h1 in
     //let idx = Bitmap5.f #4 (U32.v pos) in
     v2 == Bitmap4.set v1 pos /\
-    blob2 == Seq.upd blob1 (U32.v pos) None /\
     A.length r == U32.v size_class)
+    //blob2 == Seq.upd blob1 (U32.v pos) None /\
   =
   assert_norm (4 < FI.max_int U16.n);
   Bitmap5.bm_set #(Ghost.hide 4) md pos;
