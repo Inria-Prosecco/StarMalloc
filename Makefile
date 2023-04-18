@@ -200,13 +200,13 @@ src/lib-alloc.c \
 -o bench/h_starmalloc.so \
 
 # test the allocator as a shared library with a simple program
-test-alloc1: test-compile-alloc-lib
+test-alloc1: lib
 	$(CC) -O0 bench/test-alloc.c -o bench/alloc.a.out
-	LD_PRELOAD=bench/malloc.so ./bench/alloc.a.out
+	LD_PRELOAD=bench/starmalloc.so ./bench/alloc.a.out
 # test the allocator as a shared library with zathura
-test-alloc2: test-compile-alloc-lib
+test-alloc2: lib
 	$(CC) -O0 bench/test-alloc2.c -o bench/alloc.a.out
-	LD_PRELOAD=bench/malloc.so ./bench/alloc.a.out
+	LD_PRELOAD=bench/starmalloc.so ./bench/alloc.a.out
 
 test-alloc2bis: test-compile-alloc-lib
 	$(CC) -O0 bench/test-alloc2.c -o bench/alloc.a.out
