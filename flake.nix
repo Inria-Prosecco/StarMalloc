@@ -30,7 +30,7 @@
         FSTAR_HOME = fstar;
         KRML_HOME = karamel;
         installPhase = "cp bench/starmalloc.so $out";
-        buildFlags = [ "lib" "hardened_lib" ];
+        buildFlags = [ "lib" "hardened_lib" "test-alloc2" ];
         #buildPhase = ''
         ##  echo "${fstar}"
         ##  echo "${karamel}"

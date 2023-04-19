@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-#define N_THREADS 2
+#define N_THREADS 256
 #define N_ALLOC 1000
 
 pthread_mutex_t m;
