@@ -206,7 +206,7 @@ test-alloc2: lib
 	$(CC) -O0 bench/test-alloc2.c -o bench/alloc.a.out
 	LD_PRELOAD=bench/starmalloc.so ./bench/alloc.a.out
 
-test-alloc2bis: test-compile-alloc-lib
+test-alloc2bis: lib
 	$(CC) -O0 bench/test-alloc2.c -o bench/alloc.a.out
 	LD_PRELOAD= ./bench/alloc.a.out
 
