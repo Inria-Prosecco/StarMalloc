@@ -1773,7 +1773,7 @@ let selpred_equiv_selpred2
 
 #restart-solver
 
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100 --ifuel 1 --fuel 1 --split_queries"
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100 --ifuel 1 --fuel 1 --split_queries always"
 let extend_insert_aux4 (#a: Type)
   (#pred1 #pred2 #pred3 #pred4: a -> prop)
   (r: A.array (cell a){A.length r <= US.v metadata_max})

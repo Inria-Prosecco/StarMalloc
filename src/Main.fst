@@ -444,7 +444,7 @@ val slab_malloc (bytes:U32.t)
 
 #restart-solver
 
-#push-options "--fuel 1 --ifuel 1 --query_stats --split_queries"
+#push-options "--fuel 1 --ifuel 1 --query_stats --split_queries always"
 inline_for_extraction noextract
 let slab_malloc' (sc: size_class) (bytes: U32.t)
   : Steel
