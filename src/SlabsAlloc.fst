@@ -1897,6 +1897,7 @@ let allocate_slab_aux_3_3_2_2
     slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
     (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
     slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
+  // singleton to starseq
   sladmit ()
 
 let allocate_slab_aux_3_3_2
@@ -1965,8 +1966,25 @@ let allocate_slab_aux_3_3_2
     slab_region md_bm_region md_region md_count_v md_region_lv;
   allocate_slab_aux_3_3_2_2 size_class
     slab_region md_bm_region md_region md_count_v md_region_lv;
-  //TODO: starseq_append_pack
-  sladmit ()
+  starseq_append_s
+    #_
+    #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+    #(t size_class)
+    (f size_class slab_region md_bm_region
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))))
+    (f_lemma size_class slab_region md_bm_region
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))))
+    (SeqUtils.init_us_refined
+      (US.v (US.add md_count_v guard_pages_interval)))
+    (US.v md_count_v)
+    (US.v md_count_v + US.v guard_pages_interval - 1)
+    (US.v md_count_v + US.v guard_pages_interval)
 
 let allocate_slab_aux_3_3
   (size_class: sc)
