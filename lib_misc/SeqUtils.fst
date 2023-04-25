@@ -214,3 +214,12 @@ let lemma_slice_index (#a:Type)
   =
   lemma_index_slice s1 i j (k-i);
   lemma_index_slice s1 i j (k-i)
+
+let slice_append (#a: Type)
+  (s:Seq.seq a)
+  (i j:nat)
+  (k:nat{i <= j /\ j <= k /\ k <= Seq.length s})
+  : Lemma
+  (Seq.slice s i k == Seq.append (Seq.slice s i j) (Seq.slice s j k))
+  =
+  Seq.lemma_split (Seq.slice s i k) (j - i)

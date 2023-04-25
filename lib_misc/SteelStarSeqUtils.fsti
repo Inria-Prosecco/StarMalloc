@@ -22,49 +22,49 @@ val starl_seq_append (s1 s2: Seq.seq vprop)
   : Lemma
   (starl_seq (Seq.append s1 s2) `equiv` (starl_seq s1 `star` starl_seq s2))
 
-val starl_seq_unpack (s: Seq.seq vprop) (n: nat{n < Seq.length s})
-  : Lemma
-  //(requires n < Seq.length s)
-  //(ensures
-  (
-    starl_seq s
-    `equiv`
-    (Seq.index s n `star`
-      (starl_seq (Seq.slice s 0 n) `star`
-       starl_seq (Seq.slice s (n+1) (Seq.length s))))
-  )
+//val starl_seq_unpack (s: Seq.seq vprop) (n: nat{n < Seq.length s})
+//  : Lemma
+//  //(requires n < Seq.length s)
+//  //(ensures
+//  (
+//    starl_seq s
+//    `equiv`
+//    (Seq.index s n `star`
+//      (starl_seq (Seq.slice s 0 n) `star`
+//       starl_seq (Seq.slice s (n+1) (Seq.length s))))
+//  )
+//
+//val starl_seq_pack (s: Seq.seq vprop) (n: nat)
+//  : Lemma
+//  (requires n < Seq.length s)
+//  (ensures
+//    (Seq.index s n `star`
+//      (starl_seq (Seq.slice s 0 n) `star`
+//       starl_seq (Seq.slice s (n+1) (Seq.length s))))
+//    `equiv`
+//    starl_seq s
+//  )
 
-val starl_seq_pack (s: Seq.seq vprop) (n: nat)
-  : Lemma
-  (requires n < Seq.length s)
-  (ensures
-    (Seq.index s n `star`
-      (starl_seq (Seq.slice s 0 n) `star`
-       starl_seq (Seq.slice s (n+1) (Seq.length s))))
-    `equiv`
-    starl_seq s
-  )
+//val starl_seq_imp (s: Seq.seq vprop) (k: nat)
+//  : Lemma
+//  (requires k < Seq.length s)
+//  (ensures
+//    starl_seq s
+//    `can_be_split`
+//    Seq.index s k
+//  )
 
-val starl_seq_imp (s: Seq.seq vprop) (k: nat)
-  : Lemma
-  (requires k < Seq.length s)
-  (ensures
-    starl_seq s
-    `can_be_split`
-    Seq.index s k
-  )
-
-val starl_seq_map_imp (#a #b: Type0)
-  (f: a -> vprop)
-  (s: Seq.seq a)
-  (k: nat)
-  : Lemma
-  (requires k < Seq.length s)
-  (ensures
-    starl_seq (Seq.map_seq f s)
-    `can_be_split`
-    f (Seq.index s k)
-  )
+//val starl_seq_map_imp (#a #b: Type0)
+//  (f: a -> vprop)
+//  (s: Seq.seq a)
+//  (k: nat)
+//  : Lemma
+//  (requires k < Seq.length s)
+//  (ensures
+//    starl_seq (Seq.map_seq f s)
+//    `can_be_split`
+//    f (Seq.index s k)
+//  )
 
 val starl_seq_sel (#a #b: Type0)
   (f: a -> vprop)
