@@ -640,7 +640,42 @@ let starseq_imp_slice (#a #b: Type0)
     SM.interp (hp_of (starseq #a #b f f_lemma (Seq.slice s i j))) m
   ))
   =
-  admit ()
+  starseq_split_lemma #a #b f f_lemma s j;
+  starseq_split_lemma #a #b f f_lemma (Seq.slice s 0 j) i;
+  Seq.slice_slice s 0 j 0 i;
+  Seq.slice_slice s 0 j i j;
+  let p1 = starseq #a #b f f_lemma (Seq.slice s 0 i) in
+  let p2 = starseq #a #b f f_lemma (Seq.slice s i j) in
+  let p3 = starseq #a #b f f_lemma (Seq.slice s j (Seq.length s)) in
+  equiv_refl p3;
+  star_congruence
+    (starseq #a #b f f_lemma (Seq.slice s 0 j)) p3
+    (p1 `star` p2) p3;
+  equiv_trans
+    (starseq #a #b f f_lemma s)
+    (starseq #a #b f f_lemma (Seq.slice s 0 j) `star` p3)
+    ((p1 `star` p2) `star` p3);
+  star_commutative p1 p2;
+  star_congruence
+    (p1 `star` p2) p3
+    (p2 `star` p1) p3;
+  star_associative p2 p1 p3;
+  equiv_trans
+    (starseq #a #b f f_lemma s)
+    ((p1 `star` p2) `star` p3)
+    ((p2 `star` p1) `star` p3);
+  equiv_trans
+    (starseq #a #b f f_lemma s)
+    ((p2 `star` p1) `star` p3)
+    (p2 `star` (p1 `star` p3));
+  intro_can_be_split_frame
+    p2
+    (starseq #a #b f f_lemma s)
+    (p1 `star` p3);
+  can_be_split_interp
+    (starseq #a #b f f_lemma s)
+    p2
+    m
 
 let starseq_sel_slice (#a #b: Type0)
   (f: a -> vprop)
