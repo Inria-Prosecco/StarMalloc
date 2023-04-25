@@ -1092,8 +1092,8 @@ let rec starseq_weakening_lemma_aux_generic
       let s21, s22 = Seq.split s2 (Seq.length s1 - 1) in
       Seq.lemma_split s1 (Seq.length s1 - 1);
       Seq.lemma_split s2 (Seq.length s1 - 1);
-      starseq_append #a1 #b1 f1 f1_lemma s11 s12;
-      starseq_append #a2 #b2 f2 f2_lemma s21 s22;
+      starseq_append_lemma #a1 #b1 f1 f1_lemma s11 s12;
+      starseq_append_lemma #a2 #b2 f2 f2_lemma s21 s22;
       starseq_weakening_lemma_aux_generic #a1 #a2 #b1 #b2 f1 f2 f1_lemma f2_lemma s11 s21;
       starseq_weakening_lemma_aux_generic #a1 #a2 #b1 #b2 f1 f2 f1_lemma f2_lemma s12 s22;
       star_congruence
@@ -1495,6 +1495,7 @@ let starseq_upd_pack (#opened:_) (#a #b: Type0)
     starseq_weakening f1 f2 f1_lemma f2_lemma (Seq.slice s1 (n+1) (Seq.length s1)) (Seq.slice s2 (n+1) (Seq.length s2));
     starseq_pack_s f2 f2_lemma s2 n
 
+#push-options "--z3rlimit 20 --fuel 3 --ifuel 3"
 let starseq_upd2 (#opened:_) (#a #b: Type0)
   (f1 f2: a -> vprop)
   (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
@@ -1546,6 +1547,7 @@ let starseq_upd2 (#opened:_) (#a #b: Type0)
     )
     (fun m -> starseq_upd2_lemma #a #b f1 f2 f1_lemma f2_lemma s1 s2 n m);
   ()
+#pop-options
 
 #push-options "--z3rlimit 30"
 let starseq_upd3 (#opened:_) (#a #b: Type0)
