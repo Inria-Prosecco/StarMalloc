@@ -841,14 +841,12 @@ let starseq_singleton_equiv (#a #b: Type)
   (n: nat{n < Seq.length s})
   (n1: nat{n1 == n})
   (n2: nat{n2 == n + 1})
-  (m: SM.mem)
   : Lemma
-  (requires SM.interp (
-    hp_of (f (Seq.index s n))
-  ) m)
-  (ensures SM.interp (
-    hp_of (starseq #a #b f f_lemma (Seq.slice s n1 n2))
-  ) m)
+  (
+    f (Seq.index s n)
+    `equiv`
+    starseq #a #b f f_lemma (Seq.slice s n1 n2)
+  )
   =
   let s' = Seq.slice s n1 n2 in
   Seq.map_seq_len f s';
@@ -882,9 +880,6 @@ let starseq_singleton_equiv (#a #b: Type)
   equiv_trans
     (f (Seq.index s n))
     (emp `star` f (Seq.index s n))
-    (starseq #a #b f f_lemma (Seq.slice s n1 n2));
-  reveal_equiv
-    (f (Seq.index s n))
     (starseq #a #b f f_lemma (Seq.slice s n1 n2))
 
 let starseq_intro_empty #opened #a #b f f_lemma s =
@@ -908,7 +903,15 @@ let starseq_intro_singleton (#opened:_) (#a #b: Type0)
   rewrite_slprop
     (f (Seq.index s n))
     (starseq #a #b f f_lemma (Seq.slice s n1 n2))
-    (fun m -> starseq_singleton_equiv #a #b f f_lemma s n n1 n2 m)
+    (fun _ ->
+      starseq_singleton_equiv #a #b f f_lemma s n n1 n2;
+      reveal_equiv
+        (f (Seq.index s n))
+        (starseq #a #b f f_lemma (Seq.slice s n1 n2));
+      SM.reveal_equiv
+        (hp_of (f (Seq.index s n)))
+        (hp_of (starseq #a #b f f_lemma (Seq.slice s n1 n2)))
+    )
 
 let starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -1138,10 +1141,20 @@ let rec starseq_weakening_lemma_aux_generic
   | _ ->
     assert (Seq.length s1 > 0);
     if (Seq.length s1 = 1) then (
-      starseq_singleton_equiv #a1 #b1 f1 f1_lemma s1;
-      starseq_singleton_equiv #a2 #b2 f2 f2_lemma s2;
-      reveal_equiv
+      reveal_equiv (f1 (Seq.index s1 0)) (f2 (Seq.index s2 0));
+      assert (f1 (Seq.index s1 0) `equiv` f2 (Seq.index s2 0));
+      starseq_singleton_equiv #a1 #b1 f1 f1_lemma s1 0 0 1;
+      equiv_sym
+        (f1 (Seq.index s1 0))
+        (starseq #a1 #b1 f1 f1_lemma s1);
+      equiv_trans
         (starseq #a1 #b1 f1 f1_lemma s1)
+        (f1 (Seq.index s1 0))
+        (f2 (Seq.index s2 0));
+      starseq_singleton_equiv #a2 #b2 f2 f2_lemma s2 0 0 1;
+      equiv_trans
+        (starseq #a1 #b1 f1 f1_lemma s1)
+        (f2 (Seq.index s2 0))
         (starseq #a2 #b2 f2 f2_lemma s2)
     ) else (
       let s11, s12 = Seq.split s1 (Seq.length s1 - 1) in
