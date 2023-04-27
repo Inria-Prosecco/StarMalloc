@@ -1602,7 +1602,6 @@ let allocate_slab_aux_3_3_2_1_aux2 (#opened:_)
         (US.v (US.add md_count_v guard_pages_interval)))
         (US.v (US.add md_count_v (US.sub i 1sz)))))
 
-//TODO: some work left, should be reasonable
 let rec allocate_slab_aux_3_3_2_1_aux (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -1652,8 +1651,32 @@ let rec allocate_slab_aux_3_3_2_1_aux (#opened:_)
   =
   match US.v i with
   | 0 ->
-    //normalization to emp
-    sladmit ()
+    // 2 arrays of length 0
+    drop (A.varray (A.split_l
+           (A.split_r slab_region
+             (US.mul md_count_v (u32_to_sz page_size)))
+             (US.mul i (u32_to_sz page_size))));
+    drop (A.varray (A.split_l
+            (A.split_r md_bm_region
+              (US.mul md_count_v 4sz))
+              (US.mul i 4sz)));
+    starseq_intro_empty
+      #_
+      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+      #(t size_class)
+      (f size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (f_lemma size_class slab_region md_bm_region
+        (US.add md_count_v guard_pages_interval)
+        (Seq.append md_region_lv (Seq.append
+          (Seq.create (US.v guard_pages_interval - 1) 0ul)
+          (Seq.create 1 3ul))))
+      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
+        (US.v md_count_v)
+        (US.v md_count_v + US.v i))
   | _ ->
     A.ghost_split (A.split_l
       (A.split_r slab_region

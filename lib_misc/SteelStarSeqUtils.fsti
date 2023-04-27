@@ -130,9 +130,12 @@ let v_starseq_len (#a #b: Type)
 val starseq_intro_empty (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
-  : SteelGhostT unit opened
+  (s: Seq.seq a)
+  : SteelGhost unit opened
     emp
-    (fun _ -> starseq #a #b f f_lemma Seq.empty)
+    (fun _ -> starseq #a #b f f_lemma s)
+    (requires fun _ -> Seq.length s == 0)
+    (ensures fun _ _ _ -> True)
 
 val starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
