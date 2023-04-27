@@ -838,14 +838,54 @@ let starseq_singleton_equiv (#a #b: Type)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  (n1: nat{n1 == n})
+  (n2: nat{n2 == n + 1})
+  (m: SM.mem)
   : Lemma
-  (requires Seq.length s == 1)
-  (ensures hp_of (starseq #a #b f f_lemma s) == hp_of (f (Seq.index s 0) `star` emp))
+  (requires SM.interp (
+    hp_of (f (Seq.index s n))
+  ) m)
+  (ensures SM.interp (
+    hp_of (starseq #a #b f f_lemma (Seq.slice s n1 n2))
+  ) m)
   =
-  Seq.map_seq_len f s;
-  Seq.map_seq_index f s 0;
-  Seq.lemma_index_is_nth (Seq.map_seq f s) 0;
-  assert (hp_of (starseq #a #b f f_lemma s) == hp_of (f (Seq.index s 0) `star` emp))
+  let s' = Seq.slice s n1 n2 in
+  Seq.map_seq_len f s';
+  let s_result = Seq.map_seq f s' in
+  let l_result = Seq.seq_to_list s_result in
+  Seq.map_seq_index f s' 0;
+  Seq.lemma_index_is_nth s_result 0;
+  assert (
+    hp_of (starseq #a #b f f_lemma (Seq.slice s n1 n2))
+    ==
+    hp_of (f (Seq.index s n) `star` emp)
+  );
+  assert (
+    hp_of (f (Seq.index s n) `star` emp)
+    `SM.equiv`
+    hp_of (starseq #a #b f f_lemma (Seq.slice s n1 n2))
+  );
+  reveal_equiv
+    (f (Seq.index s n) `star` emp)
+    (starseq #a #b f f_lemma (Seq.slice s n1 n2));
+  star_commutative
+    emp (f (Seq.index s n));
+  equiv_trans
+    (emp `star` f (Seq.index s n))
+    (f (Seq.index s n) `star` emp)
+    (starseq #a #b f f_lemma (Seq.slice s n1 n2));
+  cm_identity (f (Seq.index s n));
+  equiv_sym
+    (emp `star` f (Seq.index s n))
+    (f (Seq.index s n));
+  equiv_trans
+    (f (Seq.index s n))
+    (emp `star` f (Seq.index s n))
+    (starseq #a #b f f_lemma (Seq.slice s n1 n2));
+  reveal_equiv
+    (f (Seq.index s n))
+    (starseq #a #b f f_lemma (Seq.slice s n1 n2))
 
 let starseq_intro_empty #opened #a #b f f_lemma s =
   change_slprop_rel
@@ -853,6 +893,22 @@ let starseq_intro_empty #opened #a #b f f_lemma s =
     (starseq #a #b f f_lemma s)
     (fun _ _ -> True)
     (fun _ -> starseq_empty_equiv_emp #a #b f f_lemma s)
+
+let starseq_intro_singleton (#opened:_) (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  (n1: nat{n1 == n})
+  (n2: nat{n2 == n + 1})
+  : SteelGhostT unit opened
+    (f (Seq.index s n))
+    (fun _ -> starseq #a #b f f_lemma (Seq.slice s n1 n2))
+  =
+  rewrite_slprop
+    (f (Seq.index s n))
+    (starseq #a #b f f_lemma (Seq.slice s n1 n2))
+    (fun m -> starseq_singleton_equiv #a #b f f_lemma s n n1 n2 m)
 
 let starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
