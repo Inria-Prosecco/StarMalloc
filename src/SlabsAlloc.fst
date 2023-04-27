@@ -2340,12 +2340,23 @@ let allocate_slab_aux_3
     idx1 idx2 idx3 idx4;
   allocate_slab_aux_3_3 size_class
     slab_region md_bm_region md_region md_count_v md_region_lv;
+  let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v md_count_v + US.v guard_pages_interval - 2)
+      (US.v idx2) (US.v idx3)
+      (US.v md_count_v + US.v guard_pages_interval - 1)) in
+  assume (ALG.dataify #AL.status gs1
+    == Seq.append
+      (G.reveal md_region_lv)
+      (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul)
+      ));
 
   let v = read md_count in
   write md_count (US.add v guard_pages_interval);
   write r1 (US.sub (US.add v guard_pages_interval) 2sz);
   write r4 (US.sub (US.add v guard_pages_interval) 1sz);
-  admit ();
 
   return ()
 #pop-options
