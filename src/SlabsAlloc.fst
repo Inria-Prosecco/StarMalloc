@@ -1591,8 +1591,11 @@ let allocate_slab_aux_3_3_2_1_aux2 (#opened:_)
         (Seq.create 1 3ul)))
       (Seq.index (SeqUtils.init_us_refined
         (US.v (US.add md_count_v guard_pages_interval)))
-        (US.v md_count_v + US.v i - 1)));
+        (US.v (US.add md_count_v (US.sub i 1sz)))));
   starseq_intro_singleton
+    #_
+    #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+    #(t size_class)
     (f size_class slab_region md_bm_region
       (US.add md_count_v guard_pages_interval)
       (Seq.append md_region_lv (Seq.append
@@ -1604,42 +1607,9 @@ let allocate_slab_aux_3_3_2_1_aux2 (#opened:_)
         (Seq.create (US.v guard_pages_interval - 1) 0ul)
         (Seq.create 1 3ul))))
     (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
-    (US.v md_count_v + US.v i - 1);
-  change_equal_slprop
-    (starseq
-      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
-      #(t size_class)
-      (f size_class slab_region md_bm_region
-        (US.add md_count_v guard_pages_interval)
-        (Seq.append md_region_lv (Seq.append
-          (Seq.create (US.v guard_pages_interval - 1) 0ul)
-          (Seq.create 1 3ul))))
-      (f_lemma size_class slab_region md_bm_region
-        (US.add md_count_v guard_pages_interval)
-        (Seq.append md_region_lv (Seq.append
-          (Seq.create (US.v guard_pages_interval - 1) 0ul)
-          (Seq.create 1 3ul))))
-      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
-        (US.v md_count_v + US.v i - 1)
-        (US.v md_count_v + US.v i - 1 + 1)
-      ))
-    (starseq
-      #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
-      #(t size_class)
-      (f size_class slab_region md_bm_region
-        (US.add md_count_v guard_pages_interval)
-        (Seq.append md_region_lv (Seq.append
-          (Seq.create (US.v guard_pages_interval - 1) 0ul)
-          (Seq.create 1 3ul))))
-      (f_lemma size_class slab_region md_bm_region
-        (US.add md_count_v guard_pages_interval)
-        (Seq.append md_region_lv (Seq.append
-          (Seq.create (US.v guard_pages_interval - 1) 0ul)
-          (Seq.create 1 3ul))))
-      (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
-        (US.v md_count_v + US.v i - 1)
-        (US.v md_count_v + US.v i)
-      ))
+    (US.v (US.add md_count_v (US.sub i 1sz)))
+    (US.v md_count_v + US.v i - 1)
+    (US.v md_count_v + US.v i)
 
 let rec allocate_slab_aux_3_3_2_1_aux (#opened:_)
   (size_class: sc)
@@ -1913,8 +1883,6 @@ let allocate_slab_aux_3_3_2_1 (#opened:_)
 
 open Guards
 
-//TODO: this function is the one that will set the trap
-//use slab_to_slots as above + mprotect wrapper
 let allocate_slab_aux_3_3_2_2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -2009,8 +1977,40 @@ let allocate_slab_aux_3_3_2_2
     slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
     (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
     slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
-  // singleton to starseq
-  sladmit ()
+  SeqUtils.init_us_refined_index
+    (US.v (US.add md_count_v guard_pages_interval))
+    (US.v (US.add md_count_v (US.sub guard_pages_interval 1sz)));
+  change_equal_slprop
+    (p_guard size_class
+      (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
+      slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))))
+    (f size_class slab_region md_bm_region
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul)))
+      (Seq.index (SeqUtils.init_us_refined
+        (US.v (US.add md_count_v guard_pages_interval)))
+        (US.v (US.add md_count_v (US.sub guard_pages_interval 1sz)))));
+  starseq_intro_singleton
+    #_
+    #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
+    #(t size_class)
+    (f size_class slab_region md_bm_region
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))))
+    (f_lemma size_class slab_region md_bm_region
+      (US.add md_count_v guard_pages_interval)
+      (Seq.append md_region_lv (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul))))
+    (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval)))
+    (US.v (US.add md_count_v (US.sub guard_pages_interval 1sz)))
+    (US.v md_count_v + US.v guard_pages_interval - 1)
+    (US.v md_count_v + US.v guard_pages_interval)
+#pop-options
 
 let allocate_slab_aux_3_3_2
   (size_class: sc)

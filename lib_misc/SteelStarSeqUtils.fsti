@@ -143,9 +143,11 @@ val starseq_intro_singleton (#opened:_) (#a #b: Type0)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: Seq.seq a)
   (n: nat{n < Seq.length s})
+  (n1: nat{n1 == n})
+  (n2: nat{n2 == n + 1})
   : SteelGhostT unit opened
     (f (Seq.index s n))
-    (fun _ -> starseq #a #b f f_lemma (Seq.slice s n (n+1)))
+    (fun _ -> starseq #a #b f f_lemma (Seq.slice s n1 n2))
 
 val starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
