@@ -90,6 +90,7 @@ let starseq (#a #b: Type)
   (s: Seq.seq a)
   = VUnit (starseq' #a #b f f_lemma s)
 
+//TODO: remove from interface file
 val starseq_empty_equiv_emp (#a #b: Type)
   (f: a -> vprop)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
@@ -98,13 +99,13 @@ val starseq_empty_equiv_emp (#a #b: Type)
   (requires Seq.length s == 0)
   (ensures hp_of (starseq #a #b f f_lemma s) == hp_of emp)
 
-val starseq_singleton_equiv (#a #b: Type)
-  (f: a -> vprop)
-  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
-  (s: Seq.seq a)
-  : Lemma
-  (requires Seq.length s == 1)
-  (ensures hp_of (starseq #a #b f f_lemma s) == hp_of (f (Seq.index s 0) `star` emp))
+//val starseq_singleton_equiv (#a #b: Type)
+//  (f: a -> vprop)
+//  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+//  (s: Seq.seq a)
+//  : Lemma
+//  (requires Seq.length s == 1)
+//  (ensures hp_of (starseq #a #b f f_lemma s) == hp_of (f (Seq.index s 0) `star` emp))
 
 [@@ __steel_reduce__]
 let v_starseq (#a #b: Type)
@@ -136,6 +137,15 @@ val starseq_intro_empty (#opened:_) (#a #b: Type0)
     (fun _ -> starseq #a #b f f_lemma s)
     (requires fun _ -> Seq.length s == 0)
     (ensures fun _ _ _ -> True)
+
+val starseq_intro_singleton (#opened:_) (#a #b: Type0)
+  (f: a -> vprop)
+  (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
+  (s: Seq.seq a)
+  (n: nat{n < Seq.length s})
+  : SteelGhostT unit opened
+    (f (Seq.index s n))
+    (fun _ -> starseq #a #b f f_lemma (Seq.slice s n (n+1)))
 
 val starseq_unpack_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
