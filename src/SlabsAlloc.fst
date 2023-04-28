@@ -1291,11 +1291,6 @@ let allocate_slab_aux_3_2
       ~ (ALG.mem_all #AL.status (US.v md_count_v + j)
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3) (US.v idx4) gs1));
-  // #2 : cas particulier du forall plus haut
-  assume (~ (ALG.mem_all #AL.status
-    (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) + 1)
-    (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
-    (US.v idx2) (US.v idx3) (US.v idx4) gs0));
   assert (
     US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz)
     ==
