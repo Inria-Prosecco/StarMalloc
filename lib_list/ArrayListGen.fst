@@ -37,6 +37,19 @@ let dataify (#a:Type)
 let lemma_dataify_index s i =
   Seq.map_seq_index get_data s i
 
+/// An implementation of a map_seq_slice lemma currently not in F* ulib, specialized for `cell a`
+let lemma_dataify_slice (#a:Type)
+  (s: Seq.seq (cell a))
+  (n:nat{n <= Seq.length s})
+  : Lemma (dataify (Seq.slice s 0 n) == Seq.slice (dataify s) 0 n)
+  = let s1 = dataify (Seq.slice s 0 n) in
+    let s2 = Seq.slice (dataify s) 0 n in
+    let aux (i:nat{i < n}) : Lemma (Seq.index s1 i == Seq.index s2 i)
+      = Seq.map_seq_index get_data s i;
+        Seq.map_seq_index get_data (Seq.slice s 0 n) i
+    in Classical.forall_intro aux;
+    Seq.lemma_eq_intro s1 s2
+
 /// The core logical predicate: For a sequence of cells [s], corresponding to the contents of an array,
 /// there is a doubly linked list starting at s.[idx].
 /// The [visited] argument is needed to ensure termination, it corresponds to the set of cells
@@ -1106,19 +1119,6 @@ let insert #a #pred1 #pred2 #pred3 #pred4 r hd hd2 hd3 hd4 idx v =
 
   (**) intro_vrefine (A.varray r) (varraylist_refine pred1 pred2 pred3 pred4 (US.v idx) hd2 hd3 hd4)
 #pop-options
-
-/// An implementation of a map_seq_slice lemma currently not in F* ulib, specialized for `cell a`
-let dataify_slice (#a:Type)
-  (s: Seq.seq (cell a))
-  (n:nat{n <= Seq.length s})
-  : Lemma (dataify (Seq.slice s 0 n) == Seq.slice (dataify s) 0 n)
-  = let s1 = dataify (Seq.slice s 0 n) in
-    let s2 = Seq.slice (dataify s) 0 n in
-    let aux (i:nat{i < n}) : Lemma (Seq.index s1 i == Seq.index s2 i)
-      = Seq.map_seq_index get_data s i;
-        Seq.map_seq_index get_data (Seq.slice s 0 n) i
-    in Classical.forall_intro aux;
-    Seq.lemma_eq_intro s1 s2
 
 /// If we have a dlist on sequence [s], and [s'] is an extension of [s],
 /// then we have a dlist on [s'] and the set of pointers in the list are

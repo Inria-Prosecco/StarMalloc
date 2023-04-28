@@ -923,6 +923,7 @@ let allocate_slab_aux_3_1_varraylist
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (Seq.slice gs1 0 (US.v md_count_v)) `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0);
+  // #1 ~ mem_all gs1
   assume (
     forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
     ~ (ALG.mem_all #AL.status (US.v md_count_v + j) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs1)
@@ -1290,6 +1291,7 @@ let allocate_slab_aux_3_2
       ~ (ALG.mem_all #AL.status (US.v md_count_v + j)
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3) (US.v idx4) gs1));
+  // #2 : cas particulier du forall plus haut
   assume (~ (ALG.mem_all #AL.status
     (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) + 1)
     (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
@@ -1299,6 +1301,7 @@ let allocate_slab_aux_3_2
     ==
     US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) + 1
   );
+  // #2 : cas particulier du forall plus haut
   assume (~ (ALG.mem_all #AL.status
     (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
     (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
@@ -2335,29 +2338,19 @@ let allocate_slab_aux_3
   allocate_slab_aux_3_1
     slab_region md_bm_region md_region md_count_v
     idx1 idx2 idx3 idx4;
+  let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
+    (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
+  ALG.lemma_dataify_slice #AL.status gs1 (US.v md_count_v);
   allocate_slab_aux_3_2
     md_region md_count_v
     idx1 idx2 idx3 idx4;
   allocate_slab_aux_3_3 size_class
     slab_region md_bm_region md_region md_count_v md_region_lv;
-  let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
-      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v md_count_v + US.v guard_pages_interval - 2)
-      (US.v idx2) (US.v idx3)
-      (US.v md_count_v + US.v guard_pages_interval - 1)) in
-  assume (ALG.dataify #AL.status gs1
-    == Seq.append
-      (G.reveal md_region_lv)
-      (Seq.append
-        (Seq.create (US.v guard_pages_interval - 1) 0ul)
-        (Seq.create 1 3ul)
-      ));
-
   let v = read md_count in
   write md_count (US.add v guard_pages_interval);
   write r1 (US.sub (US.add v guard_pages_interval) 2sz);
   write r4 (US.sub (US.add v guard_pages_interval) 1sz);
-
   return ()
 #pop-options
 
@@ -2459,9 +2452,8 @@ let allocate_slab'
       (if (A.is_null r) then emp else A.varray r);
     return r
   ) else (
-
     let md_count_v' = read md_count in
-    let b = US.lte (US.add md_count_v' guard_pages_interval)  metadata_max in
+    let b = US.lte (US.add md_count_v' guard_pages_interval) metadata_max in
     if b then (
       allocate_slab_aux_3 size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
@@ -2469,6 +2461,17 @@ let allocate_slab'
         md_count_v md_region_lv
         idx1 idx2 idx3 idx4;
       sladmit ();
+      //change_equal_slprop
+      //  (AL.varraylist pred1 pred2 pred3 pred4
+      //    (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      //    (US.v md_count_v + US.v guard_pages_interval - 2)
+      //    (US.v idx2) (US.v idx3)
+      //    (US.v md_count_v + US.v guard_pages_interval - 1))
+      //  (AL.varraylist pred1 pred2 pred3 pred4
+      //    (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      //    (US.v (US.sub (US.add md_count_v guard_pages_interval) 2sz))
+      //    (US.v idx2) (US.v idx3)
+      //    (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz)));
       let r = allocate_slab_aux_1 size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3 r4

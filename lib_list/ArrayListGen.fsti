@@ -49,6 +49,11 @@ val lemma_dataify_index (#a:Type)
   (i:nat{i < Seq.length s})
   : Lemma (Seq.index (dataify s) i == get_data (Seq.index s i))
 
+val lemma_dataify_slice (#a:Type)
+  (s: Seq.seq (cell a))
+  (n:nat{n <= Seq.length s})
+  : Lemma (dataify (Seq.slice s 0 n) == Seq.slice (dataify s) 0 n)
+
 /// The toplevel specification of being a list
 /// When [hd] is the head pointer of the list, the set of visited nodes
 /// is initially empty, and the prev "pointer" should be "NULL"
