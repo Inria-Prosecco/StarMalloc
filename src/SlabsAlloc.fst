@@ -2460,18 +2460,19 @@ let allocate_slab'
         md_count r1 r2 r3 r4
         md_count_v md_region_lv
         idx1 idx2 idx3 idx4;
-      sladmit ();
-      //change_equal_slprop
-      //  (AL.varraylist pred1 pred2 pred3 pred4
-      //    (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      //    (US.v md_count_v + US.v guard_pages_interval - 2)
-      //    (US.v idx2) (US.v idx3)
-      //    (US.v md_count_v + US.v guard_pages_interval - 1))
-      //  (AL.varraylist pred1 pred2 pred3 pred4
-      //    (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      //    (US.v (US.sub (US.add md_count_v guard_pages_interval) 2sz))
-      //    (US.v idx2) (US.v idx3)
-      //    (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz)));
+      change_slprop_rel
+        (AL.varraylist pred1 pred2 pred3 pred4
+          (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+          (US.v md_count_v + US.v guard_pages_interval - 2)
+          (US.v idx2) (US.v idx3)
+          (US.v md_count_v + US.v guard_pages_interval - 1))
+        (AL.varraylist pred1 pred2 pred3 pred4
+          (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+          (US.v (US.sub (US.add md_count_v guard_pages_interval) 2sz))
+          (US.v idx2) (US.v idx3)
+          (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz)))
+        (fun x y -> x == y)
+        (fun _ -> admit ());
       let r = allocate_slab_aux_1 size_class
         (A.split_r slab_region 0sz) md_bm_region md_region
         md_count r1 r2 r3 r4
@@ -2487,7 +2488,7 @@ let allocate_slab'
         (US.sub (US.add md_count_v guard_pages_interval) 1sz) in
       pack_right_and_refactor_vrefine_dep
         size_class slab_region md_bm_region md_region md_count
-        r1 r2 r3 r4 (US.add md_count_v 1sz);
+        r1 r2 r3 r4 (US.add md_count_v guard_pages_interval);
       A.varrayp_not_null r P.full_perm;
       change_equal_slprop
         (A.varray r)
