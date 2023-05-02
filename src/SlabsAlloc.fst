@@ -1198,6 +1198,83 @@ let allocate_slab_aux_3_1
 
 module FS = FStar.FiniteSet.Base
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+let allocate_slab_aux_3_2_seq_equality
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
+  (s1 s2 s3 s4: Seq.lseq AL.cell (US.v md_count_v + US.v guard_pages_interval))
+  : Lemma
+  (requires
+    ALG.dataify s2 == Seq.upd (ALG.dataify s1) (US.v md_count_v) 0ul /\
+    Seq.slice (ALG.dataify s3) 0 (US.v md_count_v + US.v guard_pages_interval - 1)
+    == Seq.append
+      (Seq.slice (ALG.dataify s2) 0 (US.v md_count_v + 1))
+      (Seq.create (US.v guard_pages_interval - 2) 0ul)
+    /\
+    ALG.dataify s4 == Seq.upd (ALG.dataify s3) (US.v md_count_v + US.v guard_pages_interval - 1) 3ul
+  )
+  (ensures
+    ALG.dataify s4
+    == Seq.append
+      (Seq.slice (ALG.dataify s1) 0 (US.v md_count_v))
+      (Seq.append
+        (Seq.create (US.v guard_pages_interval - 1) 0ul)
+        (Seq.create 1 3ul)
+      )
+  )
+  =
+  Seq.slice_slice (ALG.dataify s2)
+    0 (US.v md_count_v + 1)
+    0 (US.v md_count_v);
+  Seq.slice_slice (ALG.dataify s2)
+    0 (US.v md_count_v + 1)
+    (US.v md_count_v) (US.v md_count_v + 1);
+  Seq.lemma_split (Seq.slice (ALG.dataify s2) 0 (US.v md_count_v + 1)) (US.v md_count_v);
+  assert (Seq.slice (ALG.dataify s2) 0 (US.v md_count_v + 1)
+  == Seq.append
+    (Seq.slice (ALG.dataify s2) 0 (US.v md_count_v))
+    (Seq.slice (ALG.dataify s2) (US.v md_count_v) (US.v md_count_v + 1))
+  );
+  ALG.lemma_dataify_index s2 (US.v md_count_v);
+  Seq.lemma_eq_intro
+    (Seq.slice (ALG.dataify s2) (US.v md_count_v) (US.v md_count_v + 1))
+    (Seq.create 1 (Seq.index (ALG.dataify s2) (US.v md_count_v)));
+  assert (Seq.slice (ALG.dataify s2) 0 (US.v md_count_v + 1)
+  == Seq.append
+    (Seq.slice (ALG.dataify s1) 0 (US.v md_count_v))
+    (Seq.create 1 0ul)
+  );
+  Seq.append_assoc
+    (Seq.slice (ALG.dataify s1) 0 (US.v md_count_v))
+    (Seq.create 1 0ul)
+    (Seq.create (US.v guard_pages_interval - 2) 0ul);
+  let sc1 = Seq.append
+    (Seq.create 1 0ul)
+    (Seq.create (US.v guard_pages_interval - 2) 0ul) in
+  let sc2 = Seq.create (US.v guard_pages_interval - 1) 0ul in
+  Seq.lemma_eq_intro sc1 sc2;
+  assert (sc1 == sc2);
+  assert (Seq.slice (ALG.dataify s3) 0 (US.v md_count_v + US.v guard_pages_interval - 1)
+    == Seq.append
+      (Seq.slice (ALG.dataify s1) 0 (US.v md_count_v))
+      sc1
+  );
+  assert (Seq.slice (ALG.dataify s3) 0 (US.v md_count_v + US.v guard_pages_interval - 1)
+    == Seq.append
+      (Seq.slice (ALG.dataify s1) 0 (US.v md_count_v))
+      sc2
+  );
+  assert (ALG.dataify s4
+  == Seq.slice (ALG.dataify s4) 0 (US.v md_count_v + US.v guard_pages_interval));
+  Seq.lemma_split (ALG.dataify s4) (US.v md_count_v + US.v guard_pages_interval - 1);
+  Seq.lemma_eq_intro
+    (Seq.slice (ALG.dataify s4) (US.v md_count_v + US.v guard_pages_interval - 1) (US.v md_count_v + US.v guard_pages_interval))
+    (Seq.create 1 (Seq.index (ALG.dataify s4) (US.v md_count_v + US.v guard_pages_interval - 1)));
+  Seq.append_assoc
+    (Seq.slice (ALG.dataify s1) 0 (US.v md_count_v))
+    (Seq.create (US.v guard_pages_interval - 1) 0ul)
+    (Seq.create 1 3ul);
+  ()
+
 // Insertion function
 inline_for_extraction noextract
 let allocate_slab_aux_3_2
@@ -1276,6 +1353,9 @@ let allocate_slab_aux_3_2
     idx1 (US.v idx2) (US.v idx3) (US.v idx4)
     md_count_v
     0ul;
+  let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+      (US.v md_count_v) (US.v idx2) (US.v idx3) (US.v idx4)) in
   AL.extend_insert
     guard_pages_interval
     (US.sub guard_pages_interval 2sz)
@@ -1283,25 +1363,33 @@ let allocate_slab_aux_3_2
     idx2 idx3 idx4
     md_count_v
     0ul;
-  let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4
+  let gs2 = gget (AL.varraylist pred1 pred2 pred3 pred4
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3) (US.v idx4)) in
   assert (forall (j:nat{US.v (US.sub guard_pages_interval 2sz) + 1 <= j /\ j < US.v guard_pages_interval}).
       ~ (ALG.mem_all #AL.status (US.v md_count_v + j)
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
-      (US.v idx2) (US.v idx3) (US.v idx4) gs1));
+      (US.v idx2) (US.v idx3) (US.v idx4) gs2));
+  assert (US.v (US.sub guard_pages_interval 2sz) + 1 <= US.v (US.sub guard_pages_interval 2sz) + 1);
+  assert (US.v (US.sub guard_pages_interval 2sz) + 1 < US.v guard_pages_interval);
+  // #2 : cas particulier du forall plus haut
+  assert (~ (ALG.mem_all #AL.status
+    (US.v md_count_v + (US.v (US.sub guard_pages_interval 2sz) + 1))
+    (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
+    (US.v idx2) (US.v idx3) (US.v idx4)
+    gs2
+  ));
   assert (
     US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz)
     ==
     US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) + 1
   );
-  // #2 : cas particulier du forall plus haut
-  assume (~ (ALG.mem_all #AL.status
+  assert (~ (ALG.mem_all #AL.status
     (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
     (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
     (US.v idx2) (US.v idx3) (US.v idx4)
-    gs1
+    gs2
   ));
   AL.insert4
     (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
@@ -1310,26 +1398,20 @@ let allocate_slab_aux_3_2
     (US.v idx2) (US.v idx3)
     (US.sub (US.add md_count_v guard_pages_interval) 1sz)
     3ul;
-  let gs2 = gget (AL.varraylist pred1 pred2 pred3 pred4
+  let gs3 = gget (AL.varraylist pred1 pred2 pred3 pred4
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3)
       (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))) in
+  allocate_slab_aux_3_2_seq_equality md_count_v
+    gs0 gs1 gs2 gs3;
   assume (ALG.ptrs_in #AL.status
-      (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz)) gs2
+      (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz)) gs3
       //(US.v md_count_v + US.v guard_pages_interval - 2) gs2
     == FS.union
       (ALG.set (US.v md_count_v) (US.v md_count_v + US.v guard_pages_interval - 1))
       (ALG.ptrs_in #AL.status (US.v idx1) gs0));
-  assume (ALG.dataify #AL.status gs2
-    == Seq.append
-      (Seq.slice (ALG.dataify #AL.status gs0) 0 (US.v md_count_v))
-      (Seq.append
-        (Seq.create (US.v guard_pages_interval - 1) 0ul)
-        (Seq.create 1 3ul)
-      )
-  );
-  assume (ALG.partition #AL.status gs2
+  assume (ALG.partition #AL.status gs3
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3)
       (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
@@ -1348,6 +1430,7 @@ let allocate_slab_aux_3_2
     (fun x y -> x == y)
     (fun _ -> admit ());
   ()
+//#pop-options
 
 let lemma_slab_aux_3_3_1
   (size_class: sc)
