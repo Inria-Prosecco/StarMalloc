@@ -18,6 +18,7 @@ val alg_null: v:nat{v = US.v metadata_max + 1}
 noextract inline_for_extraction
 val alg_null_sizet: v:US.t{US.v v = US.v metadata_max + 1}
 
+//TODO: use  this variable
 inline_for_extraction
 val enable_guard_pages: bool
 inline_for_extraction
