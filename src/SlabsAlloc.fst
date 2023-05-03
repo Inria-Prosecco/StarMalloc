@@ -1198,7 +1198,7 @@ let allocate_slab_aux_3_1
 
 module FS = FStar.FiniteSet.Base
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let allocate_slab_aux_3_2_seq_equality
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (s1 s2 s3 s4: Seq.lseq AL.cell (US.v md_count_v + US.v guard_pages_interval))
@@ -1275,6 +1275,19 @@ let allocate_slab_aux_3_2_seq_equality
     (Seq.create 1 3ul);
   ()
 
+let fs_subset_elim
+  (pred: nat -> bool)
+  (s1 s2: FS.set nat)
+  : Lemma
+  (requires
+    FS.subset s1 s2 /\
+    (forall (i:nat{pred i}). FS.mem i s1)
+  )
+  (ensures
+    (forall (i:nat{pred i}). FS.mem i s2)
+  )
+  = ()
+
 let allocate_slab_aux_3_2_list_partition
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (s1 s2 s3 s4: Seq.lseq AL.cell (US.v md_count_v + US.v guard_pages_interval))
@@ -1304,7 +1317,7 @@ let allocate_slab_aux_3_2_list_partition
     ALG.ptrs_in (US.v idx2) s3
     == ALG.ptrs_in (US.v idx2) s2 /\
     ALG.ptrs_in (US.v idx3) s3
-    == ALG.ptrs_in (US.v idx3) s3 /\
+    == ALG.ptrs_in (US.v idx3) s2 /\
     ALG.ptrs_in (US.v idx4) s3
     == ALG.ptrs_in (US.v idx4) s2 /\
     // s4 wrt s3
@@ -1326,8 +1339,48 @@ let allocate_slab_aux_3_2_list_partition
       (US.v idx3)
       (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
   )
-  = admit ()
+  =
+  let idx1' = US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) in
+  let idx4' = US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz) in
+  let s1' = Seq.slice s1 0 (US.v md_count_v) in
+  let ps1' = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) s1' in
+  let ps1 = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) s1 in
+  let ps4 = ALG.ptrs_all (idx1') (US.v idx2) (US.v idx3) idx4' s4 in
+  // additional lemma required in ArrayList lib
+  assume (FS.subset ps1' ps1);
+  assert (forall (i:nat{i < US.v md_count_v}).
+    FS.mem i ps1
+  );
 
+  assert (ALG.ptrs_in (US.v idx2) s4 == ALG.ptrs_in (US.v idx2) s1);
+  assert (ALG.ptrs_in (US.v idx3) s4 == ALG.ptrs_in (US.v idx3) s1);
+  assert (FS.subset
+    (ALG.ptrs_in (US.v idx1) s1)
+    (ALG.ptrs_in idx1' s4)
+  );
+  assert (FS.subset
+    (ALG.ptrs_in (US.v idx4) s1)
+    (ALG.ptrs_in idx4' s4)
+  );
+  assert (FS.subset ps1 ps4);
+  assert (FS.subset ps1' ps4);
+  fs_subset_elim (fun i -> i < US.v md_count_v) ps1' ps4;
+  assert (forall (i:nat{i < US.v md_count_v}).
+    FS.mem i (ALG.ptrs_all
+      idx1' (US.v idx2) (US.v idx3) idx4' s4)
+  );
+  assert (forall (i:nat{US.v md_count_v <= i /\ i <= US.v md_count_v + US.v guard_pages_interval - 2}).
+    FS.mem i (ALG.ptrs_in idx1' s4)
+  );
+  assert (forall (i:nat{US.v md_count_v <= i /\ i <= US.v md_count_v + US.v guard_pages_interval - 2}).
+    FS.mem i ps4
+  );
+  assert (FS.mem (US.v md_count_v + US.v guard_pages_interval - 1) (ALG.ptrs_in idx4' s4));
+  assert (FS.mem (US.v md_count_v + US.v guard_pages_interval - 1) ps4);
+  ()
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1"
 // Insertion function
 inline_for_extraction noextract
 let allocate_slab_aux_3_2
