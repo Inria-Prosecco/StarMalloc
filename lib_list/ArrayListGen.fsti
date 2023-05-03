@@ -113,7 +113,7 @@ let disjoint4 (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3 hd4: nat) =
 
 /// The array is partitioned exactly between the four lists
 let partition (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3 hd4: nat) =
-  forall (i:nat{i < Seq.length s}). i == null \/ (FS.mem i (ptrs_all hd1 hd2 hd3 hd4 s))
+  forall (i:nat{i < Seq.length s}). FS.mem i (ptrs_all hd1 hd2 hd3 hd4 s)
 
 (** Some helpers to use cells *)
 
