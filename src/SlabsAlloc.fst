@@ -1275,6 +1275,59 @@ let allocate_slab_aux_3_2_seq_equality
     (Seq.create 1 3ul);
   ()
 
+let allocate_slab_aux_3_2_list_partition
+  (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
+  (s1 s2 s3 s4: Seq.lseq AL.cell (US.v md_count_v + US.v guard_pages_interval))
+  (idx1 idx2 idx3 idx4: US.t)
+  : Lemma
+  (requires
+    ALG.partition (Seq.slice s1 0 (US.v md_count_v))
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) /\
+    (forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
+      ~ (ALG.mem_all #AL.status (US.v md_count_v + j) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) s1)) /\
+    // s2 wrt s1
+    ALG.ptrs_in (US.v md_count_v) s2
+    == FS.insert
+      (US.v md_count_v)
+      (ALG.ptrs_in (US.v idx1) s1) /\
+    ALG.ptrs_in (US.v idx2) s2
+    == ALG.ptrs_in (US.v idx2) s1 /\
+    ALG.ptrs_in (US.v idx3) s2
+    == ALG.ptrs_in (US.v idx3) s1 /\
+    ALG.ptrs_in (US.v idx4) s2
+    == ALG.ptrs_in (US.v idx4) s1 /\
+    // s3 wrt s2
+    ALG.ptrs_in (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz)) s3
+    == FS.union
+      (ALG.set (US.v md_count_v) (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) + 1))
+      (ALG.ptrs_in (US.v md_count_v) s2) /\
+    ALG.ptrs_in (US.v idx2) s3
+    == ALG.ptrs_in (US.v idx2) s2 /\
+    ALG.ptrs_in (US.v idx3) s3
+    == ALG.ptrs_in (US.v idx3) s3 /\
+    ALG.ptrs_in (US.v idx4) s3
+    == ALG.ptrs_in (US.v idx4) s2 /\
+    // s4 wrt s3
+    ALG.ptrs_in (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz)) s4
+    == ALG.ptrs_in (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz)) s3 /\
+    ALG.ptrs_in (US.v idx2) s4
+    == ALG.ptrs_in (US.v idx2) s3 /\
+    ALG.ptrs_in (US.v idx3) s4
+    == ALG.ptrs_in (US.v idx3) s3 /\
+    ALG.ptrs_in (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz)) s4
+    == FS.insert
+      (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
+      (ALG.ptrs_in (US.v idx4) s3)
+  )
+  (ensures
+    ALG.partition s4
+      (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
+      (US.v idx2)
+      (US.v idx3)
+      (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
+  )
+  = admit ()
+
 // Insertion function
 inline_for_extraction noextract
 let allocate_slab_aux_3_2
@@ -1314,20 +1367,20 @@ let allocate_slab_aux_3_2
       (US.v idx2) (US.v idx3)
       (US.v md_count_v + US.v guard_pages_interval - 1)
       h1 in
-    ALG.ptrs_in #AL.status
-      (US.v md_count_v + US.v guard_pages_interval - 2) gs1
-    == FS.union
-      (ALG.set (US.v md_count_v) (US.v md_count_v + US.v guard_pages_interval - 1))
-      (ALG.ptrs_in #AL.status (US.v idx1) gs0) /\
-    ALG.ptrs_in #AL.status (US.v idx2) gs1
-    == ALG.ptrs_in #AL.status (US.v idx2) gs0 /\
-    ALG.ptrs_in #AL.status (US.v idx3) gs1
-    == ALG.ptrs_in #AL.status (US.v idx3) gs0 /\
-    ALG.ptrs_in #AL.status
-      (US.v md_count_v + US.v guard_pages_interval - 1) gs1
-    == FS.insert
-      (US.v md_count_v + US.v guard_pages_interval - 1)
-      (ALG.ptrs_in #AL.status (US.v idx4) gs0) /\
+    //ALG.ptrs_in #AL.status
+    //  (US.v md_count_v + US.v guard_pages_interval - 2) gs1
+    //== FS.union
+    //  (ALG.set (US.v md_count_v) (US.v md_count_v + US.v guard_pages_interval - 1))
+    //  (ALG.ptrs_in #AL.status (US.v idx1) gs0) /\
+    //ALG.ptrs_in #AL.status (US.v idx2) gs1
+    //== ALG.ptrs_in #AL.status (US.v idx2) gs0 /\
+    //ALG.ptrs_in #AL.status (US.v idx3) gs1
+    //== ALG.ptrs_in #AL.status (US.v idx3) gs0 /\
+    //ALG.ptrs_in #AL.status
+    //  (US.v md_count_v + US.v guard_pages_interval - 1) gs1
+    //== FS.insert
+    //  (US.v md_count_v + US.v guard_pages_interval - 1)
+    //  (ALG.ptrs_in #AL.status (US.v idx4) gs0) /\
     ALG.dataify gs1
     == Seq.append
       (Seq.slice (ALG.dataify gs0) 0 (US.v md_count_v))
@@ -1367,6 +1420,11 @@ let allocate_slab_aux_3_2
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3) (US.v idx4)) in
+  assert (ALG.ptrs_in #AL.status
+      (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz)) gs2
+    == FS.union
+      (ALG.set (US.v md_count_v) (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz) + 1))
+      (ALG.ptrs_in #AL.status (US.v md_count_v) gs1));
   assert (forall (j:nat{US.v (US.sub guard_pages_interval 2sz) + 1 <= j /\ j < US.v guard_pages_interval}).
       ~ (ALG.mem_all #AL.status (US.v md_count_v + j)
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
@@ -1405,17 +1463,9 @@ let allocate_slab_aux_3_2
       (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))) in
   allocate_slab_aux_3_2_seq_equality md_count_v
     gs0 gs1 gs2 gs3;
-  assume (ALG.ptrs_in #AL.status
-      (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz)) gs3
-      //(US.v md_count_v + US.v guard_pages_interval - 2) gs2
-    == FS.union
-      (ALG.set (US.v md_count_v) (US.v md_count_v + US.v guard_pages_interval - 1))
-      (ALG.ptrs_in #AL.status (US.v idx1) gs0));
-  assume (ALG.partition #AL.status gs3
-      (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
-      (US.v idx2) (US.v idx3)
-      (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
-  );
+  allocate_slab_aux_3_2_list_partition md_count_v
+    gs0 gs1 gs2 gs3
+    idx1 idx2 idx3 idx4;
   change_slprop_rel
     (AL.varraylist pred1 pred2 pred3 pred4
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
