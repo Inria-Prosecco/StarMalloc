@@ -229,19 +229,40 @@ let vrefinedep_ext
 
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects --fuel 0 --ifuel 0"
 noextract inline_for_extraction
-let init_struct (sc:sc)
+let init_struct (n: US.t{US.v n > 0 /\ US.fits (US.v metadata_max * US.v n)}) (sc:sc)
+  //(slab_region: array U8.t{A.length slab_region == U32.v page_size * US.v metadata_max * US.v n})
+  //(md_bm_region: array U64.t{A.length md_bm_region == US.v 4sz * US.v metadata_max * US.v n})
+  (md_region: array AL.cell{A.length md_region == US.v metadata_max * US.v n})
   : Steel size_class_struct
-  emp
+  (
+    //A.varray slab_region `star`
+    //A.varray md_bm_region `star`
+    A.varray md_region
+  )
   (fun scs -> size_class_vprop scs `star`
     A.varrayp (A.split_l scs.slab_region 0sz) halfp `star`
-    A.varray (A.split_r scs.slab_region slab_size))
-  (requires fun _ -> True)
+    A.varray (A.split_r scs.slab_region slab_size) `star`
+    A.varray (A.split_l md_region (US.mul metadata_max (US.sub n 1sz)))
+  )
+  (requires fun h0 -> True
+    //zf_u8 (A.asel slab_region h0) /\
+    //zf_u64 (A.asel md_bm_region h0)
+  )
   (ensures fun _ r _ -> U32.eq r.size sc)
   =
+  //let s1 = gget (A.varray slab_region) in
+  //let s2 = gget (A.varray md_bm_region) in
+  //zf_u8_split s1 0;
+  //zf_u64_split s2 0;
   intro_fits_u32 ();
   let slab_region = mmap_u8 (US.mul metadata_max (u32_to_sz page_size)) in
   let md_bm_region = mmap_u64 (US.mul metadata_max 4sz) in
-  let md_region = mmap_cell_status metadata_max in
+  A.ghost_split md_region (US.mul metadata_max (US.sub n 1sz));
+  let md_region' = A.split_r md_region (US.mul metadata_max (US.sub n 1sz)) in
+  change_equal_slprop
+    (A.varray (A.split_r md_region (US.mul metadata_max (US.sub n 1sz))))
+    (A.varray md_region');
+  //let md_region = mmap_cell_status metadata_max in
 
   A.ghost_split slab_region slab_size;
   change_slprop_rel
@@ -252,14 +273,14 @@ let init_struct (sc:sc)
 
   A.ghost_split slab_region 0sz;
   A.ghost_split md_bm_region 0sz;
-  A.ghost_split md_region 0sz;
+  A.ghost_split md_region' 0sz;
 
   A.ghost_split (A.split_r slab_region 0sz) 0sz;
 
   drop (A.varray (A.split_l (A.split_r slab_region 0sz) 0sz));
   drop (A.varray (A.split_l md_bm_region 0sz));
 
-  intro_right_vprop_empty (A.split_r slab_region 0sz) md_bm_region md_region;
+  intro_right_vprop_empty (A.split_r slab_region 0sz) md_bm_region md_region';
 
   let ptr_partial = mmap_ptr_us () in
   let ptr_empty = mmap_ptr_us () in
@@ -271,7 +292,7 @@ let init_struct (sc:sc)
   R.write ptr_full AL.null_ptr;
   R.write ptr_guard AL.null_ptr;
 
-  intro_left_vprop_empty sc (A.split_r slab_region 0sz) md_bm_region md_region ptr_empty ptr_partial ptr_full ptr_guard;
+  intro_left_vprop_empty sc (A.split_r slab_region 0sz) md_bm_region md_region' ptr_empty ptr_partial ptr_full ptr_guard;
 
   let md_count = mmap_ptr_us () in
   R.write md_count 0sz;
@@ -281,11 +302,11 @@ let init_struct (sc:sc)
     (R.vptr md_count)
     vrefinedep_prop
     (size_class_vprop_aux sc
-      slab_region md_bm_region md_region
+      slab_region md_bm_region md_region'
       ptr_empty ptr_partial ptr_full ptr_guard)
-    (left_vprop sc (A.split_r slab_region 0sz) md_bm_region md_region
+    (left_vprop sc (A.split_r slab_region 0sz) md_bm_region md_region'
          ptr_empty ptr_partial ptr_full ptr_guard 0sz `star`
-     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region 0sz `star`
+     right_vprop (A.split_r slab_region 0sz) md_bm_region md_region' 0sz `star`
      A.varrayp (A.split_l slab_region 0sz) halfp);
 
 
@@ -298,7 +319,7 @@ let init_struct (sc:sc)
     guard_slabs = ptr_guard;
     slab_region = slab_region;
     md_bm_region = md_bm_region;
-    md_region = md_region;
+    md_region = md_region';
     md_count = md_count;
   } in
 
@@ -307,7 +328,7 @@ let init_struct (sc:sc)
       (R.vptr md_count)
       vrefinedep_prop
       (size_class_vprop_aux sc
-        slab_region md_bm_region md_region
+        slab_region md_bm_region md_region'
         ptr_empty ptr_partial ptr_full ptr_guard))
      (size_class_vprop scs)
     (fun _ _ -> True)
@@ -334,15 +355,56 @@ let init_struct (sc:sc)
 
   return scs
 
-noextract inline_for_extraction
-let init (sc:sc) : SteelTop size_class false (fun _ -> emp)
-  (fun _ r _ -> U32.eq r.data.size sc) =
-  let data = init_struct sc in
-  let lock = L.new_lock (size_class_vprop data) in
-  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
-  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
-  {data; lock; region_start; region_end}
+let split_l_l (#opened:_) (#a: Type)
+  (k1: US.t)
+  (k2: US.t{US.v k1 <= US.v k2})
+  (arr: array a{US.v k2 <= A.length arr})
+  : SteelGhost unit opened
+  (A.varray (
+    A.split_l (A.split_l arr k2) k1
+  ))
+  (fun _ -> A.varray (
+    A.split_l arr k1
+  ))
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel (A.split_l (A.split_l arr k2) k1) h0
+    ==
+    A.asel (A.split_l arr k1) h1
+  )
+  =
+  A.ptr_base_offset_inj
+    (A.ptr_of (A.split_l (A.split_l arr k2) k1))
+    (A.ptr_of (A.split_l arr k1));
+  change_equal_slprop
+    (A.varray (A.split_l (A.split_l arr k2) k1))
+    (A.varray (A.split_l arr k1))
 
+let split_l_l_mul (#opened:_) (#a: Type)
+  (k1 k1': US.t)
+  (k2: US.t{US.v k1 == US.v k1' /\ US.v k1 <= US.v k2})
+  (n: US.t{US.fits (US.v k2 * US.v n)})
+  (arr: array a{US.v k2 * US.v n <= A.length arr})
+  : SteelGhost unit opened
+  (A.varray (
+    A.split_l (A.split_l arr (US.mul n k2)) (US.mul n k1)
+  ))
+  (fun _ -> A.varray (
+    A.split_l arr (US.mul n k1')
+  ))
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    A.asel (A.split_l (A.split_l arr (US.mul n k2)) (US.mul n k1)) h0
+    ==
+    A.asel (A.split_l arr (US.mul n k1')) h1
+  )
+  =
+  split_l_l (US.mul n k1) (US.mul n k2) arr;
+  change_equal_slprop
+    (A.varray (split_l arr (US.mul n k1)))
+    (A.varray (split_l arr (US.mul n k1')))
+
+// TODO: metaprogramming
 let size_class16_t = r:size_class{U32.eq r.data.size 16ul}
 let size_class32_t = r:size_class{U32.eq r.data.size 32ul}
 let size_class64_t = r:size_class{U32.eq r.data.size 64ul}
@@ -353,57 +415,130 @@ let size_class1024_t = r:size_class{U32.eq r.data.size 1024ul}
 let size_class2048_t = r:size_class{U32.eq r.data.size 2048ul}
 let size_class4096_t = r:size_class{U32.eq r.data.size 4096ul}
 
-let init16 () : SteelTop size_class16_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 16ul)
-  = init 16ul
-let init32 () : SteelTop size_class32_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 32ul)
-  = init 32ul
-let init64 () : SteelTop size_class64_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 64ul)
-  = init 64ul
+//TODO: metaprogramming
+noeq type size_classes_all = {
+  sc16 : size_class16_t;
+  sc32 : size_class32_t;
+  sc64 : size_class64_t;
+  sc128 : size_class128_t;
+  sc256 : size_class256_t;
+  sc512 : size_class512_t;
+  sc1024 : size_class1024_t;
+  sc2048 : size_class2048_t;
+  sc4096 : size_class4096_t;
+}
 
-let init128 () : SteelTop size_class128_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 128ul)
-  = init 128ul
-let init256 () : SteelTop size_class256_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 256ul)
-  = init 256ul
-let init512 () : SteelTop size_class512_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 512ul)
-  = init 512ul
-
-let init1024 () : SteelTop size_class1024_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 1024ul)
-  = init 1024ul
-let init2048 () : SteelTop size_class2048_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 2048ul)
-  = init 2048ul
-let init4096 () : SteelTop size_class4096_t
-  false (fun _ -> emp) (fun _ r _ -> U32.eq r.data.size 4096ul)
-  = init 4096ul
-
-
-// Intentional top-level effect for initialization, we temporarily disable the corresponding warning
-// for these definitions
+//TODO: metaprogramming
+noextract inline_for_extraction
+let init (_:unit)
+  : SteelTop size_classes_all false
+  (fun _ -> emp)
+  (fun _ r _ -> True)
+  =
+  let n = 9sz in
+  let md_region = mmap_cell_status (US.mul metadata_max n) in
+  // sc16
+  let data = init_struct n 16ul md_region in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc16 = {data; lock; region_start; region_end} in
+  // sc32
+  let data = init_struct (US.sub n 1sz) 32ul
+    (A.split_l md_region (US.mul metadata_max (US.sub n 1sz))) in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc32 = {data; lock; region_start; region_end} in
+  split_l_l_mul (US.sub (US.sub n 1sz) 1sz) (US.sub n 2sz) (US.sub n 1sz) metadata_max md_region;
+  // sc64
+  let data = init_struct (US.sub n 2sz) 64ul
+    (A.split_l md_region (US.mul metadata_max (US.sub n 2sz))) in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc64 = {data; lock; region_start; region_end} in
+  split_l_l_mul (US.sub (US.sub n 2sz) 1sz) (US.sub n 3sz) (US.sub n 2sz) metadata_max md_region;
+  // sc128
+  let data = init_struct (US.sub n 3sz) 128ul
+    (A.split_l md_region (US.mul metadata_max (US.sub n 3sz))) in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc128 = {data; lock; region_start; region_end} in
+  split_l_l_mul (US.sub (US.sub n 3sz) 1sz) (US.sub n 4sz) (US.sub n 3sz) metadata_max md_region;
+  // sc256
+  let data = init_struct (US.sub n 4sz) 256ul
+    (A.split_l md_region (US.mul metadata_max (US.sub n 4sz))) in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc256 = {data; lock; region_start; region_end} in
+  split_l_l_mul (US.sub (US.sub n 4sz) 1sz) (US.sub n 5sz) (US.sub n 4sz) metadata_max md_region;
+  // sc512
+  let data = init_struct (US.sub n 5sz) 512ul
+    (A.split_l md_region (US.mul metadata_max (US.sub n 5sz))) in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc512 = {data; lock; region_start; region_end} in
+  split_l_l_mul (US.sub (US.sub n 5sz) 1sz) (US.sub n 6sz) (US.sub n 5sz) metadata_max md_region;
+  // sc1024
+  let data = init_struct (US.sub n 6sz) 1024ul
+    (A.split_l md_region (US.mul metadata_max (US.sub n 6sz))) in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc1024 = {data; lock; region_start; region_end} in
+  split_l_l_mul (US.sub (US.sub n 6sz) 1sz) (US.sub n 7sz) (US.sub n 6sz) metadata_max md_region;
+  // sc2048
+  let data = init_struct (US.sub n 7sz) 2048ul
+    (A.split_l md_region (US.mul metadata_max (US.sub n 7sz))) in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc2048 = {data; lock; region_start; region_end} in
+  split_l_l_mul (US.sub (US.sub n 7sz) 1sz) (US.sub n 8sz) (US.sub n 7sz) metadata_max md_region;
+  // sc4096
+  let data = init_struct (US.sub n 8sz) 4096ul
+    (A.split_l md_region (US.mul metadata_max (US.sub n 8sz))) in
+  let lock = L.new_lock (size_class_vprop data) in
+  let region_start = RS.create_ro_array (A.split_l data.slab_region 0sz) in
+  let region_end = RS.create_ro_array (A.split_r data.slab_region slab_size) in
+  let sc4096 = {data; lock; region_start; region_end} in
+  split_l_l_mul (US.sub (US.sub n 8sz) 1sz) (US.sub n 9sz) (US.sub n 8sz) metadata_max md_region;
+  // end
+  drop (A.varray
+    (A.split_l md_region (US.mul metadata_max (US.sub n 9sz))));
+  return {
+    sc16 = sc16;
+    sc32 = sc32;
+    sc64 = sc64;
+    sc128 = sc128;
+    sc256 = sc256;
+    sc512 = sc512;
+    sc1024 = sc1024;
+    sc2048 = sc2048;
+    sc4096 = sc4096;
+  }
 
 #reset-options "--fuel 1 --ifuel 1"
 
 #push-options "--print_implicits"
 
 #push-options "--warn_error '-272'"
+let sc_all : size_classes_all = init ()
 
-let size_class16 : size_class16_t = init16 ()
-let size_class32 : size_class32_t = init32 ()
-let size_class64 : size_class64_t = init64 ()
-
-let size_class128 : size_class128_t = init128 ()
-let size_class256 : size_class256_t = init256 ()
-let size_class512 : size_class512_t = init512 ()
-
-let size_class1024 : size_class1024_t = init1024 ()
-let size_class2048 : size_class2048_t = init2048 ()
-let size_class4096 : size_class4096_t = init4096 ()
+// TODO: metaprogramming
+let size_class16 : size_class16_t = sc_all.sc16
+let size_class32 : size_class32_t = sc_all.sc32
+let size_class64 : size_class64_t = sc_all.sc64
+let size_class128 : size_class128_t = sc_all.sc128
+let size_class256 : size_class256_t = sc_all.sc256
+let size_class512 : size_class512_t = sc_all.sc512
+let size_class1024 : size_class1024_t = sc_all.sc1024
+let size_class2048 : size_class2048_t = sc_all.sc2048
+let size_class4096 : size_class4096_t = sc_all.sc4096
 #pop-options
 
 let null_or_varray (#a:Type) (r:array a) : vprop = if is_null r then emp else varray r
@@ -444,7 +579,7 @@ val slab_malloc (bytes:U32.t)
 
 #restart-solver
 
-#push-options "--fuel 1 --ifuel 1 --query_stats --split_queries always"
+#push-options "--fuel 0 --ifuel 0 --query_stats"
 inline_for_extraction noextract
 let slab_malloc' (sc: size_class) (bytes: U32.t)
   : Steel
@@ -469,7 +604,7 @@ let slab_malloc' (sc: size_class) (bytes: U32.t)
 
 #reset-options
 
-#push-options "--z3rlimit 100"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let slab_malloc bytes =
   if bytes `U32.lte` 16ul then (
     slab_malloc' size_class16 bytes
