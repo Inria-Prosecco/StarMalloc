@@ -50,9 +50,9 @@ let deallocate_slab_aux_cond
     let blob1
       : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
-    dfst (fst blob0) == dfst (fst blob1) /\
-    dsnd (fst blob0) == dsnd (fst blob1) /\
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    dfst blob0 == dfst blob1 /\
+    dsnd blob0 == dsnd blob1 /\
     blob0 == blob1 /\
     r == is_empty size_class v0
   )
