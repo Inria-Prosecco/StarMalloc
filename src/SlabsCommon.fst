@@ -12,7 +12,7 @@ let p_empty_unpack (#opened:_)
     let blob1
       : t_of (slab_vprop sc (snd b2) (fst b2))
       = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
     b1 == b2 /\
     is_empty sc v1 /\
     h0 ((p_empty sc) b1)
@@ -24,12 +24,12 @@ let p_empty_unpack (#opened:_)
     ((p_empty sc) b1)
     (slab_vprop sc (snd b2) (fst b2)
     `VR2.vrefine`
-    (fun ((|s,_|), _) -> is_empty sc s == true))
+    (fun (|s,_|) -> is_empty sc s == true))
     (fun x y -> x == y)
     (fun _ -> ());
   VR2.elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
-    (fun ((|s,_|), _) -> is_empty sc s == true)
+    (fun (|s,_|) -> is_empty sc s == true)
 
 let p_partial_unpack (#opened:_)
   (sc: sc)
@@ -43,7 +43,7 @@ let p_partial_unpack (#opened:_)
     let blob1
       : t_of (slab_vprop sc (snd b2) (fst b2))
       = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
     b1 == b2 /\
     is_partial sc v1 /\
     h0 ((p_partial sc) b1)
@@ -55,12 +55,12 @@ let p_partial_unpack (#opened:_)
     ((p_partial sc) b1)
     (slab_vprop sc (snd b2) (fst b2)
     `VR2.vrefine`
-    (fun ((|s,_|), _) -> is_partial sc s == true))
+    (fun (|s,_|) -> is_partial sc s == true))
     (fun x y -> x == y)
     (fun _ -> ());
   VR2.elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
-    (fun ((|s,_|), _) -> is_partial sc s == true)
+    (fun (|s,_|) -> is_partial sc s == true)
 
 let p_full_unpack (#opened:_)
   (sc: sc)
@@ -74,7 +74,7 @@ let p_full_unpack (#opened:_)
     let blob1
       : t_of (slab_vprop sc (snd b2) (fst b2))
       = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
     b1 == b2 /\
     is_full sc v1 /\
     h0 ((p_full sc) b1)
@@ -86,12 +86,12 @@ let p_full_unpack (#opened:_)
     ((p_full sc) b1)
     (slab_vprop sc (snd b2) (fst b2)
     `VR2.vrefine`
-    (fun ((|s,_|), _) -> is_full sc s == true))
+    (fun (|s,_|) -> is_full sc s == true))
     (fun x y -> x == y)
     (fun _ -> ());
   VR2.elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
-    (fun ((|s,_|), _) -> is_full sc s == true)
+    (fun (|s,_|) -> is_full sc s == true)
 
 let p_guard_unpack (#opened:_)
   (sc: sc)
@@ -133,7 +133,7 @@ let p_empty_pack (#opened:_)
     let blob0
       : t_of (slab_vprop sc (snd b1) (fst b1))
       = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     is_empty sc v0 /\
     b1 == b2
   )
@@ -146,11 +146,11 @@ let p_empty_pack (#opened:_)
   =
   VR2.intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
-    (fun ((|s,_|), _) -> is_empty sc s == true);
+    (fun (|s,_|) -> is_empty sc s == true);
   change_slprop_rel
     (slab_vprop sc (snd b1) (fst b1)
     `VR2.vrefine`
-    (fun ((|s,_|), _) -> is_empty sc s == true))
+    (fun (|s,_|) -> is_empty sc s == true))
     ((p_empty sc) b2)
     (fun x y -> x == y)
     (fun _ -> ())
@@ -166,7 +166,7 @@ let p_partial_pack (#opened:_)
     let blob0
       : t_of (slab_vprop sc (snd b1) (fst b1))
       = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     is_partial sc v0 /\
     b1 == b2
   )
@@ -179,11 +179,11 @@ let p_partial_pack (#opened:_)
   =
   VR2.intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
-    (fun ((|s,_|), _) -> is_partial sc s == true);
+    (fun (|s,_|) -> is_partial sc s == true);
   change_slprop_rel
     (slab_vprop sc (snd b1) (fst b1)
     `VR2.vrefine`
-    (fun ((|s,_|), _) -> is_partial sc s == true))
+    (fun (|s,_|) -> is_partial sc s == true))
     ((p_partial sc) b2)
     (fun x y -> x == y)
     (fun _ -> ())
@@ -199,7 +199,7 @@ let p_full_pack (#opened:_)
     let blob0
       : t_of (slab_vprop sc (snd b1) (fst b1))
       = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     is_full sc v0 /\
     b1 == b2
   )
@@ -212,11 +212,11 @@ let p_full_pack (#opened:_)
   =
   VR2.intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
-    (fun ((|s,_|), _) -> is_full sc s == true);
+    (fun (|s,_|) -> is_full sc s == true);
   change_slprop_rel
     (slab_vprop sc (snd b1) (fst b1)
     `VR2.vrefine`
-    (fun ((|s,_|), _) -> is_full sc s == true))
+    (fun (|s,_|) -> is_full sc s == true))
     ((p_full sc) b2)
     (fun x y -> x == y)
     (fun _ -> ())
@@ -370,7 +370,6 @@ let t (size_class: sc) : Type0 =
   dtuple2
     (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
     (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
-  & Seq.lseq U8.t 0
 
 let f_lemma
   (size_class: sc)
@@ -550,7 +549,7 @@ let pack_slab_starseq
     = h0 (slab_vprop size_class
       (slab_array slab_region idx)
       (md_bm_array md_bm_region idx)) in
-    let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
+    let md : Seq.lseq U64.t 4 = dfst md_blob in
     (v == 3ul ==> is_guard size_class
       (slab_array slab_region idx)
       (md_bm_array md_bm_region idx) md_blob) /\
@@ -634,10 +633,9 @@ let pack_right_and_refactor_vrefine_dep
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     `star`
-    (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
-    A.varrayp (A.split_l slab_region 0sz) halfp)
+    right_vprop slab_region md_bm_region md_region md_count_v
   )
   (fun _ ->
     vrefinedep
@@ -650,7 +648,7 @@ let pack_right_and_refactor_vrefine_dep
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     ) in
     md_count_v == dfst blob0)
   (ensures fun h0 _ h1 ->
@@ -658,7 +656,7 @@ let pack_right_and_refactor_vrefine_dep
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4)
     ) in
     let blob1
       = h1 (vrefinedep
@@ -672,16 +670,16 @@ let pack_right_and_refactor_vrefine_dep
   let md_count_v' = elim_vrefinedep
     (vptr md_count)
     vrefinedep_prop
-    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4) in
+    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4) in
   assert (G.reveal md_count_v' == md_count_v);
   change_equal_slprop
-    (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v)
-    (right_vprop (A.split_r slab_region 0sz) md_bm_region md_region (G.reveal md_count_v'));
+    (right_vprop slab_region md_bm_region md_region md_count_v)
+    (right_vprop slab_region md_bm_region md_region (G.reveal md_count_v'));
+
   intro_vrefinedep
     (vptr md_count)
     vrefinedep_prop
     (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4)
-    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4 (G.reveal md_count_v') `star`
-    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region (G.reveal md_count_v') `star`
-    A.varrayp (A.split_l slab_region 0sz) halfp)
+    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 (G.reveal md_count_v') `star`
+    right_vprop slab_region md_bm_region md_region (G.reveal md_count_v'))
 #pop-options

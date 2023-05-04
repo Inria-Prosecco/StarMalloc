@@ -133,9 +133,7 @@ let slab_vprop
   vrefinedep
     (A.varray md)
     (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
-    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-  `star`
-  A.varray (A.split_l arr 0sz)
+    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq)
 
 let slab_vprop_lemma
   (size_class: sc)
@@ -146,8 +144,7 @@ let slab_vprop_lemma
   ==
   dtuple2
     (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
-    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
-  & Seq.lseq U8.t 0)
+    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class))))
   = let aux (n1 n2:nat) (p:Seq.lseq U64.t n1 -> prop) : Lemma
       (requires n1 == n2)
       (ensures (x:Seq.lseq U64.t n1{p x}) == (x:Seq.lseq U64.t n2{p x}))
@@ -165,8 +162,7 @@ let slab_vprop_lemma
       dtuple2
         (x:Seq.lseq U64.t (A.length md){slab_vprop_aux2 size_class x})
         (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
-          (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class)))))
-      & Seq.lseq U8.t (A.length (A.split_l arr 0sz)));
+          (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class))))));
     aux (A.length md) 4 (slab_vprop_aux2 size_class);
     aux2
       (x:Seq.lseq U64.t (A.length md){slab_vprop_aux2 size_class x})
@@ -188,7 +184,7 @@ let v_slab_vprop_md (#p:vprop)
   let blob
     : t_of (slab_vprop size_class arr md)
     = h (slab_vprop size_class arr md) in
-  dfst (fst blob)
+  dfst blob
 
 #push-options "--print_implicits"
 
@@ -724,17 +720,13 @@ let elim_slab_vprop_aux
     vrefinedep
       (A.varray md)
       (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
-      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-    `star`
-    A.varray (A.split_l arr 0sz)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq)
   )) m /\
   sel_of (
     vrefinedep
       (A.varray md)
       (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
-      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-    `star`
-    A.varray (A.split_l arr 0sz)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq)
   ) m
   ==
   sel_of (slab_vprop size_class arr md) m)
@@ -748,8 +740,7 @@ let intro_slab_vprop (#opened:_)
   (arr: array U8.t{A.length arr = U32.v page_size})
   : SteelGhost unit opened
   (A.varray md `star`
-    A.varray (A.split_l arr 0sz) `star`
-    slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq))
+    slab_vprop_aux size_class arr (G.reveal md_as_seq))
   (fun _ -> slab_vprop size_class arr md)
   (requires fun h0 ->
     G.reveal md_as_seq == A.asel md h0 /\
@@ -758,24 +749,21 @@ let intro_slab_vprop (#opened:_)
   (ensures fun h0 _ h1 ->
     let blob1 : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let x1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    let x1 : Seq.lseq U64.t 4 = dfst blob1 in
     x1 == A.asel md h0 /\
-    dsnd (fst blob1) == h0 (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq)) /\
-    snd blob1 == A.asel (A.split_l arr 0sz) h0
+    dsnd blob1 == h0 (slab_vprop_aux size_class arr (G.reveal md_as_seq))
   )
   =
   intro_vrefinedep
     (A.varray md)
     (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
-    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-    (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq));
+    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq)
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq));
   change_equal_slprop
     (vrefinedep
       (A.varray md)
       (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
-      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-    `star`
-    A.varray (A.split_l arr 0sz))
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq))
     (slab_vprop size_class arr md)
 
 // without compat_pre_typed_indexed_effects
@@ -788,18 +776,16 @@ let elim_slab_vprop (#opened:_)
   (slab_vprop size_class arr md)
   (fun r ->
     A.varray md `star`
-    A.varray (A.split_l arr 0sz) `star`
-    slab_vprop_aux size_class (A.split_r arr 0sz) r)
+    slab_vprop_aux size_class arr r)
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
     let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
     let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
-    let x0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let x0 : Seq.lseq U64.t 4 = dfst blob0 in
     G.reveal r == x0 /\
     G.reveal r == A.asel md h1 /\
-    dsnd (fst blob0) == h1 (slab_vprop_aux size_class (A.split_r arr 0sz) r) /\
-    snd blob0 == A.asel (A.split_l arr 0sz) h1 /\
+    dsnd blob0 == h1 (slab_vprop_aux size_class arr r) /\
     slab_vprop_aux2 size_class (G.reveal r)
   )
   =
@@ -808,9 +794,7 @@ let elim_slab_vprop (#opened:_)
     (vrefinedep
       (A.varray md)
       (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
-      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
-    `star`
-    A.varray (A.split_l arr 0sz))
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq))
     (fun x y -> x == y)
     (fun m -> elim_slab_vprop_aux size_class md arr m);
   let md_as_seq
@@ -821,14 +805,14 @@ let elim_slab_vprop (#opened:_)
     = elim_vrefinedep
       (A.varray md)
       (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
-      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_r arr 0sz) md_as_seq)
+      (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq)
   in
   let md_as_seq2
     : G.erased (Seq.lseq U64.t 4)
     = G.hide (G.reveal md_as_seq <: Seq.lseq U64.t 4) in
   change_equal_slprop
-    (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq))
-    (slab_vprop_aux size_class (A.split_r arr 0sz) (G.reveal md_as_seq2));
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq2));
   md_as_seq2
 #pop-options
 
@@ -880,15 +864,15 @@ let allocate_slot
   (requires fun h0 ->
     let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     has_free_slot size_class v0)
   (ensures fun h0 r h1 ->
     let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
     let blob1 : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
-    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
     not (is_empty size_class v1) /\
     A.length r == U32.v size_class)
     //U32.v (G.reveal (snd r)) < U64.n * 4 /\
@@ -907,7 +891,7 @@ let allocate_slot
     size_class
     md
     md_as_seq
-    (A.split_r arr 0sz)
+    arr
     pos in
   set_lemma_nonempty size_class (G.reveal md_as_seq) (Bitmap4.set (G.reveal md_as_seq) pos) pos;
   bound2_inv size_class (G.reveal md_as_seq) pos;

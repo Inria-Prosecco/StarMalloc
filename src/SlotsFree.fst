@@ -550,37 +550,35 @@ let deallocate_slot'
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
+  (diff_: US.t)
   : Steel (bool & G.erased u32_bounded)
   (
     A.varray md `star`
     A.varray ptr `star`
-    A.varray (A.split_l arr 0sz) `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
       #(option (Seq.lseq U8.t (U32.v size_class)))
-      (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
-      (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
   )
   (fun r ->
     A.varray md `star`
     (if (fst r) then
       emp `star`
-      A.varray (A.split_l arr 0sz) `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
         #(option (Seq.lseq U8.t (U32.v size_class)))
-        (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
-        (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
+        (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) arr)
+        (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) arr)
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     else
       A.varray ptr `star`
-      A.varray (A.split_l arr 0sz) `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
         #(option (Seq.lseq U8.t (U32.v size_class)))
-        (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
-        (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
+        (slab_vprop_aux_f size_class md_as_seq arr)
+        (slab_vprop_aux_f_lemma size_class md_as_seq arr)
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     )
   )
@@ -589,6 +587,7 @@ let deallocate_slot'
     same_base_array ptr arr /\
     0 <= diff /\
     diff < U32.v page_size /\
+    US.v diff_ == diff /\
     A.asel md h0 == G.reveal md_as_seq
   )
   (ensures fun h0 r h1 ->
@@ -604,29 +603,26 @@ let deallocate_slot'
   )
   =
   let _ = Ghost.hide (UP.mk (FStar.Int.Cast.uint32_to_int16 page_size)) in
-  let diff = A.ptrdiff ptr (A.split_l arr 0sz) in
-  assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
-  assert_norm (UP.v diff == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (A.split_r arr 0sz)));
-  let diff_sz = UP.ptrdifft_to_sizet diff in
+  assert_norm (US.v diff_== A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
   assert_norm (4 < FI.max_int 16);
-  let diff_u32 = US.sizet_to_uint32 diff_sz in
-  let b = deallocate_slot_aux0 size_class (A.split_r arr 0sz) ptr diff_u32 in
+  let diff_u32 = US.sizet_to_uint32 diff_ in
+  let b = deallocate_slot_aux0 size_class arr ptr diff_u32 in
   if b then (
-    deallocate_slot_aux2 size_class (A.split_r arr 0sz) ptr;
+    deallocate_slot_aux2 size_class arr ptr;
     let pos : u32_bounded
-      = deallocate_slot_aux1 size_class (A.split_r arr 0sz) ptr diff_u32 in
+      = deallocate_slot_aux1 size_class arr ptr diff_u32 in
     assert (U32.v pos < U32.v (nb_slots size_class));
     let b = Bitmap5.bm_get #4 md pos in
     if b then (
       Bitmap5.bm_unset #4 md pos;
       let md_as_seq2 = gget (A.varray md) in
       // analogous of Slots@returned_value lemma
-      deallocate_slot'_aux0 size_class md_as_seq2 (A.split_r arr 0sz) pos ptr;
-      deallocate_slot'_aux1 size_class md_as_seq md_as_seq2 (A.split_r arr 0sz) pos;
-      deallocate_slot_aux size_class md md_as_seq2 (A.split_r arr 0sz) pos;
+      deallocate_slot'_aux0 size_class md_as_seq2 arr pos ptr;
+      deallocate_slot'_aux1 size_class md_as_seq md_as_seq2 arr pos;
+      deallocate_slot_aux size_class md md_as_seq2 arr pos;
       unset_set_bij size_class (G.reveal md_as_seq) (G.reveal md_as_seq2) pos;
       assert (G.reveal md_as_seq == Bitmap4.set (G.reveal md_as_seq2) pos);
-      deallocate_slot'_aux2 size_class md_as_seq2 md_as_seq (A.split_r arr 0sz) pos;
+      deallocate_slot'_aux2 size_class md_as_seq2 md_as_seq arr pos;
       return (true, G.hide pos)
     ) else (
       return (false, G.hide 0ul)
@@ -675,8 +671,6 @@ let bound2_inv2
   )
 #pop-options
 
-let _ = ()
-
 #restart-solver
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
@@ -685,6 +679,7 @@ let deallocate_slot
   (md: slab_metadata)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (ptr: array U8.t)
+  (diff_: US.t)
   : Steel bool
   (A.varray ptr `star` slab_vprop size_class arr md)
   (fun b ->
@@ -698,50 +693,49 @@ let deallocate_slot
     same_base_array arr ptr /\
     0 <= diff /\
     diff < U32.v page_size /\
-    True)
+    US.v diff_ = diff
+  )
     //not (is_empty size_class v0))
   (ensures fun h0 b h1 ->
     let blob0 : t_of (slab_vprop size_class arr md)
       = h0 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     let blob1 : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
+    let v1 : Seq.lseq U64.t 4 = dfst blob1 in
     (b ==> not (is_full size_class v1)) /\
     (not b ==> v1 == v0))
   =
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
+  //TODO: fix
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
-  let r = deallocate_slot' size_class md md_as_seq arr ptr in
+  let r = deallocate_slot' size_class md md_as_seq arr ptr diff_ in
   if (fst r) then (
     change_equal_slprop
       (if (fst r) then
         emp `star`
-        A.varray (A.split_l arr 0sz) `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
           #(option (Seq.lseq U8.t (U32.v size_class)))
-          (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
-          (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
+          (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) arr)
+          (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) arr)
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       else
         A.varray ptr `star`
-        A.varray (A.split_l arr 0sz) `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
           #(option (Seq.lseq U8.t (U32.v size_class)))
-          (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
-          (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
+          (slab_vprop_aux_f size_class md_as_seq arr)
+          (slab_vprop_aux_f_lemma size_class md_as_seq arr)
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       )
       (emp `star`
-      A.varray (A.split_l arr 0sz) `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
         #(option (Seq.lseq U8.t (U32.v size_class)))
-        (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
-        (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
+        (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) arr)
+        (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) arr)
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
     assert (U32.v (G.reveal (snd r)) < U32.v (nb_slots size_class));
     Bitmap4.get_lemma2 (G.reveal md_as_seq) (G.reveal (snd r));
@@ -756,30 +750,27 @@ let deallocate_slot
     change_equal_slprop
       (if (fst r) then
         emp `star`
-        A.varray (A.split_l arr 0sz) `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
           #(option (Seq.lseq U8.t (U32.v size_class)))
-          (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
-          (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_r arr 0sz))
+          (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) arr)
+          (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) arr)
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       else
         A.varray ptr `star`
-        A.varray (A.split_l arr 0sz) `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
           #(option (Seq.lseq U8.t (U32.v size_class)))
-          (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
-          (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
+          (slab_vprop_aux_f size_class md_as_seq arr)
+          (slab_vprop_aux_f_lemma size_class md_as_seq arr)
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       )
       (A.varray ptr `star`
-      A.varray (A.split_l arr 0sz) `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
         #(option (Seq.lseq U8.t (U32.v size_class)))
-        (slab_vprop_aux_f size_class md_as_seq (A.split_r arr 0sz))
-        (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_r arr 0sz))
+        (slab_vprop_aux_f size_class md_as_seq arr)
+        (slab_vprop_aux_f_lemma size_class md_as_seq arr)
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
     intro_slab_vprop size_class md md_as_seq arr;
     change_equal_slprop
@@ -792,5 +783,4 @@ let deallocate_slot
 (*)
 - complications
   - remove expected_size, add a split for each slot
-  - ptrdiff on live arrays: add a split 0 arr everywhere
   - page_size % size_class <> 0: take it into account

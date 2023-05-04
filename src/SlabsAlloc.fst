@@ -31,8 +31,7 @@ open SteelStarSeqUtils
 open FStar.Mul
 open SlabsCommon
 
-
-#push-options "--z3rlimit 50"
+#push-options "--fuel 1 --ifuel 0 --z3rlimit 50"
 inline_for_extraction noextract
 let allocate_slab_aux_cond
   (size_class: sc)
@@ -49,9 +48,9 @@ let allocate_slab_aux_cond
     let blob1
       : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
-    dfst (fst blob0) == dfst (fst blob1) /\
-    dsnd (fst blob0) == dsnd (fst blob1) /\
+    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
+    dfst blob0 == dfst blob1 /\
+    dsnd blob0 == dsnd blob1 /\
     blob0 == blob1 /\
     r == is_full size_class v0
   )
@@ -336,6 +335,7 @@ let allocate_slab_aux_1
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
+  (diff: US.t)
   : Steel (array U8.t)
   (
     vptr md_count `star`
@@ -1773,8 +1773,7 @@ let allocate_slab_aux_3_3_2_1_aux2 (#opened:_)
 
   let md_as_seq = gget (A.varray (md_bm_array md_bm_region (US.add md_count_v (US.sub i 1sz)))) in
   assert (G.reveal md_as_seq == Seq.create 4 0UL);
-  A.ghost_split (slab_array slab_region (US.add md_count_v (US.sub i 1sz))) 0sz;
-  slab_to_slots size_class (A.split_r (slab_array slab_region (US.add md_count_v (US.sub i 1sz))) 0sz);
+  slab_to_slots size_class (slab_array slab_region (US.add md_count_v (US.sub i 1sz)));
   empty_md_is_properly_zeroed size_class;
   intro_slab_vprop size_class
     (md_bm_array md_bm_region (US.add md_count_v (US.sub i 1sz)))
@@ -2169,8 +2168,7 @@ let allocate_slab_aux_3_3_2_2
     (A.varray (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz))));
   let md_as_seq = gget (A.varray (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))) in
   assert (G.reveal md_as_seq == Seq.create 4 0UL);
-  A.ghost_split (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))) 0sz;
-  slab_to_slots size_class (A.split_r (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))) 0sz);
+  slab_to_slots size_class (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
   empty_md_is_properly_zeroed size_class;
   intro_slab_vprop size_class
     (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
@@ -2558,17 +2556,16 @@ let allocate_slab'
     vptr r2 `star`
     vptr r3 `star`
     vptr r4 `star`
-    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v `star`
+    right_vprop slab_region md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3 pred4
       (A.split_l md_region md_count_v)
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
-      (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_us_refined (US.v md_count_v)) `star`
-    A.varrayp (A.split_l slab_region 0sz) halfp
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (fun r ->
     (if (A.is_null r) then emp else A.varray r) `star`
@@ -2602,7 +2599,7 @@ let allocate_slab'
     assert (US.v md_count_v <> AL.null);
 
     let r = allocate_slab_aux_2 size_class
-      (A.split_r slab_region 0sz) md_bm_region md_region
+      slab_region md_bm_region md_region
       md_count r1 r2 r3 r4
       md_count_v md_region_lv idx1 idx2 idx3 idx4 in
     pack_right_and_refactor_vrefine_dep
@@ -2621,7 +2618,7 @@ let allocate_slab'
     assert (US.v md_count_v <> AL.null);
 
     let r = allocate_slab_aux_1 size_class
-      (A.split_r slab_region 0sz) md_bm_region md_region
+      slab_region md_bm_region md_region
       md_count r1 r2 r3 r4
       md_count_v md_region_lv idx1 idx2 idx3 idx4 in
     pack_right_and_refactor_vrefine_dep
@@ -2637,7 +2634,7 @@ let allocate_slab'
     let b = US.lte (US.add md_count_v' guard_pages_interval) metadata_max in
     if b then (
       allocate_slab_aux_3 size_class
-        (A.split_r slab_region 0sz) md_bm_region md_region
+        slab_region md_bm_region md_region
         md_count r1 r2 r3 r4
         md_count_v md_region_lv
         idx1 idx2 idx3 idx4;
@@ -2655,7 +2652,7 @@ let allocate_slab'
         (fun x y -> x == y)
         (fun _ -> admit ());
       let r = allocate_slab_aux_1 size_class
-        (A.split_r slab_region 0sz) md_bm_region md_region
+        slab_region md_bm_region md_region
         md_count r1 r2 r3 r4
         (US.add md_count_v guard_pages_interval)
         (G.hide (Seq.append
@@ -2677,7 +2674,7 @@ let allocate_slab'
       return r
     ) else (
       pack_3 size_class
-        (A.split_r slab_region 0sz) md_bm_region md_region
+        slab_region md_bm_region md_region
         md_count r1 r2 r3 r4
         md_count_v md_region_lv idx1 idx2 idx3 idx4;
       pack_right_and_refactor_vrefine_dep
@@ -2729,17 +2726,15 @@ let allocate_slab
 
   change_equal_slprop
     (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4(G.reveal md_count_v))
-    (left_vprop size_class (A.split_r slab_region 0sz) md_bm_region md_region
+    (left_vprop size_class slab_region md_bm_region md_region
       r1 r2 r3 r4 md_count_v_ `star`
-    right_vprop (A.split_r slab_region 0sz) md_bm_region md_region md_count_v_ `star`
-    A.varrayp (A.split_l slab_region 0sz) halfp);
-
+    right_vprop slab_region md_bm_region md_region md_count_v_);
 
   let x
     : G.erased _
     = elim_vdep
     (left_vprop1 md_region r1 r2 r3 r4 md_count_v_)
-    (left_vprop_aux size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4 md_count_v_) in
+    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 md_count_v_) in
 
   let idxs
     : G.erased _
@@ -2777,12 +2772,12 @@ let allocate_slab
   let x' : Ghost.erased (Seq.lseq AL.status (US.v md_count_v_)) = ALG.dataify (dsnd x) in
 
   change_equal_slprop
-    (left_vprop_aux size_class (A.split_r slab_region 0sz) md_bm_region md_region r1 r2 r3 r4 md_count_v_ x)
+    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 md_count_v_ x)
     (starseq
       #(pos:US.t{US.v pos < US.v md_count_v_})
       #(t size_class)
-      (f size_class (A.split_r slab_region 0sz) md_bm_region md_count_v_ x')
-      (f_lemma size_class (A.split_r slab_region 0sz) md_bm_region md_count_v_ x')
+      (f size_class slab_region md_bm_region md_count_v_ x')
+      (f_lemma size_class slab_region md_bm_region md_count_v_ x')
       (SeqUtils.init_us_refined (US.v md_count_v_)));
 
   let r = allocate_slab' size_class
