@@ -228,6 +228,114 @@ let vrefinedep_ext
 
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects --fuel 0 --ifuel 0"
 noextract inline_for_extraction
+let init_struct_aux
+  (sc:sc)
+  (slab_region: array U8.t{A.length slab_region == U32.v page_size * US.v metadata_max})
+  (md_bm_region: array U64.t{A.length md_bm_region == US.v 4sz * US.v metadata_max})
+  (md_region: array AL.cell{A.length md_region == US.v metadata_max})
+  : Steel size_class_struct
+  (
+    A.varray slab_region `star`
+    A.varray md_bm_region `star`
+    A.varray md_region
+  )
+  (fun scs -> size_class_vprop scs)
+  (requires fun h0 ->
+    zf_u8 (A.asel slab_region h0) /\
+    zf_u64 (A.asel md_bm_region h0)
+  )
+  (ensures fun _ r h1 ->
+    U32.eq r.size sc /\
+    //zf_u8 (A.asel (A.split_l slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) (US.sub n 1sz))) h1) /\
+    //zf_u64 (A.asel (A.split_l md_bm_region (US.mul (US.mul metadata_max 4sz) (US.sub n 1sz))) h1) /\
+    same_base_array r.slab_region slab_region /\
+    same_base_array r.md_bm_region md_bm_region /\
+    same_base_array r.md_region md_region /\
+    True
+  )
+  =
+  let s1 = gget (A.varray slab_region) in
+  let s2 = gget (A.varray md_bm_region) in
+  zf_u8_split s1 0;
+  zf_u64_split s2 0;
+  A.ghost_split slab_region 0sz;
+  A.ghost_split md_bm_region 0sz;
+  A.ghost_split md_region 0sz;
+
+  drop (A.varray (A.split_l md_bm_region 0sz));
+  drop (A.varray (A.split_l slab_region 0sz));
+
+  intro_right_vprop_empty slab_region md_bm_region md_region;
+
+  let ptr_partial = mmap_ptr_us () in
+  let ptr_empty = mmap_ptr_us () in
+  let ptr_full = mmap_ptr_us () in
+  let ptr_guard = mmap_ptr_us () in
+
+  R.write ptr_partial AL.null_ptr;
+  R.write ptr_empty AL.null_ptr;
+  R.write ptr_full AL.null_ptr;
+  R.write ptr_guard AL.null_ptr;
+
+  intro_left_vprop_empty sc
+    slab_region md_bm_region md_region
+    ptr_empty ptr_partial ptr_full ptr_guard;
+
+  let md_count = mmap_ptr_us () in
+  R.write md_count 0sz;
+
+  intro_vrefinedep
+    (R.vptr md_count)
+    vrefinedep_prop
+    (size_class_vprop_aux sc
+      slab_region md_bm_region md_region
+      ptr_empty ptr_partial ptr_full ptr_guard)
+    (left_vprop sc slab_region md_bm_region md_region
+         ptr_empty ptr_partial ptr_full ptr_guard 0sz `star`
+     right_vprop slab_region md_bm_region md_region 0sz);
+
+
+  [@inline_let]
+  let scs = {
+    size = sc;
+    partial_slabs = ptr_partial;
+    empty_slabs = ptr_empty;
+    full_slabs = ptr_full;
+    guard_slabs = ptr_guard;
+    slab_region = slab_region;
+    md_bm_region = md_bm_region;
+    md_region = md_region;
+    md_count = md_count;
+  } in
+
+  change_slprop_rel
+    (vrefinedep
+      (R.vptr md_count)
+      vrefinedep_prop
+      (size_class_vprop_aux sc
+        slab_region md_bm_region md_region
+        ptr_empty ptr_partial ptr_full ptr_guard))
+     (size_class_vprop scs)
+    (fun _ _ -> True)
+    (fun _ ->
+      let open FStar.Tactics in
+      assert (
+        size_class_vprop scs
+        ==
+        vrefinedep
+          (R.vptr scs.md_count)
+          vrefinedep_prop
+          (size_class_vprop_aux scs.size
+            scs.slab_region scs.md_bm_region scs.md_region
+            scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs)
+      ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
+    );
+  return scs
+
+#restart-solver
+
+//#push-options "--split_queries always --query_stats"
+noextract inline_for_extraction
 let init_struct
   (n: US.t{
     US.v n > 0 /\
@@ -274,93 +382,19 @@ let init_struct
   let slab_region' = A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) (US.sub n 1sz)) in
   let md_bm_region' = A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) (US.sub n 1sz)) in
   let md_region' = A.split_r md_region (US.mul metadata_max (US.sub n 1sz)) in
-  change_slprop_rel
-    (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) (US.sub n 1sz))) `star`
-    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) (US.sub n 1sz))) `star`
-    A.varray (A.split_r md_region (US.mul metadata_max (US.sub n 1sz))))
-    (A.varray slab_region' `star`
-    A.varray md_bm_region' `star`
-    A.varray md_region')
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  //let md_region = mmap_cell_status metadata_max in
-  let s1 = gget (A.varray slab_region') in
-  let s2 = gget (A.varray md_bm_region') in
-  zf_u8_split s1 0;
-  zf_u64_split s2 0;
-  A.ghost_split slab_region' 0sz;
-  A.ghost_split md_bm_region' 0sz;
-  A.ghost_split md_region' 0sz;
-
-  drop (A.varray (A.split_l md_bm_region' 0sz));
-  drop (A.varray (A.split_l slab_region' 0sz));
-
-  intro_right_vprop_empty slab_region' md_bm_region' md_region';
-
-  let ptr_partial = mmap_ptr_us () in
-  let ptr_empty = mmap_ptr_us () in
-  let ptr_full = mmap_ptr_us () in
-  let ptr_guard = mmap_ptr_us () in
-
-  R.write ptr_partial AL.null_ptr;
-  R.write ptr_empty AL.null_ptr;
-  R.write ptr_full AL.null_ptr;
-  R.write ptr_guard AL.null_ptr;
-
-  intro_left_vprop_empty sc
-    slab_region' md_bm_region' md_region'
-    ptr_empty ptr_partial ptr_full ptr_guard;
-
-  let md_count = mmap_ptr_us () in
-  R.write md_count 0sz;
-
-  intro_vrefinedep
-    (R.vptr md_count)
-    vrefinedep_prop
-    (size_class_vprop_aux sc
-      slab_region' md_bm_region' md_region'
-      ptr_empty ptr_partial ptr_full ptr_guard)
-    (left_vprop sc slab_region' md_bm_region' md_region'
-         ptr_empty ptr_partial ptr_full ptr_guard 0sz `star`
-     right_vprop slab_region' md_bm_region' md_region' 0sz);
-
-
-  [@inline_let]
-  let scs = {
-    size = sc;
-    partial_slabs = ptr_partial;
-    empty_slabs = ptr_empty;
-    full_slabs = ptr_full;
-    guard_slabs = ptr_guard;
-    slab_region = slab_region';
-    md_bm_region = md_bm_region';
-    md_region = md_region';
-    md_count = md_count;
-  } in
-
-  change_slprop_rel
-    (vrefinedep
-      (R.vptr md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux sc
-        slab_region' md_bm_region' md_region'
-        ptr_empty ptr_partial ptr_full ptr_guard))
-     (size_class_vprop scs)
-    (fun _ _ -> True)
-    (fun _ -> admit ());
-    //  let open FStar.Tactics in
-    //  assert (
-    //    size_class_vprop scs
-    //    ==
-    //    vrefinedep
-    //      (R.vptr scs.md_count)
-    //      vrefinedep_prop
-    //      (size_class_vprop_aux scs.size
-    //        scs.slab_region scs.md_bm_region scs.md_region
-    //        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs)
-    //  ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
-    //);
-
+  change_equal_slprop
+    (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) (US.sub n 1sz))))
+    (A.varray slab_region');
+  change_equal_slprop
+    (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) (US.sub n 1sz))))
+    (A.varray md_bm_region');
+  change_equal_slprop
+    (A.varray (A.split_r md_region (US.mul metadata_max (US.sub n 1sz))))
+    (A.varray md_region');
+  assume (A.length slab_region' == US.v metadata_max * U32.v page_size);
+  assume (A.length md_bm_region' == US.v metadata_max * US.v 4sz);
+  assume (A.length md_region' == US.v metadata_max);
+  let scs = init_struct_aux sc slab_region' md_bm_region' md_region' in
   return scs
 
 let split_l_l (#opened:_) (#a: Type)
