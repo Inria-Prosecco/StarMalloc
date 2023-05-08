@@ -658,6 +658,7 @@ noeq type size_classes_all = {
   sc1024 : size_class1024_t;
   sc2048 : size_class2048_t;
   sc4096 : size_class4096_t;
+  //TODO: add ro arrays here
 }
 
 //TODO: metaprogramming
@@ -842,6 +843,7 @@ let slab_malloc' (sc: size_class) (bytes: U32.t)
 
 //TODO: top-level array of non-constant but locked values
 
+//TODO: metaprogramming
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let slab_malloc bytes =
   if bytes `U32.lte` 16ul then (
@@ -868,39 +870,47 @@ let slab_malloc bytes =
 #pop-options
 
 val slab_free (ptr:array U8.t)
-  : SteelT bool
-           (A.varray ptr)
-           (fun b -> if b then emp else A.varray ptr)
-
-inline_for_extraction noextract
-let slab_free1 (sc: size_class) (ptr: array U8.t)
   : Steel bool
   (A.varray ptr)
-  (fun b -> A.varray ptr)
-  (requires fun _ -> True)
-  (ensures fun h0 r h1 ->
-    (if r then SAA.within_bounds
-      (A.split_l sc.data.slab_region 0sz)
-      ptr
-      (A.split_r sc.data.slab_region slab_size) else
-    True) /\
-    asel ptr h1 == asel ptr h0
+  (fun b -> if b then emp else A.varray ptr)
+  //TODO: refine, sketch
+  (requires SAA.within_bounds
+    sc_all.slab_begin
+    sc_all.slab_end
   )
-  =
-  RS.within_bounds_intro
-    (A.split_l sc.data.slab_region 0sz)
-    ptr
-    (A.split_r sc.data.slab_region slab_size)
-    sc.region_start
-    sc.region_end
+  (ensures fun _ _ _ -> True)
+
+//inline_for_extraction noextract
+//let slab_free1 (sc: size_class) (ptr: array U8.t)
+//  : Steel bool
+//  (A.varray ptr)
+//  (fun b -> A.varray ptr)
+//  (requires fun _ -> True)
+//  (ensures fun h0 r h1 ->
+//    (if r then SAA.within_bounds
+//      (A.split_l sc.data.slab_region 0sz)
+//      ptr
+//      (A.split_r sc.data.slab_region slab_size) else
+//    True) /\
+//    asel ptr h1 == asel ptr h0
+//  )
+//  =
+//  RS.within_bounds_intro
+//    (A.split_l sc.data.slab_region 0sz)
+//    ptr
+//    (A.split_r sc.data.slab_region slab_size)
+//    sc.region_start
+//    sc.region_end
 
 inline_for_extraction noextract
-let slab_free2 (sc: size_class) (ptr: array U8.t)
+let slab_free' (sc: size_class) (ptr: array U8.t)
   : Steel bool
   (A.varray ptr)
   (fun b -> if b then emp else A.varray ptr)
   (requires fun h0 ->
-    SAA.within_bounds (A.split_l sc.data.slab_region 0sz) ptr (A.split_r sc.data.slab_region slab_size))
+    //TODO: sketch
+    offset (ptr_of ptr) >= offset (ptr_of sc) /\
+    offset (ptr_of ptr) < offset (ptr_of sc) + slab_sc_size)
   (ensures fun h0 _ h1 -> True)
   =
   L.acquire sc.lock;
@@ -908,7 +918,12 @@ let slab_free2 (sc: size_class) (ptr: array U8.t)
   L.release sc.lock;
   return res
 
+//TODO: metaprogramming
+
 let slab_free ptr =
+  let d = ptrdiff ... in
+  if US.eq d 0sz then slab_freee' size_class16 ptr
+  else if (...)
   if (slab_free1 size_class16 ptr) then slab_free2 size_class16 ptr
   else if (slab_free1 size_class32 ptr) then slab_free2 size_class32 ptr
   else if (slab_free1 size_class64 ptr) then slab_free2 size_class64 ptr
@@ -920,6 +935,7 @@ let slab_free ptr =
   else if (slab_free1 size_class4096 ptr) then slab_free2 size_class4096 ptr
   else return false
 
+//TODO: metaprogramming
 let slab_getsize (ptr: array U8.t)
   : Steel US.t
   (A.varray ptr) (fun _ -> A.varray ptr)
