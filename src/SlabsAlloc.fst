@@ -335,7 +335,6 @@ let allocate_slab_aux_1
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4: US.t)
-  (diff: US.t)
   : Steel (array U8.t)
   (
     vptr md_count `star`
