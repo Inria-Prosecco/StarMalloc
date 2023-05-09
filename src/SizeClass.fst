@@ -182,6 +182,7 @@ inline_for_extraction noextract
 let deallocate_size_class
   (scs: size_class_struct)
   (ptr: array U8.t)
+  (diff: US.t)
   : Steel bool
   (A.varray ptr `star`
   size_class_vprop scs)
@@ -189,7 +190,11 @@ let deallocate_size_class
     (if b then emp else A.varray ptr) `star`
     size_class_vprop scs)
   (requires fun h0 ->
-    within_bounds (A.split_l scs.slab_region 0sz) ptr (A.split_r scs.slab_region slab_size))
+    let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
+    0 <= diff' /\
+    US.v diff = diff' /\
+    same_base_array ptr scs.slab_region /\
+    UP.fits diff')
   (ensures fun h0 _ h1 -> True)
   =
   change_slprop_rel
@@ -202,19 +207,11 @@ let deallocate_size_class
         scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
-  let diff = G.hide (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region)) in
-  [@inline_let]
-  let a0 = A.split_l scs.slab_region 0sz in
-  [@inline_let]
-  let a1 = A.split_r scs.slab_region slab_size in
-  within_bounds_elim a0 a1 ptr;
-  // Needed for the assert below
-  assume (UP.fits (G.reveal diff));
   let b = deallocate_slab ptr
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region
     scs.md_count
-    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs in
+    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs diff in
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
