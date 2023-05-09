@@ -14,7 +14,6 @@ module R = Steel.Reference
 module L = Steel.SpinLock
 module AL = ArrayList
 module ALG = ArrayListGen
-module RS = RegionSelect
 module SAA = Steel.ArrayArith
 
 open Prelude
@@ -561,6 +560,7 @@ let init_wrapper2
     (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k))
     (A.split_r md_region (US.mul metadata_max k))
   in
+  assert (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
   sladmit ();
   let lock = L.new_lock (size_class_vprop data) in
   let sc = {data; lock} in
@@ -627,8 +627,6 @@ noeq type size_classes_all = {
     True
 
   };
-  slab_region_begin : RS.ro_array #U8.t (A.split_l slab_region 0sz);
-  slab_region_end : RS.ro_array #U8.t (A.split_r slab_region slab_region_size);
 }
 
 //TODO: metaprogramming
@@ -672,10 +670,8 @@ let init
 
   change_slprop_rel
     (A.varray slab_region)
-    (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) `star`
-    A.varray (A.split_l slab_region 0sz) `star`
-    A.varray (A.split_r slab_region slab_region_size))
-    (fun x y -> x == fst (fst y))
+    (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)))
+    (fun x y -> x == y)
     (fun _ -> admit ());
   change_slprop_rel
     (A.varray md_bm_region)
@@ -717,9 +713,6 @@ let init
     9sz)));
   drop (A.varray (A.split_r md_region (US.mul metadata_max
     9sz)));
-  let slab_region_begin = RS.create_ro_array (A.split_l slab_region 0sz) in
-  let slab_region_end = RS.create_ro_array (A.split_r slab_region slab_region_size) in
-  admit ();
   let s : size_classes_all = {
     sc16 = sc16;
     sc32 = sc32;
@@ -731,8 +724,6 @@ let init
     sc2048 = sc2048;
     sc4096 = sc4096;
     slab_region = slab_region;
-    slab_region_begin = slab_region_begin;
-    slab_region_end = slab_region_end;
   } in
   return s
 
@@ -798,9 +789,7 @@ val slab_free (ptr:array U8.t)
   (fun b ->
     (if b then emp else A.varray ptr) `star`
     A.varray (A.split_l sc_all.slab_region 0sz))
-  //TODO: refine, sketch
   (requires fun _ -> SAA.within_bounds
-    //sc_all.slab_region_begin
     (A.split_l (G.reveal sc_all.slab_region) 0sz)
     ptr
     (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
@@ -923,9 +912,7 @@ let slab_getsize (ptr: array U8.t)
   (A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
   (fun _ ->
    A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
-  //TODO: refine, sketch
   (requires fun _ -> SAA.within_bounds
-    //sc_all.slab_region_begin
     (A.split_l (G.reveal sc_all.slab_region) 0sz)
     ptr
     (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
