@@ -475,18 +475,18 @@ let f_lemma
     US.fits (US.v metadata_max * US.v n)
   )
   (ensures
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.sub n k)) /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v (US.sub n k)) /\
-    US.fits (US.v metadata_max * US.v (US.sub n k)) /\
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.sub n (US.add k 1sz))) /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v (US.sub n (US.add k 1sz))) /\
-    US.fits (US.v metadata_max * US.v (US.sub n (US.add k 1sz))) /\
-    US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.sub n k) <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
-    US.v metadata_max * US.v 4sz * US.v (US.sub n k) <= US.v metadata_max * US.v 4sz * US.v n /\
-    US.v metadata_max * US.v (US.sub n k) <= US.v metadata_max * US.v n /\
-    US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.sub n (US.add k 1sz)) <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
-    US.v metadata_max * US.v 4sz * US.v (US.sub n (US.add k 1sz)) <= US.v metadata_max * US.v 4sz * US.v n /\
-    US.v metadata_max * US.v (US.sub n (US.add k 1sz)) <= US.v metadata_max * US.v n
+    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v k) /\
+    US.fits (US.v metadata_max * US.v 4sz * US.v k) /\
+    US.fits (US.v metadata_max * US.v k) /\
+    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz)) /\
+    US.fits (US.v metadata_max * US.v 4sz * US.v (US.add k 1sz)) /\
+    US.fits (US.v metadata_max * US.v (US.add k 1sz)) /\
+    US.v metadata_max * US.v (u32_to_sz page_size) * US.v k <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
+    US.v metadata_max * US.v 4sz * US.v k <= US.v metadata_max * US.v 4sz * US.v n /\
+    US.v metadata_max * US.v k <= US.v metadata_max * US.v n /\
+    US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz) <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
+    US.v metadata_max * US.v 4sz * US.v (US.add k 1sz) <= US.v metadata_max * US.v 4sz * US.v n /\
+    US.v metadata_max * US.v (US.add k 1sz) <= US.v metadata_max * US.v n
   )
   = admit ()
 
@@ -502,33 +502,33 @@ let init_wrapper2
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
     US.fits (US.v metadata_max * US.v n)
   })
-  (k: US.t{US.v k < US.v n /\
+  (k: US.t{US.v k < US.v n})
+  (k': US.t{US.v k' == US.v k + 1 /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size)) /\
     US.fits (US.v metadata_max * US.v 4sz) /\
     US.fits (US.v metadata_max) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v k) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v k) /\
     US.fits (US.v metadata_max * US.v k) /\
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz)) /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v (US.add k 1sz)) /\
-    US.fits (US.v metadata_max * US.v (US.add k 1sz)) /\
+    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v k') /\
+    US.fits (US.v metadata_max * US.v 4sz * US.v k') /\
+    US.fits (US.v metadata_max * US.v k') /\
     True
   })
-  (k': US.t{US.v k' == US.v k + 1})
   (slab_region: array U8.t{
     A.length slab_region == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
     A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k /\
-    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz)
+    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k'
   })
   (md_bm_region: array U64.t{
     A.length md_bm_region == US.v metadata_max * US.v 4sz * US.v n /\
     A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v k /\
-    A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v (US.add k 1sz)
+    A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v k'
   })
   (md_region: array AL.cell{
     A.length md_region == US.v metadata_max * US.v n /\
     A.length md_region >= US.v metadata_max * US.v k /\
-    A.length md_region >= US.v metadata_max * US.v (US.add k 1sz)
+    A.length md_region >= US.v metadata_max * US.v k'
   })
   : Steel size_class
   (
@@ -556,7 +556,6 @@ let init_wrapper2
     A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
   )
   =
-  admit ();
   let data = init_struct (US.sub n k) sc
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k))
     (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k))
