@@ -21,6 +21,8 @@ open Main
 // AVL+mmap allocator
 open LargeAlloc
 
+#push-options "--fuel 0 --ifuel 0"
+
 val malloc (size: US.t)
   : Steel (array U8.t)
   emp
@@ -37,39 +39,59 @@ let malloc size =
 
 val free (ptr: array U8.t)
   : Steel bool
-  (A.varray ptr)
-  (fun b -> if b then emp else A.varray ptr)
+  (
+    A.varray ptr `star`
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size)
+  )
+  (fun b ->
+    (if b then emp else A.varray ptr) `star`
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size)
+  )
   //TODO: remove this precondition
   (requires fun _ -> A.is_full_array ptr)
   (ensures fun _ _ _ -> True)
 
 let free ptr =
-  let b = slab_free ptr in
+  let b = SAA.within_bounds_intro
+    (A.split_l sc_all.slab_region 0sz)
+    ptr
+    (A.split_r sc_all.slab_region slab_region_size) in
   if b then (
-    return b
+    slab_free ptr
   ) else (
-    change_equal_slprop
-      (if b then emp else A.varray ptr)
-      (A.varray ptr);
-    let b = large_free ptr in
-    return b
+    large_free ptr
   )
 
 let getsize (ptr: array U8.t)
   : Steel US.t
-  (A.varray ptr) (fun _ -> A.varray ptr)
+  (
+    A.varray ptr `star`
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size)
+  )
+  (fun _ ->
+    A.varray ptr `star`
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size)
+  )
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
     A.asel ptr h1 == A.asel ptr h0
   )
   =
-  let s1 = slab_getsize ptr in
-  if s1 = 0sz then (
-    let s2 = large_getsize ptr in
-    return s2
+  let b = SAA.within_bounds_intro
+    (A.split_l sc_all.slab_region 0sz)
+    ptr
+    (A.split_r sc_all.slab_region slab_region_size) in
+  if b then (
+    slab_getsize ptr
   ) else (
-    return s1
+    large_getsize ptr
   )
+
+(*)
 
 assume
 val memcpy_u8 (dest src: array U8.t) (n: US.t)
@@ -109,7 +131,6 @@ let realloc_vp (status: return_status)
   | 2 -> null_or_varray ptr `star` null_or_varray new_ptr
 
 #restart-solver
-
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let realloc (ptr: array U8.t) (new_size: US.t)
