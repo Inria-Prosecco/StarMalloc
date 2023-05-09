@@ -1047,7 +1047,6 @@ let deallocate_slab
     //diff' < US.v metadata_max * U32.v page_size /\
     US.v diff_ == diff' /\
     same_base_array ptr slab_region /\
-    UP.fits diff' /\
     (U32.v page_size) % (U32.v size_class) = 0)
   (ensures fun _ _ _ -> True)
   =
