@@ -50,6 +50,5 @@ val deallocate_slab
     US.v diff_ = diff' /\
     //diff' < US.v metadata_max * U32.v page_size /\
     same_base_array ptr slab_region /\
-    UP.fits diff' /\
     (U32.v page_size) % (U32.v size_class) = 0)
   (ensures fun _ _ _ -> True)

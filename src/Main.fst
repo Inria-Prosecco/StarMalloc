@@ -871,16 +871,15 @@ let slab_free' (sc: size_class) (ptr: array U8.t) (diff: US.t)
   (A.varray ptr)
   (fun b -> if b then emp else A.varray ptr)
   (requires fun h0 ->
-    //TODO: sketch
-    offset (ptr_of ptr) >= offset (ptr_of sc.data.slab_region) /\
-    offset (ptr_of ptr) < offset (ptr_of sc.data.slab_region) + US.v slab_size)
+    let diff' = offset (ptr_of ptr) - offset (ptr_of sc.data.slab_region) in
+    same_base_array ptr sc.data.slab_region /\
+    0 <= diff' /\
+    diff' < US.v slab_size /\
+    US.v diff = diff')
   (ensures fun h0 _ h1 -> True)
   =
   L.acquire sc.lock;
-  //TODO: update SizeClass.fst
-  //let res = deallocate_size_class sc.data ptr in
-  let res = false in
-  sladmit ();
+  let res = deallocate_size_class sc.data ptr diff in
   L.release sc.lock;
   return res
 

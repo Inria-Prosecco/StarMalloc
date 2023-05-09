@@ -193,8 +193,7 @@ let deallocate_size_class
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
     0 <= diff' /\
     US.v diff = diff' /\
-    same_base_array ptr scs.slab_region /\
-    UP.fits diff')
+    same_base_array ptr scs.slab_region)
   (ensures fun h0 _ h1 -> True)
   =
   change_slprop_rel
