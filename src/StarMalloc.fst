@@ -91,8 +91,6 @@ let getsize (ptr: array U8.t)
     large_getsize ptr
   )
 
-(*)
-
 assume
 val memcpy_u8 (dest src: array U8.t) (n: US.t)
   : Steel (array U8.t)
@@ -135,8 +133,16 @@ let realloc_vp (status: return_status)
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let realloc (ptr: array U8.t) (new_size: US.t)
   : Steel (array U8.t & G.erased (return_status & array U8.t))
-  (null_or_varray ptr)
-  (fun r -> realloc_vp (fst (G.reveal (snd r))) ptr (snd (G.reveal (snd r))) (fst r))
+  (
+    null_or_varray ptr `star`
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size)
+  )
+  (fun r ->
+    realloc_vp (fst (G.reveal (snd r))) ptr (snd (G.reveal (snd r))) (fst r) `star`
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size)
+  )
   (requires fun _ -> A.is_full_array ptr)
   (ensures fun _ r _ ->
     not (A.is_null (fst r)) ==> A.length (fst r) >= US.v new_size
@@ -220,10 +226,18 @@ val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
     Seq.create (US.v n) c
   )
 
+//TODO: there should be defensive checks and no precondition
 let calloc (size1 size2: US.t)
   : Steel (array U8.t & G.erased bool)
-  emp
-  (fun r -> if (snd r) then emp else A.varray (fst r))
+  (
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size)
+  )
+  (fun r ->
+    (if (snd r) then emp else A.varray (fst r)) `star`
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size)
+  )
   (requires fun _ -> US.fits (US.v size1 * US.v size2))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
