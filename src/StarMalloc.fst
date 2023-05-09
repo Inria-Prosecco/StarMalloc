@@ -227,6 +227,7 @@ val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
   )
 
 //TODO: there should be defensive checks and no precondition
+//TODO: add zeroing postcondition
 let calloc (size1 size2: US.t)
   : Steel (array U8.t & G.erased bool)
   (
