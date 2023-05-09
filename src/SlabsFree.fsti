@@ -28,6 +28,7 @@ val deallocate_slab
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   (r1 r2 r3 r4: ref US.t)
+  (diff_: US.t)
   : Steel bool
   (
     A.varray ptr `star`
@@ -46,6 +47,7 @@ val deallocate_slab
   (requires fun _ ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
+    US.v diff_ = diff' /\
     //diff' < US.v metadata_max * U32.v page_size /\
     same_base_array ptr slab_region /\
     UP.fits diff' /\
