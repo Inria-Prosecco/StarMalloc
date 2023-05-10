@@ -6,7 +6,8 @@ static const size_t page_size = 4096UL;
 static const size_t max_slabs = 1024UL;
 
 uint8_t *mmap_s(size_t size) {
-  return mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+  //TODO: remove MAP_NORESERVE flag
+  return mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_NORESERVE, -1, 0);
 }
 
 uint8_t *mmap_u8(size_t len) {
