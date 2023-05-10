@@ -552,6 +552,7 @@ let init_wrapper2
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
     U32.eq r.data.size sc /\
+    same_base_array slab_region r.data.slab_region /\
     A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
   )
   =
@@ -630,7 +631,7 @@ noeq type size_classes_all = {
 }
 
 //TODO: metaprogramming
-#push-options "--z3rlimit 150"
+#push-options "--z3rlimit 200 --query_stats"
 noextract inline_for_extraction
 let init
   (_:unit)
