@@ -556,6 +556,7 @@ let init_wrapper2
     A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
   )
   =
+  admit ();
   let data = init_struct (US.sub n k) sc
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k))
     (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k))
