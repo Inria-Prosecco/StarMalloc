@@ -582,7 +582,13 @@ let size_class4096_t = r:size_class{U32.eq r.data.size 4096ul}
 
 let slab_region_size
   : v:US.t{US.v v = US.v metadata_max * U32.v page_size * 9}
-  = admit (); US.mul slab_size 9sz
+  =
+  assert (US.fits_u64);
+  assume (US.v nb_size_classes == 9);
+  US.fits_lte
+    (US.v metadata_max * U32.v page_size * 9)
+    (US.v metadata_max * U32.v page_size * US.v nb_size_classes);
+  US.mul slab_size 9sz
 
 module G = FStar.Ghost
 
