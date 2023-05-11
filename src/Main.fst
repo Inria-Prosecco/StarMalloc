@@ -902,15 +902,15 @@ let slab_free ptr =
   assume (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
-       if (index = 0sz) then slab_free' sc_all.sc16 ptr rem
-  else if (index = 1sz) then slab_free' sc_all.sc32 ptr rem
-  else if (index = 2sz) then slab_free' sc_all.sc64 ptr rem
-  else if (index = 3sz) then slab_free' sc_all.sc128 ptr rem
-  else if (index = 4sz) then slab_free' sc_all.sc256 ptr rem
-  else if (index = 5sz) then slab_free' sc_all.sc512 ptr rem
-  else if (index = 6sz) then slab_free' sc_all.sc1024 ptr rem
-  else if (index = 7sz) then slab_free' sc_all.sc2048 ptr rem
-  else if (index = 8sz) then slab_free' sc_all.sc4096 ptr rem
+       if (index = 0sz) then slab_free' size_class16 ptr rem
+  else if (index = 1sz) then slab_free' size_class32 ptr rem
+  else if (index = 2sz) then slab_free' size_class64 ptr rem
+  else if (index = 3sz) then slab_free' size_class128 ptr rem
+  else if (index = 4sz) then slab_free' size_class256 ptr rem
+  else if (index = 5sz) then slab_free' size_class512 ptr rem
+  else if (index = 6sz) then slab_free' size_class1024 ptr rem
+  else if (index = 7sz) then slab_free' size_class2048 ptr rem
+  else if (index = 8sz) then slab_free' size_class4096 ptr rem
   //TODO: expose n, remove this last case
   else return false
 
