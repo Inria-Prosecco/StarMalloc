@@ -66,10 +66,7 @@ ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
 
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
-	$(KRML_EXE) \
-	-header empty.txt \
-	-skip-compilation \
-	-no-prefix Mman -tmpdir dist \
+	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
     -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 		-bundle 'Map.\*,Impl.\*,Spec.\*'[rename=AVL] \
