@@ -26,11 +26,14 @@
         name = "steel-experiments";
         src = ./.;
         enableParallelBuilding = true;
-        buildInputs = [ fstar karamel ];
+        buildInputs = [ fstar karamel pkgs.removeReferencesTo ];
         FSTAR_HOME = fstar;
         KRML_HOME = karamel;
         installPhase = "mkdir $out && cp -r dist bench/starmalloc.so $out";
         buildFlags = [ "lib" "hardened_lib" ];
+        postInstall = ''
+          find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
+        '';
         #buildPhase = ''
         ##  echo "${fstar}"
         ##  echo "${karamel}"
