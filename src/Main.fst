@@ -1,5 +1,7 @@
 module Main
 
+open Test
+
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
@@ -403,54 +405,60 @@ let init_struct
   let scs = init_struct_aux sc slab_region' md_bm_region' md_region' in
   return scs
 
-let split_l_l (#opened:_) (#a: Type)
+let split_r_r (#opened:_) (#a: Type)
   (k1: US.t)
-  (k2: US.t{US.v k1 <= US.v k2})
-  (arr: array a{US.v k2 <= A.length arr})
+  (k2: US.t)
+  (arr: array a{
+    US.fits (US.v k1 + US.v k2) /\
+    US.v k1 + US.v k2 <= A.length arr
+  })
   : SteelGhost unit opened
   (A.varray (
-    A.split_l (A.split_l arr k2) k1
+    A.split_r (A.split_r arr k1) k2
   ))
   (fun _ -> A.varray (
-    A.split_l arr k1
+    A.split_r arr (US.add k1 k2)
   ))
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
-    A.asel (A.split_l (A.split_l arr k2) k1) h0
+    A.asel (A.split_r (A.split_r arr k1) k2) h0
     ==
-    A.asel (A.split_l arr k1) h1
+    A.asel (A.split_r arr (US.add k1 k2)) h1
   )
   =
   A.ptr_base_offset_inj
-    (A.ptr_of (A.split_l (A.split_l arr k2) k1))
-    (A.ptr_of (A.split_l arr k1));
+    (A.ptr_of (A.split_r (A.split_r arr k1) k2))
+    (A.ptr_of (A.split_r arr (US.add k1 k2)));
   change_equal_slprop
-    (A.varray (A.split_l (A.split_l arr k2) k1))
-    (A.varray (A.split_l arr k1))
+    (A.varray (A.split_r (A.split_r arr k1) k2))
+    (A.varray (A.split_r arr (US.add k1 k2)))
 
-let split_l_l_mul (#opened:_) (#a: Type)
-  (k1 k1': US.t)
-  (k2: US.t{US.v k1 == US.v k1' /\ US.v k1 <= US.v k2})
-  (n: US.t{US.fits (US.v n * US.v k2)})
-  (arr: array a{US.v k2 * US.v n <= A.length arr})
+let split_r_r_mul (#opened:_) (#a: Type)
+  (n: US.t)
+  (k1: US.t)
+  (k2: US.t{US.v k2 == US.v k1 + 1})
+  (arr: array a{
+    US.fits (US.v n * US.v k2) /\
+    US.v n * US.v k2 <= A.length arr
+  })
   : SteelGhost unit opened
   (A.varray (
-    A.split_l (A.split_l arr (US.mul n k2)) (US.mul n k1)
+    A.split_r (A.split_r arr (US.mul n k1)) n
   ))
   (fun _ -> A.varray (
-    A.split_l arr (US.mul n k1')
+    A.split_r arr (US.mul n k2)
   ))
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
-    A.asel (A.split_l (A.split_l arr (US.mul n k2)) (US.mul n k1)) h0
+    A.asel (A.split_r (A.split_r arr (US.mul n k1)) n) h0
     ==
-    A.asel (A.split_l arr (US.mul n k1')) h1
+    A.asel (A.split_r arr (US.mul n k2)) h1
   )
   =
-  split_l_l (US.mul n k1) (US.mul n k2) arr;
+  split_r_r (US.mul n k1) n arr;
   change_equal_slprop
-    (A.varray (split_l arr (US.mul n k1)))
-    (A.varray (split_l arr (US.mul n k1')))
+    (A.varray (split_r arr (US.add (US.mul n k1) n)))
+    (A.varray (split_r arr (US.mul n k2)))
 
 let _ = ()
 
@@ -460,38 +468,48 @@ let _ = ()
 
 //#push-options "--z3smtopt '(set-option :smt.arith.nl false)'"
 
-open FStar.Math.Lemmas
+module FML = FStar.Math.Lemmas
 
 let _ : squash (US.fits_u64) = intro_fits_u64 ()
 
 let f_lemma
-  (n: US.t{US.v n > 0 /\ US.v n >= US.v 1sz})
-  (k: US.t{US.v k < US.v n})
-  : Lemma
-  (requires
+  //(n: US.t{US.v n > 0 /\ US.v n >= US.v 1sz})
+  //(k: US.t}){US.v k <= US.v n})
+  (n: US.t{
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
     US.fits (US.v metadata_max * US.v n)
+  })
+  (k: US.t{US.v k <= US.v n})
+  : Lemma
+  (requires
+    //US.v k <= US.v n
+    True
   )
   (ensures
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v k) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v k) /\
     US.fits (US.v metadata_max * US.v k) /\
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz)) /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v (US.add k 1sz)) /\
-    US.fits (US.v metadata_max * US.v (US.add k 1sz)) /\
+    //US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz)) /\
+    //US.fits (US.v metadata_max * US.v 4sz * US.v (US.add k 1sz)) /\
+    //US.fits (US.v metadata_max * US.v (US.add k 1sz)) /\
     US.v metadata_max * US.v (u32_to_sz page_size) * US.v k <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
     US.v metadata_max * US.v 4sz * US.v k <= US.v metadata_max * US.v 4sz * US.v n /\
     US.v metadata_max * US.v k <= US.v metadata_max * US.v n /\
-    US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz) <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
-    US.v metadata_max * US.v 4sz * US.v (US.add k 1sz) <= US.v metadata_max * US.v 4sz * US.v n /\
-    US.v metadata_max * US.v (US.add k 1sz) <= US.v metadata_max * US.v n
+    //US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz) <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
+    //US.v metadata_max * US.v 4sz * US.v (US.add k 1sz) <= US.v metadata_max * US.v 4sz * US.v n /\
+    //US.v metadata_max * US.v (US.add k 1sz) <= US.v metadata_max * US.v n
+    True
   )
-  = admit ()
+  =
+  FML.lemma_mult_le_right (US.v metadata_max * US.v (u32_to_sz page_size)) (US.v k) (US.v n);
+  FML.lemma_mult_le_right (US.v metadata_max * US.v 4sz) (US.v k) (US.v n);
+  FML.lemma_mult_le_right (US.v metadata_max) (US.v k) (US.v n)
 
-#push-options "--z3rlimit 100"
 
 #restart-solver
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 
 noextract inline_for_extraction
 let init_wrapper2
@@ -501,19 +519,8 @@ let init_wrapper2
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
     US.fits (US.v metadata_max * US.v n)
   })
-  (k: US.t{US.v k < US.v n})
-  (k': US.t{US.v k' == US.v k + 1 /\
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size)) /\
-    US.fits (US.v metadata_max * US.v 4sz) /\
-    US.fits (US.v metadata_max) /\
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v k) /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v k) /\
-    US.fits (US.v metadata_max * US.v k) /\
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v k') /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v k') /\
-    US.fits (US.v metadata_max * US.v k') /\
-    True
-  })
+  (k: US.t{US.v k <= US.v n})
+  (k': US.t{US.v k' <= US.v n})
   (slab_region: array U8.t{
     A.length slab_region == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
     A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k /\
@@ -531,19 +538,20 @@ let init_wrapper2
   })
   : Steel size_class
   (
+    f_lemma n k;
     A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) `star`
     A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) `star`
     A.varray (A.split_r md_region (US.mul metadata_max k))
   )
   (fun r ->
+    f_lemma n k';
     A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) `star`
     A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) `star`
     A.varray (A.split_r md_region (US.mul metadata_max k'))
-    //A.varray (A.split_l slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) (US.sub n (US.add k 1sz)))) `star`
-    //A.varray (A.split_l md_bm_region (US.mul (US.mul metadata_max 4sz) (US.sub n (US.add k 1sz)))) `star`
-    //A.varray (A.split_l md_region (US.mul metadata_max (US.sub n (US.add k 1sz))))
   )
   (requires fun h0 ->
+    US.v k < US.v n /\
+    US.v k' == US.v k + 1 /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
     True
@@ -556,14 +564,28 @@ let init_wrapper2
     A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
   )
   =
-  admit ();
+  f_lemma n (US.sub n k);
   let data = init_struct (US.sub n k) sc
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k))
     (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k))
     (A.split_r md_region (US.mul metadata_max k))
   in
+  split_r_r_mul
+    (US.mul metadata_max (u32_to_sz page_size))
+    k
+    k'
+    slab_region;
+  split_r_r_mul
+    (US.mul metadata_max 4sz)
+    k
+    k'
+    md_bm_region;
+  split_r_r_mul
+    metadata_max
+    k
+    k'
+    md_region;
   assert (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
-  sladmit ();
   let lock = L.new_lock (size_class_vprop data) in
   let sc = {data; lock} in
   return sc
@@ -633,7 +655,6 @@ noeq type size_classes_all = {
     A.offset (A.ptr_of sc4096.data.slab_region)
       == A.offset (A.ptr_of arr) + 8 * US.v slab_size /\
     True
-
   };
 }
 
