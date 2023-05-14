@@ -1867,6 +1867,7 @@ let rec allocate_slab_aux_3_3_2_1_aux (#opened:_)
   match US.v i with
   | 0 ->
     // 2 arrays of length 0
+    //TODO: add corresponding builtin (at least in lib_misc)
     drop (A.varray (A.split_l
            (A.split_r slab_region
              (US.mul md_count_v (u32_to_sz page_size)))
