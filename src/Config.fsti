@@ -3,6 +3,7 @@ module Config
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module US = FStar.SizeT
+module UP = FStar.PtrdiffT
 
 open FStar.Mul
 
@@ -21,6 +22,10 @@ val metadata_max: v:US.t{
   US.fits (US.v v * U32.v page_size * US.v nb_size_classes) /\
   US.fits (US.v v * U32.v page_size)
 }
+
+val metadata_max_up_fits (_:unit)
+  : Lemma
+  (UP.fits (US.v metadata_max * U32.v page_size * US.v nb_size_classes))
 
 noextract inline_for_extraction
 val alg_null: v:nat{v = US.v metadata_max + 1}

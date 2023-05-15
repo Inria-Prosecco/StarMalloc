@@ -548,6 +548,8 @@ val init_wrapper2
 
 #restart-solver
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
+
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
   f_lemma n k;
@@ -590,6 +592,9 @@ let size_class1024_t = r:size_class{U32.eq r.data.size 1024ul}
 let size_class2048_t = r:size_class{U32.eq r.data.size 2048ul}
 let size_class4096_t = r:size_class{U32.eq r.data.size 4096ul}
 
+module G = FStar.Ghost
+module UP = FStar.PtrdiffT
+
 let slab_region_size
   : v:US.t{US.v v = US.v metadata_max * U32.v page_size * 9}
   =
@@ -599,8 +604,6 @@ let slab_region_size
     (US.v metadata_max * U32.v page_size * 9)
     (US.v metadata_max * U32.v page_size * US.v nb_size_classes);
   US.mul slab_size 9sz
-
-module G = FStar.Ghost
 
 //TODO: metaprogramming
 noeq type size_classes_all = {
@@ -887,8 +890,6 @@ let slab_free' (sc: size_class) (ptr: array U8.t) (diff: US.t)
   L.release sc.lock;
   return res
 
-module UP = FStar.PtrdiffT
-
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0"
@@ -899,6 +900,7 @@ let slab_free ptr =
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
     ptr;
+  //TODO: once within_bounds is fixed, can be removed
   assume (UP.fits (US.v slab_region_size + 1));
   UP.fits_lt
     (A.offset (A.ptr_of ptr)
@@ -943,6 +945,7 @@ let slab_getsize (ptr: array U8.t)
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
     ptr;
+  //TODO: once within_bounds is fixed, can be removed
   assume (UP.fits (US.v slab_region_size + 1));
   UP.fits_lt
     (A.offset (A.ptr_of ptr)
