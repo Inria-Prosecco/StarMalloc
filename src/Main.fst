@@ -700,11 +700,10 @@ let init
     (A.varray (A.split_r md_region (US.mul metadata_max 0sz)))
     (fun x y -> x == y)
     (fun _ -> admit ());
-  assume (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n);
-  assume (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
-  assume (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
-  //assert (False);
-  //Classical.forall_intro (Classical.move_requires (f_lemma n));
+  assert (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n);
+  assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
+  assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
+
   f_lemma n 0sz;
   let sc16 = init_wrapper2 16ul n 0sz 1sz slab_region md_bm_region md_region in
   f_lemma n 1sz;
