@@ -900,15 +900,17 @@ let slab_free ptr =
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
     ptr;
-  assume (UP.fits
+  assume (UP.fits (US.v slab_region_size + 1));
+  UP.fits_lt
     (A.offset (A.ptr_of ptr)
     -
-    A.offset (A.ptr_of (A.split_l sc_all.slab_region 0sz))));
+    A.offset (A.ptr_of (A.split_l sc_all.slab_region 0sz)))
+    (US.v slab_region_size + 1);
   let diff = A.ptrdiff
     ptr
     (A.split_l sc_all.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
-  assume (US.v slab_size > 0);
+  assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
        if (index = 0sz) then slab_free' size_class16 ptr rem
@@ -942,15 +944,17 @@ let slab_getsize (ptr: array U8.t)
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
     ptr;
-  assume (UP.fits
+  assume (UP.fits (US.v slab_region_size + 1));
+  UP.fits_lt
     (A.offset (A.ptr_of ptr)
     -
-    A.offset (A.ptr_of (A.split_l sc_all.slab_region 0sz))));
+    A.offset (A.ptr_of (A.split_l sc_all.slab_region 0sz)))
+    (US.v slab_region_size + 1);
   let diff = A.ptrdiff
     ptr
     (A.split_l sc_all.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
-  assume (US.v slab_size > 0);
+  assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
        if (index = 0sz) then return 16sz
