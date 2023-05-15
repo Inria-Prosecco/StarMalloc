@@ -1,7 +1,5 @@
 module Main
 
-open Test
-
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
@@ -469,8 +467,6 @@ module FML = FStar.Math.Lemmas
 let _ : squash (US.fits_u64) = intro_fits_u64 ()
 
 let f_lemma
-  //(n: US.t{US.v n > 0 /\ US.v n >= US.v 1sz})
-  //(k: US.t}){US.v k <= US.v n})
   (n: US.t{
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
@@ -478,23 +474,15 @@ let f_lemma
   })
   (k: US.t{US.v k <= US.v n})
   : Lemma
-  (requires
-    //US.v k <= US.v n
-    True
-  )
-  (ensures
+  (
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v k) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v k) /\
     US.fits (US.v metadata_max * US.v k) /\
-    //US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz)) /\
-    //US.fits (US.v metadata_max * US.v 4sz * US.v (US.add k 1sz)) /\
-    //US.fits (US.v metadata_max * US.v (US.add k 1sz)) /\
     US.v metadata_max * US.v (u32_to_sz page_size) * US.v k <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
     US.v metadata_max * US.v 4sz * US.v k <= US.v metadata_max * US.v 4sz * US.v n /\
     US.v metadata_max * US.v k <= US.v metadata_max * US.v n /\
-    //US.v metadata_max * US.v (u32_to_sz page_size) * US.v (US.add k 1sz) <= US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
-    //US.v metadata_max * US.v 4sz * US.v (US.add k 1sz) <= US.v metadata_max * US.v 4sz * US.v n /\
-    //US.v metadata_max * US.v (US.add k 1sz) <= US.v metadata_max * US.v n
+    US.fits (US.v metadata_max * US.v (u32_to_sz page_size)) /\
+    US.fits (US.v metadata_max * US.v 4sz) /\
     True
   )
   =
@@ -508,7 +496,7 @@ let f_lemma
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 
 noextract inline_for_extraction
-let init_wrapper2
+val init_wrapper2
   (sc: sc)
   (n: US.t{
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
@@ -534,13 +522,11 @@ let init_wrapper2
   })
   : Steel size_class
   (
-    f_lemma n k;
     A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) `star`
     A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) `star`
     A.varray (A.split_r md_region (US.mul metadata_max k))
   )
   (fun r ->
-    f_lemma n k';
     A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) `star`
     A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) `star`
     A.varray (A.split_r md_region (US.mul metadata_max k'))
@@ -559,7 +545,13 @@ let init_wrapper2
     same_base_array slab_region r.data.slab_region /\
     A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
   )
+
+#restart-solver
+
+let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
+  f_lemma n k;
+  f_lemma n k';
   f_lemma n (US.sub n k);
   let data = init_struct (US.sub n k) sc
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k))
