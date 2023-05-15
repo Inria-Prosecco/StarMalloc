@@ -1194,7 +1194,9 @@ let extend_aux (#a:Type) (#opened:_)
     ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
     ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
     ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
-    (~ (mem_all (US.v k) hd1 hd2 hd3 hd4 gs1)) /\
+    (forall (j:nat{0 <= j /\ j < US.v n}).
+      ~ (mem_all (US.v k + j) hd1 hd2 hd3 hd4 gs1)
+    ) /\
     Seq.slice gs1 0 (US.v k)
     ==
     gs0
@@ -1232,7 +1234,11 @@ let extend_aux (#a:Type) (#opened:_)
 
   (**) let s1 = gget (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` n)) hd1 hd2 hd3 hd4) in
   // Derived from the postcondition of join
-  (**) assert (Ghost.reveal s0 `Seq.equal` Seq.slice #(cell a) (Ghost.reveal s1) 0 (US.v k))
+  (**) assert (Ghost.reveal s0 `Seq.equal` Seq.slice #(cell a) (Ghost.reveal s1) 0 (US.v k));
+  assume (
+    forall (j:nat{0 <= j /\ j < US.v n}).
+      ~ (mem_all #a (US.v k + j) hd1 hd2 hd3 hd4 s1)
+  )
   //// Move the slice out of dataify
   //(**) dataify_slice #a (Ghost.reveal s1) (US.v k)
 #pop-options

@@ -921,15 +921,9 @@ let allocate_slab_aux_3_1_varraylist
     (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (Seq.slice gs1 0 (US.v md_count_v)) `FStar.FiniteSet.Base.equal`
-          ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0);
-  // #1 ~ mem_all gs1
-  assume (
-    forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
-    ~ (ALG.mem_all #AL.status (US.v md_count_v + j) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs1)
-  )
+          ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) gs0)
 
 #restart-solver
-
 
 let split_r_r (#opened:_) (#a: Type)
   (k1: US.t)
@@ -1345,7 +1339,7 @@ let allocate_slab_aux_3_2_list_partition
   let ps1' = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) s1' in
   let ps1 = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) s1 in
   let ps4 = ALG.ptrs_all (idx1') (US.v idx2) (US.v idx3) idx4' s4 in
-  // additional lemma required in ArrayList lib
+  // TODO: additional lemma required in ArrayList lib
   assume (FS.subset ps1' ps1);
   assert (forall (i:nat{i < US.v md_count_v}).
     FS.mem i ps1

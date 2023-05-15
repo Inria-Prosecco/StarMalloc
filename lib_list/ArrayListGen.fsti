@@ -468,7 +468,9 @@ val extend_aux (#a:Type) (#opened:_)
     ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
     ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
     ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
-    (~ (mem_all (US.v k) hd1 hd2 hd3 hd4 gs1)) /\
+    (forall (j:nat{0 <= j /\ j < US.v n}).
+      ~ (mem_all (US.v k + j) hd1 hd2 hd3 hd4 gs1)
+    ) /\
     Seq.slice gs1 0 (US.v k)
     ==
     gs0

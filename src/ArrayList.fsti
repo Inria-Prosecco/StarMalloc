@@ -250,7 +250,9 @@ let extend_aux (#opened:_)
     AL.ptrs_in hd2 (Seq.slice gs1 0 (US.v k)) == AL.ptrs_in hd2 gs0 /\
     AL.ptrs_in hd3 (Seq.slice gs1 0 (US.v k)) == AL.ptrs_in hd3 gs0 /\
     AL.ptrs_in hd4 (Seq.slice gs1 0 (US.v k)) == AL.ptrs_in hd4 gs0 /\
-    (~ (AL.mem_all (US.v k) hd1 hd2 hd3 hd4 gs1)) /\
+    (forall (j:nat{0 <= j /\ j < US.v n}).
+      ~ (AL.mem_all (US.v k + j) hd1 hd2 hd3 hd4 gs1)
+    ) /\
     Seq.slice gs1 0 (US.v k)
     ==
     gs0
