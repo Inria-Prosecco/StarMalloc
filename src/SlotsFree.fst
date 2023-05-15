@@ -326,8 +326,7 @@ let deallocate_slot_aux2
   assert (A.offset (A.ptr_of ptr) == A.offset (A.ptr_of ptr'));
   A.ptr_base_offset_inj (A.ptr_of ptr) (A.ptr_of ptr');
   assert (A.ptr_of ptr == A.ptr_of ptr');
-  // CAUTION: discuss with Aymeric, metaproperty
-  // actually, will be removed (expected_length as ghost)
+  //TODO: to be removed (free precondition)
   assume (A.length ptr == U32.v size_class);
   assert (ptr == ptr')
 #pop-options

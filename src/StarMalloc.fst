@@ -181,6 +181,7 @@ let realloc (ptr: array U8.t) (new_size: US.t)
         (if A.is_null new_ptr then emp else A.varray new_ptr)
         (A.varray new_ptr);
       let old_size = getsize ptr in
+      // TODO: to be removed, refine large_getsize + add slab_getsize precondition
       assume (US.v old_size == A.length ptr);
       assert (A.length new_ptr >= US.v new_size);
       let min_of_sizes =
