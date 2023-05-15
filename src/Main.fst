@@ -31,8 +31,7 @@ open Utils2
 #push-options  "--ide_id_info_off"
 (**  Handwritten mmap functions to allocate basic data structures *)
 
-assume
-val mmap_u8 (len: US.t)
+assume val mmap_u8 (len: US.t)
   : Steel (array U8.t)
     emp
     (fun a -> A.varray a)
@@ -43,8 +42,7 @@ val mmap_u8 (len: US.t)
       A.asel a h1 == Seq.create (US.v len) U8.zero
     )
 
-assume
-val mmap_u64 (len: US.t)
+assume val mmap_u64 (len: US.t)
   : Steel (array U64.t)
     emp
     (fun a -> A.varray a)
@@ -55,14 +53,12 @@ val mmap_u64 (len: US.t)
       A.asel a h1 == Seq.create (US.v len) U64.zero
     )
 
-assume
-val mmap_ptr_us (_:unit)
+assume val mmap_ptr_us (_:unit)
   : SteelT (R.ref US.t)
     emp
     (fun r -> R.vptr r)
 
-assume
-val mmap_cell_status (len: US.t)
+assume val mmap_cell_status (len: US.t)
   : Steel (array AL.cell)
      emp
     (fun a -> A.varray a)

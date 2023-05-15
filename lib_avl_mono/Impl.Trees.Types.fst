@@ -22,8 +22,7 @@ let node = node data
 let t = t data
 
 noextract
-assume
-val ptr_to_u64 (x: array U8.t) : U64.t
+assume val ptr_to_u64 (x: array U8.t) : U64.t
 
 inline_for_extraction noextract
 let cmp (x y: data) : I64.t

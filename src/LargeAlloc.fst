@@ -68,8 +68,7 @@ let linked_avl_tree (tree: t)
 let ind_linked_avl_tree (metadata: ref t)
   = vptr metadata `vdep` linked_avl_tree
 
-assume
-val mmap_ptr_metadata (_:unit)
+assume val mmap_ptr_metadata (_:unit)
   : SteelT (ref t)
   emp
   (fun r -> vptr r)

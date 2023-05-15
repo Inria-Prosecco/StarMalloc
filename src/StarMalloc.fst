@@ -91,8 +91,7 @@ let getsize (ptr: array U8.t)
     large_getsize ptr
   )
 
-assume
-val memcpy_u8 (dest src: array U8.t) (n: US.t)
+assume val memcpy_u8 (dest src: array U8.t) (n: US.t)
   : Steel (array U8.t)
   (A.varray dest `star` A.varray src)
   (fun _ -> A.varray dest `star` A.varray src)
@@ -211,8 +210,7 @@ let realloc (ptr: array U8.t) (new_size: US.t)
     )
   )
 
-assume
-val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
+assume val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
   : Steel (array U8.t)
   (A.varray dest)
   (fun _ -> A.varray dest)
