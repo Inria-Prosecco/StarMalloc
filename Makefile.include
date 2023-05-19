@@ -47,7 +47,7 @@ INCLUDE_DIRS = \
   $(FSTAR_ULIB)/.cache \
   $(STEEL_LIB)
 
-FSTAR_INCLUDES = $(addprefix --include ,$(INCLUDE_DIRS))
+FSTAR_INCLUDES = $(addprefix --include ,$(INCLUDE_DIRS)) --load_cmxs steel
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_INCLUDES)
