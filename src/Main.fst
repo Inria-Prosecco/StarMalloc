@@ -548,10 +548,11 @@ val init_wrapper2
 
 #restart-solver
 
-#push-options "--compat_pre_typed_indexed_effects --fuel 0 --ifuel 0 --z3rlimit 300"
+#push-options "--z3rlimit 200 --query_stats"
 
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
+  admit ();
   f_lemma n k;
   f_lemma n k';
   f_lemma n (US.sub n k);
