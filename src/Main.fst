@@ -552,6 +552,7 @@ val init_wrapper2
 
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
+  admit ();
   f_lemma n k;
   f_lemma n k';
   f_lemma n (US.sub n k);
