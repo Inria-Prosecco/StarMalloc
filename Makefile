@@ -18,7 +18,6 @@ obj:
 	mkdir $@
 
 FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_INCLUDES) \
-    --load_cmxs steel \
     --already_cached 'FStar Steel C Prims' \
 		--cmi --odir obj --cache_dir obj \
 		$(OTHERFLAGS)
