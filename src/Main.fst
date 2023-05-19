@@ -651,7 +651,6 @@ noeq type size_classes_all = {
 
 //TODO: metaprogramming
 #push-options "--z3rlimit 200 --query_stats"
-noextract inline_for_extraction
 let init
   (_:unit)
 //  (n: US.t{
@@ -754,15 +753,15 @@ let init
 let sc_all : size_classes_all = init ()
 
 // TODO: metaprogramming
-let size_class16 : size_class16_t = sc_all.sc16
-let size_class32 : size_class32_t = sc_all.sc32
-let size_class64 : size_class64_t = sc_all.sc64
-let size_class128 : size_class128_t = sc_all.sc128
-let size_class256 : size_class256_t = sc_all.sc256
-let size_class512 : size_class512_t = sc_all.sc512
-let size_class1024 : size_class1024_t = sc_all.sc1024
-let size_class2048 : size_class2048_t = sc_all.sc2048
-let size_class4096 : size_class4096_t = sc_all.sc4096
+//let size_class16 : size_class16_t = sc_all.sc16
+//let size_class32 : size_class32_t = sc_all.sc32
+//let size_class64 : size_class64_t = sc_all.sc64
+//let size_class128 : size_class128_t = sc_all.sc128
+//let size_class256 : size_class256_t = sc_all.sc256
+//let size_class512 : size_class512_t = sc_all.sc512
+//let size_class1024 : size_class1024_t = sc_all.sc1024
+//let size_class2048 : size_class2048_t = sc_all.sc2048
+//let size_class4096 : size_class4096_t = sc_all.sc4096
 #pop-options
 
 let null_or_varray (#a:Type) (r:array a) : vprop = if is_null r then emp else varray r
@@ -850,23 +849,23 @@ let slab_malloc' (sc: size_class) (bytes: U32.t)
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let slab_malloc bytes =
   if bytes `U32.lte` 16ul then (
-    slab_malloc' size_class16 bytes
+    slab_malloc' sc_all.sc16 bytes
   ) else if bytes `U32.lte` 32ul then (
-    slab_malloc' size_class32 bytes
+    slab_malloc' sc_all.sc32 bytes
   ) else if bytes `U32.lte` 64ul then (
-    slab_malloc' size_class64 bytes
+    slab_malloc' sc_all.sc64 bytes
   ) else if bytes `U32.lte` 128ul then (
-    slab_malloc' size_class128 bytes
+    slab_malloc' sc_all.sc128 bytes
   ) else if bytes `U32.lte` 256ul then (
-    slab_malloc' size_class256 bytes
+    slab_malloc' sc_all.sc256 bytes
   ) else if bytes `U32.lte` 512ul then (
-    slab_malloc' size_class512 bytes
+    slab_malloc' sc_all.sc512 bytes
   ) else if bytes `U32.lte` 1024ul then (
-    slab_malloc' size_class1024 bytes
+    slab_malloc' sc_all.sc1024 bytes
   ) else if bytes `U32.lte` 2048ul then (
-    slab_malloc' size_class2048 bytes
+    slab_malloc' sc_all.sc2048 bytes
   ) else if bytes `U32.lte` 4096ul then (
-    slab_malloc' size_class4096 bytes
+    slab_malloc' sc_all.sc4096 bytes
   ) else (
     return_null ()
   )
@@ -914,15 +913,15 @@ let slab_free ptr =
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
-       if (index = 0sz) then slab_free' size_class16 ptr rem
-  else if (index = 1sz) then slab_free' size_class32 ptr rem
-  else if (index = 2sz) then slab_free' size_class64 ptr rem
-  else if (index = 3sz) then slab_free' size_class128 ptr rem
-  else if (index = 4sz) then slab_free' size_class256 ptr rem
-  else if (index = 5sz) then slab_free' size_class512 ptr rem
-  else if (index = 6sz) then slab_free' size_class1024 ptr rem
-  else if (index = 7sz) then slab_free' size_class2048 ptr rem
-  else if (index = 8sz) then slab_free' size_class4096 ptr rem
+       if (index = 0sz) then slab_free' sc_all.sc16 ptr rem
+  else if (index = 1sz) then slab_free' sc_all.sc32 ptr rem
+  else if (index = 2sz) then slab_free' sc_all.sc64 ptr rem
+  else if (index = 3sz) then slab_free' sc_all.sc128 ptr rem
+  else if (index = 4sz) then slab_free' sc_all.sc256 ptr rem
+  else if (index = 5sz) then slab_free' sc_all.sc512 ptr rem
+  else if (index = 6sz) then slab_free' sc_all.sc1024 ptr rem
+  else if (index = 7sz) then slab_free' sc_all.sc2048 ptr rem
+  else if (index = 8sz) then slab_free' sc_all.sc4096 ptr rem
   //TODO: expose n, remove this last case
   else return false
 
