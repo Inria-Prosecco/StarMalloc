@@ -548,11 +548,10 @@ val init_wrapper2
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
+#push-options "--compat_pre_typed_indexed_effects --fuel 0 --ifuel 0 --z3rlimit 200"
 
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
-  admit ();
   f_lemma n k;
   f_lemma n k';
   f_lemma n (US.sub n k);
@@ -581,6 +580,7 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   let sc = {data; lock} in
   return sc
 
+#pop-options
 
 // TODO: metaprogramming
 let size_class16_t = r:size_class{U32.eq r.data.size 16ul}
