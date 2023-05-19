@@ -68,14 +68,16 @@ val mem (#a:Type0) (x:nat) (hd:nat) (s:Seq.seq (cell a)) : prop
 val ptrs_in (#a:Type) (hd:nat) (s:Seq.seq (cell a)) : GTot (FS.set nat)
 
 /// Set of all pointers contained in the four doubly linked lists
-let ptrs_all (#a:Type) (hd1 hd2 hd3 hd4:nat) (s:Seq.seq (cell a)) =
+let ptrs_all (#a:Type) (hd1 hd2 hd3 hd4 hd5:nat) (s:Seq.seq (cell a)) =
   FS.union
-    (FS.union (ptrs_in hd1 s) (ptrs_in hd2 s))
-    (FS.union (ptrs_in hd3 s) (ptrs_in hd4 s))
+    (FS.union
+      (FS.union (ptrs_in hd1 s) (ptrs_in hd2 s))
+      (FS.union (ptrs_in hd3 s) (ptrs_in hd4 s)))
+    (ptrs_in hd5 s)
 
 /// Membership of element [x] in any of the dlist pointed to by [hd1], [hd2], or [hd3]
-let mem_all (#a:Type0) (x:nat) (hd1 hd2 hd3 hd4:nat) (s:Seq.seq (cell a)) =
-  FS.mem x (ptrs_all hd1 hd2 hd3 hd4 s)
+let mem_all (#a:Type0) (x:nat) (hd1 hd2 hd3 hd4 hd5:nat) (s:Seq.seq (cell a)) =
+  FS.mem x (ptrs_all hd1 hd2 hd3 hd4 hd5 s)
 
 /// Equivalence lemma between `mem` and membership in `ptrs_in`
 val lemma_mem_ptrs_in (#a:Type)
@@ -103,17 +105,21 @@ val disjoint (#a:Type)
   : prop
 
 /// Mutual exclusiveness for four dlists
-let disjoint4 (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3 hd4: nat) =
+let disjoint5 (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3 hd4 hd5: nat) =
   disjoint s hd1 hd2 /\
   disjoint s hd1 hd3 /\
   disjoint s hd1 hd4 /\
+  disjoint s hd1 hd5 /\
   disjoint s hd2 hd3 /\
   disjoint s hd2 hd4 /\
-  disjoint s hd3 hd4
+  disjoint s hd2 hd5 /\
+  disjoint s hd3 hd4 /\
+  disjoint s hd3 hd5 /\
+  disjoint s hd4 hd5
 
 /// The array is partitioned exactly between the four lists
-let partition (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3 hd4: nat) =
-  forall (i:nat{i < Seq.length s}). FS.mem i (ptrs_all hd1 hd2 hd3 hd4 s)
+let partition (#a:Type) (s:Seq.seq (cell a)) (hd1 hd2 hd3 hd4 hd5: nat) =
+  forall (i:nat{i < Seq.length s}). FS.mem i (ptrs_all hd1 hd2 hd3 hd4 hd5 s)
 
 (** Some helpers to use cells *)
 
@@ -126,89 +132,94 @@ val write_data (#a:Type0) (c:cell a) (v:a) : cell a
 /// The refinement predicate for varraylist, stating that the sequence contains
 /// four mutually exclusive doubly linked lists
 let varraylist_refine (#a:Type)
-  (pred1 pred2 pred3 pred4: a -> prop)
-  (hd1 hd2 hd3 hd4:nat)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
+  (hd1 hd2 hd3 hd4 hd5:nat)
   (s:Seq.seq (cell a)) : prop
   =
   is_dlist pred1 hd1 s /\
   is_dlist pred2 hd2 s /\
   is_dlist pred3 hd3 s /\
   is_dlist pred4 hd4 s /\
-  disjoint4 s hd1 hd2 hd3 hd4
+  is_dlist pred5 hd5 s /\
+  disjoint5 s hd1 hd2 hd3 hd4 hd5
 
 /// The main vprop of this module.
 /// We have access to an array, such that the array contains four mutually
 /// exclusive doubly linked list, starting at offsets [hd1] [hd2] and [hd3]
 /// respectively
 [@@__steel_reduce__]
-let varraylist (#a:Type) (pred1 pred2 pred3 pred4: a -> prop) (r:A.array (cell a)) (hd1 hd2 hd3 hd4:nat) : vprop
-  = A.varray r `vrefine` (varraylist_refine pred1 pred2 pred3 pred4 hd1 hd2 hd3 hd4)
+let varraylist (#a:Type) (pred1 pred2 pred3 pred4 pred5: a -> prop) (r:A.array (cell a)) (hd1 hd2 hd3 hd4 hd5:nat) : vprop
+  = A.varray r `vrefine` (varraylist_refine pred1 pred2 pred3 pred4 pred5 hd1 hd2 hd3 hd4 hd5)
 
 /// Create an arraylist with an empty sequence
 val intro_arraylist_nil (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3 hd4:US.t) :
+  (hd1 hd2 hd3 hd4 hd5:US.t) :
   SteelGhost unit opened
     (A.varray r)
     (fun _ ->
-      varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
+      varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
     (requires fun _ ->
       A.length r == 0 /\
       hd1 == null_ptr /\
       hd2 == null_ptr /\
       hd3 == null_ptr /\
-      hd4 == null_ptr)
+      hd4 == null_ptr /\
+      hd5 == null_ptr)
     (ensures fun _ _ h1 ->
-      h1 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
+      h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
       `Seq.equal`
       Seq.empty
     )
 
 /// If the head of one of the lists is not null, then it is in the list
 val lemma_head_not_null_mem (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3 hd4:US.t) :
+  (hd1 hd2 hd3 hd4 hd5:US.t) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 pred4 r
-      (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
     (fun _ ->
-      varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
+      varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
-      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4)) in
-      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4)) in
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
+      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
       // Framing
       gs1 == gs0 /\
       // Functional property
       (hd1 = null_ptr \/ mem (US.v hd1) (US.v hd1) gs1) /\
       (hd2 = null_ptr \/ mem (US.v hd2) (US.v hd2) gs1) /\
       (hd3 = null_ptr \/ mem (US.v hd3) (US.v hd3) gs1) /\
-      (hd4 = null_ptr \/ mem (US.v hd4) (US.v hd4) gs1)
+      (hd4 = null_ptr \/ mem (US.v hd4) (US.v hd4) gs1) /\
+      (hd5 = null_ptr \/ mem (US.v hd5) (US.v hd5) gs1)
     )
 
 /// If the head of one of the lists is not null, then it is smaller than the length
 /// of the underlying array
 val lemma_head1_in_bounds (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
   (hd1: US.t)
-  (hd2 hd3 hd4: Ghost.erased nat) :
+  (hd2 hd3 hd4 hd5: Ghost.erased nat) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) hd2 hd3 hd4)
-    (fun _ -> varraylist pred1 pred2 pred3 pred4 r (US.v hd1) hd2 hd3 hd4)
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) hd2 hd3 hd4 hd5)
+    (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) hd2 hd3 hd4 hd5)
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
-      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) hd2 hd3 hd4) in
-      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) hd2 hd3 hd4) in
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) hd2 hd3 hd4 hd5) in
+      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) hd2 hd3 hd4 hd5) in
       // Framing
       gs1 == gs0 /\
       // Functional property
@@ -218,20 +229,22 @@ val lemma_head1_in_bounds (#a:Type) (#opened:inames)
 /// If the head of one of the lists is not null, then it is smaller than the length
 /// of the underlying array
 val lemma_head2_in_bounds (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
   (hd1: Ghost.erased nat)
   (hd2: US.t)
-  (hd3 hd4: Ghost.erased nat) :
+  (hd3 hd4 hd5: Ghost.erased nat) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 pred4 r hd1 (US.v hd2) hd3 hd4)
-    (fun _ -> varraylist pred1 pred2 pred3 pred4 r hd1 (US.v hd2) hd3 hd4)
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 (US.v hd2) hd3 hd4 hd5)
+    (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 (US.v hd2) hd3 hd4 hd5)
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
-      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-        hd1 (US.v hd2) hd3 hd4) in
-      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 r
-        hd1 (US.v hd2) hd3 hd4) in
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        hd1 (US.v hd2) hd3 hd4 hd5) in
+      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        hd1 (US.v hd2) hd3 hd4 hd5) in
       // Framing
       gs1 == gs0 /\
       // Functional property
@@ -240,19 +253,21 @@ val lemma_head2_in_bounds (#a:Type) (#opened:inames)
 
 /// If the head of one of the lists is not null, then it satisfies the corresponding predicate
 val lemma_head1_implies_pred1 (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
   (hd1:US.t{US.v hd1 < A.length r})
-  (hd2 hd3 hd4:US.t) :
+  (hd2 hd3 hd4 hd5:US.t) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
-    (fun _ -> varraylist pred1 pred2 pred3 pred4 r (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
+    (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
     (requires fun h -> hd1 <> null_ptr)
     (ensures fun h0 _ h1 ->
-      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4)) in
-      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4)) in
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
+      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
       // Framing
       gs1 == gs0 /\
       // Functional property
@@ -261,20 +276,22 @@ val lemma_head1_implies_pred1 (#a:Type) (#opened:inames)
 
 /// If the head of one of the lists is not null, then it satisfies the corresponding predicate
 val lemma_head2_implies_pred2 (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
   (hd1:US.t)
   (hd2:US.t{US.v hd2 < A.length r})
-  (hd3 hd4:US.t) :
+  (hd3 hd4 hd5:US.t) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
-    (fun _ -> varraylist pred1 pred2 pred3 pred4 r (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4))
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
+    (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
     (requires fun h -> hd2 <> null_ptr)
     (ensures fun h0 _ h1 ->
-      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4)) in
-      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 r
-        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4)) in
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
+      let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        (US.v hd1) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
       // Framing
       gs1 == gs0 /\
       // Functional property
@@ -284,18 +301,20 @@ val lemma_head2_implies_pred2 (#a:Type) (#opened:inames)
 /// The order of the four lists does not matter, we can permute them in the varraylist predicate.
 /// We permute here the first and second lists
 val permute12 (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3 hd4:nat) :
+  (hd1 hd2 hd3 hd4 hd5:nat) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
-    (fun _ -> varraylist pred2 pred1 pred3 pred4 r hd2 hd1 hd3 hd4)
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 hd5)
+    (fun _ -> varraylist pred2 pred1 pred3 pred4 pred5 r
+      hd2 hd1 hd3 hd4 hd5)
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
-      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-        hd1 hd2 hd3 hd4) in
-      let gs1 = h1 (varraylist pred2 pred1 pred3 pred4 r
-        hd2 hd1 hd3 hd4) in
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        hd1 hd2 hd3 hd4 hd5) in
+      let gs1 = h1 (varraylist pred2 pred1 pred3 pred4 pred5 r
+        hd2 hd1 hd3 hd4 hd5) in
       // Framing
       gs1 == gs0
     )
@@ -303,37 +322,62 @@ val permute12 (#a:Type) (#opened:inames)
 /// The order of the four lists does not matter, we can permute them in the varraylist predicate
 /// We permute here the first and third lists
 val permute13 (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3 hd4:nat) :
+  (hd1 hd2 hd3 hd4 hd5:nat) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
-    (fun _ -> varraylist pred3 pred2 pred1 pred4 r hd3 hd2 hd1 hd4)
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 hd5)
+    (fun _ -> varraylist pred3 pred2 pred1 pred4 pred5 r
+      hd3 hd2 hd1 hd4 hd5)
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
-      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-        hd1 hd2 hd3 hd4) in
-      let gs1 = h1 (varraylist pred3 pred2 pred1 pred4 r
-        hd3 hd2 hd1 hd4) in
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        hd1 hd2 hd3 hd4 hd5) in
+      let gs1 = h1 (varraylist pred3 pred2 pred1 pred4 pred5 r
+        hd3 hd2 hd1 hd4 hd5) in
       // Framing
       gs1 == gs0
     )
 
 /// The order of the four lists does not matter, we can permute them in the varraylist predicate
-/// We permute here the first and third lists
+/// We permute here the first and fourth lists
 val permute14 (#a:Type) (#opened:inames)
-  (pred1 pred2 pred3 pred4: a -> prop)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3 hd4:nat) :
+  (hd1 hd2 hd3 hd4 hd5:nat) :
   SteelGhost unit opened
-    (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
-    (fun _ -> varraylist pred4 pred2 pred3 pred1 r hd4 hd2 hd3 hd1)
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 hd5)
+    (fun _ -> varraylist pred4 pred2 pred3 pred1 pred5 r
+      hd4 hd2 hd3 hd1 hd5)
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
-      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-        hd1 hd2 hd3 hd4) in
-      let gs1 = h1 (varraylist pred4 pred2 pred3 pred1 r
-        hd4 hd2 hd3 hd1) in
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        hd1 hd2 hd3 hd4 hd5) in
+      let gs1 = h1 (varraylist pred4 pred2 pred3 pred1 pred5 r
+        hd4 hd2 hd3 hd1 hd5) in
+      // Framing
+      gs1 == gs0
+    )
+
+/// The order of the four lists does not matter, we can permute them in the varraylist predicate
+/// We permute here the first and fifth lists
+val permute15 (#a:Type) (#opened:inames)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
+  (r:A.array (cell a))
+  (hd1 hd2 hd3 hd4 hd5:nat) :
+  SteelGhost unit opened
+    (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 hd5)
+    (fun _ -> varraylist pred5 pred2 pred3 pred4 pred1 r
+      hd5 hd2 hd3 hd4 hd1)
+    (requires fun _ -> True)
+    (ensures fun h0 _ h1 ->
+      let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+        hd1 hd2 hd3 hd4 hd5) in
+      let gs1 = h1 (varraylist pred5 pred2 pred3 pred4 pred1 r
+        hd5 hd2 hd3 hd4 hd1) in
       // Framing
       gs1 == gs0
     )
@@ -341,19 +385,21 @@ val permute14 (#a:Type) (#opened:inames)
 /// Reads at index [idx] in the array.
 inline_for_extraction noextract
 val read_in_place (#a:Type)
-  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (r:A.array (cell a))
-  (hd1 hd2 hd3 hd4:Ghost.erased nat)
+  (hd1 hd2 hd3 hd4 hd5:Ghost.erased nat)
   (idx:US.t{US.v idx < A.length r})
   : Steel a
-  (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
-  (fun _ -> varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
+  (varraylist pred1 pred2 pred3 pred4 pred5 r
+    hd1 hd2 hd3 hd4 hd5)
+  (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5 r
+    hd1 hd2 hd3 hd4 hd5)
   (requires fun _ -> True)
   (ensures fun h0 res h1 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r
-      hd1 hd2 hd3 hd4) in
-    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 r
-      hd1 hd2 hd3 hd4) in
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 hd5) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 hd5) in
     // Framing
     gs1 == gs0 /\
     // Functional correctness
@@ -361,28 +407,28 @@ val read_in_place (#a:Type)
   )
 
 //TODO: to be removed
-/// Updates the `data` field of the cell at index [idx] in the array [r] with [v]
-/// We define four different functions, depending on which list the element
-/// belongs to. In all four cases, we require [v] to satisfy the predicate
-/// corresponding to a given list
-/// Note, we only expose the version for [hd1] to avoid duplication,
-/// but we can easily obtain versions for [hd2] and [hd3] using the
-/// permutations above. See instantiations in `src/ArrayList.fst`
-inline_for_extraction noextract
-val write_in_place (#a:Type)
-  (#pred1 #pred2 #pred3 #pred4: a -> prop)
-  (r:A.array (cell a))
-  (hd1 hd2 hd3 hd4:Ghost.erased nat)
-  (idx:US.t{US.v idx < A.length r})
-  (v:a)
-  : Steel unit
-  (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
-  (fun _ -> varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
-  (requires fun h0 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4) in
-    pred1 v /\ mem (US.v idx) hd1 gs0
-  )
-  (ensures fun h0 _ h1 -> True)
+///// Updates the `data` field of the cell at index [idx] in the array [r] with [v]
+///// We define four different functions, depending on which list the element
+///// belongs to. In all four cases, we require [v] to satisfy the predicate
+///// corresponding to a given list
+///// Note, we only expose the version for [hd1] to avoid duplication,
+///// but we can easily obtain versions for [hd2] and [hd3] using the
+///// permutations above. See instantiations in `src/ArrayList.fst`
+//inline_for_extraction noextract
+//val write_in_place (#a:Type)
+//  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+//  (r:A.array (cell a))
+//  (hd1 hd2 hd3 hd4:Ghost.erased nat)
+//  (idx:US.t{US.v idx < A.length r})
+//  (v:a)
+//  : Steel unit
+//  (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
+//  (fun _ -> varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4)
+//  (requires fun h0 ->
+//    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r hd1 hd2 hd3 hd4) in
+//    pred1 v /\ mem (US.v idx) hd1 gs0
+//  )
+//  (ensures fun h0 _ h1 -> True)
 
 /// Removes the element at offset [idx] from the dlist pointed to by [hd1]
 /// Note, we only expose the version for [hd1] to avoid duplication,
@@ -390,27 +436,33 @@ val write_in_place (#a:Type)
 /// permutations above. See instantiations in `src/ArrayList.fst`
 inline_for_extraction noextract
 val remove (#a:Type)
-  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (r:A.array (cell a))
   (hd1:US.t)
-  (hd2 hd3 hd4:Ghost.erased nat)
+  (hd2 hd3 hd4 hd5:Ghost.erased nat)
   (idx:US.t{US.v idx < A.length r})
   : Steel US.t
-  (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) hd2 hd3 hd4)
-  (fun hd' -> varraylist pred1 pred2 pred3 pred4 r (US.v hd') hd2 hd3 hd4)
+  (varraylist pred1 pred2 pred3 pred4 pred5 r
+    (US.v hd1) hd2 hd3 hd4 hd5)
+  (fun hd' -> varraylist pred1 pred2 pred3 pred4 pred5 r
+    (US.v hd') hd2 hd3 hd4 hd5)
   (requires fun h0 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) hd2 hd3 hd4) in
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) hd2 hd3 hd4 hd5) in
     mem (US.v idx) (US.v hd1) gs0
   )
   (ensures fun h0 hd' h1 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) hd2 hd3 hd4) in
-    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 r (US.v hd') hd2 hd3 hd4) in
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) hd2 hd3 hd4 hd5) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd') hd2 hd3 hd4 hd5) in
     ptrs_in (US.v hd') gs1 ==
     FS.remove (US.v idx) (ptrs_in (US.v hd1) gs0) /\
     ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
     ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
     ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
-    (~ (mem_all (US.v idx) (US.v hd') hd2 hd3 hd4 gs1)) /\
+    ptrs_in hd5 gs1 == ptrs_in hd5 gs0 /\
+    (~ (mem_all (US.v idx) (US.v hd') hd2 hd3 hd4 hd5 gs1)) /\
     dataify gs1 == dataify gs0
   )
 
@@ -421,55 +473,68 @@ val remove (#a:Type)
 /// permutations above. See instantiations in `src/ArrayList.fst`
 inline_for_extraction noextract
 val insert (#a:Type)
-  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (r:A.array (cell a))
   (hd1:US.t)
-  (hd2 hd3 hd4:Ghost.erased nat)
+  (hd2 hd3 hd4 hd5:Ghost.erased nat)
   (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
   (v: a)
   : Steel unit
-  (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) hd2 hd3 hd4)
-  (fun _ -> varraylist pred1 pred2 pred3 pred4 r (US.v idx) hd2 hd3 hd4)
+  (varraylist pred1 pred2 pred3 pred4 pred5 r
+    (US.v hd1) hd2 hd3 hd4 hd5)
+  (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5 r
+    (US.v idx) hd2 hd3 hd4 hd5)
   (requires fun h0 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) hd2 hd3 hd4) in
-    pred1 v /\ (~ (mem_all (US.v idx) (US.v hd1) hd2 hd3 hd4 gs0))
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) hd2 hd3 hd4 hd5) in
+    pred1 v /\ (~ (mem_all (US.v idx) (US.v hd1) hd2 hd3 hd4 hd5 gs0))
   )
   (ensures fun h0 hd' h1 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 r (US.v hd1) hd2 hd3 hd4) in
-    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 r (US.v idx) hd2 hd3 hd4) in
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v hd1) hd2 hd3 hd4 hd5) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v idx) hd2 hd3 hd4 hd5) in
     ptrs_in (US.v idx) gs1 ==
     FS.insert (US.v idx) (ptrs_in (US.v hd1) gs0) /\
     ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
     ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
     ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
+    ptrs_in hd5 gs1 == ptrs_in hd5 gs0 /\
     dataify gs1 == Seq.upd (dataify gs0) (US.v idx) v
   )
 
 val extend_aux (#a:Type) (#opened:_)
-  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (n: US.t)
   (r:A.array (cell a))
-  (hd1 hd2 hd3 hd4:Ghost.erased nat)
+  (hd1 hd2 hd3 hd4 hd5:Ghost.erased nat)
   (k:US.t{US.v k + US.v n <= A.length r /\ US.fits (US.v k + US.v n)})
   (v:a)
   : SteelGhost unit opened
   (
-    varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4 `star`
+    varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l r k)
+      hd1 hd2 hd3 hd4 hd5 `star`
     A.varray (A.split_l (A.split_r r k) n)
   )
-  (fun _ -> varraylist pred1 pred2 pred3 pred4
+  (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l r (k `US.add` n))
-    hd1 hd2 hd3 hd4)
+    hd1 hd2 hd3 hd4 hd5)
   (requires fun _ -> k <> null_ptr /\ pred1 v)
   (ensures fun h0 _ h1 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 (A.split_l r k) hd1 hd2 hd3 hd4) in
-    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 (A.split_l r (k `US.add` n)) hd1 hd2 hd3 hd4) in
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l r k)
+      hd1 hd2 hd3 hd4 hd5) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l r (k `US.add` n))
+      hd1 hd2 hd3 hd4 hd5) in
     ptrs_in hd1 gs1 == ptrs_in hd1 gs0 /\
     ptrs_in hd2 gs1 == ptrs_in hd2 gs0 /\
     ptrs_in hd3 gs1 == ptrs_in hd3 gs0 /\
     ptrs_in hd4 gs1 == ptrs_in hd4 gs0 /\
+    ptrs_in hd5 gs1 == ptrs_in hd5 gs0 /\
     (forall (j:nat{0 <= j /\ j < US.v n}).
-      ~ (mem_all (US.v k + j) hd1 hd2 hd3 hd4 gs1)
+      ~ (mem_all (US.v k + j) hd1 hd2 hd3 hd4 hd5 gs1)
     ) /\
     Seq.slice gs1 0 (US.v k)
     ==
@@ -488,36 +553,36 @@ val set (bound1 bound2: nat)
 open Config
 
 val extend_insert (#a: Type)
-  (#pred1 #pred2 #pred3 #pred4: a -> prop)
+  (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (n1: US.t{2 <= US.v n1})
   (n2: US.t{US.v n2 < US.v n1})
   (r: A.array (cell a))
-  (hd2 hd3 hd4: US.t)
+  (hd2 hd3 hd4 hd5: US.t)
   (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1) /\ k <> null_ptr})
   (v1: a)
   : Steel unit
-  (varraylist pred1 pred2 pred3 pred4
+  (varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l r (k `US.add` n1))
-    (US.v k) (US.v hd2) (US.v hd3) (US.v hd4))
-  (fun _ -> varraylist pred1 pred2 pred3 pred4
+    (US.v k) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
+  (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l r (k `US.add` n1))
-    (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4))
+    (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5))
   (requires fun h0 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l r (k `US.add` n1))
-      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4)) in
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
     pred1 v1 /\
     A.length r <= US.v metadata_max /\
     (forall (j:nat{1 <= j /\ j < US.v n1}).
-      ~ (mem_all (US.v k + j) (US.v k) (US.v hd2) (US.v hd3) (US.v hd4) gs0))
+      ~ (mem_all (US.v k + j) (US.v k) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5) gs0))
   )
   (ensures fun h0 _ h1 ->
-    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l r (k `US.add` n1))
-      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4)) in
-    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4
+      (US.v k) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l r (k `US.add` n1))
-      (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4)) in
+      (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5)) in
     ptrs_in (US.v k + US.v n2) gs1
     == FS.union
       (set (US.v k) (US.v k + US.v n2 + 1))
@@ -525,11 +590,12 @@ val extend_insert (#a: Type)
     ptrs_in (US.v hd2) gs1 == ptrs_in (US.v hd2) gs0 /\
     ptrs_in (US.v hd3) gs1 == ptrs_in (US.v hd3) gs0 /\
     ptrs_in (US.v hd4) gs1 == ptrs_in (US.v hd4) gs0 /\
+    ptrs_in (US.v hd5) gs1 == ptrs_in (US.v hd5) gs0 /\
     Seq.slice (dataify gs1) 0 (US.v k + US.v n2 + 1)
     == Seq.append
       (Seq.slice (G.reveal (dataify gs0)) 0 (US.v k + 1))
       (Seq.create (US.v n2) v1) /\
     (forall (j:nat{US.v n2 + 1 <= j /\ j < US.v n1}).
-      ~ (mem_all (US.v k + j) (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4) gs1)) /\
+      ~ (mem_all (US.v k + j) (US.v k + US.v n2) (US.v hd2) (US.v hd3) (US.v hd4) (US.v hd5) gs1)) /\
     True
   )
