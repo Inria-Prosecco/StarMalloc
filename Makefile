@@ -195,6 +195,7 @@ hardened_lib: verify extract patch
 	-fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
+	-I $(STEEL_HOME)/include/steel \
 	-pthread -lpthread \
 	-Wwrite-strings -Wno-c++17-extensions -Werror -march=native \
 	-Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
