@@ -2,12 +2,20 @@ ifeq (,$(FSTAR_HOME))
   $(error FSTAR_HOME is not defined)
 endif
 
+ifeq (,$(STEEL_HOME))
+  $(error STEEL_HOME is not defined)
+endif
+
 ifeq (,$(KRML_HOME))
   $(error KRML_HOME is not defined)
 endif
 
 ifndef FSTAR_ULIB
   FSTAR_ULIB := $(shell if test -d "$(FSTAR_HOME)/ulib" ; then echo "$(FSTAR_HOME)/ulib" ; else echo "$(FSTAR_HOME)/lib/fstar" ; fi)
+endif
+
+ifndef STEEL_LIB
+  STEEL_LIB := $(shell if test -f "$(FSTAR_HOME)/ulib/experimental/Steel.Effect.fsti" ; then echo "$(FSTAR_HOME)/ulib/experimental" ; else echo "$(STEEL_HOME)/lib/steel" ; fi)
 endif
 
 ifndef KRML_LIB
@@ -37,7 +45,7 @@ SOURCE_DIRS = \
 INCLUDE_DIRS = \
   $(SOURCE_DIRS) \
   $(FSTAR_ULIB)/.cache \
-  $(FSTAR_ULIB)/experimental
+  $(STEEL_LIB)
 
 FSTAR_INCLUDES = $(addprefix --include ,$(INCLUDE_DIRS))
 

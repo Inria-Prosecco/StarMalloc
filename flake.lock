@@ -1,12 +1,15 @@
 {
   "nodes": {
     "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
       "locked": {
-        "lastModified": 1667395993,
-        "narHash": "sha256-nuEHfE/LcWyuSWnS8t12N1wc105Qtau+/OdUAjtQ0rA=",
+        "lastModified": 1681202837,
+        "narHash": "sha256-H+Rh19JDwRtpVPAWp64F+rlEtxUWBAQW28eAi3SRSzg=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "5aed5285a952e0b949eb3ba02c12fa4fcfef535f",
+        "rev": "cfacdce06f30d2b68473a46042957675eebb3401",
         "type": "github"
       },
       "original": {
@@ -22,15 +25,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1682089990,
-        "narHash": "sha256-4FpIzWnXwjHPA9GMjt16ILEE3q82CVMyYmBp0DnH7p4=",
-        "owner": "FStarLang",
+        "lastModified": 1684435623,
+        "narHash": "sha256-rTEsBpahOrvn/Q0XqbffYaUiHOTbxmV8w2YQN+YpWrQ=",
+        "owner": "cmovcc",
         "repo": "FStar",
-        "rev": "5a15885098c69006bb56ff2712534fe75a5fd839",
+        "rev": "73a1e78ead43a3e22e79e1de47d370f00be6dfc3",
         "type": "github"
       },
       "original": {
-        "owner": "FStarLang",
+        "owner": "cmovcc",
         "repo": "FStar",
         "type": "github"
       }
@@ -49,27 +52,26 @@
         ]
       },
       "locked": {
-        "lastModified": 1682347692,
-        "narHash": "sha256-hSXlZkVtSsxz+R17nhdRQOLUDqf6/QodPlXpa6FivIU=",
+        "lastModified": 1684358684,
+        "narHash": "sha256-XesmagoszjXCBve1+Y+sZGN7gU52r3YQsCD6n6JQxfk=",
         "owner": "FStarLang",
         "repo": "karamel",
-        "rev": "fb8e2a9dc44d4666b01e1e93ff5b50c65ce5294b",
+        "rev": "ef08ed0cb901f2f3fc4cee7f2cab462fec8caf5f",
         "type": "github"
       },
       "original": {
         "owner": "FStarLang",
-        "ref": "protz_spinlock",
         "repo": "karamel",
         "type": "github"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1682362401,
-        "narHash": "sha256-/UMUHtF2CyYNl4b60Z2y4wwTTdIWGKhj9H301EDcT9M=",
+        "lastModified": 1684385584,
+        "narHash": "sha256-O7y0gK8OLIDqz+LaHJJyeu09IGiXlZIS3+JgEzGmmJA=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "884ac294018409e0d1adc0cae185439a44bd6b0b",
+        "rev": "48a0fb7aab511df92a17cf239c37f2bd2ec9ae3a",
         "type": "github"
       },
       "original": {
@@ -83,7 +85,50 @@
       "inputs": {
         "fstar-src": "fstar-src",
         "krml-src": "krml-src",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "steel-src": "steel-src"
+      }
+    },
+    "steel-src": {
+      "inputs": {
+        "flake-utils": [
+          "fstar-src",
+          "flake-utils"
+        ],
+        "fstar": [
+          "fstar-src"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1684450466,
+        "narHash": "sha256-D1GagGtnClfdrJIMy7ojpojFBaqMAvz2L8QS6bwBqfQ=",
+        "owner": "cmovcc",
+        "repo": "steel",
+        "rev": "a35ae37445a0353df185b0c8ca46c4d8aea65125",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cmovcc",
+        "repo": "steel",
+        "type": "github"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
       }
     }
   },

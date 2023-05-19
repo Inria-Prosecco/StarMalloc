@@ -18,6 +18,7 @@ obj:
 	mkdir $@
 
 FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_INCLUDES) \
+    --load_cmxs steel \
     --already_cached 'FStar Steel C Prims' \
 		--cmi --odir obj --cache_dir obj \
 		$(OTHERFLAGS)
@@ -64,6 +65,9 @@ obj/%.krml:
 
 ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
 
+# TODO: remove following hack:
+# add-include 'Steel_Spinlock:"steel_base.h"'
+# steel_base.h defines symbols required by Steel.ArrayArith
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
 	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
@@ -78,7 +82,9 @@ extract: $(ALL_KRML_FILES)
     -no-prefix LargeAlloc \
     -no-prefix Guards \
 		-warn-error +9 \
-		-add-include 'Steel_SpinLock:"krml/steel_types.h"' $^
+		-add-include 'Steel_SpinLock:"steel_types.h"' \
+		-add-include 'Steel_SpinLock:"steel_base.h"' \
+		$^
 
 patch: extract
 	sed 's/uint64_t x1 = Impl_Trees_Types_ptr_to_u64(x);/uintptr_t x1 = (uintptr_t) x;/g' -i dist/AVL.c
@@ -90,7 +96,7 @@ test: verify extract
 	-o bench/a.out dist/Impl_Test.c
 
 FILES = \
-$(KRML_LIB)/c/steel_spinlock.c \
+$(STEEL_HOME)/src/c/steel_spinlock.c \
 dist/ArrayList.c \
 dist/AVL.c \
 dist/krmlinit.c \
@@ -167,11 +173,11 @@ src/lib-alloc.c
 
 # foptimize-strlen = gcc issue culprit
 lib: verify extract patch
-	echo "using ${CC} compiler"
 	$(CC) -O3 \
 	-DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
+	-I $(STEEL_HOME)/include/steel \
 	-pthread -lpthread \
         -std=gnu11 \
 -shared -fPIC \
