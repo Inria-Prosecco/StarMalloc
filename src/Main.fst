@@ -548,7 +548,7 @@ val init_wrapper2
 
 #restart-solver
 
-#push-options "--compat_pre_typed_indexed_effects --fuel 0 --ifuel 0 --z3rlimit 200"
+#push-options "--compat_pre_typed_indexed_effects --fuel 0 --ifuel 0 --z3rlimit 300"
 
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
