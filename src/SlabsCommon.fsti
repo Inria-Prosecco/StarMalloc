@@ -25,7 +25,7 @@ open Prelude
 open Config
 open Utils2
 open SlotsAlloc
-open Guards
+
 open SteelStarSeqUtils
 open FStar.Mul
 
@@ -116,6 +116,7 @@ let lemma_partition_and_pred_implies_mem3
     Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
 
 open Guards
+open Quarantine
 
 unfold
 let blob

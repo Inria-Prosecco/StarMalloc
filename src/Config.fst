@@ -26,6 +26,9 @@ let alg_null = US.v metadata_max + 1
 
 let alg_null_sizet = US.add metadata_max 1sz
 
+// guard pages
 let enable_guard_pages = true
-
 let guard_pages_interval = 8sz
+
+//quarantine
+let enable_quarantine = true

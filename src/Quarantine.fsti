@@ -1,4 +1,4 @@
-module Guards
+module Quarantine
 
 open Utils2
 open SlotsAlloc
@@ -17,24 +17,24 @@ module G = FStar.Ghost
 open Config
 open MemoryTrap
 
-val is_guard
+val is_quarantine
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md: slab_metadata)
   (x: normal (t_of (slab_vprop size_class arr md)))
   : prop
 
-let trap_implies_guard
+let trap_implies_quarantine
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md: slab_metadata)
   (x: normal (t_of (slab_vprop size_class arr md)))
   : Lemma
   (requires is_trap size_class arr md x)
-  (ensures is_guard size_class arr md x)
+  (ensures is_quarantine size_class arr md x)
   = admit ()
 
-let mmap_trap_guard
+let mmap_trap_quarantine
   (size_class: G.erased sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md: G.erased (array U64.t){A.length md = 4})
@@ -45,14 +45,14 @@ let mmap_trap_guard
   (requires fun _ -> True)
   (ensures fun _ _ h1 ->
     let v = h1 (slab_vprop size_class arr md) in
-    is_guard size_class arr md v
+    is_quarantine size_class arr md v
   )
   =
   if enable_guard_pages then (
     mmap_trap size_class arr md;
     let v = gget (slab_vprop size_class arr md) in
-    trap_implies_guard size_class arr md v
+    trap_implies_quarantine size_class arr md v
   ) else (
     let v = gget (slab_vprop size_class arr md) in
-    assume (is_guard size_class arr md v)
+    assume (is_quarantine size_class arr md v)
   )

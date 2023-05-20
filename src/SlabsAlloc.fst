@@ -2160,7 +2160,7 @@ let allocate_slab_aux_3_3_2_2
     (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
     (Seq.create 4 0UL)
     (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
-  mmap_trap size_class
+  mmap_trap_guard size_class
     (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
     (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
     (u32_to_sz page_size);
