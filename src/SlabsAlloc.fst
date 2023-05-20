@@ -158,6 +158,7 @@ open SteelVRefineDep
 #restart-solver
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+// Slab moves from empty to partial
 inline_for_extraction noextract
 let allocate_slab_aux_1_partial
   (size_class: sc)
@@ -243,6 +244,7 @@ let allocate_slab_aux_1_partial
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
     idx1' idx1 idx3 idx4 idx5
 
+// Slab moves from empty to full
 inline_for_extraction noextract
 let allocate_slab_aux_1_full
   (size_class: sc)
@@ -328,6 +330,7 @@ let allocate_slab_aux_1_full
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
     idx1' idx2 idx1 idx4 idx5
 
+// Slab initially empty
 inline_for_extraction noextract
 let allocate_slab_aux_1
   (size_class: sc)
@@ -447,6 +450,7 @@ let allocate_slab_aux_1
 
 #restart-solver
 
+// Slab moves from partial to full
 inline_for_extraction noextract
 let allocate_slab_aux_2_full
   (size_class: sc)
@@ -533,6 +537,7 @@ let allocate_slab_aux_2_full
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul))
     idx1 idx2' idx2 idx4 idx5
 
+// Slab moves from partial to partial
 inline_for_extraction noextract
 let allocate_slab_aux_2_partial
   (size_class: sc)
@@ -598,6 +603,7 @@ let allocate_slab_aux_2_partial
     md_count_v md_region_lv
     idx1 idx2 idx3 idx4 idx5
 
+// Slab initially partial
 inline_for_extraction noextract
 let allocate_slab_aux_2
   (size_class: sc)

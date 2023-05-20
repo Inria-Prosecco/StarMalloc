@@ -66,6 +66,7 @@ let deallocate_slab_aux_cond
 
 module FS = FStar.FiniteSet.Base
 
+// Slab moves from full to partial
 inline_for_extraction noextract
 let deallocate_slab_aux_1_partial
   (size_class: sc)
@@ -154,6 +155,7 @@ let deallocate_slab_aux_1_partial
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v pos) 1ul))
     idx1 pos idx3' idx4 idx5
 
+// Slab moves from full to empty
 inline_for_extraction noextract
 let deallocate_slab_aux_1_empty
   (size_class: sc)
@@ -342,6 +344,7 @@ let deallocate_slab_aux_1_fail
 
 #restart-solver
 
+// Slab initially full
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
 inline_for_extraction noextract
 let deallocate_slab_aux_1
@@ -463,7 +466,7 @@ let deallocate_slab_aux_1
   )
 #pop-options
 
-
+// Slab moves from partial to empty
 inline_for_extraction noextract
 let deallocate_slab_aux_2_empty
   (size_class: sc)
@@ -551,6 +554,7 @@ let deallocate_slab_aux_2_empty
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v pos) 0ul))
     pos idx2' idx3 idx4 idx5
 
+// Slab moves from partial to partial
 inline_for_extraction noextract
 let deallocate_slab_aux_2_partial
   (size_class: sc)
@@ -716,6 +720,7 @@ let deallocate_slab_aux_2_fail
 #restart-solver
 
 #push-options "--z3rlimit 100"
+// Slab initially partial
 inline_for_extraction noextract
 let deallocate_slab_aux_2
   (ptr: array U8.t)
