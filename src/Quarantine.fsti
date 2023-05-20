@@ -48,7 +48,7 @@ let mmap_trap_quarantine
     is_quarantine size_class arr md v
   )
   =
-  if enable_guard_pages then (
+  if enable_quarantine_trap then (
     mmap_trap size_class arr md;
     let v = gget (slab_vprop size_class arr md) in
     trap_implies_quarantine size_class arr md v
