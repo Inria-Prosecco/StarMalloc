@@ -332,6 +332,40 @@ let insert4
   insert r hd hd2 hd3 hd1 hd5 idx v;
   AL.permute14 pred4 pred2 pred3 pred1 pred5 r (US.v idx) hd2 hd3 hd1 hd5
 
+let insert5
+  (#pred1 #pred2 #pred3 #pred4 #pred5: status -> prop)
+  (r:A.array cell)
+  (hd:US.t)
+  (hd1 hd2 hd3 hd4:Ghost.erased nat)
+  (idx:US.t{idx <> null_ptr /\ US.v idx < A.length r})
+  (v: status)
+  : Steel unit
+  (varraylist pred1 pred2 pred3 pred4 pred5 r
+    hd1 hd2 hd3 hd4 (US.v hd))
+  (fun _ -> varraylist pred1 pred2 pred3 pred4 pred5 r
+    hd1 hd2 hd3 hd4 (US.v idx))
+  (requires fun h -> pred5 v /\
+    (~ (AL.mem_all (US.v idx) hd1 hd2 hd3 hd4 (US.v hd)
+      (h (varraylist pred1 pred2 pred3 pred4 pred5 r
+        hd1 hd2 hd3 hd4 (US.v hd))))))
+  (ensures fun h0 hd' h1 ->
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 (US.v hd)) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 (US.v idx)) in
+    AL.ptrs_in (US.v idx) gs1 ==
+    FS.insert (US.v idx) (AL.ptrs_in (US.v hd) gs0) /\
+    AL.ptrs_in hd1 gs1 == AL.ptrs_in hd1 gs0 /\
+    AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
+    AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
+    AL.ptrs_in hd4 gs1 == AL.ptrs_in hd4 gs0 /\
+    AL.dataify gs1 == Seq.upd (AL.dataify gs0) (US.v idx) v
+  )
+  =
+  AL.permute15 pred1 pred2 pred3 pred4 pred5 r hd1 hd2 hd3 hd4 (US.v hd);
+  insert r hd hd2 hd3 hd4 hd1 idx v;
+  AL.permute15 pred5 pred2 pred3 pred4 pred1 r (US.v idx) hd2 hd3 hd4 hd1
+
 (*)
 let extend
   (#pred1 #pred2 #pred3 #pred4: status -> prop)
