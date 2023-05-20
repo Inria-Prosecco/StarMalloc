@@ -32,3 +32,4 @@ let guard_pages_interval = 8sz
 
 //quarantine
 let enable_quarantine = true
+let enable_quarantine_trap = true

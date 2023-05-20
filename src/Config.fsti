@@ -35,7 +35,7 @@ val alg_null_sizet: v:US.t{US.v v = US.v metadata_max + 1}
 // guard pages mechanism
 // given the slab allocator memory layout,
 // is required to avoid basic large buffer overflows
-// actually, this flag controls whether guard pages are unmapped
+// TODO: actually, this flag controls whether guard pages are unmapped
 inline_for_extraction
 val enable_guard_pages: bool
 inline_for_extraction
@@ -45,6 +45,8 @@ val guard_pages_interval: v:US.t{2 <= US.v v /\ US.fits (US.v metadata_max + US.
 // for now, basic quarantine:
 // when a slab becomes empty (from partial/full),
 // it is never used again
-// actually, this flag controls whether quarantined slabs are unmapped
 inline_for_extraction
 val enable_quarantine: bool
+// controls whether quarantined slabs are unmapped
+inline_for_extraction
+val enable_quarantine_trap: bool
