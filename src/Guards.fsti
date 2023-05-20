@@ -22,6 +22,13 @@ val is_guard
   (x: normal (t_of (slab_vprop size_class arr md)))
   : prop
 
+val is_quarantine
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (md: slab_metadata)
+  (x: normal (t_of (slab_vprop size_class arr md)))
+  : prop
+
 val mmap_trap
   (size_class: G.erased sc)
   (arr: array U8.t{A.length arr = U32.v page_size})

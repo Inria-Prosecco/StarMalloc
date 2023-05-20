@@ -17,7 +17,7 @@ module AL = ArrayListGen
     We only expose the computationally relevant functions here, all the lemmas remain in ArrayListGen *)
 
 inline_for_extraction noextract
-let status = v:U32.t{U32.v v < 4}
+let status = v:U32.t{U32.v v < 5}
 
 let cell : Type0 = AL.cell status
 
