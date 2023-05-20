@@ -40,6 +40,8 @@ type size_class_struct' = {
   full_slabs: ref US.t;
   // guard
   guard_slabs: ref US.t;
+  // quarantine
+  quarantine_slabs: ref US.t;
   md_count: ref US.t;
   slab_region: array U8.t;
   //TODO: due to karamel extraction issue + sl proof workaround
@@ -71,7 +73,7 @@ let size_class_vprop
     vrefinedep_prop
     (size_class_vprop_aux scs.size
       scs.slab_region scs.md_bm_region scs.md_region
-      scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs)
+      scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
 
 let allocate_size_class_sl_lemma1
   (scs: size_class_struct)
@@ -87,7 +89,7 @@ let allocate_size_class_sl_lemma1
         vrefinedep_prop
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region
-          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs)
+          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
     )) m /\
     sel_of (size_class_vprop scs) m
     ==
@@ -97,7 +99,7 @@ let allocate_size_class_sl_lemma1
         vrefinedep_prop
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region
-          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs)
+          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
     ) m
   )
   = ()
@@ -113,7 +115,7 @@ let allocate_size_class_sl_lemma2
         vrefinedep_prop
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region
-          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs)
+          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
     )) m
   )
   (ensures
@@ -126,7 +128,7 @@ let allocate_size_class_sl_lemma2
         vrefinedep_prop
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region
-          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs)
+          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
     ) m
   )
   = ()
@@ -152,21 +154,21 @@ let allocate_size_class
       vrefinedep_prop
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region
-        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs))
+        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   let result = allocate_slab
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region
     scs.md_count
-    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs in
+    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs in
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
       vrefinedep_prop
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region
-        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs))
+        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs))
     (size_class_vprop scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);
@@ -203,21 +205,21 @@ let deallocate_size_class
       vrefinedep_prop
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region
-        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs))
+        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   let b = deallocate_slab ptr
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region
     scs.md_count
-    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs diff in
+    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs diff in
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
       vrefinedep_prop
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region
-        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs))
+        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs))
     (size_class_vprop scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);
