@@ -75,64 +75,66 @@ type size_class =
     lock : L.lock (size_class_vprop data);
   }
 
-let ind_aux pred1 pred2 pred3 pred4 r idxs : vprop =
-  SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 pred4 r idxs
+let ind_aux r idxs : vprop =
+  SlabsCommon.ind_varraylist_aux r idxs
 
 //#push-options "--compat_pre_core 0 --compat_pre_typed_indexed_effects"
 val intro_ind_varraylist_nil (#opened:_)
-  (pred1 pred2 pred3 pred4: AL.status -> prop) (r: A.array AL.cell)
-  (r1 r2 r3 r4: R.ref US.t)
+  (r: A.array AL.cell)
+  (r1 r2 r3 r4 r5: R.ref US.t)
   : SteelGhost unit opened
-      (A.varray r `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4)
-      (fun _ -> ind_varraylist pred1 pred2 pred3 pred4 r r1 r2 r3 r4)
+      (A.varray r `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4 `star` R.vptr r5)
+      (fun _ -> ind_varraylist r r1 r2 r3 r4 r5)
       (requires fun h -> A.length r == 0 /\
         R.sel r1 h == AL.null_ptr /\
         R.sel r2 h == AL.null_ptr /\
         R.sel r3 h == AL.null_ptr /\
-        R.sel r4 h == AL.null_ptr
+        R.sel r4 h == AL.null_ptr /\
+        R.sel r5 h == AL.null_ptr
       )
       (ensures fun _ _ _ -> True)
 
-let intro_ind_varraylist_nil pred1 pred2 pred3 pred4 r r1 r2 r3 r4 =
+let intro_ind_varraylist_nil r r1 r2 r3 r4 r5 =
   ALG.intro_arraylist_nil
-    pred1 pred2 pred3 pred4
+    pred1 pred2 pred3 pred4 pred5
     r
-    AL.null_ptr AL.null_ptr AL.null_ptr AL.null_ptr;
-  let idxs = gget (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4) in
+    AL.null_ptr AL.null_ptr AL.null_ptr AL.null_ptr AL.null_ptr;
+  let idxs = gget (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4 `star` R.vptr r5) in
   intro_vrefine
-    (SlabsCommon.ind_varraylist_aux2 pred1 pred2 pred3 pred4 r (((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr))
-    (SlabsCommon.ind_varraylist_aux_refinement pred1 pred2 pred3 pred4 r (((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr));
+    (SlabsCommon.ind_varraylist_aux2 r ((((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr), AL.null_ptr))
+    (SlabsCommon.ind_varraylist_aux_refinement r ((((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr), AL.null_ptr));
   intro_vdep
-    (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4)
-    (SlabsCommon.ind_varraylist_aux pred1 pred2 pred3 pred4 r (((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr))
-    (ind_aux pred1 pred2 pred3 pred4 r)
+    (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4 `star` R.vptr r5)
+    (SlabsCommon.ind_varraylist_aux r ((((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr), AL.null_ptr))
+    (ind_aux r)
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-  (r1 r2 r3 r4: R.ref US.t)
+  (r1 r2 r3 r4 r5: R.ref US.t)
   : SteelGhost unit opened
-      (A.varray (split_l md_region 0sz) `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4)
-      (fun _ -> SlabsCommon.left_vprop sc slab_region md_bm_region md_region r1 r2 r3 r4 0sz)
+      (A.varray (split_l md_region 0sz) `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4 `star` R.vptr r5)
+      (fun _ -> SlabsCommon.left_vprop sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz)
       (requires fun h ->
         R.sel r1 h == AL.null_ptr /\
         R.sel r2 h == AL.null_ptr /\
         R.sel r3 h == AL.null_ptr /\
-        R.sel r4 h == AL.null_ptr
+        R.sel r4 h == AL.null_ptr /\
+        R.sel r5 h == AL.null_ptr
       )
       (ensures fun _ _ _ -> True)
 
 #push-options "--z3rlimit 30"
-let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 r4 =
-  intro_ind_varraylist_nil pred1 pred2 pred3 pred4
+let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 =
+  intro_ind_varraylist_nil
     (A.split_l md_region 0sz)
-    r1 r2 r3 r4;
+    r1 r2 r3 r4 r5;
 
-  let s = gget (ind_varraylist pred1 pred2 pred3 pred4
+  let s = gget (ind_varraylist
       (A.split_l md_region 0sz)
-      r1 r2 r3 r4) in
+      r1 r2 r3 r4 r5) in
 
   starseq_intro_empty #_
       #(pos:US.t{US.v pos < US.v 0sz})
@@ -150,7 +152,7 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 r4 =
       (f sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
       (f_lemma sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
       (SeqUtils.init_us_refined (US.v 0sz))) ==
-    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 0sz s))
+    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz s))
   by (norm [delta_only [`%left_vprop_aux]]);
 
 
@@ -161,14 +163,14 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 r4 =
       (f sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
       (f_lemma sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
       (SeqUtils.init_us_refined (US.v 0sz)))
-    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 0sz s);
+    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz s);
 
   intro_vdep
-    (ind_varraylist pred1 pred2 pred3 pred4
+    (ind_varraylist
       (A.split_l md_region 0sz)
-      r1 r2 r3 r4)
-    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 0sz s)
-    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 0sz)
+      r1 r2 r3 r4 r5)
+    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz s)
+    (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz)
 
 val intro_right_vprop_empty (#opened:_)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -266,15 +268,17 @@ let init_struct_aux
   let ptr_empty = mmap_ptr_us () in
   let ptr_full = mmap_ptr_us () in
   let ptr_guard = mmap_ptr_us () in
+  let ptr_quarantine = mmap_ptr_us () in
 
   R.write ptr_partial AL.null_ptr;
   R.write ptr_empty AL.null_ptr;
   R.write ptr_full AL.null_ptr;
   R.write ptr_guard AL.null_ptr;
+  R.write ptr_quarantine AL.null_ptr;
 
   intro_left_vprop_empty sc
     slab_region md_bm_region md_region
-    ptr_empty ptr_partial ptr_full ptr_guard;
+    ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine;
 
   let md_count = mmap_ptr_us () in
   R.write md_count 0sz;
@@ -284,9 +288,9 @@ let init_struct_aux
     vrefinedep_prop
     (size_class_vprop_aux sc
       slab_region md_bm_region md_region
-      ptr_empty ptr_partial ptr_full ptr_guard)
+      ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine)
     (left_vprop sc slab_region md_bm_region md_region
-         ptr_empty ptr_partial ptr_full ptr_guard 0sz `star`
+         ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine 0sz `star`
      right_vprop slab_region md_bm_region md_region 0sz);
 
 
@@ -297,6 +301,7 @@ let init_struct_aux
     empty_slabs = ptr_empty;
     full_slabs = ptr_full;
     guard_slabs = ptr_guard;
+    quarantine_slabs = ptr_quarantine;
     slab_region = slab_region;
     md_bm_region = md_bm_region;
     md_region = md_region;
@@ -309,7 +314,7 @@ let init_struct_aux
       vrefinedep_prop
       (size_class_vprop_aux sc
         slab_region md_bm_region md_region
-        ptr_empty ptr_partial ptr_full ptr_guard))
+        ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine))
      (size_class_vprop scs)
     (fun _ _ -> True)
     (fun _ ->
@@ -322,7 +327,7 @@ let init_struct_aux
           vrefinedep_prop
           (size_class_vprop_aux scs.size
             scs.slab_region scs.md_bm_region scs.md_region
-            scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs)
+            scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
       ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
     );
   return scs
