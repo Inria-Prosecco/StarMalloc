@@ -69,7 +69,7 @@ ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
 # steel_base.h defines symbols required by Steel.ArrayArith
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
-	$(KRML_EXE) -skip-compilation -no-prefix Mman -tmpdir dist \
+	$(KRML_EXE) -skip-compilation -tmpdir dist \
     -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 		-bundle 'Map.\*,Impl.\*,Spec.\*'[rename=AVL] \
@@ -79,7 +79,8 @@ extract: $(ALL_KRML_FILES)
 		-bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
     -no-prefix Main \
     -no-prefix LargeAlloc \
-    -no-prefix Guards \
+    -no-prefix Mman \
+    -no-prefix MemoryTrap \
 		-warn-error +9 \
 		-add-include 'Steel_SpinLock:"steel_types.h"' \
 		-add-include 'Steel_SpinLock:"steel_base.h"' \
@@ -104,6 +105,8 @@ dist/Slabs.c \
 dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
+dist/Quarantine.c \
+dist/Guards.c \
 src/utils.c \
 src/main-mmap.c
 
@@ -125,6 +128,7 @@ test-alloc0: verify extract patch
 	$(CC) -O0 -g -DKRML_VERIFIED_UINT126 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
+	-I $(STEEL_HOME)/include/steel \
 -o bench/a.out \
 $(FILES) \
 bench/test-alloc.c \
@@ -163,6 +167,7 @@ test-alloc0bis: verify extract patch
 	$(CC) -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
+	-I $(STEEL_HOME)/include/steel \
   -pthread \
 -o bench/a.out \
 $(FILES) \

@@ -49,7 +49,7 @@ let mmap_trap_guard
   )
   =
   if enable_guard_pages then (
-    mmap_trap size_class arr md;
+    mmap_trap size_class arr md len;
     let v = gget (slab_vprop size_class arr md) in
     trap_implies_guard size_class arr md v
   ) else (

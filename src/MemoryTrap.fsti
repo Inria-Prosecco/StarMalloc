@@ -28,6 +28,7 @@ val mmap_trap
   (size_class: G.erased sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md: G.erased (array U64.t){A.length md = 4})
+  (len: US.t{US.v len = U32.v page_size})
   : Steel unit
   (slab_vprop size_class arr md)
   (fun _ -> slab_vprop size_class arr md)
