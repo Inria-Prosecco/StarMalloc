@@ -15,8 +15,15 @@ module I64 = FStar.Int64
 noextract inline_for_extraction
 let array = Steel.ST.Array.array
 
-noeq
-type data = { ptr: array U8.t; size: US.t}
+type data = x: (array U8.t * US.t){
+  (
+    US.v (snd x) > 0 /\
+    US.v (snd x) == A.length (fst x) /\
+    A.is_full_array (fst x)
+  )
+  \/
+  US.v (snd x) == 0
+}
 
 let node = node data
 let t = t data
@@ -27,8 +34,8 @@ assume val ptr_to_u64 (x: array U8.t) : U64.t
 inline_for_extraction noextract
 let cmp (x y: data) : I64.t
   =
-  let x = x.ptr in
-  let y = y.ptr in
+  let x = fst x in
+  let y = fst y in
   let x = ptr_to_u64 x in
   let y = ptr_to_u64 y in
   if U64.gt x y then 1L

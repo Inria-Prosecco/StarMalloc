@@ -37,7 +37,7 @@ let munmap (ptr: array U8.t) (size: US.t)
     (A.varray ptr)
     (fun b -> if b then A.varray ptr else emp)
     (requires fun _ ->
-      //A.length a == U64.v size_t /\
+      A.length ptr == US.v size /\
       A.is_full_array ptr
     )
     (ensures fun _ _ _ -> True)
@@ -125,7 +125,7 @@ let large_malloc' (metadata: ref t) (size: US.t)
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
   let ptr = mmap size in
-  let md_v' = insert false md_v {ptr; size} in
+  let md_v' = insert false md_v (ptr, size) in
   write metadata md_v';
   (**) intro_vrefine (linked_tree md_v') is_avl;
   (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
@@ -167,7 +167,7 @@ let large_free' (metadata: ref t) (ptr: array U8.t)
     (if b then emp else A.varray ptr) `star`
     ind_linked_avl_tree metadata
   )
-  (requires fun h0 -> A.is_full_array ptr)
+  (requires fun h0 -> True)
   (ensures fun _ _ _ -> True)
   =
   (**) let t = elim_vdep (vptr metadata) linked_avl_tree in
@@ -178,7 +178,8 @@ let large_free' (metadata: ref t) (ptr: array U8.t)
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  let size = find md_v {ptr; size= 0sz} in
+  let k_elem : data = (ptr, 0sz) in
+  let size = find md_v k_elem in
   if Some? size then (
     let size = Some?.v size in
     let b = munmap ptr size in
@@ -190,7 +191,7 @@ let large_free' (metadata: ref t) (ptr: array U8.t)
       (**) intro_vdep (vptr metadata) (linked_avl_tree md_v) linked_avl_tree;
       return (not b)
     ) else (
-      let md_v' = delete md_v {ptr; size} in
+      let md_v' = delete md_v (ptr, size) in
       write metadata md_v';
       (**) intro_vrefine (linked_tree md_v') is_avl;
       (**) intro_vdep (vptr metadata) (linked_avl_tree md_v') linked_avl_tree;
@@ -241,7 +242,7 @@ let large_free (ptr: array U8.t)
   : Steel bool
   (A.varray ptr)
   (fun b -> if b then emp else A.varray ptr)
-  (requires fun _ -> A.is_full_array ptr)
+  (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
   =
   L.acquire metadata.lock;

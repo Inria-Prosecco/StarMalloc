@@ -86,6 +86,12 @@ let mem
   =
   Impl.Mono.member ptr v
 
+module A = Steel.Array
+
+#restart-solver
+
+#push-options "--z3rlimit 100"
+
 let rec find
   (ptr: t)
   (v: data)
@@ -95,7 +101,12 @@ let rec find
   (requires fun h0 ->
     Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 r h1 ->
-    v_linked_tree ptr h1 == v_linked_tree ptr h0)
+    v_linked_tree ptr h1 == v_linked_tree ptr h0 /\
+    (Some? r ==> (
+      US.v (Some?.v r) == A.length (fst v)) /\
+      A.is_full_array (fst v)
+    )
+  )
     //Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0))
     //r == Spec.Map.find_avl #a #b (spec_convert cmp) (v_linked_tree ptr h0) v)
   =
@@ -109,7 +120,9 @@ let rec find
     pack_tree ptr
       (get_left node) (get_right node)
       (get_size node) (get_height node);
-    let r = (get_data node).size in
+    assume (forall (x y: data). ptr_to_u64 (fst x) == ptr_to_u64 (fst y) ==> fst x == fst y);
+    let r = snd (get_data node) in
+    assume (US.v r <> 0);
     return (Some r)
   ) else (
     if I64.lt delta szero then (
