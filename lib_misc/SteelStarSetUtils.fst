@@ -232,13 +232,21 @@ let starl_set_sel_depends_only_on (#a: eqtype) (#b: Type0)
   let p = fun x -> L.mem x l in
   map_pure_len p f1 l;
   map_pure_len p f2 l;
-  //assume (forall x. L.mem x l ==> L.mem x l);
-  //Classical.forall_intro (map_pure_index p f1 l);
-  //Classical.forall_intro (map_pure_index p f2 l);
+  //Classical.forall_intro (L.lemma_index_memP #a l);
+  assume (forall (k:nat{k < L.length l}).
+    L.memP (L.index l k) l
+  );
+  Classical.forall_intro (map_pure_index p f1 l);
+  Classical.forall_intro (map_pure_index p f2 l);
   let l1 = map_pure p f1 l in
   let l2 = map_pure p f2 l in
-  assume (l1 == l2)
-  //L.index_extensionality l1 l2
+  assert (L.length l1 == L.length l);
+  assert (L.length l1 == L.length l2);
+  assume (forall (k:nat{k < L.length l}).
+    L.index l1 k == L.index l2 k
+  );
+  L.index_extensionality l1 l2;
+  assert (l1 == l2)
 
 let starl_set_sel_depends_only_on_core (#a: eqtype) (#b: Type0)
   (f: a -> vprop)
@@ -257,13 +265,21 @@ let starl_set_sel_depends_only_on_core (#a: eqtype) (#b: Type0)
   let p = fun x -> L.mem x l in
   map_pure_len p f1 l;
   map_pure_len p f2 l;
-  //assume (forall x. L.mem x l ==> L.mem x l);
-  //Classical.forall_intro (map_pure_index p f1 l);
-  //Classical.forall_intro (map_pure_index p f2 l);
+  //Classical.forall_intro (L.lemma_index_memP #a l);
+  assume (forall (k:nat{k < L.length l}).
+    L.memP (L.index l k) l
+  );
+  Classical.forall_intro (map_pure_index p f1 l);
+  Classical.forall_intro (map_pure_index p f2 l);
   let l1 = map_pure p f1 l in
   let l2 = map_pure p f2 l in
-  assume (l1 == l2)
-  //L.index_extensionality l1 l2
+  assert (L.length l1 == L.length l);
+  assert (L.length l1 == L.length l2);
+  assume (forall (k:nat{k < L.length l}).
+    L.index l1 k == L.index l2 k
+  );
+  L.index_extensionality l1 l2;
+  assert (l1 == l2)
 
 let starl_set_sel (#a: eqtype) (#b: Type0)
   (f: a -> vprop)
