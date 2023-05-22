@@ -270,7 +270,7 @@ let large_getsize' (metadata: ref t) (ptr: array U8.t)
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  let size = find md_v {ptr; size=0sz} in
+  let size = find md_v (ptr, 0sz) in
   if Some? size then (
     let size = Some?.v size in
     (**) intro_vrefine (linked_tree md_v) is_avl;
