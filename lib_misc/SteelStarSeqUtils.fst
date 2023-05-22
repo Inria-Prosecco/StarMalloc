@@ -10,11 +10,6 @@ open SteelOptUtils
 
 #push-options "--fuel 0 --ifuel 0"
 
-let starl (l: list vprop)
-  : vprop
-  =
-  L.fold_right star l emp
-
 let starl_seq (s: Seq.seq vprop)
   : vprop
   =

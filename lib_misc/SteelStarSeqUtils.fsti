@@ -8,8 +8,10 @@ module L = FStar.List.Tot
 module G = FStar.Ghost
 open SteelOptUtils
 
-val starl (l: list vprop)
+let starl (l: list vprop)
   : vprop
+  =
+  L.fold_right star l emp
 
 val starl_seq (s: Seq.seq vprop)
   : vprop

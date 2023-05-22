@@ -36,16 +36,28 @@ let starl_set_append (#a: eqtype) (f: a -> vprop) (s1 s2: FS.set a)
   // more complicated but reasonable
   admit ()
 
-let starl_set_singleton (#a: eqtype) (f: a -> vprop) (s: FS.set a)
+let starl_set_singleton (#a: eqtype) (f: a -> vprop) (x: a)
   : Lemma
-  (requires FS.cardinality s == 1)
+  (requires True)
   (ensures
-    Cons? (FS.set_as_list s) /\
-    starl_set f s `equiv` f (L.hd (FS.set_as_list s))
+    starl_set f (FS.singleton x) `equiv` f x
   )
   =
   // need for an equivalent of map_seq_index to map_seq for L.map
-  admit ()
+  assume (L.map f (FS.set_as_list (FS.singleton x)) == [f x]);
+  assert (starl_set f (FS.singleton x) == starl [f x]);
+  assert_norm (starl [f x] == f x `star` emp);
+  star_commutative (f x) emp;
+  cm_identity (f x);
+  equiv_refl (starl_set f (FS.singleton x));
+  equiv_trans
+    (starl_set f (FS.singleton x))
+    (f x `star` emp)
+    (emp `star` f x);
+  equiv_trans
+    (starl_set f (FS.singleton x))
+    (emp `star` f x)
+    (f x)
 
 let starl_set_unpack (#a: eqtype) (f: a -> vprop) (s: FS.set a) (x: a)
   : Lemma
@@ -55,17 +67,47 @@ let starl_set_unpack (#a: eqtype) (f: a -> vprop) (s: FS.set a) (x: a)
     `equiv`
     (f x `star` starl_set f (FS.remove x s))
   )
-  = admit ()
+  =
+  FS.all_finite_set_facts_lemma ();
+  assert (s `FS.equal` FS.union (FS.singleton x) (FS.remove x s));
+  starl_set_append f (FS.singleton x) (FS.remove x s);
+  starl_set_singleton f x;
+  equiv_refl (starl_set f (FS.remove x s));
+  star_congruence
+    (starl_set f (FS.singleton x)) (starl_set f (FS.remove x s))
+    (f x) (starl_set f (FS.remove x s));
+  equiv_trans
+    (starl_set f s)
+    (starl_set f (FS.singleton x) `star` starl_set f (FS.remove x s))
+    (f x `star` starl_set f (FS.remove x s))
 
 let starl_set_pack (#a: eqtype) (f: a -> vprop) (s: FS.set a) (x: a)
   : Lemma
   (requires not (FS.mem x s))
   (ensures
-    starl_set f (FS.insert x s)
-    `equiv`
     (f x `star` starl_set f s)
+    `equiv`
+    starl_set f (FS.insert x s)
   )
-  = admit ()
+  =
+  FS.all_finite_set_facts_lemma ();
+  assert (FS.insert x s `FS.equal` FS.union (FS.singleton x) s);
+  starl_set_append f (FS.singleton x) s;
+  equiv_sym
+    (starl_set f (FS.insert x s))
+    (starl_set f (FS.singleton x) `star` starl_set f s);
+  starl_set_singleton f x;
+  equiv_sym
+    (starl_set f (FS.singleton x))
+    (f x);
+  equiv_refl (starl_set f s);
+  star_congruence
+    (f x) (starl_set f s)
+    (starl_set f (FS.singleton x)) (starl_set f s);
+  equiv_trans
+    (f x `star` starl_set f s)
+    (starl_set f (FS.singleton x) `star` starl_set f s)
+    (starl_set f (FS.insert x s))
 
 let starl_set_imp (#a: eqtype) (f: a -> vprop) (s: FS.set a) (x: a)
   : Lemma
@@ -75,7 +117,12 @@ let starl_set_imp (#a: eqtype) (f: a -> vprop) (s: FS.set a) (x: a)
     `can_be_split`
     f x
   )
-  = admit ()
+  =
+  starl_set_unpack f s x;
+  intro_can_be_split_frame
+    (f x)
+    (starl_set f s)
+    (starl_set f (FS.remove x s))
 
 let starl_set_sel_aux (#a: eqtype) (#b: Type0)
   (f: a -> vprop)
@@ -161,14 +208,13 @@ let starl_set_sel_depends_only_on_aux (#a: eqtype) (#b: Type0)
   (s: FS.set a)
   (m0: SM.hmem (hp_of (starl_set f s)))
   (m1: SM.mem{SM.disjoint m0 m1})
-  (x: a)
+  (x: a{FS.mem x s})
   : Lemma
-  (requires FS.mem x s)
-  (ensures (
+  (
     let v1 = starl_set_sel_aux #a #b f f_lemma s m0 x in
     let v2 = starl_set_sel_aux #a #b f f_lemma s (SM.join m0 m1) x in
     v1 == v2
-  ))
+  )
   =
   let m' = SM.join m0 m1 in
   let s1 = starl_set_sel' #a #b f f_lemma s m0 in
@@ -191,14 +237,13 @@ let starl_set_sel_depends_only_on_core_aux (#a: eqtype) (#b: Type0)
   (f_lemma: (x:a -> Lemma (t_of (f x) == b)))
   (s: FS.set a)
   (m0: SM.hmem (hp_of (starl_set f s)))
-  (x: a)
+  (x: a{FS.mem x s})
   : Lemma
-  (requires FS.mem x s)
-  (ensures (
+  (
     let v1 = starl_set_sel_aux #a #b f f_lemma s m0 x in
     let v2 = starl_set_sel_aux #a #b f f_lemma s (SM.core_mem m0) x in
     v1 == v2
-  ))
+  )
   =
   let l = FS.set_as_list s in
   map_pure_len (fun x -> L.mem x l)
@@ -236,13 +281,14 @@ let starl_set_sel_depends_only_on (#a: eqtype) (#b: Type0)
   assume (forall (k:nat{k < L.length l}).
     L.memP (L.index l k) l
   );
+  Classical.forall_intro (starl_set_sel_depends_only_on_aux #a #b f f_lemma s m0 m1);
   Classical.forall_intro (map_pure_index p f1 l);
   Classical.forall_intro (map_pure_index p f2 l);
   let l1 = map_pure p f1 l in
   let l2 = map_pure p f2 l in
   assert (L.length l1 == L.length l);
   assert (L.length l1 == L.length l2);
-  assume (forall (k:nat{k < L.length l}).
+  assert (forall (k:nat{k < L.length l}).
     L.index l1 k == L.index l2 k
   );
   L.index_extensionality l1 l2;
@@ -269,13 +315,14 @@ let starl_set_sel_depends_only_on_core (#a: eqtype) (#b: Type0)
   assume (forall (k:nat{k < L.length l}).
     L.memP (L.index l k) l
   );
+  Classical.forall_intro (starl_set_sel_depends_only_on_core_aux #a #b f f_lemma s m0);
   Classical.forall_intro (map_pure_index p f1 l);
   Classical.forall_intro (map_pure_index p f2 l);
   let l1 = map_pure p f1 l in
   let l2 = map_pure p f2 l in
   assert (L.length l1 == L.length l);
   assert (L.length l1 == L.length l2);
-  assume (forall (k:nat{k < L.length l}).
+  assert (forall (k:nat{k < L.length l}).
     L.index l1 k == L.index l2 k
   );
   L.index_extensionality l1 l2;
