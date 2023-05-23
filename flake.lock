@@ -103,15 +103,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1684450466,
-        "narHash": "sha256-D1GagGtnClfdrJIMy7ojpojFBaqMAvz2L8QS6bwBqfQ=",
-        "owner": "cmovcc",
+        "lastModified": 1683781985,
+        "narHash": "sha256-3M5ahLiOX5cd3+fQAa8moQ9cMqh1vu/O+Ha/tkaU188=",
+        "owner": "pnmadelaine",
         "repo": "steel",
-        "rev": "a35ae37445a0353df185b0c8ca46c4d8aea65125",
+        "rev": "799dd38b4cd16231dce512ae038fa198848bd4a5",
         "type": "github"
       },
       "original": {
-        "owner": "cmovcc",
+        "owner": "pnmadelaine",
         "repo": "steel",
         "type": "github"
       }
