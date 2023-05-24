@@ -25,11 +25,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1684851019,
-        "narHash": "sha256-2d8AaucQNBUNXaNbwCy0tCt1VhZMGL+WYtuzFmC4Ve8=",
+        "lastModified": 1684857461,
+        "narHash": "sha256-9f2Wst0QT+dPXLxG8EIK+4Zrxutn29ehIxaiAOZ8Us0=",
         "owner": "cmovcc",
         "repo": "FStar",
-        "rev": "1535f9cbdd85d866a525905fd27883d588d77615",
+        "rev": "e2b8ae8a0edeed28a6686073a25b8b3d6851ec57",
         "type": "github"
       },
       "original": {
