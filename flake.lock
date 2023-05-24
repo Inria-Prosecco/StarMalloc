@@ -25,11 +25,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1684857461,
-        "narHash": "sha256-9f2Wst0QT+dPXLxG8EIK+4Zrxutn29ehIxaiAOZ8Us0=",
+        "lastModified": 1684937941,
+        "narHash": "sha256-nRj7bPEW9Pll15zRjOFMNcHtm7O8A9VVpOohgFBj8OY=",
         "owner": "cmovcc",
         "repo": "FStar",
-        "rev": "e2b8ae8a0edeed28a6686073a25b8b3d6851ec57",
+        "rev": "85755a1c602698eb8047557b82411f3bb6bf7f43",
         "type": "github"
       },
       "original": {
@@ -52,26 +52,27 @@
         ]
       },
       "locked": {
-        "lastModified": 1684515062,
-        "narHash": "sha256-g66rY0y4FEqGoOy/5mXnf04caM4hlBjFHbK7U07T1Rc=",
+        "lastModified": 1684878518,
+        "narHash": "sha256-v/+nB33O3wPW3KvzwDFxnBMsa/iSPlT8EcR2DPLhXuI=",
         "owner": "FStarLang",
         "repo": "karamel",
-        "rev": "95fc1a05ecaf48306fa4a9ff935b2adeb241802b",
+        "rev": "578af02c9e9a4efe9e67abfe7eb1e1640c2c9870",
         "type": "github"
       },
       "original": {
         "owner": "FStarLang",
+        "ref": "protz_spinlock",
         "repo": "karamel",
         "type": "github"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1684754342,
-        "narHash": "sha256-plGnjnbnPLoZCTdQX21oT7xliQhFtgcWlkuDHgtEb1o=",
+        "lastModified": 1684844536,
+        "narHash": "sha256-M7HhXYVqAuNb25r/d3FOO0z4GxPqDIZp5UjHFbBgw0Q=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "7084250df3d7f9735087d3234407f3c1fc2400e3",
+        "rev": "d30264c2691128adc261d7c9388033645f0e742b",
         "type": "github"
       },
       "original": {
