@@ -103,11 +103,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1683781985,
-        "narHash": "sha256-3M5ahLiOX5cd3+fQAa8moQ9cMqh1vu/O+Ha/tkaU188=",
+        "lastModified": 1684926316,
+        "narHash": "sha256-WA+P5qS1Gv1uVyWP30aIbxbuLN7xkdqIuAiycXpoHlo=",
         "owner": "pnmadelaine",
         "repo": "steel",
-        "rev": "799dd38b4cd16231dce512ae038fa198848bd4a5",
+        "rev": "3edd476be4153436e355d572c98353cc6205e496",
         "type": "github"
       },
       "original": {
