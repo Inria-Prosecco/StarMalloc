@@ -8,7 +8,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
-      url = "github:pnmadelaine/steel";
+      url = "github:pnmadelaine/steel/nix";
       inputs.fstar.follows = "fstar-src";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
