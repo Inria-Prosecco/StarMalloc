@@ -603,8 +603,12 @@ module G = FStar.Ghost
 module UP = FStar.PtrdiffT
 
 let slab_region_size
-  : v:US.t{US.v v = US.v metadata_max * U32.v page_size * 9}
+  : v:US.t{
+    US.v v = US.v metadata_max * U32.v page_size * 9 /\
+    UP.fits (US.v v)
+  }
   =
+  metadata_max_up_fits ();
   assert (US.fits_u64);
   assume (US.v nb_size_classes == 9);
   US.fits_lte
@@ -900,6 +904,8 @@ let slab_free' (sc: size_class) (ptr: array U8.t) (diff: US.t)
 
 #push-options "--fuel 0 --ifuel 0"
 
+#restart-solver
+
 //TODO: metaprogramming
 let slab_free ptr =
   SAA.within_bounds_elim
@@ -910,7 +916,7 @@ let slab_free ptr =
     (A.offset (A.ptr_of ptr)
     -
     A.offset (A.ptr_of (A.split_l sc_all.slab_region 0sz)))
-    (US.v slab_region_size + 1);
+    (US.v slab_region_size);
   let diff = A.ptrdiff
     ptr
     (A.split_l sc_all.slab_region 0sz) in
@@ -953,7 +959,7 @@ let slab_getsize (ptr: array U8.t)
     (A.offset (A.ptr_of ptr)
     -
     A.offset (A.ptr_of (A.split_l sc_all.slab_region 0sz)))
-    (US.v slab_region_size + 1);
+    (US.v slab_region_size);
   let diff = A.ptrdiff
     ptr
     (A.split_l sc_all.slab_region 0sz) in
