@@ -906,8 +906,6 @@ let slab_free ptr =
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
     ptr;
-  //TODO: once within_bounds is fixed, can be removed
-  assume (UP.fits (US.v slab_region_size + 1));
   UP.fits_lt
     (A.offset (A.ptr_of ptr)
     -
@@ -951,8 +949,6 @@ let slab_getsize (ptr: array U8.t)
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
     ptr;
-  //TODO: once within_bounds is fixed, can be removed
-  assume (UP.fits (US.v slab_region_size + 1));
   UP.fits_lt
     (A.offset (A.ptr_of ptr)
     -
