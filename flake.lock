@@ -104,16 +104,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1684936056,
-        "narHash": "sha256-MlIpLpcaWmaRV2zNLXopD+Ee9bGDfAVUiTZNWjMuJOw=",
-        "owner": "pnmadelaine",
+        "lastModified": 1685111472,
+        "narHash": "sha256-gd0UC1ZNUV8tUCy9iWONXRKC9bdscvA1a1ug4UptXqI=",
+        "owner": "cmovcc",
         "repo": "steel",
-        "rev": "88046914d223f2a67bfd1a89356051a19392eae6",
+        "rev": "70cb9ca6bcf09b0715e3184370c46a7a6ebdb6ea",
         "type": "github"
       },
       "original": {
-        "owner": "pnmadelaine",
-        "ref": "nix",
+        "owner": "cmovcc",
+        "ref": "main",
         "repo": "steel",
         "type": "github"
       }
