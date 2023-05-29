@@ -75,6 +75,16 @@ type size_class =
     lock : L.lock (size_class_vprop data);
   }
 
+assume val mmap_sc (len: US.t)
+  : Steel (array size_class)
+     emp
+    (fun a -> A.varray a)
+    (fun _ -> True)
+    (fun _ a h1 ->
+      A.length a == US.v len /\
+      A.is_full_array a
+    )
+
 let ind_aux r idxs : vprop =
   SlabsCommon.ind_varraylist_aux r idxs
 
@@ -557,7 +567,6 @@ val init_wrapper2
 
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
-  admit ();
   f_lemma n k;
   f_lemma n k';
   f_lemma n (US.sub n k);
@@ -588,19 +597,9 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
 
 #pop-options
 
-// TODO: metaprogramming
-let size_class16_t = r:size_class{U32.eq r.data.size 16ul}
-let size_class32_t = r:size_class{U32.eq r.data.size 32ul}
-let size_class64_t = r:size_class{U32.eq r.data.size 64ul}
-let size_class128_t = r:size_class{U32.eq r.data.size 128ul}
-let size_class256_t = r:size_class{U32.eq r.data.size 256ul}
-let size_class512_t = r:size_class{U32.eq r.data.size 512ul}
-let size_class1024_t = r:size_class{U32.eq r.data.size 1024ul}
-let size_class2048_t = r:size_class{U32.eq r.data.size 2048ul}
-let size_class4096_t = r:size_class{U32.eq r.data.size 4096ul}
-
 module G = FStar.Ghost
 module UP = FStar.PtrdiffT
+
 
 let slab_region_size
   : v:US.t{
@@ -616,49 +615,71 @@ let slab_region_size
     (US.v metadata_max * U32.v page_size * US.v nb_size_classes);
   US.mul slab_size 9sz
 
-//TODO: metaprogramming
-noeq type size_classes_all = {
-  sc16 : size_class16_t;
-  sc32 : size_class32_t;
-  sc64 : size_class64_t;
-  sc128 : size_class128_t;
-  sc256 : size_class256_t;
-  sc512 : size_class512_t;
-  sc1024 : size_class1024_t;
-  sc2048 : size_class2048_t;
-  sc4096 : size_class4096_t;
-  slab_region : arr:array U8.t{
-    A.length arr = US.v slab_region_size /\
-    same_base_array arr (sc16.data.slab_region) /\
-    same_base_array arr (sc32.data.slab_region) /\
-    same_base_array arr (sc64.data.slab_region) /\
-    same_base_array arr (sc128.data.slab_region) /\
-    same_base_array arr (sc256.data.slab_region) /\
-    same_base_array arr (sc512.data.slab_region) /\
-    same_base_array arr (sc1024.data.slab_region) /\
-    same_base_array arr (sc2048.data.slab_region) /\
-    same_base_array arr (sc4096.data.slab_region) /\
-    A.offset (A.ptr_of sc16.data.slab_region)
-      == A.offset (A.ptr_of arr) + 0 * US.v slab_size /\
-    A.offset (A.ptr_of sc32.data.slab_region)
-      == A.offset (A.ptr_of arr) + 1 * US.v slab_size /\
-    A.offset (A.ptr_of sc64.data.slab_region)
-      == A.offset (A.ptr_of arr) + 2 * US.v slab_size /\
-    A.offset (A.ptr_of sc128.data.slab_region)
-      == A.offset (A.ptr_of arr) + 3 * US.v slab_size /\
-    A.offset (A.ptr_of sc256.data.slab_region)
-      == A.offset (A.ptr_of arr) + 4 * US.v slab_size /\
-    A.offset (A.ptr_of sc512.data.slab_region)
-      == A.offset (A.ptr_of arr) + 5 * US.v slab_size /\
-    A.offset (A.ptr_of sc1024.data.slab_region)
-      == A.offset (A.ptr_of arr) + 6 * US.v slab_size /\
-    A.offset (A.ptr_of sc2048.data.slab_region)
-      == A.offset (A.ptr_of arr) + 7 * US.v slab_size /\
-    A.offset (A.ptr_of sc4096.data.slab_region)
-      == A.offset (A.ptr_of arr) + 8 * US.v slab_size /\
-    True
-  };
-}
+
+noeq
+type size_classes_all =
+  { n: US.t;
+    size_classes : sc:array size_class{length sc == US.v n};
+    slab_region: arr:array U8.t{
+      A.length arr == US.v slab_region_size
+    }
+  }
+
+
+// // TODO: metaprogramming
+// let size_class16_t = r:size_class{U32.eq r.data.size 16ul}
+// let size_class32_t = r:size_class{U32.eq r.data.size 32ul}
+// let size_class64_t = r:size_class{U32.eq r.data.size 64ul}
+// let size_class128_t = r:size_class{U32.eq r.data.size 128ul}
+// let size_class256_t = r:size_class{U32.eq r.data.size 256ul}
+// let size_class512_t = r:size_class{U32.eq r.data.size 512ul}
+// let size_class1024_t = r:size_class{U32.eq r.data.size 1024ul}
+// let size_class2048_t = r:size_class{U32.eq r.data.size 2048ul}
+// let size_class4096_t = r:size_class{U32.eq r.data.size 4096ul}
+
+// //TODO: metaprogramming
+// noeq type size_classes_all = {
+//   sc16 : size_class16_t;
+//   sc32 : size_class32_t;
+//   sc64 : size_class64_t;
+//   sc128 : size_class128_t;
+//   sc256 : size_class256_t;
+//   sc512 : size_class512_t;
+//   sc1024 : size_class1024_t;
+//   sc2048 : size_class2048_t;
+//   sc4096 : size_class4096_t;
+//   slab_region : arr:array U8.t{
+//     A.length arr = US.v slab_region_size /\
+//     same_base_array arr (sc16.data.slab_region) /\
+//     same_base_array arr (sc32.data.slab_region) /\
+//     same_base_array arr (sc64.data.slab_region) /\
+//     same_base_array arr (sc128.data.slab_region) /\
+//     same_base_array arr (sc256.data.slab_region) /\
+//     same_base_array arr (sc512.data.slab_region) /\
+//     same_base_array arr (sc1024.data.slab_region) /\
+//     same_base_array arr (sc2048.data.slab_region) /\
+//     same_base_array arr (sc4096.data.slab_region) /\
+//     A.offset (A.ptr_of sc16.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 0 * US.v slab_size /\
+//     A.offset (A.ptr_of sc32.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 1 * US.v slab_size /\
+//     A.offset (A.ptr_of sc64.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 2 * US.v slab_size /\
+//     A.offset (A.ptr_of sc128.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 3 * US.v slab_size /\
+//     A.offset (A.ptr_of sc256.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 4 * US.v slab_size /\
+//     A.offset (A.ptr_of sc512.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 5 * US.v slab_size /\
+//     A.offset (A.ptr_of sc1024.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 6 * US.v slab_size /\
+//     A.offset (A.ptr_of sc2048.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 7 * US.v slab_size /\
+//     A.offset (A.ptr_of sc4096.data.slab_region)
+//       == A.offset (A.ptr_of arr) + 8 * US.v slab_size /\
+//     True
+//   };
+// }
 
 //TODO: metaprogramming
 #push-options "--z3rlimit 200 --query_stats"
@@ -698,6 +719,8 @@ let init
   let md_bm_region = mmap_u64 (US.mul (US.mul metadata_max 4sz) n) in
   let md_region = mmap_cell_status (US.mul metadata_max n) in
 
+
+
   change_slprop_rel
     (A.varray slab_region)
     (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)))
@@ -717,44 +740,61 @@ let init
   assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
   assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
 
+  let size_classes = mmap_sc 2sz in
   f_lemma n 0sz;
   let sc16 = init_wrapper2 16ul n 0sz 1sz slab_region md_bm_region md_region in
+  upd size_classes 0sz sc16;
+
   f_lemma n 1sz;
   let sc32 = init_wrapper2 32ul n 1sz 2sz slab_region md_bm_region md_region in
-  f_lemma n 2sz;
-  let sc64 = init_wrapper2 64ul n 2sz 3sz slab_region md_bm_region md_region in
-  f_lemma n 3sz;
-  let sc128 = init_wrapper2 128ul n 3sz 4sz slab_region md_bm_region md_region in
-  f_lemma n 4sz;
-  let sc256 = init_wrapper2 256ul n 4sz 5sz slab_region md_bm_region md_region in
-  f_lemma n 5sz;
-  let sc512 = init_wrapper2 512ul n 5sz 6sz slab_region md_bm_region md_region in
-  f_lemma n 6sz;
-  let sc1024 = init_wrapper2 1024ul n 6sz 7sz slab_region md_bm_region md_region in
-  f_lemma n 7sz;
-  let sc2048 = init_wrapper2 2048ul n 7sz 8sz slab_region md_bm_region md_region in
-  f_lemma n 8sz;
-  let sc4096 = init_wrapper2 4096ul n 8sz 9sz slab_region md_bm_region md_region in
+  upd size_classes 1sz sc32;
+
+  // Fix into invariant
+  drop (varray size_classes);
+
+  // f_lemma n 2sz;
+  // let sc64 = init_wrapper2 64ul n 2sz 3sz slab_region md_bm_region md_region in
+  // f_lemma n 3sz;
+  // let sc128 = init_wrapper2 128ul n 3sz 4sz slab_region md_bm_region md_region in
+  // f_lemma n 4sz;
+  // let sc256 = init_wrapper2 256ul n 4sz 5sz slab_region md_bm_region md_region in
+  // f_lemma n 5sz;
+  // let sc512 = init_wrapper2 512ul n 5sz 6sz slab_region md_bm_region md_region in
+  // f_lemma n 6sz;
+  // let sc1024 = init_wrapper2 1024ul n 6sz 7sz slab_region md_bm_region md_region in
+  // f_lemma n 7sz;
+  // let sc2048 = init_wrapper2 2048ul n 7sz 8sz slab_region md_bm_region md_region in
+  // f_lemma n 8sz;
+  // let sc4096 = init_wrapper2 4096ul n 8sz 9sz slab_region md_bm_region md_region in
 
   drop (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size))
-    9sz)));
+    2sz)));
   drop (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz)
-    9sz)));
+    2sz)));
   drop (A.varray (A.split_r md_region (US.mul metadata_max
-    9sz)));
+    2sz)));
+
+
+  [@inline_let]
   let s : size_classes_all = {
-    sc16 = sc16;
-    sc32 = sc32;
-    sc64 = sc64;
-    sc128 = sc128;
-    sc256 = sc256;
-    sc512 = sc512;
-    sc1024 = sc1024;
-    sc2048 = sc2048;
-    sc4096 = sc4096;
-    slab_region = slab_region;
+    n = 2sz;
+    size_classes;
+    slab_region;
   } in
   return s
+  // let s : size_classes_all = {
+  //   sc16 = sc16;
+  //   sc32 = sc32;
+  //   sc64 = sc64;
+  //   sc128 = sc128;
+  //   sc256 = sc256;
+  //   sc512 = sc512;
+  //   sc1024 = sc1024;
+  //   sc2048 = sc2048;
+  //   sc4096 = sc4096;
+  //   slab_region = slab_region;
+  // } in
+  // return s
 
 #reset-options "--fuel 1 --ifuel 1"
 
@@ -859,24 +899,34 @@ let slab_malloc' (sc: size_class) (bytes: U32.t)
 //TODO: metaprogramming
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let slab_malloc bytes =
-  if bytes `U32.lte` 16ul then (
-    slab_malloc' sc_all.sc16 bytes
-  ) else if bytes `U32.lte` 32ul then (
-    slab_malloc' sc_all.sc32 bytes
-  ) else if bytes `U32.lte` 64ul then (
-    slab_malloc' sc_all.sc64 bytes
-  ) else if bytes `U32.lte` 128ul then (
-    slab_malloc' sc_all.sc128 bytes
-  ) else if bytes `U32.lte` 256ul then (
-    slab_malloc' sc_all.sc256 bytes
-  ) else if bytes `U32.lte` 512ul then (
-    slab_malloc' sc_all.sc512 bytes
-  ) else if bytes `U32.lte` 1024ul then (
-    slab_malloc' sc_all.sc1024 bytes
-  ) else if bytes `U32.lte` 2048ul then (
-    slab_malloc' sc_all.sc2048 bytes
-  ) else if bytes `U32.lte` 4096ul then (
-    slab_malloc' sc_all.sc4096 bytes
+  change_slprop_rel emp (A.varray sc_all.size_classes) (fun x y -> True) (fun _ -> admit());
+
+  // Probably need this as a top-level value somewhere
+  assume (length sc_all.size_classes == 2);
+  let sc0 = index sc_all.size_classes 0sz in
+  let sc1 = index sc_all.size_classes 1sz in
+  drop (A.varray sc_all.size_classes);
+  if bytes `U32.lte` sc0.data.size then (
+    slab_malloc' sc0 bytes
+  ) else if bytes `U32.lte` sc1.data.size then (
+    slab_malloc' sc1 bytes
+
+  // ) else if bytes `U32.lte` 32ul then (
+  //   slab_malloc' sc_all.sc32 bytes
+  // ) else if bytes `U32.lte` 64ul then (
+  //   slab_malloc' sc_all.sc64 bytes
+  // ) else if bytes `U32.lte` 128ul then (
+  //   slab_malloc' sc_all.sc128 bytes
+  // ) else if bytes `U32.lte` 256ul then (
+  //   slab_malloc' sc_all.sc256 bytes
+  // ) else if bytes `U32.lte` 512ul then (
+  //   slab_malloc' sc_all.sc512 bytes
+  // ) else if bytes `U32.lte` 1024ul then (
+  //   slab_malloc' sc_all.sc1024 bytes
+  // ) else if bytes `U32.lte` 2048ul then (
+  //   slab_malloc' sc_all.sc2048 bytes
+  // ) else if bytes `U32.lte` 4096ul then (
+  //   slab_malloc' sc_all.sc4096 bytes
   ) else (
     return_null ()
   )
@@ -923,16 +973,30 @@ let slab_free ptr =
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
+
+  change_slprop_rel emp (A.varray sc_all.size_classes) (fun x y -> True) (fun _ -> admit());
+  assume (length sc_all.size_classes == 2);
+  let sc0 = A.index sc_all.size_classes 0sz in
+  let sc1 = A.index sc_all.size_classes 1sz in
+  drop (A.varray sc_all.size_classes);
+
+  assume (same_base_array sc_all.slab_region sc0.data.slab_region);
+  assume (same_base_array sc_all.slab_region sc1.data.slab_region);
+  assume (A.offset (A.ptr_of sc0.data.slab_region)
+       == A.offset (A.ptr_of sc_all.slab_region) + 0 * US.v slab_size);
+  assume (A.offset (A.ptr_of sc1.data.slab_region)
+       == A.offset (A.ptr_of sc_all.slab_region) + 1 * US.v slab_size);
+
   let rem = US.rem diff_sz slab_size in
-       if (index = 0sz) then slab_free' sc_all.sc16 ptr rem
-  else if (index = 1sz) then slab_free' sc_all.sc32 ptr rem
-  else if (index = 2sz) then slab_free' sc_all.sc64 ptr rem
-  else if (index = 3sz) then slab_free' sc_all.sc128 ptr rem
-  else if (index = 4sz) then slab_free' sc_all.sc256 ptr rem
-  else if (index = 5sz) then slab_free' sc_all.sc512 ptr rem
-  else if (index = 6sz) then slab_free' sc_all.sc1024 ptr rem
-  else if (index = 7sz) then slab_free' sc_all.sc2048 ptr rem
-  else if (index = 8sz) then slab_free' sc_all.sc4096 ptr rem
+       if (index = 0sz) then slab_free' sc0 ptr rem
+  else if (index = 1sz) then slab_free' sc1 ptr rem
+  // else if (index = 2sz) then slab_free' sc_all.sc64 ptr rem
+  // else if (index = 3sz) then slab_free' sc_all.sc128 ptr rem
+  // else if (index = 4sz) then slab_free' sc_all.sc256 ptr rem
+  // else if (index = 5sz) then slab_free' sc_all.sc512 ptr rem
+  // else if (index = 6sz) then slab_free' sc_all.sc1024 ptr rem
+  // else if (index = 7sz) then slab_free' sc_all.sc2048 ptr rem
+  // else if (index = 8sz) then slab_free' sc_all.sc4096 ptr rem
   //TODO: expose n, remove this last case
   else return false
 
