@@ -257,6 +257,8 @@ let rebalance_avl_equal (#a: Type) (cmp: cmp a) (t: bst a cmp)
   => bad idea/bad design?
 *)
 
+module G = FStar.Ghost
+
 #push-options "--z3rlimit 25"
 let rec insert_avl_aux (#a: Type)
   (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
@@ -1084,7 +1086,7 @@ let delete_lemma (#a: Type)
   )
   = delete_avl_aux_avl cmp t data_to_rm
 
-let rec lemma_insert (#a: Type)
+let rec lemma_insert_aux (#a: Type)
   (r: bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
   : Lemma
   (requires mem cmp t new_data = false)
@@ -1097,9 +1099,54 @@ let rec lemma_insert (#a: Type)
         test_aux0 cmp t data new_data;
         assert (mem cmp t new_data)
       end else if delta < 0 then
-        lemma_insert r cmp left new_data
+        lemma_insert_aux r cmp left new_data
       else
-        lemma_insert  r cmp right new_data
+        lemma_insert_aux r cmp right new_data
+
+let lemma_insert (#a: Type)
+  (r: bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
+  : Lemma
+  (requires mem cmp t new_data = false)
+  (ensures (
+    let new_t, b = insert_avl_aux r cmp t new_data in
+    is_bst cmp new_t /\
+    mem cmp new_t new_data = true /\
+    G.reveal b = true /\
+    add cmp t new_t new_data
+  ))
+  =
+  insert_avl_aux_bst r cmp t new_data
+
+#push-options "--fuel 3 --ifuel 3 --z3rlimit 100"
+let rec lemma_insert2 (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (new_data: a) (cond : a -> bool)
+  : Lemma
+  (requires
+    mem cmp t new_data = false /\
+    cond new_data /\
+    forall_keys t cond
+  )
+  (ensures (
+    let new_t, b = insert_avl_aux false cmp t new_data in
+    forall_keys new_t cond
+  ))
+  (decreases t)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ _ ->
+      let delta = cmp new_data data in
+      if delta = 0 then
+        ()
+      else if delta < 0 then (
+        assert (mem cmp left new_data = false);
+        assert (forall_keys left cond);
+        lemma_insert2 cmp left new_data cond
+      ) else (
+        assert (mem cmp right new_data = false);
+        assert (forall_keys right cond);
+        lemma_insert2 cmp right new_data cond
+      )
+#pop-options
 
 let rec lemma_delete (#a: Type)
   (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)

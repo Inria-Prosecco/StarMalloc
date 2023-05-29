@@ -134,8 +134,7 @@ let large_malloc_aux
     Spec.is_avl (spec_convert cmp) t /\
     (not (A.is_null r) ==> (
       not (Spec.mem (spec_convert cmp) t (r, size)) /\
-      //TODO: Spec.mem (spec_convert cmp) t' (r, size)
-      True
+      Spec.mem (spec_convert cmp) t' (r, size)
     ))
   )
   =
@@ -163,13 +162,11 @@ let large_malloc_aux
       return (A.null #U8.t)
     ) else (
       A.varrayp_not_null ptr P.full_perm;
-      let md_v' = insert false md_v (ptr, size) in
-      write metadata_ptr md_v';
       let h0 = get () in
-      //TODO: add corresponding lemma
-      assume (Spec.forall_keys (v_linked_tree md_v' h0)
-        (fun x -> US.v (snd x) <> 0)
-      );
+      let md_v' = insert false md_v (ptr, size) in
+      Spec.lemma_insert false (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
+      Spec.lemma_insert2 false (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
+      write metadata_ptr md_v';
       (**) intro_vrefine (linked_tree md_v') is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
       return ptr
@@ -261,7 +258,7 @@ let large_free_aux
       (if b then A.varray ptr else emp)
       (if (not b) then emp else A.varray ptr);
     if b then (
-      //TODO: die(), munmap has failed
+      //TODO: die(), munmap has failed, something must be wrong
       (**) intro_vrefine (linked_tree md_v) is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
       return (not b)
