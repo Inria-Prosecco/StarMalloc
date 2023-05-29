@@ -1148,7 +1148,7 @@ let rec lemma_insert2 (#a: Type)
       )
 #pop-options
 
-let rec lemma_delete (#a: Type)
+let rec lemma_delete_aux (#a: Type)
   (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
   : Lemma
   (requires mem cmp t data_to_rm = true)
@@ -1159,11 +1159,40 @@ let rec lemma_delete (#a: Type)
       let delta = cmp data_to_rm data in
       if delta < 0 then begin
         unicity_left cmp t data_to_rm;
-        lemma_delete cmp left data_to_rm
+        lemma_delete_aux cmp left data_to_rm
       end else if delta > 0 then begin
         unicity_right cmp t data_to_rm;
-        lemma_delete cmp right data_to_rm
+        lemma_delete_aux cmp right data_to_rm
       end else ()
+
+let lemma_delete (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
+  : Lemma
+  (requires mem cmp t data_to_rm = true)
+  (ensures (
+    let new_t, b = delete_avl_aux cmp t data_to_rm in
+    is_bst cmp new_t /\
+    mem cmp new_t data_to_rm = false /\
+    G.reveal b = true /\
+    add cmp new_t t data_to_rm
+  ))
+  =
+  delete_avl_aux_bst cmp t data_to_rm
+
+let lemma_delete2 (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a) (cond : a -> bool)
+  : Lemma
+  (requires
+    mem cmp t data_to_rm = true /\
+    forall_keys t cond
+  )
+  (ensures (
+    let new_t, b = delete_avl_aux cmp t data_to_rm in
+    forall_keys new_t cond
+  ))
+  = admit ()
+
+
 
 (*)
 let functional_correctness (#a: Type)

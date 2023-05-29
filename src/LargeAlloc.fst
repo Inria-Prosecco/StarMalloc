@@ -165,7 +165,7 @@ let large_malloc_aux
       let h0 = get () in
       let md_v' = insert false md_v (ptr, size) in
       Spec.lemma_insert false (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
-      Spec.lemma_insert2 false (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
+      Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
       write metadata_ptr md_v';
       (**) intro_vrefine (linked_tree md_v') is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
@@ -216,23 +216,23 @@ let large_free_aux
   )
   (requires fun h0 -> True)
   (ensures fun h0 b h1 ->
+    let blob0
+      : t_of (ind_linked_wf_tree metadata_ptr)
+      = h0 (ind_linked_wf_tree metadata_ptr) in
+    let t : wdm data = dsnd blob0 in
+    let blob1
+      : t_of (ind_linked_wf_tree metadata_ptr)
+      = h1 (ind_linked_wf_tree metadata_ptr) in
+    let t' : wdm data = dsnd blob1 in
+    b ==> (
+      US.fits (A.length ptr) /\
+      A.is_full_array ptr /\
+      Spec.mem (spec_convert cmp) t
+        (ptr, US.uint_to_t (A.length ptr)) /\
+      not (Spec.mem (spec_convert cmp) t'
+        (ptr, US.uint_to_t (A.length ptr)))
+    ) /\
     True
-    //let blob0
-    //  : t_of (ind_linked_wf_tree metadata_ptr)
-    //  = h0 (ind_linked_wf_tree metadata_ptr) in
-    //let t : wdm data = dsnd blob0 in
-    //let blob1
-    //  : t_of (ind_linked_wf_tree metadata_ptr)
-    //  = h1 (ind_linked_wf_tree metadata_ptr) in
-    //let t' : wdm data = dsnd blob1 in
-    //b ==> (
-    //  Spec.mem (spec_convert cmp) t
-    //    (ptr, US.uint_to_t (A.length ptr)) /\
-    //  //TODO: lemma
-    //  //not (Spec.mem (spec_convert cmp) t'
-    //  //  (ptr, US.uint_to_t (A.length ptr)))
-    //  True
-    //) /\
     //not b ==> (
     //  //TODO: refine find
     //  //not (Spec.mem (spec_convert cmp) t
@@ -261,17 +261,17 @@ let large_free_aux
       //TODO: die(), munmap has failed, something must be wrong
       (**) intro_vrefine (linked_tree md_v) is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
+      // return false
       return (not b)
     ) else (
-      let md_v' = delete md_v (ptr, size) in
       let h0 = get () in
-      //TODO: add corresponding lemma
-      assume (Spec.forall_keys (v_linked_tree md_v' h0)
-        (fun x -> US.v (snd x) <> 0)
-      );
+      let md_v' = delete md_v (ptr, size) in
+      Spec.lemma_delete (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
+      Spec.lemma_delete2 (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
       write metadata_ptr md_v';
       (**) intro_vrefine (linked_tree md_v') is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
+      // return true
       return (not b)
     )
   ) else (
