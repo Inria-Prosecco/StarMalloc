@@ -94,7 +94,7 @@ module A = Steel.Array
 
 #restart-solver
 
-#push-options "--z3rlimit 100"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 
 #restart-solver
 
@@ -113,23 +113,20 @@ let rec find
   (ensures fun h0 r h1 ->
     v_linked_tree ptr h1 == v_linked_tree ptr h0 /\
     Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0) /\
+    (Some? r == Spec.mem (spec_convert cmp) (v_linked_tree ptr h0) v) /\
+    (Some? r == Spec.memopt (spec_convert cmp) (v_linked_tree ptr h0) v) /\
     (Some? r ==> (
       US.v (Some?.v r) == A.length (fst v)) /\
       A.is_full_array (fst v) /\
-      Spec.mem (spec_convert cmp) (v_linked_tree ptr h0) (fst v, Some?.v r)
-    ) /\
-    True
-    //(None? r ==>
-    //  not (Spec.mem
-    //    (spec_convert cmp)
-    //    (v_linked_tree ptr h0)
-    //    (fst v, 0sz)
-    //  )
-    //)
+      Spec.mem (spec_convert cmp) (v_linked_tree ptr h0)
+        (fst v, Some?.v r)
+    )
   )
   //TODO: add a more precise spec?
     //r == Spec.Map.find_avl #a #b (spec_convert cmp) (v_linked_tree ptr h0) v)
   =
+  let h = get () in
+  Spec.equivmem (spec_convert cmp) (v_linked_tree ptr h) v;
   if is_null_t ptr then (
     null_is_leaf ptr;
     return None
@@ -172,34 +169,3 @@ let rec find
       )
     )
   )
-
-//let find2
-//  (ptr: t)
-//  (v: data)
-//  : Steel (U64.t)
-//  (linked_tree ptr)
-//  (fun _ -> linked_tree ptr)
-//  (requires fun h0 ->
-//    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0))
-//  (ensures fun h0 r h1 ->
-//    v_linked_tree ptr h1 == v_linked_tree ptr h0)
-//  =
-//  let a = find ptr v in
-//  if Some? a
-//  then return 1UL
-//  else return 0UL
-//let mem (#a #b: Type) (cmp: cmp a) (ptr: t (a & b))
-//  (v: a)
-//  (b_inhabitant: b)
-//  : Steel bool
-//  (linked_tree ptr)
-//  (fun _ -> linked_tree ptr)
-//  (requires fun h0 ->
-//    Spec.is_bst (spec_convert cmp) (v_linked_tree ptr h0))
-//  (ensures fun h0 b h1 ->
-//    v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-//    Spec.is_bst (spec_convert cmp) (v_linked_tree ptr h0) /\
-//    (Spec.mem (spec_convert cmp) (v_linked_tree ptr h0) (v, b_inhabitant) <==> b) /\
-//    (Spec.memopt (spec_convert cmp) (v_linked_tree ptr h0) (v, b_inhabitant) <==> b))
-//  =
-//  Impl.member (convert cmp) ptr (v, b_inhabitant)

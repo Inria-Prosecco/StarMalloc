@@ -232,13 +232,11 @@ let large_free_aux
       not (Spec.mem (spec_convert cmp) t'
         (ptr, US.uint_to_t (A.length ptr)))
     ) /\
-    True
-    //not b ==> (
-    //  //TODO: refine find
-    //  //not (Spec.mem (spec_convert cmp) t
-    //  //  (ptr, US.uint_to_t (A.length ptr))) /\
-    //  blob0 == blob1
-    //)
+    not b ==> (
+      not (Spec.mem (spec_convert cmp) t
+        (ptr, 0sz)) /\
+      blob0 == blob1
+    )
   )
   =
   (**) let t = elim_vdep (vptr metadata_ptr) linked_wf_tree in
