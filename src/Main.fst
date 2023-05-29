@@ -510,7 +510,7 @@ let f_lemma
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 
-//noextract inline_for_extraction
+noextract inline_for_extraction
 val init_wrapper2
   (sc: sc)
   (n: US.t{
