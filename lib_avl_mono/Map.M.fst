@@ -82,7 +82,11 @@ let mem
   (requires fun h0 ->
     Spec.is_bst (spec_convert cmp) (v_linked_tree ptr h0))
   (ensures fun h0 b h1 ->
-    v_linked_tree ptr h0 == v_linked_tree ptr h1)
+    v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
+    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
+    (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b) /\
+    (Spec.memopt (convert cmp) (v_linked_tree ptr h0) v <==> b)
+  )
   =
   Impl.Mono.member ptr v
 

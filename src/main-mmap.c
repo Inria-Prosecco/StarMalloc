@@ -1,33 +1,39 @@
 #include "main-mmap.h"
-#include "internal/AVL.h"
 #include <sys/mman.h>
+#include <assert.h>
+#include "internal/AVL.h"
 
 static const size_t page_size = 4096UL;
 static const size_t max_slabs = 1024UL;
 
-uint8_t *mmap_s(size_t size) {
-  //TODO: remove MAP_NORESERVE flag
+uint8_t *mmap_init(size_t size) {
+  void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+  assert (ptr != NULL);
+  return ptr;
+}
+
+uint8_t *mmap_noinit(size_t size) {
   return mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
 }
 
 uint8_t *mmap_u8(size_t len) {
-  return (uint8_t*) mmap_s(len * sizeof(uint8_t));
+  return (uint8_t*) mmap_init(len * sizeof(uint8_t));
 }
 
 uint64_t *mmap_u64(size_t len) {
-  return (uint64_t*) mmap_s(len * sizeof(uint64_t));
+  return (uint64_t*) mmap_init(len * sizeof(uint64_t));
 }
 
 ArrayList_cell *mmap_cell_status(size_t len) {
-  return (ArrayList_cell*) mmap_s(len * sizeof(ArrayList_cell));
+  return (ArrayList_cell*) mmap_init(len * sizeof(ArrayList_cell));
 }
 
 uint32_t *mmap_ptr_u32() {
-  return (uint32_t*) mmap_s(sizeof(uint32_t));
+  return (uint32_t*) mmap_init(sizeof(uint32_t));
 }
 
 size_t *mmap_ptr_us() {
-  return (size_t*) mmap_s(sizeof(size_t));
+  return (size_t*) mmap_init(sizeof(size_t));
 }
 
 //TODO: check for mprotect return value
@@ -43,7 +49,7 @@ uint64_t* Impl_Trees_Types_trees_malloc(uint64_t x) {
 }
 
 Impl_Trees_Types_node* Impl_Trees_Types_trees_malloc2(Impl_Trees_Types_node x) {
-  Impl_Trees_Types_node* ptr = (Impl_Trees_Types_node*) mmap_s(sizeof(Impl_Trees_Types_node));
+  Impl_Trees_Types_node* ptr = (Impl_Trees_Types_node*) mmap_init(sizeof(Impl_Trees_Types_node));
   *ptr = x;
   return ptr;
 }
@@ -57,5 +63,5 @@ void Impl_Trees_Types_trees_free2(Impl_Trees_Types_node* r) {
 }
 
 Impl_Trees_Types_node** mmap_ptr_metadata() {
-  return (Impl_Trees_Types_node**) mmap_s(sizeof(Impl_Trees_Types_node*));
+  return (Impl_Trees_Types_node**) mmap_init(sizeof(Impl_Trees_Types_node*));
 }

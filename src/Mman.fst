@@ -10,16 +10,29 @@ module US = FStar.SizeT
 let array = Steel.ST.Array.array
 
 //noextract
-assume val mmap_s
+assume val mmap_init
   (size: US.t)
   : Steel (array U8.t)
     emp
-    (fun a -> A.varray a)
+    (fun r -> A.varray r)
     (requires fun _ -> True)
-    (ensures fun _ a h1 ->
-      A.length a == US.v size /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v size) U8.zero
+    (ensures fun _ ptr h1 ->
+      A.length ptr == US.v size /\
+      A.is_full_array ptr /\
+      A.asel ptr h1 == Seq.create (US.v size) U8.zero
+    )
+
+//noextract
+assume val mmap_noinit
+  (size: US.t)
+  : Steel (array U8.t)
+    emp
+    (fun ptr -> A.varray ptr)
+    (requires fun _ -> True)
+    (ensures fun _ ptr h1 ->
+      A.length ptr == US.v size /\
+      A.is_full_array ptr /\
+      A.asel ptr h1 == Seq.create (US.v size) U8.zero
     )
 
 //noextract
