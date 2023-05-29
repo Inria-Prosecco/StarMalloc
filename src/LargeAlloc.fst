@@ -28,21 +28,9 @@ let linked_tree = Impl.Core.linked_tree #data
 
 noextract inline_for_extraction
 let mmap = Mman.mmap_s
-  //= Mman.mmap 0UL len prot 33l (-1l) 0ul
-  //MAP_PRIVATE instead of MAP_ANON (avoid filling the disk...)
-  //34l = MAP_PRIVATE|MAP_ANON
 
-let munmap (ptr: array U8.t) (size: US.t)
-  : Steel bool
-    (A.varray ptr)
-    (fun b -> if b then A.varray ptr else emp)
-    (requires fun _ ->
-      A.length ptr == US.v size /\
-      A.is_full_array ptr
-    )
-    (ensures fun _ _ _ -> True)
-  =
-  Mman.munmap ptr size
+noextract inline_for_extraction
+let munmap = Mman.munmap
 
 let create_leaf = Impl.Trees.M.create_leaf
 
