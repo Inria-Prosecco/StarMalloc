@@ -510,7 +510,7 @@ let f_lemma
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 
-noextract inline_for_extraction
+//noextract inline_for_extraction
 val init_wrapper2
   (sc: sc)
   (n: US.t{
@@ -987,6 +987,7 @@ let slab_free ptr =
   let sc0 = ROArray.index sc_all.ro_perm 0sz in
   let sc1 = ROArray.index sc_all.ro_perm 1sz in
 
+  // We can add these predicates on the `g_size_classes` field with a forall.
   assume (same_base_array sc_all.slab_region sc0.data.slab_region);
   assume (same_base_array sc_all.slab_region sc1.data.slab_region);
   assume (A.offset (A.ptr_of sc0.data.slab_region)
