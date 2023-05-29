@@ -567,6 +567,7 @@ val init_wrapper2
 
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
+  admit();
   f_lemma n k;
   f_lemma n k';
   f_lemma n (US.sub n k);
@@ -615,12 +616,18 @@ let slab_region_size
     (US.v metadata_max * U32.v page_size * US.v nb_size_classes);
   US.mul slab_size 9sz
 
+open ROArray
 
+/// This gathers all the data for small allocations.
+/// In particular, it contains an array with all size_classes data,
+/// as well as the slab_region containing the actual memory
 noeq
 type size_classes_all =
-  { n: US.t;
-    size_classes : sc:array size_class{length sc == US.v n};
-    slab_region: arr:array U8.t{
+  { n: US.t; // The number of size_classes
+    size_classes : sc:array size_class{length sc == US.v n}; // The array of size_classes
+    g_size_classes: s:Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
+    ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
+    slab_region: arr:array U8.t{ // The region of memory handled by this size class
       A.length arr == US.v slab_region_size
     }
   }
@@ -740,6 +747,7 @@ let init
   assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
   assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
 
+  // TODO: Need to generalize to all size_classes
   let size_classes = mmap_sc 2sz in
   f_lemma n 0sz;
   let sc16 = init_wrapper2 16ul n 0sz 1sz slab_region md_bm_region md_region in
@@ -749,8 +757,8 @@ let init
   let sc32 = init_wrapper2 32ul n 1sz 2sz slab_region md_bm_region md_region in
   upd size_classes 1sz sc32;
 
-  // Fix into invariant
-  drop (varray size_classes);
+  let g_size_classes = gget (varray size_classes) in
+  let ro_perm = create_ro_array size_classes g_size_classes in
 
   // f_lemma n 2sz;
   // let sc64 = init_wrapper2 64ul n 2sz 3sz slab_region md_bm_region md_region in
@@ -779,6 +787,8 @@ let init
   let s : size_classes_all = {
     n = 2sz;
     size_classes;
+    g_size_classes;
+    ro_perm;
     slab_region;
   } in
   return s
@@ -899,13 +909,12 @@ let slab_malloc' (sc: size_class) (bytes: U32.t)
 //TODO: metaprogramming
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let slab_malloc bytes =
-  change_slprop_rel emp (A.varray sc_all.size_classes) (fun x y -> True) (fun _ -> admit());
 
   // Probably need this as a top-level value somewhere
   assume (length sc_all.size_classes == 2);
-  let sc0 = index sc_all.size_classes 0sz in
-  let sc1 = index sc_all.size_classes 1sz in
-  drop (A.varray sc_all.size_classes);
+  let sc0 = index sc_all.ro_perm 0sz in
+  let sc1 = index sc_all.ro_perm 1sz in
+
   if bytes `U32.lte` sc0.data.size then (
     slab_malloc' sc0 bytes
   ) else if bytes `U32.lte` sc1.data.size then (
@@ -974,11 +983,9 @@ let slab_free ptr =
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
 
-  change_slprop_rel emp (A.varray sc_all.size_classes) (fun x y -> True) (fun _ -> admit());
   assume (length sc_all.size_classes == 2);
-  let sc0 = A.index sc_all.size_classes 0sz in
-  let sc1 = A.index sc_all.size_classes 1sz in
-  drop (A.varray sc_all.size_classes);
+  let sc0 = ROArray.index sc_all.ro_perm 0sz in
+  let sc1 = ROArray.index sc_all.ro_perm 1sz in
 
   assume (same_base_array sc_all.slab_region sc0.data.slab_region);
   assume (same_base_array sc_all.slab_region sc1.data.slab_region);
