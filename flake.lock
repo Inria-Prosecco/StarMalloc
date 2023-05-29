@@ -52,16 +52,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1684878518,
-        "narHash": "sha256-v/+nB33O3wPW3KvzwDFxnBMsa/iSPlT8EcR2DPLhXuI=",
+        "lastModified": 1684957418,
+        "narHash": "sha256-opm3T3Pn2ts4wtZ8Jciof18bzZorfsqJQw6nj+vdp8w=",
         "owner": "FStarLang",
         "repo": "karamel",
-        "rev": "578af02c9e9a4efe9e67abfe7eb1e1640c2c9870",
+        "rev": "2cf2974007f4103dba5619e4eb9e3eaeefad533b",
         "type": "github"
       },
       "original": {
         "owner": "FStarLang",
-        "ref": "protz_spinlock",
         "repo": "karamel",
         "type": "github"
       }
