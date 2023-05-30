@@ -12,9 +12,7 @@ inline_for_extraction
 let page_size: U32.t = 4096ul
 
 inline_for_extraction
-val nb_size_classes: v:US.t{
-  US.v v > 0
-}
+let nb_size_classes: v:US.t{US.v v > 0} = 9sz
 
 inline_for_extraction
 val metadata_max: v:US.t{

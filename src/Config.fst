@@ -2,8 +2,6 @@ module Config
 
 open FStar.Mul
 
-let nb_size_classes = 9sz
-
 // required for metadata_max values
 // such that nb_size_classes * page_size * metadata_max > max_int 32
 module A = Steel.Array

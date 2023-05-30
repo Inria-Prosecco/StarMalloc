@@ -590,7 +590,7 @@ val init_wrapper2
 
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
-  admit();
+//  admit();
   f_lemma n k;
   f_lemma n k';
   f_lemma n (US.sub n k);
@@ -624,20 +624,15 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
 module G = FStar.Ghost
 module UP = FStar.PtrdiffT
 
-
 let slab_region_size
   : v:US.t{
-    US.v v = US.v metadata_max * U32.v page_size * 9 /\
+    US.v v = US.v metadata_max * U32.v page_size * (US.v nb_size_classes) /\
     UP.fits (US.v v)
   }
   =
   metadata_max_up_fits ();
   assert (US.fits_u64);
-  assume (US.v nb_size_classes == 9);
-  US.fits_lte
-    (US.v metadata_max * U32.v page_size * 9)
-    (US.v metadata_max * U32.v page_size * US.v nb_size_classes);
-  US.mul slab_size 9sz
+  US.mul slab_size nb_size_classes
 
 open ROArray
 
@@ -648,11 +643,7 @@ let size_class_pred (slab_region:array U8.t) (sc:size_class) (i:nat) : prop =
 
 [@@ reduce_attr]
 inline_for_extraction noextract
-let nbr_size_classes : (n:nat{US.fits n}) = 9
-
-[@@ reduce_attr]
-inline_for_extraction noextract
-let sc_list : (l:list sc{List.length l == nbr_size_classes})
+let sc_list : (l:list sc{List.length l == US.v nb_size_classes})
   = [@inline_let] let l = [16ul; 32ul; 64ul; 128ul; 256ul; 512ul; 1024ul; 2048ul; 4096ul] in
     assert_norm (List.length l == 9);
     l
@@ -667,14 +658,14 @@ let synced_sizes (#n:nat) (k:nat{k <= n}) (sizes:Seq.lseq sc n) (size_classes:Se
 /// as well as the slab_region containing the actual memory
 noeq
 type size_classes_all =
-  { size_classes : sc:array size_class{length sc == nbr_size_classes}; // The array of size_classes
-    sizes : sz:array sc{length sz == nbr_size_classes}; // An array of the sizes of [size_classes]
+  { size_classes : sc:array size_class{length sc == US.v nb_size_classes}; // The array of size_classes
+    sizes : sz:array sc{length sz == US.v nb_size_classes}; // An array of the sizes of [size_classes]
     g_size_classes: Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
     g_sizes: Ghost.erased (Seq.lseq sc (length sizes)); // The ghost representation of sizes
     ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
     ro_sizes: ro_array sizes g_sizes;
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
-      synced_sizes nbr_size_classes g_sizes g_size_classes /\
+      synced_sizes (US.v nb_size_classes) g_sizes g_size_classes /\
       A.length arr == US.v slab_region_size /\
       (forall (i:nat{i < Seq.length g_size_classes}).
         size_class_pred arr (Seq.index g_size_classes i) i)
@@ -914,10 +905,10 @@ let init
   (fun _ r _ -> True)
   =
   [@inline_let]
-  let n = 9sz in
-  assume (
+  let n = nb_size_classes in
+  assert (
     US.v n > 0 /\ US.v n >= US.v 1sz /\
-    US.v n == 9 /\
+    US.v n == US.v nb_size_classes /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size)) /\
     US.fits (US.v metadata_max * US.v 4sz) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
@@ -929,27 +920,29 @@ let init
   let md_bm_region = mmap_u64 (US.mul (US.mul metadata_max 4sz) n) in
   let md_region = mmap_cell_status (US.mul metadata_max n) in
 
-  change_slprop_rel
+  Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max (u32_to_sz page_size)));
+  Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max 4sz));
+  Math.Lemmas.mul_zero_right_is_zero (US.v metadata_max);
+  A.ptr_shift_zero (A.ptr_of slab_region);
+  A.ptr_shift_zero (A.ptr_of md_bm_region);
+  A.ptr_shift_zero (A.ptr_of md_region);
+
+  change_equal_slprop
     (A.varray slab_region)
-    (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  change_slprop_rel
+    (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)));
+  change_equal_slprop
     (A.varray md_bm_region)
-    (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
-  change_slprop_rel
+    (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)));
+  change_equal_slprop
     (A.varray md_region)
-    (A.varray (A.split_r md_region (US.mul metadata_max 0sz)))
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+    (A.varray (A.split_r md_region (US.mul metadata_max 0sz)));
+
   assert (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n);
   assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
   assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
 
-  let size_classes = mmap_sc 9sz in
-  let sizes = mmap_sizes 9sz in
+  let size_classes = mmap_sc nb_size_classes in
+  let sizes = mmap_sizes nb_size_classes in
 
   init_size_classes sc_list n slab_region md_bm_region md_region size_classes sizes;
 
@@ -1019,7 +1012,7 @@ let allocate_size_class scs =
 
 #push-options "--fuel 0 --ifuel 0 --query_stats"
 inline_for_extraction noextract
-let slab_malloc_one (i:US.t{US.v i < nbr_size_classes}) (bytes: U32.t)
+let slab_malloc_one (i:US.t{US.v i < US.v nb_size_classes}) (bytes: U32.t)
   : Steel
   (array U8.t)
   emp (fun r -> if is_null r then emp else varray r)
@@ -1082,6 +1075,34 @@ val slab_malloc (bytes:U32.t)
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let slab_malloc bytes = (slab_malloc_i sc_list 0sz) bytes
 
+#pop-options
+
+inline_for_extraction noextract
+let slab_free' (i:US.t{US.v i < US.v nb_size_classes}) (ptr: array U8.t) (diff: US.t)
+  : Steel bool
+  (A.varray ptr)
+  (fun b -> if b then emp else A.varray ptr)
+  (requires fun h0 ->
+    let sc = Seq.index (G.reveal sc_all.g_size_classes) (US.v i) in
+    let diff' = offset (ptr_of ptr) - offset (ptr_of sc.data.slab_region) in
+    same_base_array ptr sc.data.slab_region /\
+    0 <= diff' /\
+    diff' < US.v slab_size /\
+    US.v diff = diff')
+  (ensures fun h0 _ h1 -> True)
+  =
+  let sc = ROArray.index sc_all.ro_perm i in
+  L.acquire sc.lock;
+  let res = deallocate_size_class sc.data ptr diff in
+  L.release sc.lock;
+  return res
+
+#restart-solver
+
+#push-options "--fuel 0 --ifuel 0"
+
+#restart-solver
+
 val slab_free (ptr:array U8.t)
   : Steel bool
   (A.varray ptr `star`
@@ -1096,70 +1117,7 @@ val slab_free (ptr:array U8.t)
   )
   (ensures fun _ _ _ -> True)
 
-
-(*
-  // Probably need this as a top-level value somewhere
-  assume (length sc_all.size_classes == 2);
-  let sc0 = index sc_all.ro_perm 0sz in
-  let sc1 = index sc_all.ro_perm 1sz in
-
-  if bytes `U32.lte` sc0.data.size then (
-    slab_malloc' sc0 bytes
-  ) else if bytes `U32.lte` sc1.data.size then (
-    slab_malloc' sc1 bytes
-
-  // ) else if bytes `U32.lte` 32ul then (
-  //   slab_malloc' sc_all.sc32 bytes
-  // ) else if bytes `U32.lte` 64ul then (
-  //   slab_malloc' sc_all.sc64 bytes
-  // ) else if bytes `U32.lte` 128ul then (
-  //   slab_malloc' sc_all.sc128 bytes
-  // ) else if bytes `U32.lte` 256ul then (
-  //   slab_malloc' sc_all.sc256 bytes
-  // ) else if bytes `U32.lte` 512ul then (
-  //   slab_malloc' sc_all.sc512 bytes
-  // ) else if bytes `U32.lte` 1024ul then (
-  //   slab_malloc' sc_all.sc1024 bytes
-  // ) else if bytes `U32.lte` 2048ul then (
-  //   slab_malloc' sc_all.sc2048 bytes
-  // ) else if bytes `U32.lte` 4096ul then (
-  //   slab_malloc' sc_all.sc4096 bytes
-  ) else (
-    return_null ()
-  )
-
-*)
-
-#pop-options
-
-inline_for_extraction noextract
-let slab_free' (sc: size_class) (ptr: array U8.t) (diff: US.t)
-  : Steel bool
-  (A.varray ptr)
-  (fun b -> if b then emp else A.varray ptr)
-  (requires fun h0 ->
-    let diff' = offset (ptr_of ptr) - offset (ptr_of sc.data.slab_region) in
-    same_base_array ptr sc.data.slab_region /\
-    0 <= diff' /\
-    diff' < US.v slab_size /\
-    US.v diff = diff')
-  (ensures fun h0 _ h1 -> True)
-  =
-  L.acquire sc.lock;
-  let res = deallocate_size_class sc.data ptr diff in
-  L.release sc.lock;
-  return res
-
-#restart-solver
-
-#push-options "--fuel 0 --ifuel 0"
-
-#restart-solver
-
-//TODO: metaprogramming
 let slab_free ptr =
-  return false
-(*
   SAA.within_bounds_elim
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
@@ -1175,27 +1133,11 @@ let slab_free ptr =
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
-
-  // Needs to be somewhere at the toplevel
-  assume (length sc_all.size_classes == 2);
-  let sc0 = ROArray.index sc_all.ro_perm 0sz in
-  let sc1 = ROArray.index sc_all.ro_perm 1sz in
-
   let rem = US.rem diff_sz slab_size in
-       if (index = 0sz) then slab_free' sc0 ptr rem
-  else if (index = 1sz) then slab_free' sc1 ptr rem
-  // else if (index = 2sz) then slab_free' sc_all.sc64 ptr rem
-  // else if (index = 3sz) then slab_free' sc_all.sc128 ptr rem
-  // else if (index = 4sz) then slab_free' sc_all.sc256 ptr rem
-  // else if (index = 5sz) then slab_free' sc_all.sc512 ptr rem
-  // else if (index = 6sz) then slab_free' sc_all.sc1024 ptr rem
-  // else if (index = 7sz) then slab_free' sc_all.sc2048 ptr rem
-  // else if (index = 8sz) then slab_free' sc_all.sc4096 ptr rem
-  //TODO: expose n, remove this last case
+  if index `US.lt` nb_size_classes then
+    slab_free' index ptr rem
   else return false
-*)
 
-//TODO: metaprogramming
 let slab_getsize (ptr: array U8.t)
   : Steel US.t
   (A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
@@ -1226,14 +1168,7 @@ let slab_getsize (ptr: array U8.t)
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
-       if (index = 0sz) then return 16sz
-  else if (index = 1sz) then return 32sz
-  else if (index = 2sz) then return 64sz
-  else if (index = 3sz) then return 128sz
-  else if (index = 4sz) then return 256sz
-  else if (index = 5sz) then return 512sz
-  else if (index = 6sz) then return 1024sz
-  else if (index = 7sz) then return 2048sz
-  else if (index = 8sz) then return 4096sz
-  //TODO: expose n, remove this last case
+  if index `US.lt` nb_size_classes then
+    let size = ROArray.index sc_all.ro_sizes index in
+    return (US.uint32_to_sizet size)
   else return 0sz
