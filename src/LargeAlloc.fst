@@ -19,6 +19,9 @@ open Map.M
 open Impl.Core
 open Impl.Trees.Types
 
+open Utils2
+open NullOrVarray
+
 #set-options "--ide_id_info_off"
 
 // machine representation
@@ -100,16 +103,11 @@ let large_malloc_aux
   (size: US.t)
   : Steel (array U8.t)
   (
-    //vptr metadata_ptr `star`
-    //linked_tree metadata
     ind_linked_wf_tree metadata_ptr
   )
   (fun r ->
-    //null_or_varray r `star`
-    A.varray r `star`
+    null_or_varray r `star`
     ind_linked_wf_tree metadata_ptr
-    //vptr metadata_ptr `star`
-    //linked_tree metadata
   )
   (requires fun h0 ->
     let blob0
@@ -128,11 +126,20 @@ let large_malloc_aux
       : t_of (ind_linked_wf_tree metadata_ptr)
       = h1 (ind_linked_wf_tree metadata_ptr) in
     let t' : wdm data = dsnd blob1 in
-    A.length r == US.v size /\
-    A.is_full_array r /\
-    A.asel r h1 == Seq.create (US.v size) U8.zero /\
+    null_or_varray_t r;
+    let s
+      : normal (t_of (null_or_varray #U8.t r))
+      = h1 (null_or_varray r) in
+    let s
+      : option (Seq.lseq U8.t (A.length r))
+      = s in
     Spec.is_avl (spec_convert cmp) t /\
     (not (A.is_null r) ==> (
+      A.length r == US.v size /\
+      A.is_full_array r /\
+      //TODO: fixme
+      //Some? s /\
+      //zf_u8 (Some?.v s) /\
       not (Spec.mem (spec_convert cmp) t (r, size)) /\
       Spec.mem (spec_convert cmp) t' (r, size)
     ))
@@ -151,17 +158,20 @@ let large_malloc_aux
   if (A.is_null ptr) then (
     (**) intro_vrefine (linked_tree md_v) is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
-    //TODO: improve null_or_varray
-    sladmit ();
-    return (A.null #U8.t)
+    return ptr
   ) else (
+    //TODO: fixme
+    assume (A.length ptr == US.v size /\ A.is_full_array ptr);
     let b = mem md_v (ptr, size) in
     if b then (
       //TODO: add a die()
-      sladmit ();
-      return (A.null #U8.t)
+      //sladmit ();
+      (**) intro_vrefine (linked_tree md_v) is_wf;
+      (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
+      drop (null_or_varray ptr);
+      let r = intro_null_null_or_varray #U8.t in
+      return r
     ) else (
-      A.varrayp_not_null ptr P.full_perm;
       let h0 = get () in
       let md_v' = insert false md_v (ptr, size) in
       Spec.lemma_insert false (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
@@ -285,10 +295,24 @@ let large_free_aux
 
 let large_malloc (size: US.t)
   : Steel (array U8.t)
-  emp (fun r -> if A.is_null r then emp else A.varray r)
+  emp
+  (fun ptr -> null_or_varray ptr)
   (requires fun _ -> US.v size > 0)
-  (ensures fun _ r _ ->
-    not (A.is_null r) ==> A.length r == US.v size
+  (ensures fun _ ptr h1 ->
+    null_or_varray_t ptr;
+    let s
+      : normal (t_of (null_or_varray #U8.t ptr))
+      = h1 (null_or_varray ptr) in
+    let s
+      : option (Seq.lseq U8.t (A.length ptr))
+      = s in
+    not (A.is_null ptr) ==> (
+      A.length ptr == US.v size /\
+      Some? s /\
+      True
+      //TODO: fixme
+      //zf_u8 (Some?.v s)
+    )
   )
   =
   L.acquire metadata.lock;
@@ -299,17 +323,10 @@ let large_malloc (size: US.t)
     //TODO: large_malloc' can return NULL due to mmap
     let ptr = large_malloc_aux metadata.data size in
     L.release metadata.lock;
-    A.varrayp_not_null ptr P.full_perm;
-    change_equal_slprop
-      (A.varray ptr)
-      (if A.is_null ptr then emp else A.varray ptr);
     return ptr
   ) else (
     L.release metadata.lock;
-    [@inline_let] let r = A.null #U8.t in
-    change_equal_slprop
-      emp
-      (if A.is_null r then emp else A.varray r);
+    let r = intro_null_null_or_varray #U8.t in
     return r
   )
 

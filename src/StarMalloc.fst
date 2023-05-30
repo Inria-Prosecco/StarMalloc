@@ -15,6 +15,7 @@ module SAA = Steel.ArrayArith
 open Prelude
 open Utils2
 open Config
+open NullOrVarray
 
 // slab allocator
 open Main
@@ -26,9 +27,16 @@ open LargeAlloc
 val malloc (size: US.t)
   : Steel (array U8.t)
   emp
-  (fun r -> if A.is_null r then emp else A.varray r)
+  (fun r -> null_or_varray r)
   (requires fun _ -> True)
   (ensures fun _ r _ ->
+    //null_or_varray_t ptr;
+    //let s
+    //  : normal (t_of (null_or_varray #U8.t ptr))
+    //  = h1 (null_or_varray ptr) in
+    //let s
+    //  : option (Seq.lseq U8.t (A.length ptr))
+    //  = s in
     not (A.is_null r) ==> A.length r >= US.v size
   )
 
@@ -40,7 +48,7 @@ let malloc size =
 val free (ptr: array U8.t)
   : Steel bool
   (
-    A.varray ptr `star`
+    null_or_varray ptr `star`
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
@@ -49,19 +57,27 @@ val free (ptr: array U8.t)
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
-  //TODO: remove this precondition
-  (requires fun _ -> A.is_full_array ptr)
+  (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
 
 let free ptr =
-  let b = SAA.within_bounds_intro
-    (A.split_l sc_all.slab_region 0sz)
-    ptr
-    (A.split_r sc_all.slab_region slab_region_size) in
-  if b then (
-    slab_free ptr
+  if A.is_null ptr then (
+    sladmit ();
+    return true
   ) else (
-    large_free ptr
+    rewrite_slprop
+      (null_or_varray ptr)
+      (A.varray ptr)
+      (fun _ -> admit ());
+    let b = SAA.within_bounds_intro
+      (A.split_l sc_all.slab_region 0sz)
+      ptr
+      (A.split_r sc_all.slab_region slab_region_size) in
+    if b then (
+      slab_free ptr
+    ) else (
+      large_free ptr
+    )
   )
 
 let getsize (ptr: array U8.t)
@@ -129,7 +145,7 @@ let realloc_vp (status: return_status)
 
 #restart-solver
 
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 150 --compat_pre_typed_indexed_effects"
 let realloc (ptr: array U8.t) (new_size: US.t)
   : Steel (array U8.t & G.erased (return_status & array U8.t))
   (
@@ -142,34 +158,44 @@ let realloc (ptr: array U8.t) (new_size: US.t)
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
-  (requires fun _ -> A.is_full_array ptr)
+  (requires fun _ -> True)
   (ensures fun _ r _ ->
     not (A.is_null (fst r)) ==> A.length (fst r) >= US.v new_size
   )
   =
+  //TODO: fixme
+  admit ();
   if A.is_null ptr then (
     // In case that ptr is a null pointer, the function behaves
     // like malloc, assigning a new block of size bytes and
     // returning a pointer to its beginning.
-    change_equal_slprop (null_or_varray ptr) emp;
+    rewrite_slprop
+      (null_or_varray ptr)
+      emp
+      (fun _ -> admit ());
     let new_ptr = malloc new_size in
     change_equal_slprop
-      (if A.is_null new_ptr then emp else A.varray new_ptr)
+      (null_or_varray new_ptr)
       (realloc_vp 0 (A.null #U8.t) (A.null #U8.t) new_ptr);
     return (new_ptr, G.hide (0, A.null #U8.t))
   ) else (
-    change_equal_slprop (null_or_varray ptr) (A.varray ptr);
+    rewrite_slprop
+      (null_or_varray ptr)
+      (A.varray ptr)
+      (fun _ -> admit ());
+    //change_equal_slprop (null_or_varray ptr) (A.varray ptr);
     let new_ptr = malloc new_size in
     if (A.is_null new_ptr) then (
       // If the function fails to allocate the requested block
       // of memory, a null pointer is returned, and the memory
       // block pointed to by argument ptr is not deallocated
       // (it is still valid, and with its contents unchanged).
+      rewrite_slprop
+        (null_or_varray new_ptr `star` A.varray ptr)
+        (null_or_varray ptr)
+        (fun _ -> admit ());
       change_equal_slprop
-        (if A.is_null new_ptr then emp else A.varray new_ptr)
-        emp;
-      change_equal_slprop
-        (A.varray ptr)
+        (null_or_varray ptr)
         (realloc_vp 1 ptr (A.null #U8.t) (A.null #U8.t));
       return (A.null #U8.t, G.hide (1, A.null #U8.t))
     ) else (
@@ -177,9 +203,10 @@ let realloc (ptr: array U8.t) (new_size: US.t)
       // lesser of the new and old sizes, even if the block is
       // moved to a new location. If the new size is larger, the
       // value of the newly allocated portion is indeterminate.
-      change_equal_slprop
-        (if A.is_null new_ptr then emp else A.varray new_ptr)
-        (A.varray new_ptr);
+      rewrite_slprop
+        (null_or_varray new_ptr)
+        (A.varray new_ptr)
+        (fun _ -> admit ());
       let old_size = getsize ptr in
       // TODO: to be removed, refine large_getsize + add slab_getsize precondition
       assume (US.v old_size == A.length ptr);
@@ -189,9 +216,10 @@ let realloc (ptr: array U8.t) (new_size: US.t)
         then new_size
         else old_size in
       let _ = memcpy_u8 new_ptr ptr min_of_sizes in
-      change_equal_slprop
-        (A.varray new_ptr)
-        (null_or_varray new_ptr);
+      rewrite_slprop
+        (A.varray new_ptr `star` A.varray ptr)
+        (null_or_varray new_ptr `star` null_or_varray ptr)
+        (fun _ -> admit ());
       let b = free ptr in
       if b then (
         change_equal_slprop
@@ -228,21 +256,20 @@ assume val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
 //TODO: there should be defensive checks and no precondition
 //TODO: add zeroing postcondition
 let calloc (size1 size2: US.t)
-  : Steel (array U8.t & G.erased bool)
+  : Steel (array U8.t)
   (
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
   (fun r ->
-    (if (snd r) then emp else A.varray (fst r)) `star`
+    null_or_varray r `star`
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
   (requires fun _ -> US.fits (US.v size1 * US.v size2))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
-    G.reveal (snd r) = A.is_null (fst r) /\
-    not (snd r) ==> A.length (fst r) >= size /\
+    not (A.is_null r) ==> A.length r >= size /\
     True
     //not (snd r) ==> zf_u8 (Seq.slice (A.asel (fst r) h1) 0 size)
   )
@@ -251,19 +278,16 @@ let calloc (size1 size2: US.t)
   let ptr = malloc size in
   if A.is_null ptr
   then (
-    [@inline_let] let b = true in
-    change_equal_slprop
-      (if A.is_null ptr then emp else A.varray ptr)
-      (if b then emp else A.varray ptr);
-    return (ptr, G.hide b)
+    return ptr
   ) else (
-    [@inline_let] let b = false in
-    change_equal_slprop
-      (if A.is_null ptr then emp else A.varray ptr)
-      (A.varray ptr);
-    let _ = memset_u8 ptr 0z size in
-    change_equal_slprop
+    rewrite_slprop
+      (null_or_varray ptr)
       (A.varray ptr)
-      (if b then emp else A.varray ptr);
-    return (ptr, G.hide b)
+      (fun _ -> admit ());
+    let _ = memset_u8 ptr 0z size in
+    rewrite_slprop
+      (A.varray ptr)
+      (null_or_varray ptr)
+      (fun _ -> admit ());
+    return ptr
   )

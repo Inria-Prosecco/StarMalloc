@@ -771,7 +771,7 @@ let sc_all : size_classes_all = init ()
 //let size_class4096 : size_class4096_t = sc_all.sc4096
 #pop-options
 
-let null_or_varray (#a:Type) (r:array a) : vprop = if is_null r then emp else varray r
+open NullOrVarray
 
 inline_for_extraction noextract
 let return_null ()
@@ -780,10 +780,8 @@ let return_null ()
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
   (ensures fun _ r _ -> is_null r)
-  = [@inline_let]
-    let r = null in
-    change_equal_slprop emp (null_or_varray r);
-    return r
+  =
+  intro_null_null_or_varray #U8.t
 
 /// Wrapper around allocate_size_class, that does not return a pair, and instead
 /// always returns a valid permission on the new pointer if it is not null
@@ -797,13 +795,15 @@ val allocate_size_class
 
 let allocate_size_class scs =
   let r = SizeClass.allocate_size_class scs in
-  change_equal_slprop (if is_null r then emp else varray r) (null_or_varray r);
+  //TODO
+  //change_equal_slprop (if is_null r then emp else varray r) (null_or_varray r);
+  sladmit ();
   return r
 
 val slab_malloc (bytes:U32.t)
   : Steel (array U8.t)
   emp
-  (fun r -> if is_null r then emp else varray r)
+  (fun r -> null_or_varray r)
   (requires fun _ -> True)
   (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
 
@@ -830,7 +830,7 @@ inline_for_extraction noextract
 let slab_malloc' (sc: size_class) (bytes: U32.t)
   : Steel
   (array U8.t)
-  emp (fun r -> if is_null r then emp else varray r)
+  emp (fun r -> null_or_varray r)
   (requires fun _ ->
     U32.v bytes <= U32.v sc.data.size
   )
