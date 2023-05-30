@@ -618,6 +618,12 @@ let slab_region_size
 
 open ROArray
 
+unfold
+let size_class_pred (slab_region:array U8.t) (sc:size_class) (i:nat) : prop =
+  same_base_array slab_region sc.data.slab_region /\
+  A.offset (A.ptr_of sc.data.slab_region) == A.offset (A.ptr_of slab_region) + i * US.v slab_size
+
+
 /// This gathers all the data for small allocations.
 /// In particular, it contains an array with all size_classes data,
 /// as well as the slab_region containing the actual memory
@@ -625,10 +631,16 @@ noeq
 type size_classes_all =
   { n: US.t; // The number of size_classes
     size_classes : sc:array size_class{length sc == US.v n}; // The array of size_classes
-    g_size_classes: s:Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
+    g_size_classes: Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
     ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
-      A.length arr == US.v slab_region_size
+      A.length arr == US.v slab_region_size /\
+      (forall (i:nat{i < Seq.length g_size_classes}).
+        size_class_pred arr (Seq.index g_size_classes i) i)
+      // {:pattern Seq.index g_size_classes i}
+      //   same_base_array arr (Seq.index g_size_classes i).data.slab_region /\
+      //   A.offset (A.ptr_of (Seq.index g_size_classes i).data.slab_region)
+      //     == A.offset (A.ptr_of arr) + i * US.v slab_size)
     }
   }
 
@@ -689,7 +701,7 @@ type size_classes_all =
 // }
 
 //TODO: metaprogramming
-#push-options "--z3rlimit 200 --query_stats"
+#push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
 let init
   (_:unit)
 //  (n: US.t{
@@ -749,15 +761,24 @@ let init
 
   // TODO: Need to generalize to all size_classes
   let size_classes = mmap_sc 2sz in
+  // Not sure why, but explicitly adding the assertions about upd below is needed
+  (**) let g0 = gget (varray size_classes) in
+
   f_lemma n 0sz;
   let sc16 = init_wrapper2 16ul n 0sz 1sz slab_region md_bm_region md_region in
   upd size_classes 0sz sc16;
+
+  (**) let g1 = gget (varray size_classes) in
+  (**) assert (Ghost.reveal g1 == Seq.upd (Ghost.reveal g0) 0 sc16);
 
   f_lemma n 1sz;
   let sc32 = init_wrapper2 32ul n 1sz 2sz slab_region md_bm_region md_region in
   upd size_classes 1sz sc32;
 
   let g_size_classes = gget (varray size_classes) in
+
+  (**) assert (G.reveal g_size_classes == Seq.upd (Ghost.reveal g1) 1 sc32);
+
   let ro_perm = create_ro_array size_classes g_size_classes in
 
   // f_lemma n 2sz;
@@ -781,7 +802,6 @@ let init
     2sz)));
   drop (A.varray (A.split_r md_region (US.mul metadata_max
     2sz)));
-
 
   [@inline_let]
   let s : size_classes_all = {
@@ -983,17 +1003,10 @@ let slab_free ptr =
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
 
+  // Needs to be somewhere at the toplevel
   assume (length sc_all.size_classes == 2);
   let sc0 = ROArray.index sc_all.ro_perm 0sz in
   let sc1 = ROArray.index sc_all.ro_perm 1sz in
-
-  // We can add these predicates on the `g_size_classes` field with a forall.
-  assume (same_base_array sc_all.slab_region sc0.data.slab_region);
-  assume (same_base_array sc_all.slab_region sc1.data.slab_region);
-  assume (A.offset (A.ptr_of sc0.data.slab_region)
-       == A.offset (A.ptr_of sc_all.slab_region) + 0 * US.v slab_size);
-  assume (A.offset (A.ptr_of sc1.data.slab_region)
-       == A.offset (A.ptr_of sc_all.slab_region) + 1 * US.v slab_size);
 
   let rem = US.rem diff_sz slab_size in
        if (index = 0sz) then slab_free' sc0 ptr rem
