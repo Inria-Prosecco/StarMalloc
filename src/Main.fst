@@ -1080,9 +1080,9 @@ let rec slab_malloc_i
   = match l with
     | [] -> return_null ()
     | hd::tl ->
-      let sc = index sc_all.ro_perm i in
-      if bytes `U32.lte` sc.data.size then
-        slab_malloc_one sc bytes
+      let uu__ = index sc_all.ro_perm i in
+      if bytes `U32.lte` uu__.data.size then
+        slab_malloc_one uu__ bytes
       else
         slab_malloc_i tl (i `US.add` 1sz) bytes
 
