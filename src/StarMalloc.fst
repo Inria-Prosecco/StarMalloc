@@ -30,13 +30,7 @@ val malloc (size: US.t)
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
   (ensures fun _ r _ ->
-    //null_or_varray_t ptr;
-    //let s
-    //  : normal (t_of (null_or_varray #U8.t ptr))
-    //  = h1 (null_or_varray ptr) in
-    //let s
-    //  : option (Seq.lseq U8.t (A.length ptr))
-    //  = s in
+    //TODO: add postcond (zeroing)
     not (A.is_null r) ==> A.length r >= US.v size
   )
 
@@ -58,17 +52,20 @@ val free (ptr: array U8.t)
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
   (requires fun _ -> True)
-  (ensures fun _ _ _ -> True)
+  (ensures fun _ _ _ ->
+    //TODO: add postcond (zeroing on free)
+    True
+  )
 
 let free ptr =
   if A.is_null ptr then (
-    sladmit ();
-    return true
+    elim_null_null_or_varray ptr;
+    [@inline_let] let b = true in
+    change_equal_slprop
+      emp (if b then emp else A.varray ptr);
+    return b
   ) else (
-    rewrite_slprop
-      (null_or_varray ptr)
-      (A.varray ptr)
-      (fun _ -> admit ());
+    elim_live_null_or_varray ptr;
     let b = SAA.within_bounds_intro
       (A.split_l sc_all.slab_region 0sz)
       ptr
@@ -94,6 +91,7 @@ let getsize (ptr: array U8.t)
   )
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
+    //TODO: add precond+postcond
     A.asel ptr h1 == A.asel ptr h0
   )
   =
@@ -145,7 +143,7 @@ let realloc_vp (status: return_status)
 
 #restart-solver
 
-#push-options "--z3rlimit 150 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let realloc (ptr: array U8.t) (new_size: US.t)
   : Steel (array U8.t & G.erased (return_status & array U8.t))
   (
@@ -160,40 +158,31 @@ let realloc (ptr: array U8.t) (new_size: US.t)
   )
   (requires fun _ -> True)
   (ensures fun _ r _ ->
+    //TODO: add precond+postcond (expected_size)
+    //TODO: add postcond (zeroing)
     not (A.is_null (fst r)) ==> A.length (fst r) >= US.v new_size
   )
   =
-  //TODO: fixme
-  admit ();
   if A.is_null ptr then (
     // In case that ptr is a null pointer, the function behaves
     // like malloc, assigning a new block of size bytes and
     // returning a pointer to its beginning.
-    rewrite_slprop
-      (null_or_varray ptr)
-      emp
-      (fun _ -> admit ());
+    elim_null_null_or_varray ptr;
     let new_ptr = malloc new_size in
     change_equal_slprop
       (null_or_varray new_ptr)
       (realloc_vp 0 (A.null #U8.t) (A.null #U8.t) new_ptr);
     return (new_ptr, G.hide (0, A.null #U8.t))
   ) else (
-    rewrite_slprop
-      (null_or_varray ptr)
-      (A.varray ptr)
-      (fun _ -> admit ());
-    //change_equal_slprop (null_or_varray ptr) (A.varray ptr);
+    elim_live_null_or_varray ptr;
     let new_ptr = malloc new_size in
     if (A.is_null new_ptr) then (
       // If the function fails to allocate the requested block
       // of memory, a null pointer is returned, and the memory
       // block pointed to by argument ptr is not deallocated
       // (it is still valid, and with its contents unchanged).
-      rewrite_slprop
-        (null_or_varray new_ptr `star` A.varray ptr)
-        (null_or_varray ptr)
-        (fun _ -> admit ());
+      elim_null_null_or_varray new_ptr;
+      intro_live_null_or_varray ptr;
       change_equal_slprop
         (null_or_varray ptr)
         (realloc_vp 1 ptr (A.null #U8.t) (A.null #U8.t));
@@ -203,10 +192,7 @@ let realloc (ptr: array U8.t) (new_size: US.t)
       // lesser of the new and old sizes, even if the block is
       // moved to a new location. If the new size is larger, the
       // value of the newly allocated portion is indeterminate.
-      rewrite_slprop
-        (null_or_varray new_ptr)
-        (A.varray new_ptr)
-        (fun _ -> admit ());
+      elim_live_null_or_varray new_ptr;
       let old_size = getsize ptr in
       // TODO: to be removed, refine large_getsize + add slab_getsize precondition
       assume (US.v old_size == A.length ptr);
@@ -216,10 +202,8 @@ let realloc (ptr: array U8.t) (new_size: US.t)
         then new_size
         else old_size in
       let _ = memcpy_u8 new_ptr ptr min_of_sizes in
-      rewrite_slprop
-        (A.varray new_ptr `star` A.varray ptr)
-        (null_or_varray new_ptr `star` null_or_varray ptr)
-        (fun _ -> admit ());
+      intro_live_null_or_varray new_ptr;
+      intro_live_null_or_varray ptr;
       let b = free ptr in
       if b then (
         change_equal_slprop
@@ -230,7 +214,9 @@ let realloc (ptr: array U8.t) (new_size: US.t)
         return (new_ptr, G.hide (0, A.null #U8.t))
       ) else (
         change_equal_slprop
-          (if b then emp else A.varray ptr) (null_or_varray ptr);
+          (if b then emp else A.varray ptr)
+          (A.varray ptr);
+        intro_live_null_or_varray ptr;
         change_equal_slprop
           (null_or_varray ptr `star` null_or_varray new_ptr)
           (realloc_vp 2 ptr new_ptr (A.null #U8.t));
@@ -263,15 +249,19 @@ let calloc (size1 size2: US.t)
   )
   (fun r ->
     null_or_varray r `star`
-    A.varray (A.split_l sc_all.slab_region 0sz) `star`
-    A.varray (A.split_r sc_all.slab_region slab_region_size)
+    (A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
   (requires fun _ -> US.fits (US.v size1 * US.v size2))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
-    not (A.is_null r) ==> A.length r >= size /\
+    let s : normal (t_of (null_or_varray r))
+      = h1 (null_or_varray r) in
+    not (A.is_null r) ==> (
+      A.length r >= size /\
+      zf_u8 (Seq.slice s 0 size)
+    ) /\
     True
-    //not (snd r) ==> zf_u8 (Seq.slice (A.asel (fst r) h1) 0 size)
   )
   =
   let size = US.mul size1 size2 in
@@ -280,14 +270,8 @@ let calloc (size1 size2: US.t)
   then (
     return ptr
   ) else (
-    rewrite_slprop
-      (null_or_varray ptr)
-      (A.varray ptr)
-      (fun _ -> admit ());
+    elim_live_null_or_varray ptr;
     let _ = memset_u8 ptr 0z size in
-    rewrite_slprop
-      (A.varray ptr)
-      (null_or_varray ptr)
-      (fun _ -> admit ());
+    intro_live_null_or_varray ptr;
     return ptr
   )

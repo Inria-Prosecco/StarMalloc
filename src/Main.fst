@@ -795,9 +795,9 @@ val allocate_size_class
 
 let allocate_size_class scs =
   let r = SizeClass.allocate_size_class scs in
-  //TODO
-  //change_equal_slprop (if is_null r then emp else varray r) (null_or_varray r);
-  sladmit ();
+  intro_vrewrite
+    (if A.is_null r then emp else A.varray r)
+    (null_or_varray_f r);
   return r
 
 val slab_malloc (bytes:U32.t)

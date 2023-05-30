@@ -7,18 +7,36 @@ module SM = Steel.Memory
 
 module A = Steel.Array
 
-open SteelOptUtils
-
 let array = Steel.ST.Array.array
+
+let null_or_varray_f (#a: Type)
+  (r: array a)
+  (v: normal (t_of (if A.is_null r then emp else A.varray r)))
+  : Seq.lseq a (A.length r)
+  =
+  if A.is_null r
+  then Seq.empty #a
+  else (
+    assert (normal (t_of (if A.is_null r then emp else A.varray r))
+    == normal (t_of (A.varray r)));
+    assert (normal (t_of (A.varray r)) == Seq.lseq a (A.length r));
+    let v : normal (t_of (if A.is_null r then emp else A.varray r)) = v in
+    let v : normal (t_of (A.varray r)) = v in
+    let v : Seq.lseq a (A.length r) = v in
+    v
+  )
 
 let null_or_varray (#a:Type) (r:array a)
   : vprop
-  = c2 #(Seq.lseq a (A.length r))
-    (not (A.is_null r)) (A.varray r)
+  =
+  vrewrite
+    (if A.is_null r then emp else A.varray r)
+    #(Seq.lseq a (A.length r))
+    (null_or_varray_f r)
 
 let null_or_varray_t (#a: Type) (r:array a)
   : Lemma
-  (t_of (null_or_varray #a r) == option (Seq.lseq a (A.length r)))
+  (t_of (null_or_varray #a r) == Seq.lseq a (A.length r))
   = ()
 
 noextract inline_for_extraction
@@ -29,8 +47,14 @@ let intro_null_null_or_varray (#a: Type)
   (requires fun _ -> True)
   (ensures fun _ r _ -> A.is_null r)
   =
-  sladmit ();
-  return (A.null #a)
+  [@inline_let] let r = A.null #a in
+  change_equal_slprop
+    emp
+    (if A.is_null r then emp else A.varray r);
+  intro_vrewrite
+    (if A.is_null r then emp else A.varray r)
+    (null_or_varray_f r);
+  return r
 
 let elim_null_null_or_varray (#opened:_) (#a: Type) (r: array a)
   : SteelGhost unit opened
@@ -39,4 +63,52 @@ let elim_null_null_or_varray (#opened:_) (#a: Type) (r: array a)
   (requires fun _ -> A.is_null r)
   (ensures fun _ _ _ -> True)
   =
-  sladmit ()
+  elim_vrewrite
+    (if A.is_null r then emp else A.varray r)
+    (null_or_varray_f r);
+  change_equal_slprop
+    (if A.is_null r then emp else A.varray r)
+    emp
+
+module P = Steel.FractionalPermission
+
+let intro_live_null_or_varray (#opened:_) (#a: Type)
+  (r: array a)
+  : SteelGhost unit opened
+  (A.varray r)
+  (fun _ -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun h0 _ h1 ->
+    let v0 = A.asel r h0 in
+    let v1 : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    v0 == v1
+  )
+  =
+  A.varrayp_not_null r P.full_perm;
+  change_equal_slprop
+    (A.varray r)
+    (if A.is_null r then emp else A.varray r);
+  intro_vrewrite
+    (if A.is_null r then emp else A.varray r)
+    (null_or_varray_f r)
+
+let elim_live_null_or_varray (#opened:_) (#a: Type)
+  (r: array a)
+  : SteelGhost unit opened
+  (null_or_varray r)
+  (fun _ -> A.varray r)
+  (requires fun _ -> not (A.is_null r))
+  (ensures fun h0 _ h1 ->
+    let v0 : t_of (null_or_varray r)
+      = h0 (null_or_varray r) in
+    let v1 = A.asel r h1 in
+    v0 == v1
+  )
+  =
+  elim_vrewrite
+    (if A.is_null r then emp else A.varray r)
+    (null_or_varray_f r);
+  change_equal_slprop
+    (if A.is_null r then emp else A.varray r)
+    (A.varray r)

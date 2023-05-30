@@ -126,20 +126,13 @@ let large_malloc_aux
       : t_of (ind_linked_wf_tree metadata_ptr)
       = h1 (ind_linked_wf_tree metadata_ptr) in
     let t' : wdm data = dsnd blob1 in
-    null_or_varray_t r;
-    let s
-      : normal (t_of (null_or_varray #U8.t r))
+    let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
-    let s
-      : option (Seq.lseq U8.t (A.length r))
-      = s in
     Spec.is_avl (spec_convert cmp) t /\
     (not (A.is_null r) ==> (
       A.length r == US.v size /\
       A.is_full_array r /\
-      //TODO: fixme
-      //Some? s /\
-      //zf_u8 (Some?.v s) /\
+      zf_u8 s /\
       not (Spec.mem (spec_convert cmp) t (r, size)) /\
       Spec.mem (spec_convert cmp) t' (r, size)
     ))
@@ -153,21 +146,18 @@ let large_malloc_aux
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  //TODO: improve null_or_varray (should be the result of mmap)
   let ptr = mmap size in
   if (A.is_null ptr) then (
     (**) intro_vrefine (linked_tree md_v) is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
     return ptr
   ) else (
-    //TODO: fixme
-    assume (A.length ptr == US.v size /\ A.is_full_array ptr);
     let b = mem md_v (ptr, size) in
     if b then (
-      //TODO: add a die()
-      //sladmit ();
       (**) intro_vrefine (linked_tree md_v) is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
+      //TODO: add a die()
+      //sladmit ();
       drop (null_or_varray ptr);
       let r = intro_null_null_or_varray #U8.t in
       return r
@@ -299,19 +289,12 @@ let large_malloc (size: US.t)
   (fun ptr -> null_or_varray ptr)
   (requires fun _ -> US.v size > 0)
   (ensures fun _ ptr h1 ->
-    null_or_varray_t ptr;
-    let s
-      : normal (t_of (null_or_varray #U8.t ptr))
+    let s : (t_of (null_or_varray ptr))
       = h1 (null_or_varray ptr) in
-    let s
-      : option (Seq.lseq U8.t (A.length ptr))
-      = s in
     not (A.is_null ptr) ==> (
       A.length ptr == US.v size /\
-      Some? s /\
-      True
-      //TODO: fixme
-      //zf_u8 (Some?.v s)
+      A.is_full_array ptr /\
+      zf_u8 s
     )
   )
   =
