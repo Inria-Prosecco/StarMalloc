@@ -586,11 +586,10 @@ val init_wrapper2
 
 #restart-solver
 
-#push-options "--z3rlimit 200 --query_stats"
+#push-options "--z3rlimit 200 --query_stats --split_queries always"
 
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
-//  admit();
   f_lemma n k;
   f_lemma n k';
   f_lemma n (US.sub n k);
