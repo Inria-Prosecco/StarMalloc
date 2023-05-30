@@ -647,7 +647,7 @@ irreducible let reduce_attr : unit = ()
 unfold
 let normal_steps = [
       delta_attr [`%reduce_attr];
-      iota; zeta]
+      iota; zeta; primops]
 
 unfold
 let normal (#a:Type) (x:a) =
