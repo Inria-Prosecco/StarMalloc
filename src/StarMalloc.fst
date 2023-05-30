@@ -24,20 +24,70 @@ open LargeAlloc
 
 #push-options "--fuel 0 --ifuel 0"
 
+assume val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
+  : Steel (array U8.t)
+  (A.varray dest)
+  (fun _ -> A.varray dest)
+  (requires fun _ ->
+    A.length dest >= US.v n
+  )
+  (ensures fun h0 r h1 ->
+    A.length dest >= US.v n /\
+    Seq.slice (A.asel dest h1) 0 (US.v n)
+    ==
+    Seq.create (US.v n) c
+  )
+
+assume val memcpy_u8 (dest src: array U8.t) (n: US.t)
+  : Steel (array U8.t)
+  (A.varray dest `star` A.varray src)
+  (fun _ -> A.varray dest `star` A.varray src)
+  (requires fun _ ->
+    A.length dest >= US.v n /\
+    A.length src >= US.v n
+  )
+  (ensures fun h0 r h1 ->
+    A.length dest >= US.v n /\
+    A.length src >= US.v n /\
+    Seq.slice (A.asel dest h1) 0 (US.v n)
+    ==
+    Seq.slice (A.asel src h0) 0 (US.v n) /\
+    A.asel src h1 == A.asel src h0
+  )
+
+#push-options "--fuel 1 --ifuel 1"
 val malloc (size: US.t)
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
-  (ensures fun _ r _ ->
-    //TODO: add postcond (zeroing)
-    not (A.is_null r) ==> A.length r >= US.v size
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (A.is_null r) ==> (
+      A.length r >= US.v size /\
+      (enable_zeroing ==> zf_u8 (Seq.slice s 0 (US.v size)))
+    )
   )
+#pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 let malloc size =
   if US.lte size (US.uint32_to_sizet page_size)
-  then slab_malloc (US.sizet_to_uint32 size)
-  else large_malloc size
+  then (
+    let ptr = slab_malloc (US.sizet_to_uint32 size) in
+    if (A.is_null ptr) then (
+      return ptr
+    ) else (
+      elim_live_null_or_varray ptr;
+      let _ = memset_u8 ptr 0z size in
+      intro_live_null_or_varray ptr;
+      return ptr
+    )
+  ) else (
+    large_malloc size
+  )
+#pop-options
 
 val free (ptr: array U8.t)
   : Steel bool
@@ -52,10 +102,7 @@ val free (ptr: array U8.t)
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
   (requires fun _ -> True)
-  (ensures fun _ _ _ ->
-    //TODO: add postcond (zeroing on free)
-    True
-  )
+  (ensures fun _ _ _ -> True)
 
 let free ptr =
   if A.is_null ptr then (
@@ -105,23 +152,6 @@ let getsize (ptr: array U8.t)
     large_getsize ptr
   )
 
-assume val memcpy_u8 (dest src: array U8.t) (n: US.t)
-  : Steel (array U8.t)
-  (A.varray dest `star` A.varray src)
-  (fun _ -> A.varray dest `star` A.varray src)
-  (requires fun _ ->
-    A.length dest >= US.v n /\
-    A.length src >= US.v n
-  )
-  (ensures fun h0 r h1 ->
-    A.length dest >= US.v n /\
-    A.length src >= US.v n /\
-    Seq.slice (A.asel dest h1) 0 (US.v n)
-    ==
-    Seq.slice (A.asel src h0) 0 (US.v n) /\
-    A.asel src h1 == A.asel src h0
-  )
-
 module G = FStar.Ghost
 
 let return_status = x:nat{x < 3}
@@ -160,7 +190,9 @@ let realloc (ptr: array U8.t) (new_size: US.t)
   (ensures fun _ r _ ->
     //TODO: add precond+postcond (expected_size)
     //TODO: add postcond (zeroing)
-    not (A.is_null (fst r)) ==> A.length (fst r) >= US.v new_size
+    not (A.is_null (fst r)) ==> (
+      A.length (fst r) >= US.v new_size
+    )
   )
   =
   if A.is_null ptr then (
@@ -225,22 +257,9 @@ let realloc (ptr: array U8.t) (new_size: US.t)
     )
   )
 
-assume val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
-  : Steel (array U8.t)
-  (A.varray dest)
-  (fun _ -> A.varray dest)
-  (requires fun _ ->
-    A.length dest >= US.v n
-  )
-  (ensures fun h0 r h1 ->
-    A.length dest >= US.v n /\
-    Seq.slice (A.asel dest h1) 0 (US.v n)
-    ==
-    Seq.create (US.v n) c
-  )
-
 //TODO: there should be defensive checks and no precondition
 //TODO: add zeroing postcondition
+#push-options "--fuel 1 --ifuel 1"
 let calloc (size1 size2: US.t)
   : Steel (array U8.t)
   (
@@ -255,13 +274,12 @@ let calloc (size1 size2: US.t)
   (requires fun _ -> US.fits (US.v size1 * US.v size2))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
-    let s : normal (t_of (null_or_varray r))
+    let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= size /\
       zf_u8 (Seq.slice s 0 size)
-    ) /\
-    True
+    )
   )
   =
   let size = US.mul size1 size2 in
@@ -270,8 +288,12 @@ let calloc (size1 size2: US.t)
   then (
     return ptr
   ) else (
-    elim_live_null_or_varray ptr;
-    let _ = memset_u8 ptr 0z size in
-    intro_live_null_or_varray ptr;
-    return ptr
+    if enable_zeroing then (
+      return ptr
+    ) else (
+      elim_live_null_or_varray ptr;
+      let _ = memset_u8 ptr 0z size in
+      intro_live_null_or_varray ptr;
+      return ptr
+    )
   )
