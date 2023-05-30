@@ -637,10 +637,6 @@ type size_classes_all =
       A.length arr == US.v slab_region_size /\
       (forall (i:nat{i < Seq.length g_size_classes}).
         size_class_pred arr (Seq.index g_size_classes i) i)
-      // {:pattern Seq.index g_size_classes i}
-      //   same_base_array arr (Seq.index g_size_classes i).data.slab_region /\
-      //   A.offset (A.ptr_of (Seq.index g_size_classes i).data.slab_region)
-      //     == A.offset (A.ptr_of arr) + i * US.v slab_size)
     }
   }
 
@@ -699,6 +695,69 @@ type size_classes_all =
 //     True
 //   };
 // }
+
+/// Performs the initialization of one size class of length [len], and stores it in the
+/// size_classes array at index [k]
+inline_for_extraction noextract
+val init_size_classes'
+  (sc: sc)
+  (n: US.t{
+    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
+    US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
+    US.fits (US.v metadata_max * US.v n)
+  })
+  (k: US.t{US.v k < US.v n})
+  (k': US.t{US.v k' <= US.v n})
+  (slab_region: array U8.t{
+    A.length slab_region == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
+    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k /\
+    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k'
+  })
+  (md_bm_region: array U64.t{
+    A.length md_bm_region == US.v metadata_max * US.v 4sz * US.v n /\
+    A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v k /\
+    A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v k'
+  })
+  (md_region: array AL.cell{
+    A.length md_region == US.v metadata_max * US.v n /\
+    A.length md_region >= US.v metadata_max * US.v k /\
+    A.length md_region >= US.v metadata_max * US.v k'
+  })
+  (size_classes: array size_class{A.length size_classes == US.v n})
+  : Steel unit
+  (
+    A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) `star`
+    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) `star`
+    A.varray (A.split_r md_region (US.mul metadata_max k)) `star`
+    A.varray size_classes
+  )
+  (fun r ->
+    A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) `star`
+    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) `star`
+    A.varray (A.split_r md_region (US.mul metadata_max k')) `star`
+    A.varray size_classes
+  )
+  (requires fun h0 ->
+    US.v k' == US.v k + 1 /\
+    zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
+    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
+  )
+  (ensures fun _ r h1 ->
+    zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
+    (forall (i:nat{i <= US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
+  )
+
+let init_size_classes' sc n k k' slab_region md_bm_region md_region size_classes =
+  (**) let g0 = gget (varray size_classes) in
+  f_lemma n k;
+  let sc = init_wrapper2 sc n k k' slab_region md_bm_region md_region in
+  upd size_classes k sc;
+
+  (**) let g1 = gget (varray size_classes) in
+  (**) assert (Ghost.reveal g1 == Seq.upd (Ghost.reveal g0) (US.v k) sc)
+
 
 //TODO: metaprogramming
 #push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
@@ -759,72 +818,38 @@ let init
   assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
   assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
 
-  // TODO: Need to generalize to all size_classes
-  let size_classes = mmap_sc 2sz in
-  // Not sure why, but explicitly adding the assertions about upd below is needed
-  (**) let g0 = gget (varray size_classes) in
+  let size_classes = mmap_sc 9sz in
 
-  f_lemma n 0sz;
-  let sc16 = init_wrapper2 16ul n 0sz 1sz slab_region md_bm_region md_region in
-  upd size_classes 0sz sc16;
-
-  (**) let g1 = gget (varray size_classes) in
-  (**) assert (Ghost.reveal g1 == Seq.upd (Ghost.reveal g0) 0 sc16);
-
-  f_lemma n 1sz;
-  let sc32 = init_wrapper2 32ul n 1sz 2sz slab_region md_bm_region md_region in
-  upd size_classes 1sz sc32;
+  init_size_classes' 16ul n 0sz 1sz slab_region md_bm_region md_region size_classes;
+  init_size_classes' 32ul n 1sz 2sz slab_region md_bm_region md_region size_classes;
+  init_size_classes' 64ul n 2sz 3sz slab_region md_bm_region md_region size_classes;
+  init_size_classes' 128ul n 3sz 4sz slab_region md_bm_region md_region size_classes;
+  init_size_classes' 256ul n 4sz 5sz slab_region md_bm_region md_region size_classes;
+  init_size_classes' 512ul n 5sz 6sz slab_region md_bm_region md_region size_classes;
+  init_size_classes' 1024ul n 6sz 7sz slab_region md_bm_region md_region size_classes;
+  init_size_classes' 2048ul n 7sz 8sz slab_region md_bm_region md_region size_classes;
+  init_size_classes' 4096ul n 8sz 9sz slab_region md_bm_region md_region size_classes;
 
   let g_size_classes = gget (varray size_classes) in
 
-  (**) assert (G.reveal g_size_classes == Seq.upd (Ghost.reveal g1) 1 sc32);
-
   let ro_perm = create_ro_array size_classes g_size_classes in
 
-  // f_lemma n 2sz;
-  // let sc64 = init_wrapper2 64ul n 2sz 3sz slab_region md_bm_region md_region in
-  // f_lemma n 3sz;
-  // let sc128 = init_wrapper2 128ul n 3sz 4sz slab_region md_bm_region md_region in
-  // f_lemma n 4sz;
-  // let sc256 = init_wrapper2 256ul n 4sz 5sz slab_region md_bm_region md_region in
-  // f_lemma n 5sz;
-  // let sc512 = init_wrapper2 512ul n 5sz 6sz slab_region md_bm_region md_region in
-  // f_lemma n 6sz;
-  // let sc1024 = init_wrapper2 1024ul n 6sz 7sz slab_region md_bm_region md_region in
-  // f_lemma n 7sz;
-  // let sc2048 = init_wrapper2 2048ul n 7sz 8sz slab_region md_bm_region md_region in
-  // f_lemma n 8sz;
-  // let sc4096 = init_wrapper2 4096ul n 8sz 9sz slab_region md_bm_region md_region in
-
   drop (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size))
-    2sz)));
+    9sz)));
   drop (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz)
-    2sz)));
+    9sz)));
   drop (A.varray (A.split_r md_region (US.mul metadata_max
-    2sz)));
+    9sz)));
 
   [@inline_let]
   let s : size_classes_all = {
-    n = 2sz;
+    n = 9sz;
     size_classes;
     g_size_classes;
     ro_perm;
     slab_region;
   } in
   return s
-  // let s : size_classes_all = {
-  //   sc16 = sc16;
-  //   sc32 = sc32;
-  //   sc64 = sc64;
-  //   sc128 = sc128;
-  //   sc256 = sc256;
-  //   sc512 = sc512;
-  //   sc1024 = sc1024;
-  //   sc2048 = sc2048;
-  //   sc4096 = sc4096;
-  //   slab_region = slab_region;
-  // } in
-  // return s
 
 #reset-options "--fuel 1 --ifuel 1"
 
