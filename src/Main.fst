@@ -640,6 +640,18 @@ type size_classes_all =
     }
   }
 
+/// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
+irreducible let reduce_attr : unit = ()
+
+/// The normalization steps for reduction at compile-time
+unfold
+let normal_steps = [
+      delta_attr [`%reduce_attr];
+      iota; zeta]
+
+unfold
+let normal (#a:Type) (x:a) =
+  Pervasives.norm normal_steps x
 
 // // TODO: metaprogramming
 // let size_class16_t = r:size_class{U32.eq r.data.size 16ul}
@@ -698,7 +710,7 @@ type size_classes_all =
 
 /// Performs the initialization of one size class of length [len], and stores it in the
 /// size_classes array at index [k]
-inline_for_extraction noextract
+//inline_for_extraction noextract
 val init_size_class
   (sc: sc)
   (n: US.t{
@@ -763,6 +775,8 @@ let init_size_class sc n k k' slab_region md_bm_region md_region size_classes =
 /// the [size_classes] array. Note, this function should not be extracted as is,
 /// it will be reduced at compile-time to yield an idiomatic sequence of calls
 /// to `init_size_class`
+[@@ reduce_attr]
+noextract
 val init_size_classes_aux (l:list sc)
   (n: US.t{
     US.fits (US.v n) /\
@@ -898,7 +912,7 @@ val init_size_classes (l:list sc)
   )
 
 let init_size_classes l n slab_region md_bm_region md_region size_classes =
-  init_size_classes_aux l n 0sz 1sz slab_region md_bm_region md_region size_classes
+  (normal (init_size_classes_aux l n 0sz 1sz)) slab_region md_bm_region md_region size_classes
 
 inline_for_extraction noextract
 let sc_list : (l:list sc{List.length l == 9})
@@ -906,7 +920,6 @@ let sc_list : (l:list sc{List.length l == 9})
     assert_norm (List.length l == 9);
     l
 
-//TODO: metaprogramming
 #push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
 let init
   (_:unit)
@@ -928,8 +941,6 @@ let init
   let slab_region = mmap_u8 (US.mul (US.mul metadata_max (u32_to_sz page_size)) n) in
   let md_bm_region = mmap_u64 (US.mul (US.mul metadata_max 4sz) n) in
   let md_region = mmap_cell_status (US.mul metadata_max n) in
-
-
 
   change_slprop_rel
     (A.varray slab_region)
