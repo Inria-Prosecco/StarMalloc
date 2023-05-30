@@ -85,6 +85,19 @@ assume val mmap_sc (len: US.t)
       A.is_full_array a
     )
 
+/// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
+irreducible let reduce_attr : unit = ()
+
+/// The normalization steps for reduction at compile-time
+unfold
+let normal_steps = [
+      delta_attr [`%reduce_attr];
+      iota; zeta; primops]
+
+unfold
+let normal (#a:Type) (x:a) =
+  Pervasives.norm normal_steps x
+
 let ind_aux r idxs : vprop =
   SlabsCommon.ind_varraylist_aux r idxs
 
@@ -623,14 +636,23 @@ let size_class_pred (slab_region:array U8.t) (sc:size_class) (i:nat) : prop =
   same_base_array slab_region sc.data.slab_region /\
   A.offset (A.ptr_of sc.data.slab_region) == A.offset (A.ptr_of slab_region) + i * US.v slab_size
 
+[@@ reduce_attr]
+inline_for_extraction noextract
+let nbr_size_classes : (n:nat{US.fits n}) = 9
+
+[@@ reduce_attr]
+inline_for_extraction noextract
+let sc_list : (l:list sc{List.length l == nbr_size_classes})
+  = [@inline_let] let l = [16ul; 32ul; 64ul; 128ul; 256ul; 512ul; 1024ul; 2048ul; 4096ul] in
+    assert_norm (List.length l == 9);
+    l
 
 /// This gathers all the data for small allocations.
 /// In particular, it contains an array with all size_classes data,
 /// as well as the slab_region containing the actual memory
 noeq
 type size_classes_all =
-  { n: US.t; // The number of size_classes
-    size_classes : sc:array size_class{length sc == US.v n}; // The array of size_classes
+  { size_classes : sc:array size_class{length sc == nbr_size_classes}; // The array of size_classes
     g_size_classes: Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
     ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
@@ -639,19 +661,6 @@ type size_classes_all =
         size_class_pred arr (Seq.index g_size_classes i) i)
     }
   }
-
-/// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
-irreducible let reduce_attr : unit = ()
-
-/// The normalization steps for reduction at compile-time
-unfold
-let normal_steps = [
-      delta_attr [`%reduce_attr];
-      iota; zeta; primops]
-
-unfold
-let normal (#a:Type) (x:a) =
-  Pervasives.norm normal_steps x
 
 // // TODO: metaprogramming
 // let size_class16_t = r:size_class{U32.eq r.data.size 16ul}
@@ -914,12 +923,6 @@ val init_size_classes (l:list sc)
 let init_size_classes l n slab_region md_bm_region md_region size_classes =
   (normal (init_size_classes_aux l n 0sz 1sz)) slab_region md_bm_region md_region size_classes
 
-inline_for_extraction noextract
-let sc_list : (l:list sc{List.length l == 9})
-  = [@inline_let] let l = [16ul; 32ul; 64ul; 128ul; 256ul; 512ul; 1024ul; 2048ul; 4096ul] in
-    assert_norm (List.length l == 9);
-    l
-
 #push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
 let init
   (_:unit)
@@ -927,6 +930,7 @@ let init
   (fun _ -> emp)
   (fun _ r _ -> True)
   =
+  [@inline_let]
   let n = 9sz in
   assume (
     US.v n > 0 /\ US.v n >= US.v 1sz /\
@@ -977,7 +981,6 @@ let init
 
   [@inline_let]
   let s : size_classes_all = {
-    n = 9sz;
     size_classes;
     g_size_classes;
     ro_perm;
@@ -1033,34 +1036,11 @@ let allocate_size_class scs =
   change_equal_slprop (if is_null r then emp else varray r) (null_or_varray r);
   return r
 
-val slab_malloc (bytes:U32.t)
-  : Steel (array U8.t)
-  emp
-  (fun r -> if is_null r then emp else varray r)
-  (requires fun _ -> True)
-  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
-
-val slab_free (ptr:array U8.t)
-  : Steel bool
-  (A.varray ptr `star`
-    A.varray (A.split_l sc_all.slab_region 0sz))
-  (fun b ->
-    (if b then emp else A.varray ptr) `star`
-    A.varray (A.split_l sc_all.slab_region 0sz))
-  (requires fun _ -> SAA.within_bounds
-    (A.split_l (G.reveal sc_all.slab_region) 0sz)
-    ptr
-    (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
-  )
-  (ensures fun _ _ _ -> True)
-
-
-
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --query_stats"
 inline_for_extraction noextract
-let slab_malloc' (sc: size_class) (bytes: U32.t)
+let slab_malloc_one (sc: size_class) (bytes: U32.t)
   : Steel
   (array U8.t)
   emp (fun r -> if is_null r then emp else varray r)
@@ -1083,10 +1063,63 @@ let slab_malloc' (sc: size_class) (bytes: U32.t)
 
 #reset-options
 
-//TODO: metaprogramming
+/// A wrapper around slab_malloc' that performs dispatch in the size classes
+/// in a generic way. The list argument is not actually used, it just serves
+/// as a counter that reduces better than nats
+[@@ reduce_attr]
+noextract
+let rec slab_malloc_i
+  (l:list sc{List.length l <= length sc_all.size_classes})
+  (i:US.t{US.v i + List.length l == length sc_all.size_classes})
+  bytes
+  : Steel (array U8.t)
+  emp
+  (fun r -> if is_null r then emp else varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  = match l with
+    | [] -> return_null ()
+    | hd::tl ->
+      let sc = index sc_all.ro_perm i in
+      if bytes `U32.lte` sc.data.size then
+        slab_malloc_one sc bytes
+      else
+        slab_malloc_i tl (i `US.add` 1sz) bytes
+
+module T = FStar.Tactics
+
+/// A variant of the normalization, with a zeta full to reduce under
+/// matches (and if/then/else). To use with care, as zeta_full can
+/// loop and lead to stack overflows
+let norm_full () : T.Tac unit =
+  T.norm [zeta_full; iota; primops; delta_attr [`%reduce_attr]];
+  T.trefl ()
+
+[@@ T.postprocess_with norm_full]
+val slab_malloc (bytes:U32.t)
+  : Steel (array U8.t)
+  emp
+  (fun r -> if is_null r then emp else varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
-let slab_malloc bytes =
-  return_null ()
+let slab_malloc bytes = (slab_malloc_i sc_list 0sz) bytes
+
+val slab_free (ptr:array U8.t)
+  : Steel bool
+  (A.varray ptr `star`
+    A.varray (A.split_l sc_all.slab_region 0sz))
+  (fun b ->
+    (if b then emp else A.varray ptr) `star`
+    A.varray (A.split_l sc_all.slab_region 0sz))
+  (requires fun _ -> SAA.within_bounds
+    (A.split_l (G.reveal sc_all.slab_region) 0sz)
+    ptr
+    (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
+  )
+  (ensures fun _ _ _ -> True)
+
 
 (*
   // Probably need this as a top-level value somewhere
