@@ -994,6 +994,7 @@ let return_null ()
 
 /// Wrapper around allocate_size_class, that does not return a pair, and instead
 /// always returns a valid permission on the new pointer if it is not null
+inline_for_extraction noextract
 val allocate_size_class
   (scs: size_class_struct)
   : Steel (array U8.t)
