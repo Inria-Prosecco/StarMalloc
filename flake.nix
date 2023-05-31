@@ -14,7 +14,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     krml-src = {
-      url = "github:FStarLang/karamel";
+      url = "github:FStarLang/karamel/protz_spinlock";
       inputs.fstar.follows = "fstar-src";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
