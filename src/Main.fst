@@ -1015,7 +1015,7 @@ inline_for_extraction noextract
 let slab_malloc_one (i:US.t{US.v i < US.v nb_size_classes}) (bytes: U32.t)
   : Steel
   (array U8.t)
-  emp (fun r -> if is_null r then emp else varray r)
+  emp (fun r -> null_or_varray r)
   (requires fun _ ->
     U32.v bytes <= U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size
   )
@@ -1047,7 +1047,7 @@ let rec slab_malloc_i
   bytes
   : Steel (array U8.t)
   emp
-  (fun r -> if is_null r then emp else varray r)
+  (fun r -> null_or_varray r)
   (requires fun _ -> True)
   (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
   = match l with
