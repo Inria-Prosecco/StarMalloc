@@ -33,7 +33,7 @@ noextract inline_for_extraction
 let mmap = Mman.mmap_noinit
 
 noextract inline_for_extraction
-let munmap = Mman.munmap
+let munmap = Mman.munmap_u8
 
 let create_leaf = Impl.Trees.M.create_leaf
 
@@ -157,7 +157,6 @@ let large_malloc_aux
       (**) intro_vrefine (linked_tree md_v) is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
       //TODO: add a die()
-      //sladmit ();
       drop (null_or_varray ptr);
       let r = intro_null_null_or_varray #U8.t in
       return r

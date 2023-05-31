@@ -101,6 +101,7 @@ dist/Slabs.c \
 dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
+dist/SizeClass.c \
 dist/Quarantine.c \
 dist/Guards.c \
 src/utils.c \

@@ -2,6 +2,7 @@
 #include <sys/mman.h>
 #include <assert.h>
 #include "internal/AVL.h"
+#include "internal/StarMalloc.h"
 
 static const size_t page_size = 4096UL;
 static const size_t max_slabs = 1024UL;
@@ -14,6 +15,10 @@ uint8_t *mmap_init(size_t size) {
 
 uint8_t *mmap_noinit(size_t size) {
   return mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+}
+
+bool munmap_u8(uint8_t* ptr, size_t len) {
+  return munmap((void*) ptr, len);
 }
 
 uint8_t *mmap_u8(size_t len) {
@@ -34,6 +39,14 @@ uint32_t *mmap_ptr_u32() {
 
 size_t *mmap_ptr_us() {
   return (size_t*) mmap_init(sizeof(size_t));
+}
+
+size_class* mmap_sc(size_t len) {
+  return (size_class*) mmap_init(len * sizeof(size_class));
+}
+
+uint32_t* mmap_sizes (size_t len) {
+  return (uint32_t*) mmap_init(len * sizeof(uint32_t));
 }
 
 //TODO: check for mprotect return value

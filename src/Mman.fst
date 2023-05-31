@@ -44,7 +44,7 @@ assume val mmap_noinit
     )
 
 //noextract
-assume val munmap (ptr: array U8.t) (size: US.t)
+assume val munmap_u8 (ptr: array U8.t) (size: US.t)
   : Steel bool
     (A.varray ptr)
     (fun b -> if b then A.varray ptr else emp)
