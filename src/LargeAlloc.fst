@@ -250,31 +250,23 @@ let large_free_aux
   let size = find md_v k_elem in
   if Some? size then (
     let size = Some?.v size in
-    let b = munmap ptr size in
+    munmap ptr size;
+    let h0 = get () in
+    let md_v' = delete md_v (ptr, size) in
+    Spec.lemma_delete (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
+    Spec.lemma_delete2 (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
+    write metadata_ptr md_v';
+    (**) intro_vrefine (linked_tree md_v') is_wf;
+    (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
+    [@inline_let] let b = true in
     change_equal_slprop
-      (if b then A.varray ptr else emp)
-      (if (not b) then emp else A.varray ptr);
-    if b then (
-      //TODO: die(), munmap has failed, something must be wrong
-      (**) intro_vrefine (linked_tree md_v) is_wf;
-      (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
-      // return false
-      return (not b)
-    ) else (
-      let h0 = get () in
-      let md_v' = delete md_v (ptr, size) in
-      Spec.lemma_delete (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
-      Spec.lemma_delete2 (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
-      write metadata_ptr md_v';
-      (**) intro_vrefine (linked_tree md_v') is_wf;
-      (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
-      // return true
-      return (not b)
-    )
+      emp
+      (if b then emp else A.varray ptr);
+    return b
   ) else (
     (**) intro_vrefine (linked_tree md_v) is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
-    let b = false in
+    [@inline_let] let b = false in
     change_equal_slprop
       (A.varray ptr)
       (if b then emp else A.varray ptr);

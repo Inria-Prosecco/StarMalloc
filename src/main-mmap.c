@@ -17,8 +17,10 @@ uint8_t *mmap_noinit(size_t size) {
   return mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
 }
 
-bool munmap_u8(uint8_t* ptr, size_t len) {
-  return munmap((void*) ptr, len);
+void munmap_u8(uint8_t* ptr, size_t len) {
+  bool b = munmap((void*) ptr, len);
+  assert (! b);
+  return;
 }
 
 uint8_t *mmap_u8(size_t len) {
