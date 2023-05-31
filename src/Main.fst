@@ -1024,10 +1024,14 @@ let slab_malloc_one (i:US.t{US.v i < US.v nb_size_classes}) (bytes: U32.t)
       A.length r >= U32.v bytes
   ))
   =
-  let sc = index sc_all.ro_perm i in
-  L.acquire sc.lock;
-  let ptr = allocate_size_class sc.data in
-  L.release sc.lock;
+  let uu__ = index sc_all.ro_perm i in
+  L.acquire uu__.lock;
+  let uu__ = index sc_all.ro_perm i in
+  change_equal_slprop (size_class_vprop _) (size_class_vprop _);
+  let ptr = allocate_size_class uu__.data in
+  let uu__ = index sc_all.ro_perm i in
+  change_equal_slprop (size_class_vprop _) (size_class_vprop _);
+  L.release uu__.lock;
   return ptr
 #pop-options
 
@@ -1090,10 +1094,14 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes}) (ptr: array U8.t) (diff: 
     US.v diff = diff')
   (ensures fun h0 _ h1 -> True)
   =
-  let sc = ROArray.index sc_all.ro_perm i in
-  L.acquire sc.lock;
-  let res = deallocate_size_class sc.data ptr diff in
-  L.release sc.lock;
+  let uu__ = ROArray.index sc_all.ro_perm i in
+  L.acquire uu__.lock;
+  let uu__ = ROArray.index sc_all.ro_perm i in
+  change_equal_slprop (size_class_vprop _) (size_class_vprop _);
+  let res = deallocate_size_class uu__.data ptr diff in
+  let uu__ = ROArray.index sc_all.ro_perm i in
+  change_equal_slprop (size_class_vprop _) (size_class_vprop _);
+  L.release uu__.lock;
   return res
 
 #restart-solver
