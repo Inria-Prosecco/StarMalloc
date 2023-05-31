@@ -257,6 +257,8 @@ let rebalance_avl_equal (#a: Type) (cmp: cmp a) (t: bst a cmp)
   => bad idea/bad design?
 *)
 
+module G = FStar.Ghost
+
 #push-options "--z3rlimit 25"
 let rec insert_avl_aux (#a: Type)
   (r:bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
@@ -1084,7 +1086,7 @@ let delete_lemma (#a: Type)
   )
   = delete_avl_aux_avl cmp t data_to_rm
 
-let rec lemma_insert (#a: Type)
+let rec lemma_insert_aux (#a: Type)
   (r: bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
   : Lemma
   (requires mem cmp t new_data = false)
@@ -1097,11 +1099,56 @@ let rec lemma_insert (#a: Type)
         test_aux0 cmp t data new_data;
         assert (mem cmp t new_data)
       end else if delta < 0 then
-        lemma_insert r cmp left new_data
+        lemma_insert_aux r cmp left new_data
       else
-        lemma_insert  r cmp right new_data
+        lemma_insert_aux r cmp right new_data
 
-let rec lemma_delete (#a: Type)
+let lemma_insert (#a: Type)
+  (r: bool) (cmp:cmp a) (t: avl a cmp) (new_data: a)
+  : Lemma
+  (requires mem cmp t new_data = false)
+  (ensures (
+    let new_t, b = insert_avl_aux r cmp t new_data in
+    is_bst cmp new_t /\
+    mem cmp new_t new_data = true /\
+    G.reveal b = true /\
+    add cmp t new_t new_data
+  ))
+  =
+  insert_avl_aux_bst r cmp t new_data
+
+#push-options "--fuel 3 --ifuel 3 --z3rlimit 100"
+let rec lemma_insert2 (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (new_data: a) (cond : a -> bool)
+  : Lemma
+  (requires
+    mem cmp t new_data = false /\
+    cond new_data /\
+    forall_keys t cond
+  )
+  (ensures (
+    let new_t, b = insert_avl_aux false cmp t new_data in
+    forall_keys new_t cond
+  ))
+  (decreases t)
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ _ ->
+      let delta = cmp new_data data in
+      if delta = 0 then
+        ()
+      else if delta < 0 then (
+        assert (mem cmp left new_data = false);
+        assert (forall_keys left cond);
+        lemma_insert2 cmp left new_data cond
+      ) else (
+        assert (mem cmp right new_data = false);
+        assert (forall_keys right cond);
+        lemma_insert2 cmp right new_data cond
+      )
+#pop-options
+
+let rec lemma_delete_aux (#a: Type)
   (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
   : Lemma
   (requires mem cmp t data_to_rm = true)
@@ -1112,11 +1159,130 @@ let rec lemma_delete (#a: Type)
       let delta = cmp data_to_rm data in
       if delta < 0 then begin
         unicity_left cmp t data_to_rm;
-        lemma_delete cmp left data_to_rm
+        lemma_delete_aux cmp left data_to_rm
       end else if delta > 0 then begin
         unicity_right cmp t data_to_rm;
-        lemma_delete cmp right data_to_rm
+        lemma_delete_aux cmp right data_to_rm
       end else ()
+
+let lemma_delete (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a)
+  : Lemma
+  (requires mem cmp t data_to_rm = true)
+  (ensures (
+    let new_t, b = delete_avl_aux cmp t data_to_rm in
+    is_bst cmp new_t /\
+    mem cmp new_t data_to_rm = false /\
+    G.reveal b = true /\
+    add cmp new_t t data_to_rm
+  ))
+  =
+  delete_avl_aux_bst cmp t data_to_rm
+
+#push-options "--fuel 3 --ifuel 3 --z3rlimit 100"
+let rec lemma_delete2_remove_leftmost (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (cond : a -> bool)
+  : Lemma
+  (requires
+    forall_keys t cond /\
+    Node? t
+  )
+  (ensures (
+    let new_t, x = remove_leftmost_avl cmp t in
+    forall_keys new_t cond /\
+    cond x
+  ))
+  = match t with
+  | Node _ Leaf _ _ _ -> ()
+  | Node _ left _ _ _ ->
+      lemma_delete2_remove_leftmost cmp left cond;
+      ()
+#pop-options
+
+let lemma_delete2_rebalance (#a: Type)
+  (t: wdm a) (cond : a -> bool)
+  : Lemma
+  (requires
+    forall_keys t cond
+  )
+  (ensures (
+    let new_t = rebalance_avl t in
+    forall_keys new_t cond
+  ))
+  = ()
+
+let lemma_delete2_merge_tree (#a: Type)
+  (v: a) (l r: wdm a) (cond: a -> bool)
+  : Lemma
+  (requires
+    cond v /\
+    forall_keys l cond /\
+    forall_keys r cond
+  )
+  (ensures forall_keys (merge_tree v l r) cond)
+  = ()
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+let lemma_delete2_aux (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a) (cond : a -> bool)
+  : Lemma
+  (requires
+    mem cmp t data_to_rm = true /\
+    forall_keys t cond /\
+    Node? t /\
+    cmp (cdata t) data_to_rm = 0
+  )
+  (ensures (
+    let new_t = delete_avl_aux0 cmp t data_to_rm in
+    forall_keys new_t cond
+  ))
+  = match t with
+  | Node data _ Leaf _ _ -> ()
+  | Node data Leaf _ _ _ -> ()
+  | Node z l r sz hz ->
+      assert (Node? r);
+      assert (mem cmp t data_to_rm = true);
+      let new_right, succ_z = remove_leftmost_avl cmp r in
+      let height_new_right = hot_wdh new_right in
+      let height_left = hot_wdh l in
+      let new_height = M.max height_left height_new_right + 1 in
+      let new_t = merge_tree succ_z l new_right in
+      assert (sot_wds new_t = sz - 1);
+      assert (hot_wdh new_t = new_height);
+      let new_t2 = rebalance_avl new_t in
+      let final_r = delete_avl_aux0 cmp t data_to_rm in
+      assert (final_r == new_t2);
+      lemma_delete2_remove_leftmost cmp r cond;
+      lemma_delete2_merge_tree succ_z l new_right cond;
+      lemma_delete2_rebalance new_t cond
+#pop-options
+
+#push-options "--fuel 3 --ifuel 3 --z3rlimit 100"
+let rec lemma_delete2 (#a: Type)
+  (cmp:cmp a) (t: avl a cmp) (data_to_rm: a) (cond : a -> bool)
+  : Lemma
+  (requires
+    mem cmp t data_to_rm = true /\
+    forall_keys t cond
+  )
+  (ensures (
+    let new_t, b = delete_avl_aux cmp t data_to_rm in
+    forall_keys new_t cond
+  ))
+  = match t with
+  | Leaf -> ()
+  | Node data left right _ _ ->
+      let delta = cmp data_to_rm data in
+      if delta < 0 then begin
+        unicity_left cmp t data_to_rm;
+        lemma_delete2 cmp left data_to_rm cond
+      end else if delta > 0 then begin
+        unicity_right cmp t data_to_rm;
+        lemma_delete2 cmp right data_to_rm cond
+      end else begin
+        lemma_delete2_aux cmp t data_to_rm cond
+      end
+#pop-options
 
 (*)
 let functional_correctness (#a: Type)

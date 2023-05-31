@@ -50,3 +50,8 @@ val enable_quarantine: bool
 // controls whether quarantined slabs are unmapped
 inline_for_extraction
 val enable_quarantine_trap: bool
+
+// zeroing mechanism
+// TODO: controls whether zeroing is done at allocation time
+inline_for_extraction
+val enable_zeroing: bool

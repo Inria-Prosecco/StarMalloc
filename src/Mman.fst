@@ -4,41 +4,52 @@ open Steel.Effect.Atomic
 open Steel.Effect
 module A = Steel.Array
 
-//module U64 = FStar.UInt64
-//module U32 = FStar.UInt32
-//module I32 = FStar.Int32
 module U8 = FStar.UInt8
 module US = FStar.SizeT
-//module UP = FStar.PtrdiffT
 
 let array = Steel.ST.Array.array
 
-
-noextract
-assume val mmap_s
-  //(addr: U64.t)//TODO: implicit cast
+//noextract
+assume val mmap_init
   (size: US.t)
-  //(prot: I32.t)
-  //(flags: I32.t)
-  //(fd: I32.t)
-  //(off: U32.t)
   : Steel (array U8.t)
     emp
-    (fun a -> A.varray a)
+    (fun r -> A.varray r)
     (requires fun _ -> True)
-    (ensures fun _ a h1 ->
-      A.length a == US.v size /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v size) U8.zero
+    (ensures fun _ ptr h1 ->
+      A.length ptr == US.v size /\
+      A.is_full_array ptr /\
+      A.asel ptr h1 == Seq.create (US.v size) U8.zero
     )
 
-noextract
+open NullOrVarray
+
+open Utils2
+
+//noextract
+assume val mmap_noinit
+  (size: US.t)
+  : Steel (array U8.t)
+    emp
+    (fun ptr -> null_or_varray ptr)
+    (requires fun _ -> True)
+    (ensures fun _ ptr h1 ->
+      let s : t_of (null_or_varray ptr)
+        = h1 (null_or_varray ptr) in
+      not (A.is_null ptr) ==> (
+        A.length ptr == US.v size /\
+        A.is_full_array ptr /\
+        zf_u8 s
+      )
+    )
+
+//noextract
 assume val munmap (ptr: array U8.t) (size: US.t)
   : Steel bool
     (A.varray ptr)
     (fun b -> if b then A.varray ptr else emp)
     (requires fun _ ->
-      //A.length a == U64.v size_t /\
+      A.length ptr == US.v size /\
       A.is_full_array ptr
     )
     (ensures fun _ _ _ -> True)

@@ -174,11 +174,13 @@ let rec memopt (#a: Type) (cmp:cmp a) (t: bst a cmp) (x: a) : bool =
       end
 
 let unicity_left (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
-  (x: a{mem cmp t x})
-  : Lemma (
+  (x: a)
+  : Lemma
+  (requires mem cmp t x)
+  (ensures (
     let delta = cmp x (cdata t) in
     delta < 0 <==> mem cmp (cleft t) x
-  )
+  ))
   = match t with
   | Node data left right _ _ ->
       let delta = cmp x data in
@@ -202,11 +204,13 @@ let unicity_left (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
       assert (mem cmp (cleft t) x ==> delta < 0)
 
 let unicity_right (#a: Type) (cmp: cmp a) (t: bst a cmp{Node? t})
-  (x: a{mem cmp t x})
-  : Lemma (
+  (x: a)
+  : Lemma
+  (requires mem cmp t x)
+  (ensures (
     let delta = cmp x (cdata t) in
     delta > 0 <==> mem cmp (cright t) x
-  )
+  ))
   = match t with
   | Node data left right _ _ ->
       let delta = cmp x data in

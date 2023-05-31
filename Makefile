@@ -86,10 +86,6 @@ extract: $(ALL_KRML_FILES)
 		-add-include 'Steel_SpinLock:"steel_base.h"' \
 		$^
 
-patch: extract
-	sed 's/uint64_t x1 = Impl_Trees_Types_ptr_to_u64(x);/uintptr_t x1 = (uintptr_t) x;/g' -i dist/AVL.c
-	sed 's/uint64_t y1 = Impl_Trees_Types_ptr_to_u64(y);/uintptr_t y1 = (uintptr_t) y;/g' -i dist/AVL.c
-
 # test classic AVL trees
 test: verify extract
 	$(CC) -DKRML_VERIFIED_UINT128 -I $(KRML_HOME)/include -I $(KRML_LIB)/dist/generic -I dist -lbsd \
@@ -124,7 +120,7 @@ test-compile-alloc: verify extract
 $(FILES) src/lib-alloc.c
 
 # test the allocator with a static binary
-test-alloc0: verify extract patch
+test-alloc0: verify extract
 	$(CC) -O0 -g -DKRML_VERIFIED_UINT126 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
@@ -163,7 +159,7 @@ bench/test-avl.c
 	./bench/a.out
 
 # test the allocator with a static binary
-test-alloc0bis: verify extract patch
+test-alloc0bis: verify extract
 	$(CC) -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
@@ -176,7 +172,7 @@ src/lib-alloc.c
 	./bench/a.out
 
 # foptimize-strlen = gcc issue culprit
-lib: verify extract patch
+lib: verify extract
 	$(CC) -O3 \
 	-DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
@@ -193,7 +189,7 @@ src/lib-alloc.c \
 #-std=c17
 #-Wall -Wextra -Wcast-align=strict -Wcast-qual
 #-fvisibility=hidden
-hardened_lib: verify extract patch
+hardened_lib: verify extract
 	$(CC) -DKRML_VERIFIED_UINT128 \
 	-pipe -O3 -flto -fPIC \
 	-fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
