@@ -156,14 +156,22 @@ module G = FStar.Ghost
 
 let return_status = x:nat{x < 3}
 
+// in case of failure, this vprop describes
+// memory that is still allocated but not returned
+// TODO: doc this better, realloc conforms to C DR 400
+// realloc(NULL,0) only gives NULL on alloc failure
+// (errno is ENOMEM)
+// realloc(ptr,0) only gives NULL on alloc failure, ptr unchanged
+// (errno is ENOMEM)
+// TODO: errno
+
 let realloc_vp (status: return_status)
   (ptr: array U8.t)
   (new_ptr: array U8.t)
-  (r: array U8.t)
   : vprop
   = match status with
   // success
-  | 0 -> null_or_varray r
+  | 0 -> emp
   // new allocation fails, cannot memcpy,
   // returning previous allocation
   | 1 -> null_or_varray ptr
@@ -173,26 +181,40 @@ let realloc_vp (status: return_status)
 
 #restart-solver
 
+#push-options "--fuel 1 --ifuel 1"
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let realloc (ptr: array U8.t) (new_size: US.t)
   : Steel (array U8.t & G.erased (return_status & array U8.t))
   (
     null_or_varray ptr `star`
-    A.varray (A.split_l sc_all.slab_region 0sz) `star`
-    A.varray (A.split_r sc_all.slab_region slab_region_size)
+    (A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
   (fun r ->
-    realloc_vp (fst (G.reveal (snd r))) ptr (snd (G.reveal (snd r))) (fst r) `star`
+    null_or_varray (fst r) `star`
+    (realloc_vp (fst (G.reveal (snd r))) ptr (snd (G.reveal (snd r))) `star`
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
-    A.varray (A.split_r sc_all.slab_region slab_region_size)
+    A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
+  //TODO: add precond+postcond (expected_size)
   (requires fun _ -> True)
-  (ensures fun _ r _ ->
-    //TODO: add precond+postcond (expected_size)
-    //TODO: add postcond (zeroing)
+  (ensures fun h0 r h1 ->
+    let s0 : t_of (null_or_varray ptr)
+      = h0 (null_or_varray ptr) in
+    let s1 : t_of (null_or_varray (fst r))
+      = h1 (null_or_varray (fst r)) in
+    // success
     not (A.is_null (fst r)) ==> (
-      A.length (fst r) >= US.v new_size
+      A.length (fst r) >= US.v new_size /\
+      (not (A.is_null ptr) ==>
+        Seq.slice s1 0 (min (A.length ptr) (US.v new_size))
+        ==
+        Seq.slice s0 0 (min (A.length ptr) (US.v new_size))
+      )
     )
+    // On failure, returns a null pointer.
+    // The original pointer ptr remains valid and may need to be deallocated with free or realloc.
+    //TODO: add corresponding postcond
   )
   =
   if A.is_null ptr then (
@@ -202,8 +224,8 @@ let realloc (ptr: array U8.t) (new_size: US.t)
     elim_null_null_or_varray ptr;
     let new_ptr = malloc new_size in
     change_equal_slprop
-      (null_or_varray new_ptr)
-      (realloc_vp 0 (A.null #U8.t) (A.null #U8.t) new_ptr);
+      emp
+      (realloc_vp 0 (A.null #U8.t) (A.null #U8.t));
     return (new_ptr, G.hide (0, A.null #U8.t))
   ) else (
     elim_live_null_or_varray ptr;
@@ -217,8 +239,9 @@ let realloc (ptr: array U8.t) (new_size: US.t)
       intro_live_null_or_varray ptr;
       change_equal_slprop
         (null_or_varray ptr)
-        (realloc_vp 1 ptr (A.null #U8.t) (A.null #U8.t));
-      return (A.null #U8.t, G.hide (1, A.null #U8.t))
+        (realloc_vp 1 ptr (A.null #U8.t));
+      let r = intro_null_null_or_varray #U8.t in
+      return (r, G.hide (1, A.null #U8.t))
     ) else (
       // The content of the memory block is preserved up to the
       // lesser of the new and old sizes, even if the block is
@@ -241,25 +264,25 @@ let realloc (ptr: array U8.t) (new_size: US.t)
         change_equal_slprop
           (if b then emp else A.varray ptr) emp;
         change_equal_slprop
-          (null_or_varray new_ptr)
-          (realloc_vp 0 ptr (A.null #U8.t) new_ptr);
+          emp
+          (realloc_vp 0 ptr (A.null #U8.t));
         return (new_ptr, G.hide (0, A.null #U8.t))
       ) else (
+        //TODO: add a die(), internal error
         change_equal_slprop
           (if b then emp else A.varray ptr)
           (A.varray ptr);
         intro_live_null_or_varray ptr;
         change_equal_slprop
           (null_or_varray ptr `star` null_or_varray new_ptr)
-          (realloc_vp 2 ptr new_ptr (A.null #U8.t));
-        return (A.null #U8.t, G.hide (2, new_ptr))
+          (realloc_vp 2 ptr new_ptr);
+        let r = intro_null_null_or_varray #U8.t in
+        return (r, G.hide (2, new_ptr))
       )
     )
   )
 
 //TODO: there should be defensive checks and no precondition
-//TODO: add zeroing postcondition
-#push-options "--fuel 1 --ifuel 1"
 let calloc (size1 size2: US.t)
   : Steel (array U8.t)
   (
