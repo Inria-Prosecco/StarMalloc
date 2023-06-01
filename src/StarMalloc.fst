@@ -56,7 +56,7 @@ assume val memcpy_u8 (dest src: array U8.t) (n: US.t)
   )
 
 #push-options "--fuel 1 --ifuel 1"
-val malloc (size: US.t)
+val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
@@ -72,10 +72,10 @@ val malloc (size: US.t)
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
-let malloc size =
+let malloc arena_id size =
   if US.lte size (US.uint32_to_sizet page_size)
   then (
-    let ptr = slab_malloc (US.sizet_to_uint32 size) in
+    let ptr = slab_malloc arena_id (US.sizet_to_uint32 size) in
     if (A.is_null ptr) then (
       return ptr
     ) else (
