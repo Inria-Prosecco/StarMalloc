@@ -183,7 +183,8 @@ let realloc_vp (status: return_status)
 
 #push-options "--fuel 1 --ifuel 1"
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
-let realloc (ptr: array U8.t) (new_size: US.t)
+let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+  (ptr: array U8.t) (new_size: US.t)
   : Steel (array U8.t & G.erased (return_status & array U8.t))
   (
     null_or_varray ptr `star`
@@ -222,14 +223,14 @@ let realloc (ptr: array U8.t) (new_size: US.t)
     // like malloc, assigning a new block of size bytes and
     // returning a pointer to its beginning.
     elim_null_null_or_varray ptr;
-    let new_ptr = malloc new_size in
+    let new_ptr = malloc arena_id new_size in
     change_equal_slprop
       emp
       (realloc_vp 0 (A.null #U8.t) (A.null #U8.t));
     return (new_ptr, G.hide (0, A.null #U8.t))
   ) else (
     elim_live_null_or_varray ptr;
-    let new_ptr = malloc new_size in
+    let new_ptr = malloc arena_id new_size in
     if (A.is_null new_ptr) then (
       // If the function fails to allocate the requested block
       // of memory, a null pointer is returned, and the memory
@@ -283,7 +284,9 @@ let realloc (ptr: array U8.t) (new_size: US.t)
   )
 
 //TODO: there should be defensive checks and no precondition
-let calloc (size1 size2: US.t)
+let calloc
+  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+  (size1 size2: US.t)
   : Steel (array U8.t)
   (
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
@@ -306,7 +309,7 @@ let calloc (size1 size2: US.t)
   )
   =
   let size = US.mul size1 size2 in
-  let ptr = malloc size in
+  let ptr = malloc arena_id size in
   if A.is_null ptr
   then (
     return ptr
