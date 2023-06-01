@@ -14,7 +14,7 @@ inline_for_extraction noextract
 let metadata_max' = 16777216UL
 
 let metadata_max =
-  US.fits_u64_implies_fits (U32.v page_size * U64.v metadata_max' * US.v nb_size_classes);
+  US.fits_u64_implies_fits (U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas);
   US.fits_u64_implies_fits (U64.v metadata_max');
   US.of_u64 metadata_max'
 
