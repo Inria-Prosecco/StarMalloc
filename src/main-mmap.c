@@ -8,7 +8,7 @@ static const size_t page_size = 4096UL;
 static const size_t max_slabs = 1024UL;
 
 uint8_t *mmap_init(size_t size) {
-  void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+  void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_NORESERVE, -1, 0);
   assert (ptr != NULL);
   return ptr;
 }
