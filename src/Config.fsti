@@ -11,19 +11,24 @@ open FStar.Mul
 inline_for_extraction
 let page_size: U32.t = 4096ul
 
+/// Number of size classes per arena
 inline_for_extraction
 let nb_size_classes: v:US.t{US.v v > 0} = 9sz
+
+/// Number of arenas supported
+inline_for_extraction
+let nb_arenas: v:US.t{US.v v > 0} = 4sz
 
 inline_for_extraction
 val metadata_max: v:US.t{
   US.v v > 0 /\
-  US.fits (US.v v * U32.v page_size * US.v nb_size_classes) /\
+  US.fits (US.v v * U32.v page_size * US.v nb_size_classes * US.v nb_arenas) /\
   US.fits (US.v v * U32.v page_size)
 }
 
 val metadata_max_up_fits (_:unit)
   : Lemma
-  (UP.fits (US.v metadata_max * U32.v page_size * US.v nb_size_classes))
+  (UP.fits ((US.v metadata_max * U32.v page_size) * US.v nb_size_classes * US.v nb_arenas))
 
 noextract inline_for_extraction
 val alg_null: v:nat{v = US.v metadata_max + 1}

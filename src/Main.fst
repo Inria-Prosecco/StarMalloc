@@ -102,6 +102,7 @@ irreducible let reduce_attr : unit = ()
 unfold
 let normal_steps = [
       delta_attr [`%reduce_attr];
+      delta_only [`%List.append];
       iota; zeta; primops]
 
 unfold
@@ -625,13 +626,12 @@ module UP = FStar.PtrdiffT
 
 let slab_region_size
   : v:US.t{
-    US.v v = US.v metadata_max * U32.v page_size * (US.v nb_size_classes) /\
+    US.v v == US.v metadata_max * U32.v page_size * US.v nb_size_classes * US.v nb_arenas /\
     UP.fits (US.v v)
   }
   =
   metadata_max_up_fits ();
-  assert (US.fits_u64);
-  US.mul slab_size nb_size_classes
+  slab_size `US.mul` nb_size_classes `US.mul` nb_arenas
 
 open ROArray
 
@@ -652,26 +652,56 @@ let sc_list : (l:list sc{List.length l == US.v nb_size_classes})
 let synced_sizes (#n:nat) (k:nat{k <= n}) (sizes:Seq.lseq sc n) (size_classes:Seq.lseq size_class n) : prop =
   forall (i:nat{i < k}). Seq.index sizes i == (Seq.index size_classes i).data.size
 
+/// The total number of size classes in the allocator, across all arenas.
+/// Used as an abbreviation for specification purposes
+inline_for_extraction noextract
+let total_nb_sc : n:nat{n == US.v nb_size_classes * US.v nb_arenas} = 36
+
+/// Number of arenas as a nat, for specification purposes. Not relying on US.v
+/// allows better normalization for extraction
+[@@ reduce_attr]
+inline_for_extraction noextract
+let nb_arenas_nat : n:nat{n == US.v nb_arenas} = 4
+
+/// Duplicating the list of size_classes sizes for each arena, which enables a simpler
+/// initialization directly using the mechanism in place for one arena
+[@@ reduce_attr]
+inline_for_extraction noextract
+let rec arena_sc_list' (i:nat{i <= US.v nb_arenas}) (acc:list sc{List.length acc = i * US.v nb_size_classes}) :
+  Tot (l:list sc{List.length l == total_nb_sc}) (decreases (US.v nb_arenas - i))
+  = if i = nb_arenas_nat then acc
+    else (
+      List.append_length acc sc_list;
+      arena_sc_list' (i + 1) (acc `List.append` sc_list)
+    )
+
+/// Fuel needed to establish that the length of [] is 0
+#push-options "--fuel 1"
+[@@ reduce_attr]
+inline_for_extraction noextract
+let arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l}) = arena_sc_list' 0 []
+#pop-options
+
 /// This gathers all the data for small allocations.
 /// In particular, it contains an array with all size_classes data,
 /// as well as the slab_region containing the actual memory
 noeq
 type size_classes_all =
-  { size_classes : sc:array size_class{length sc == US.v nb_size_classes}; // The array of size_classes
-    sizes : sz:array sc{length sz == US.v nb_size_classes}; // An array of the sizes of [size_classes]
+  { size_classes : sc:array size_class{length sc == total_nb_sc}; // The array of size_classes
+    sizes : sz:array sc{length sz == total_nb_sc}; // An array of the sizes of [size_classes]
     g_size_classes: Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
     g_sizes: Ghost.erased (Seq.lseq sc (length sizes)); // The ghost representation of sizes
     ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
     ro_sizes: ro_array sizes g_sizes;
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
-      synced_sizes (US.v nb_size_classes) g_sizes g_size_classes /\
+      synced_sizes total_nb_sc g_sizes g_size_classes /\
       A.length arr == US.v slab_region_size /\
       (forall (i:nat{i < Seq.length g_size_classes}).
         size_class_pred arr (Seq.index g_size_classes i) i)
     }
   }
 
-/// Performs the initialization of one size class of length [len], and stores it in the
+/// Performs the initialization of one size class of length [size_c], and stores it in the
 /// size_classes array at index [k]
 val init_size_class
   (size_c: sc)
@@ -904,10 +934,10 @@ let init
   (fun _ r _ -> True)
   =
   [@inline_let]
-  let n = nb_size_classes in
+  let n = nb_size_classes `US.mul` nb_arenas in
   assert (
     US.v n > 0 /\ US.v n >= US.v 1sz /\
-    US.v n == US.v nb_size_classes /\
+    US.v n == total_nb_sc /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size)) /\
     US.fits (US.v metadata_max * US.v 4sz) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
@@ -940,10 +970,10 @@ let init
   assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
   assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
 
-  let size_classes = mmap_sc nb_size_classes in
-  let sizes = mmap_sizes nb_size_classes in
+  let size_classes = mmap_sc n in
+  let sizes = mmap_sizes n in
 
-  init_size_classes sc_list n slab_region md_bm_region md_region size_classes sizes;
+  init_size_classes arena_sc_list n slab_region md_bm_region md_region size_classes sizes;
 
   let g_size_classes = gget (varray size_classes) in
   let g_sizes = gget (varray sizes) in
@@ -1012,7 +1042,7 @@ let allocate_size_class scs =
 
 #push-options "--fuel 0 --ifuel 0 --query_stats"
 inline_for_extraction noextract
-let slab_malloc_one (i:US.t{US.v i < US.v nb_size_classes}) (bytes: U32.t)
+let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
   : Steel
   (array U8.t)
   emp (fun r -> null_or_varray r)
@@ -1037,13 +1067,15 @@ let slab_malloc_one (i:US.t{US.v i < US.v nb_size_classes}) (bytes: U32.t)
 #pop-options
 
 /// A wrapper around slab_malloc' that performs dispatch in the size classes
-/// in a generic way. The list argument is not actually used, it just serves
+/// for arena [arena_id] in a generic way.
+/// The list argument is not actually used, it just serves
 /// as a counter that reduces better than nats
 [@@ reduce_attr]
 noextract
 let rec slab_malloc_i
   (l:list sc{List.length l <= length sc_all.size_classes})
-  (i:US.t{US.v i + List.length l == length sc_all.size_classes})
+  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
+  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   bytes
   : Steel (array U8.t)
   emp
@@ -1053,11 +1085,12 @@ let rec slab_malloc_i
   = match l with
     | [] -> return_null ()
     | hd::tl ->
-      let size = index sc_all.ro_sizes i in
+      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+      let size = index sc_all.ro_sizes idx in
       if bytes `U32.lte` size then
-        slab_malloc_one i bytes
+        slab_malloc_one idx bytes
       else
-        slab_malloc_i tl (i `US.add` 1sz) bytes
+        slab_malloc_i tl (i `US.add` 1sz) arena_id bytes
 
 module T = FStar.Tactics
 
@@ -1069,7 +1102,7 @@ let norm_full () : T.Tac unit =
   T.trefl ()
 
 [@@ T.postprocess_with norm_full]
-val slab_malloc (bytes:U32.t)
+val slab_malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (bytes:U32.t)
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
@@ -1077,8 +1110,7 @@ val slab_malloc (bytes:U32.t)
   (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
-let slab_malloc bytes = (slab_malloc_i sc_list 0sz) bytes
-
+let slab_malloc arena_id bytes = (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
 inline_for_extraction noextract
