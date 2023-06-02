@@ -1139,7 +1139,7 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
 
 #restart-solver
 
@@ -1171,9 +1171,12 @@ let slab_free ptr =
     ptr
     (A.split_l sc_all.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
+  assert (ptr_of (A.split_l sc_all.slab_region 0sz) == ptr_of (sc_all.slab_region));
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
+  (**) let g_sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
+  (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
   slab_free' index ptr rem
 
 let slab_getsize (ptr: array U8.t)
