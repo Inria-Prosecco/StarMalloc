@@ -766,6 +766,20 @@ let intro_slab_vprop (#opened:_)
       (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class arr md_as_seq))
     (slab_vprop size_class arr md)
 
+let intro_empty_slab_varray (#opened:_)
+  (size_class: sc)
+  (md_as_seq: G.erased (Seq.lseq U64.t 4))
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  : SteelGhost unit opened
+  (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+  (fun _ -> A.varray arr)
+  (requires fun h0 ->
+    is_empty size_class (G.reveal md_as_seq) /\
+    slab_vprop_aux2 size_class md_as_seq
+  )
+  (ensures fun h0 _ h1 -> True)
+  = sladmit ()
+
 // without compat_pre_typed_indexed_effects
 // this fails in lax mode
 let elim_slab_vprop (#opened:_)

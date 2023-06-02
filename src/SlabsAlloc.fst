@@ -732,27 +732,6 @@ let allocate_slab_aux_2
     return r
   )
 
-#push-options "--fuel 0 --ifuel 0"
-let empty_md_is_properly_zeroed
-  (size_class: sc)
-  : Lemma
-  (slab_vprop_aux2 size_class (Seq.create 4 0UL))
-  =
-  let zero_to_vec_lemma2 (i:nat{i < 64})
-    : Lemma
-    (FU.nth (FU.zero 64) i = false)
-    =
-    FU.zero_to_vec_lemma #64 i in
-  let s0 = Seq.create 4 0UL in
-  let bm = Bitmap4.array_to_bv2 #4 s0 in
-  let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
-  assert (U64.v (Seq.index s0 0) == FU.zero 64);
-  array_to_bv_slice #4 s0 0;
-  Classical.forall_intro (zero_to_vec_lemma2);
-  Seq.lemma_eq_intro (Seq.slice bm 0 64) (Seq.create 64 false);
-  zf_b_slice (Seq.slice bm 0 64) 0 (64 - U32.v bound2)
-#pop-options
-
 let alloc_metadata_sl1
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -2162,24 +2141,20 @@ let allocate_slab_aux_3_3_2_2
   assert (G.reveal md_as_seq == Seq.create 4 0UL);
   slab_to_slots size_class (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
   empty_md_is_properly_zeroed size_class;
-  intro_slab_vprop size_class
-    (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
+  intro_empty_slab_varray size_class
     (Seq.create 4 0UL)
     (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
-  mmap_trap_guard size_class
+  mmap_trap_guard
     (slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
-    (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
     (u32_to_sz page_size);
   p_guard_pack size_class
-    (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
-    slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)))
     (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
     slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz)));
   SeqUtils.init_us_refined_index
     (US.v (US.add md_count_v guard_pages_interval))
     (US.v (US.add md_count_v (US.sub guard_pages_interval 1sz)));
   change_equal_slprop
-    (p_guard size_class
+    (p_guard
       (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
       slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))))
     (f size_class slab_region md_bm_region

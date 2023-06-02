@@ -536,13 +536,9 @@ let deallocate_slab_aux_1
       (slab_array slab_region pos) in
     if cond then (
       if enable_quarantine then (
-        mmap_trap_quarantine size_class
-          (slab_array slab_region pos)
-          (md_bm_array md_bm_region pos)
-          (u32_to_sz page_size);
-        pack_slab_starseq size_class
+        upd_and_pack_slab_starseq_quarantine size_class
           slab_region md_bm_region md_region md_count
-          md_count_v md_region_lv pos 4ul;
+          md_count_v md_region_lv pos;
         deallocate_slab_aux_1_quarantine size_class
           slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
           md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 pos;
@@ -1014,13 +1010,9 @@ let deallocate_slab_aux_2
       (slab_array slab_region pos) in
     if cond then (
       if enable_quarantine then (
-        mmap_trap_quarantine size_class
-          (slab_array slab_region pos)
-          (md_bm_array md_bm_region pos)
-          (u32_to_sz page_size);
-        pack_slab_starseq size_class
+        upd_and_pack_slab_starseq_quarantine size_class
           slab_region md_bm_region md_region md_count
-          md_count_v md_region_lv pos 4ul;
+          md_count_v md_region_lv pos;
         deallocate_slab_aux_2_quarantine size_class
           slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
           md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 pos;
