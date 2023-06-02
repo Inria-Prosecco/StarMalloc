@@ -89,6 +89,46 @@ let malloc arena_id size =
   )
 #pop-options
 
+#push-options "--fuel 1 --ifuel 1"
+val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.t) (size: US.t)
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (A.is_null r) ==> (
+      A.length r >= US.v size /\
+      (enable_zeroing ==> zf_u8 (Seq.slice s 0 (US.v size)))
+    )
+  )
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
+let aligned_alloc arena_id alignment size =
+  if size = 0sz then intro_null_null_or_varray #U8.t else (
+  if US.lte size (US.uint32_to_sizet page_size) && US.lte alignment (US.uint32_to_sizet page_size)
+  then (
+    let ptr = slab_aligned_alloc arena_id (US.sizet_to_uint32 alignment) (US.sizet_to_uint32 size) in
+    if (A.is_null ptr) then (
+      return ptr
+    ) else (
+      elim_live_null_or_varray ptr;
+      let _ = memset_u8 ptr 0z size in
+      intro_live_null_or_varray ptr;
+      return ptr
+    )
+  ) else (
+    // mmap returns page-aligned memory. We do not support alignment larger
+    // than a page size.
+    if alignment `US.rem` 16sz = 0sz && alignment `US.lte` (US.uint32_to_sizet page_size) then
+      large_malloc size
+    else
+      intro_null_null_or_varray #U8.t
+  ))
+#pop-options
+
 val free (ptr: array U8.t)
   : Steel bool
   (
