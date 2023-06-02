@@ -36,6 +36,19 @@ void* malloc(size_t size) {
   return StarMalloc_malloc(thread_arena, size);
 }
 
+void* aligned_alloc(size_t alignment, size_t size) {
+  if (! init_status) {
+    pthread_mutex_lock(&m);
+    krmlinit_globals();
+    init_status=1UL;
+    pthread_mutex_unlock(&m);
+  }
+  if (thread_arena == N_ARENA) {
+    thread_arena = thread_arena_counter++ % N_ARENA;
+  }
+  return StarMalloc_aligned_alloc(thread_arena, alignment, size);
+}
+
 void free(void *ptr) {
   if (! init_status) {
     pthread_mutex_lock(&m);
