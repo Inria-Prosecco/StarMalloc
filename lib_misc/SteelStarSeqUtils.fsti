@@ -250,6 +250,28 @@ val starseq_weakening_rel_some (#opened:_)
     v_starseq #a #(option b) f2 f2_lemma s2 h1
   )
 
+val starseq_weakening_rel_from_some (#opened:_)
+  (#a #b: Type0)
+  (f1: a -> vprop)
+  (f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b)))
+  (s1: Seq.seq a)
+  (s2: Seq.seq a)
+  : SteelGhost unit opened
+  (starseq #a #(option b) f1 f1_lemma s1)
+  (fun _ -> starseq #a #b f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 == Seq.length s2 /\
+    (forall (k:nat{k < Seq.length s1}). (
+      f2_lemma (Seq.index s2 k);
+      f1 (Seq.index s1 k)
+      ==
+      some_as_vp #b (f2 (Seq.index s2 k))
+    ))
+  )
+  (ensures fun _ _ _ -> True)
+
 val starseq_weakening_ref (#opened:_)
   (#a1 #a2 #b: Type0)
   (f1: a1 -> vprop)

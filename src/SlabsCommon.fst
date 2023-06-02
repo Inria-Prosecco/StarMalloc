@@ -592,7 +592,7 @@ let upd_and_pack_slab_starseq_quarantine size_class
   =
   let md_as_seq = elim_slab_vprop size_class
     (md_bm_array md_bm_region idx) (slab_array slab_region idx) in
-  intro_empty_slab_varray size_class md_as_seq (slab_array slab_region idx);
+  Helpers.intro_empty_slab_varray size_class md_as_seq (slab_array slab_region idx);
   mmap_trap_quarantine
           (slab_array slab_region idx)
           (u32_to_sz page_size);

@@ -2154,7 +2154,7 @@ let allocate_slab_aux_3_3_2_2
     (US.v (US.add md_count_v guard_pages_interval))
     (US.v (US.add md_count_v (US.sub guard_pages_interval 1sz)));
   change_equal_slprop
-    (p_guard
+    (p_guard size_class
       (md_bm_array md_bm_region (US.add md_count_v (US.sub guard_pages_interval 1sz)),
       slab_array slab_region (US.add md_count_v (US.sub guard_pages_interval 1sz))))
     (f size_class slab_region md_bm_region
