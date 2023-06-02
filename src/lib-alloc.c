@@ -6,10 +6,13 @@
 #include "Config.h"
 #include "StarMalloc.h"
 
+#define N_ARENA 4
+
 static uint32_t init_status = 0UL;
 static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
-static _Thread_local unsigned thread_arena = 4;
+__attribute__((tls_model("initial-exec")))
+static _Thread_local unsigned thread_arena = N_ARENA;
 static atomic_uint thread_arena_counter = 0;
 
 uint8_t* StarMalloc_memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
@@ -25,11 +28,10 @@ void* malloc(size_t size) {
     pthread_mutex_lock(&m);
     krmlinit_globals();
     init_status=1UL;
-
     pthread_mutex_unlock(&m);
   }
-  if (thread_arena == 4) {
-    thread_arena = thread_arena_counter++ % 4;
+  if (thread_arena == N_ARENA) {
+    thread_arena = thread_arena_counter++ % N_ARENA;
   }
   return StarMalloc_malloc(thread_arena, size);
 }
@@ -54,8 +56,8 @@ void* realloc(void* ptr, size_t new_size) {
     init_status=1UL;
     pthread_mutex_unlock(&m);
   }
-  if (thread_arena == 4) {
-    thread_arena = thread_arena_counter++ % 4;
+  if (thread_arena == N_ARENA) {
+    thread_arena = thread_arena_counter++ % N_ARENA;
   }
   //printf("ptr: %p, new_size: %lu\n", ptr, new_size);
   void* new_ptr = StarMalloc_realloc(thread_arena, ptr, new_size);
@@ -70,8 +72,8 @@ void* calloc(size_t nb_elem, size_t size_elem) {
     init_status=1UL;
     pthread_mutex_unlock(&m);
   }
-  if (thread_arena == 4) {
-    thread_arena = thread_arena_counter++ % 4;
+  if (thread_arena == N_ARENA) {
+    thread_arena = thread_arena_counter++ % N_ARENA;
   }
   uint8_t* ptr = StarMalloc_calloc(thread_arena, nb_elem, size_elem);
   return (void*) ptr;

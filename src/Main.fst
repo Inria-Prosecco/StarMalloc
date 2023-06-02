@@ -1114,7 +1114,7 @@ let slab_malloc arena_id bytes = (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
 inline_for_extraction noextract
-let slab_free' (i:US.t{US.v i < US.v nb_size_classes}) (ptr: array U8.t) (diff: US.t)
+let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: array U8.t) (diff: US.t)
   : Steel bool
   (A.varray ptr)
   (fun b -> if b then emp else A.varray ptr)
@@ -1174,7 +1174,7 @@ let slab_free ptr =
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
-  if index `US.lt` nb_size_classes then
+  if index `US.lt` (US.mul nb_size_classes nb_arenas) then
     slab_free' index ptr rem
   else return false
 
@@ -1208,7 +1208,7 @@ let slab_getsize (ptr: array U8.t)
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
-  if index `US.lt` nb_size_classes then
+  if index `US.lt` (US.mul nb_size_classes nb_arenas) then
     let size = ROArray.index sc_all.ro_sizes index in
     return (US.uint32_to_sizet size)
   else return 0sz
