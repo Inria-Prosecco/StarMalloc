@@ -1174,9 +1174,7 @@ let slab_free ptr =
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
-  if index `US.lt` (US.mul nb_size_classes nb_arenas) then
-    slab_free' index ptr rem
-  else return false
+  slab_free' index ptr rem
 
 let slab_getsize (ptr: array U8.t)
   : Steel US.t
@@ -1208,7 +1206,5 @@ let slab_getsize (ptr: array U8.t)
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
-  if index `US.lt` (US.mul nb_size_classes nb_arenas) then
-    let size = ROArray.index sc_all.ro_sizes index in
-    return (US.uint32_to_sizet size)
-  else return 0sz
+  let size = ROArray.index sc_all.ro_sizes index in
+  return (US.uint32_to_sizet size)
