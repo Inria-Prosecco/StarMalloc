@@ -102,8 +102,6 @@ dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 dist/SizeClass.c \
-dist/Quarantine.c \
-dist/Guards.c \
 src/utils.c \
 src/main-mmap.c
 
@@ -174,7 +172,7 @@ src/lib-alloc.c
 
 # foptimize-strlen = gcc issue culprit
 lib: verify extract
-	$(CC) -O3 \
+	gcc-12 -O3 \
 	-DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
