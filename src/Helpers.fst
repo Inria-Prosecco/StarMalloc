@@ -397,6 +397,7 @@ let empty_md_lemma
   assert (r == Seq.index (FU.to_vec #U64.n 0) (idx%U64.n));
   assert (FU.to_vec #U64.n 0 == FU.to_vec #U64.n (FU.zero U64.n))
 
+#push-options "--z3rlimit 50"
 let slab_to_slots_aux
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
