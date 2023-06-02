@@ -1,5 +1,35 @@
 module SlabsCommon
 
+let t (size_class: sc) : Type0 =
+  dtuple2
+    (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
+    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
+
+#push-options "--fuel 0 --ifuel 0"
+let empty_md_is_properly_zeroed
+  (size_class: sc)
+  : Lemma
+  (slab_vprop_aux2 size_class (Seq.create 4 0UL))
+  =
+  let zero_to_vec_lemma2 (i:nat{i < 64})
+    : Lemma
+    (FU.nth (FU.zero 64) i = false)
+    =
+    FU.zero_to_vec_lemma #64 i in
+  let s0 = Seq.create 4 0UL in
+  let bm = Bitmap4.array_to_bv2 #4 s0 in
+  let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
+  assert (U64.v (Seq.index s0 0) == FU.zero 64);
+  array_to_bv_slice #4 s0 0;
+  Classical.forall_intro (zero_to_vec_lemma2);
+  Seq.lemma_eq_intro (Seq.slice bm 0 64) (Seq.create 64 false);
+  zf_b_slice (Seq.slice bm 0 64) 0 (64 - U32.v bound2)
+#pop-options
+
+let empty_t size_class =
+  empty_md_is_properly_zeroed size_class;
+  (| Seq.create 4 0UL, Seq.create (U32.v (nb_slots size_class)) (Ghost.hide None) |)
+
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 50"
 let p_empty_unpack (#opened:_)
   (sc: sc)
@@ -92,64 +122,6 @@ let p_full_unpack (#opened:_)
   VR2.elim_vrefine
     (slab_vprop sc (snd b2) (fst b2))
     (fun (|s,_|) -> is_full sc s == true)
-
-let p_guard_unpack (#opened:_)
-  (sc: sc)
-  (b1 b2: blob)
-  : SteelGhost unit opened
-  ((p_guard sc) b1)
-  (fun _ -> slab_vprop sc (snd b2) (fst b2))
-  (requires fun _ -> b1 == b2)
-  (ensures fun h0 _ h1 ->
-    let blob1
-      : t_of (slab_vprop sc (snd b2) (fst b2))
-      = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    b1 == b2 /\
-    is_guard sc (snd b1) (fst b1) blob1 /\
-    h0 ((p_guard sc) b1)
-    ==
-    h1 (slab_vprop sc (snd b2) (fst b2))
-  )
-  =
-  change_slprop_rel
-    ((p_guard sc) b1)
-    (slab_vprop sc (snd b2) (fst b2)
-    `VR2.vrefine`
-    is_guard sc (snd b2) (fst b2))
-    (fun x y -> x == y)
-    (fun _ -> ());
-  VR2.elim_vrefine
-    (slab_vprop sc (snd b2) (fst b2))
-    (is_guard sc (snd b2) (fst b2))
-
-let p_quarantine_unpack (#opened:_)
-  (sc: sc)
-  (b1 b2: blob)
-  : SteelGhost unit opened
-  ((p_quarantine sc) b1)
-  (fun _ -> slab_vprop sc (snd b2) (fst b2))
-  (requires fun _ -> b1 == b2)
-  (ensures fun h0 _ h1 ->
-    let blob1
-      : t_of (slab_vprop sc (snd b2) (fst b2))
-      = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    b1 == b2 /\
-    is_quarantine sc (snd b1) (fst b1) blob1 /\
-    h0 ((p_quarantine sc) b1)
-    ==
-    h1 (slab_vprop sc (snd b2) (fst b2))
-  )
-  =
-  change_slprop_rel
-    ((p_quarantine sc) b1)
-    (slab_vprop sc (snd b2) (fst b2)
-    `VR2.vrefine`
-    is_quarantine sc (snd b2) (fst b2))
-    (fun x y -> x == y)
-    (fun _ -> ());
-  VR2.elim_vrefine
-    (slab_vprop sc (snd b2) (fst b2))
-    (is_quarantine sc (snd b2) (fst b2))
 
 let p_empty_pack (#opened:_)
   (sc: sc)
@@ -250,69 +222,11 @@ let p_full_pack (#opened:_)
     (fun x y -> x == y)
     (fun _ -> ())
 
-let p_guard_pack (#opened:_)
-  (sc: sc)
-  (b1: blob)
-  (b2: blob)
-  : SteelGhost unit opened
-  (slab_vprop sc (snd b1) (fst b1))
-  (fun _ -> (p_guard sc) b2)
-  (requires fun h0 ->
-    let blob0
-      : t_of (slab_vprop sc (snd b1) (fst b1))
-      = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    is_guard sc (snd b1) (fst b1) blob0 /\
-    b1 == b2
-  )
-  (ensures fun h0 _ h1 ->
-    b1 == b2 /\
-    h1 ((p_guard sc) b2)
-    ==
-    h0 (slab_vprop sc (snd b1) (fst b1))
-  )
-  =
-  VR2.intro_vrefine
-    (slab_vprop sc (snd b1) (fst b1))
-    (is_guard sc (snd b1) (fst b1));
-  change_slprop_rel
-    (slab_vprop sc (snd b1) (fst b1)
-    `VR2.vrefine`
-    is_guard sc (snd b1) (fst b1))
-    ((p_guard sc) b2)
-    (fun x y -> x == y)
-    (fun _ -> ())
+let p_guard_pack (#opened:_) size_class b =
+  intro_vrewrite (guard_slab (snd b) `star` A.varray (fst b)) (fun _ -> empty_t size_class)
 
-let p_quarantine_pack (#opened:_)
-  (sc: sc)
-  (b1: blob)
-  (b2: blob)
-  : SteelGhost unit opened
-  (slab_vprop sc (snd b1) (fst b1))
-  (fun _ -> (p_quarantine sc) b2)
-  (requires fun h0 ->
-    let blob0
-      : t_of (slab_vprop sc (snd b1) (fst b1))
-      = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    is_quarantine sc (snd b1) (fst b1) blob0 /\
-    b1 == b2
-  )
-  (ensures fun h0 _ h1 ->
-    b1 == b2 /\
-    h1 ((p_quarantine sc) b2)
-    ==
-    h0 (slab_vprop sc (snd b1) (fst b1))
-  )
-  =
-  VR2.intro_vrefine
-    (slab_vprop sc (snd b1) (fst b1))
-    (is_quarantine sc (snd b1) (fst b1));
-  change_slprop_rel
-    (slab_vprop sc (snd b1) (fst b1)
-    `VR2.vrefine`
-    is_quarantine sc (snd b1) (fst b1))
-    ((p_quarantine sc) b2)
-    (fun x y -> x == y)
-    (fun _ -> ())
+let p_quarantine_pack (#opened:_) size_class b =
+  intro_vrewrite (quarantine_slab (snd b) `star` A.varray (fst b)) (fun _ -> empty_t size_class)
 #pop-options
 
 inline_for_extraction noextract
@@ -426,11 +340,6 @@ let unpack_md_array (#opened:_)
   = change_equal_slprop
       (A.varray (md_array md_region md_count))
       (A.varray (A.split_l (A.split_r md_region md_count) 1sz))
-
-let t (size_class: sc) : Type0 =
-  dtuple2
-    (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
-    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
 
 let f_lemma
   (size_class: sc)
@@ -615,12 +524,7 @@ let pack_slab_starseq
       (slab_array slab_region idx)
       (md_bm_array md_bm_region idx)) in
     let md : Seq.lseq U64.t 4 = dfst md_blob in
-    (v == 4ul ==> is_quarantine size_class
-      (slab_array slab_region idx)
-      (md_bm_array md_bm_region idx) md_blob) /\
-    (v == 3ul ==> is_guard size_class
-      (slab_array slab_region idx)
-      (md_bm_array md_bm_region idx) md_blob) /\
+    v <> 4ul /\ v <> 3ul /\
     (v == 2ul ==> is_full size_class md) /\
     (v == 1ul ==> is_partial size_class md) /\
     (v == 0ul ==> is_empty size_class md) /\
@@ -629,27 +533,7 @@ let pack_slab_starseq
   (ensures fun h0 _ h1 -> True)
   =
   SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx);
-  if (U32.eq v 4ul) then (
-    p_quarantine_pack size_class
-      (md_bm_array md_bm_region idx,
-      slab_array slab_region idx)
-      (md_bm_array md_bm_region idx,
-      slab_array slab_region idx);
-    change_equal_slprop
-      (p_quarantine size_class (md_bm_array md_bm_region idx, slab_array slab_region idx))
-      (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v)
-        (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx)))
-  ) else if (U32.eq v 3ul) then (
-    p_guard_pack size_class
-      (md_bm_array md_bm_region idx,
-      slab_array slab_region idx)
-      (md_bm_array md_bm_region idx,
-      slab_array slab_region idx);
-    change_equal_slprop
-      (p_guard size_class (md_bm_array md_bm_region idx, slab_array slab_region idx))
-      (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v)
-        (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx)))
-  ) else if (U32.eq v 2ul) then (
+  if (U32.eq v 2ul) then (
     p_full_pack size_class
       (md_bm_array md_bm_region idx,
       slab_array slab_region idx)
@@ -691,6 +575,45 @@ let pack_slab_starseq
     (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx) v))
     (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
     (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx) v))
+    (SeqUtils.init_us_refined (US.v md_count_v))
+    (SeqUtils.init_us_refined (US.v md_count_v))
+    (US.v idx)
+#pop-options
+
+#push-options "--z3rlimit 40"
+let upd_and_pack_slab_starseq_quarantine size_class
+  slab_region
+  md_bm_region
+  md_region
+  md_count
+  md_count_v
+  md_region_lv
+  idx
+  =
+  let md_as_seq = elim_slab_vprop size_class
+    (md_bm_array md_bm_region idx) (slab_array slab_region idx) in
+  Helpers.intro_empty_slab_varray size_class md_as_seq (slab_array slab_region idx);
+  mmap_trap_quarantine
+          (slab_array slab_region idx)
+          (u32_to_sz page_size);
+
+  SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx);
+  p_quarantine_pack size_class (md_bm_array md_bm_region idx, slab_array slab_region idx);
+  change_equal_slprop
+    (p_quarantine size_class (md_bm_array md_bm_region idx, slab_array slab_region idx))
+    (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) 4ul)
+      (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx)));
+  lemma_slab_aux_starseq size_class
+    slab_region md_bm_region md_region
+    md_count_v md_region_lv (US.v idx) 4ul;
+  starseq_upd_pack
+    #_
+    #(pos:US.t{US.v pos < US.v md_count_v})
+    #(t size_class)
+    (f size_class slab_region md_bm_region md_count_v md_region_lv)
+    (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx) 4ul))
+    (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+    (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx) 4ul))
     (SeqUtils.init_us_refined (US.v md_count_v))
     (SeqUtils.init_us_refined (US.v md_count_v))
     (US.v idx)

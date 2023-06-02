@@ -1319,6 +1319,65 @@ let starseq_weakening_rel_some (#opened:_)
       s1 s2
     m)
 
+let starseq_weakening_rel_from_some_lemma (#a #b: Type0)
+  (f1: a -> vprop)
+  (f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b)))
+  (s1: Seq.seq a)
+  (s2: Seq.seq a)
+  (m: SM.mem)
+  : Lemma
+  (requires
+    Seq.length s1 == Seq.length s2 /\
+    (forall (k:nat{k < Seq.length s1}). (
+      f2_lemma (Seq.index s2 k);
+      f1 (Seq.index s1 k)
+      ==
+      some_as_vp #b (f2 (Seq.index s2 k))
+    )) /\
+    SM.interp (hp_of (starseq #a #(option b) f1 f1_lemma s1)) m)
+  (ensures (
+    SM.interp (hp_of (starseq #a #b f2 f2_lemma s2)) m
+  ))
+  =
+  let p1 = starseq #a #(option b) f1 f1_lemma s1 in
+  let p2 = starseq #a #b f2 f2_lemma s2 in
+  starseq_weakening_lemma_aux_generic #a #a #(option b) #b f1 f2 f1_lemma f2_lemma s1 s2;
+  reveal_equiv p1 p2
+
+let starseq_weakening_rel_from_some (#opened:_)
+  (#a #b: Type0)
+  (f1: a -> vprop)
+  (f2: a -> vprop)
+  (f1_lemma: (x:a -> Lemma (t_of (f1 x) == option b)))
+  (f2_lemma: (x:a -> Lemma (t_of (f2 x) == b)))
+  (s1: Seq.seq a)
+  (s2: Seq.seq a)
+  : SteelGhost unit opened
+  (starseq #a #(option b) f1 f1_lemma s1)
+  (fun _ -> starseq #a #b f2 f2_lemma s2)
+  (requires fun _ ->
+    Seq.length s1 == Seq.length s2 /\
+    (forall (k:nat{k < Seq.length s1}). (
+      f2_lemma (Seq.index s2 k);
+      f1 (Seq.index s1 k)
+      ==
+      some_as_vp #b (f2 (Seq.index s2 k))
+    ))
+  )
+  (ensures fun _ _ _ -> True)
+  = change_slprop_rel
+    (starseq #a #(option b) f1 f1_lemma s1)
+    (starseq #a #b f2 f2_lemma s2)
+    (fun x y -> True)
+    (fun m ->
+      starseq_weakening_rel_from_some_lemma #a #b
+      f1 f2
+      f1_lemma f2_lemma
+      s1 s2
+    m)
+
 let starseq_weakening_lemma (#a1 #a2 #b: Type0)
   (f1: a1 -> vprop)
   (f2: a2 -> vprop)

@@ -17,42 +17,15 @@ module G = FStar.Ghost
 open Config
 open MemoryTrap
 
-val is_guard
-  (size_class: sc)
+/// Depending on whether the config flag
+/// `enable_guard_pages` is enabled, this either
+/// corresponds to `trap_array` or to `varray`
+val guard_slab
   (arr: array U8.t{A.length arr = U32.v page_size})
-  (md: slab_metadata)
-  (x: normal (t_of (slab_vprop size_class arr md)))
-  : prop
+  : vprop
 
-let trap_implies_guard
-  (size_class: sc)
+inline_for_extraction noextract
+val mmap_trap_guard
   (arr: array U8.t{A.length arr = U32.v page_size})
-  (md: slab_metadata)
-  (x: normal (t_of (slab_vprop size_class arr md)))
-  : Lemma
-  (requires is_trap size_class arr md x)
-  (ensures is_guard size_class arr md x)
-  = admit ()
-
-let mmap_trap_guard
-  (size_class: G.erased sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (md: G.erased (array U64.t){A.length md = 4})
   (len: US.t{US.v len = U32.v page_size})
-  : Steel unit
-  (slab_vprop size_class arr md)
-  (fun _ -> slab_vprop size_class arr md)
-  (requires fun _ -> True)
-  (ensures fun _ _ h1 ->
-    let v = h1 (slab_vprop size_class arr md) in
-    is_guard size_class arr md v
-  )
-  =
-  if enable_guard_pages then (
-    mmap_trap size_class arr md len;
-    let v = gget (slab_vprop size_class arr md) in
-    trap_implies_guard size_class arr md v
-  ) else (
-    let v = gget (slab_vprop size_class arr md) in
-    assume (is_guard size_class arr md v)
-  )
+  : SteelT unit (A.varray arr) (fun _ -> guard_slab arr)

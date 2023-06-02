@@ -1,4 +1,4 @@
-module MemoryTrap
+ module MemoryTrap
 
 open Utils2
 open SlotsAlloc
@@ -16,24 +16,21 @@ module G = FStar.Ghost
 
 open Config
 
-val is_trap
-  (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (md: slab_metadata)
-  (x: normal (t_of (slab_vprop size_class arr md)))
-  : prop
+/// A model of "trap" memory, representing that the array
+/// pointed to by [arr] is mapped by the OS, but that
+/// any access to it will yield an OS fault (SIGSEGV).
+/// To avoid any misuse of this predicate and model,
+/// this predicate is abstract, does not expose any
+/// primitive to use it, and can only be introduced
+/// through the mmap_trap function below
+val trap_array (arr: array U8.t) : vprop
 
-//assumed implementation is written in C
+/// Introduction function for the abstract `trap_array`
+/// predicate above. Under the hood, this function will
+/// be implemented in C as a mmap(PROT_NONE)
 val mmap_trap
-  (size_class: G.erased sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (md: G.erased (array U64.t){A.length md = 4})
-  (len: US.t{US.v len = U32.v page_size})
-  : Steel unit
-  (slab_vprop size_class arr md)
-  (fun _ -> slab_vprop size_class arr md)
-  (requires fun _ -> True)
-  (ensures fun _ _ h1 ->
-    let v = h1 (slab_vprop size_class arr md) in
-    is_trap size_class arr md v
-  )
+  (arr: array U8.t)
+  (len: US.t{US.v len == A.length arr /\ US.v len > 0})
+  : SteelT unit
+  (A.varray arr)
+  (fun _ -> trap_array arr)
