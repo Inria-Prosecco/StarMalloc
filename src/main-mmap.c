@@ -51,9 +51,13 @@ uint32_t* mmap_sizes (size_t len) {
   return (uint32_t*) mmap_init(len * sizeof(uint32_t));
 }
 
-//TODO: check for mprotect return value
+//TODO: check for mprotect return value (including ENOMEM)
 void mmap_trap (uint8_t* ptr, size_t len) {
-  mprotect((void*) ptr, len, PROT_NONE);
+  bool b;
+  b = madvise ((void*) ptr, len, MADV_DONTNEED);
+  //b = mprotect((void*) ptr, len, PROT_NONE);
+  //b = munmap((void*) ptr, len);
+  assert (! b);
   return;
 }
 
