@@ -56,7 +56,6 @@ void mmap_trap (uint8_t* ptr, size_t len) {
   bool b;
   b = madvise ((void*) ptr, len, MADV_DONTNEED);
   //b = mprotect((void*) ptr, len, PROT_NONE);
-  //b = munmap((void*) ptr, len);
   assert (! b);
   return;
 }
