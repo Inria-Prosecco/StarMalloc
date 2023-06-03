@@ -11,7 +11,7 @@ let _ : squash (UP.fits (FStar.Int.max_int 64))
   = A.intro_fits_ptrdiff64 ()
 
 inline_for_extraction noextract
-let metadata_max' = 131072UL
+let metadata_max' = 1048576UL
 
 let metadata_max =
   US.fits_u64_implies_fits (U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas);
