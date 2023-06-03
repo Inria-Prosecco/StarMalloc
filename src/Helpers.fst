@@ -534,8 +534,16 @@ let intro_empty_slab_varray (#opened:_)
     slab_vprop_aux2 size_class md_as_seq
   )
   (ensures fun h0 _ h1 -> True)
-  = change_equal_slprop (slab_vprop_aux _ _ _) (starseq _ _ _);
-    slots_to_slabs size_class arr md_as_seq
+  =
+  change_equal_slprop
+    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+    (starseq
+      #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
+      #(option (Seq.lseq U8.t (U32.v size_class)))
+      (slab_vprop_aux_f size_class md_as_seq arr)
+      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
+  slots_to_slabs size_class arr md_as_seq
 
 //array_to_pieces
 //starseq_weakening_ref
