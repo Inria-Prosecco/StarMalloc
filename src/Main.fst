@@ -1092,6 +1092,37 @@ let rec slab_malloc_i
       else
         slab_malloc_i tl (i `US.add` 1sz) arena_id bytes
 
+/// A variant of slab_malloc_i adding slab canaries
+[@@ reduce_attr]
+noextract
+let rec slab_malloc_canary_i
+  (l:list sc{List.length l <= length sc_all.size_classes})
+  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
+  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+  bytes
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  = match l with
+    | [] -> return_null ()
+    | hd::tl ->
+      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+      let size = index sc_all.ro_sizes idx in
+      if bytes `U32.lte` (size `U32.sub` 2ul) then
+        let ptr = slab_malloc_one idx bytes in
+        if is_null ptr then return ptr
+        else (
+          elim_live_null_or_varray ptr;
+          upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
+          upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
+          intro_live_null_or_varray ptr;
+          return ptr
+        )
+      else
+        slab_malloc_canary_i tl (i `US.add` 1sz) arena_id bytes
+
 module T = FStar.Tactics
 
 /// A variant of the normalization, with a zeta full to reduce under
@@ -1110,9 +1141,12 @@ val slab_malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (bytes:U32.t)
   (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
-let slab_malloc arena_id bytes = (slab_malloc_i sc_list 0sz) arena_id bytes
+let slab_malloc arena_id bytes =
+  if enable_slab_canaries then
+    (slab_malloc_canary_i sc_list 0sz) arena_id bytes
+  else
+    (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
-
 
 /// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
 /// The key difference lies in the condition of the if-branch: we only
@@ -1141,6 +1175,37 @@ let rec slab_aligned_alloc_i
       else
         slab_aligned_alloc_i tl (i `US.add` 1sz) arena_id alignment bytes
 
+/// Version of `slab_aligned_alloc_i` with slab canaries
+[@@ reduce_attr]
+noextract
+let rec slab_aligned_alloc_canary_i
+  (l:list sc{List.length l <= length sc_all.size_classes})
+  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
+  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+  (alignment:U32.t)
+  bytes
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  = match l with
+    | [] -> return_null ()
+    | hd::tl ->
+      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+      let size = index sc_all.ro_sizes idx in
+      if bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.rem` size = 0ul then
+        let ptr = slab_malloc_one idx bytes in
+        if is_null ptr then return ptr
+        else (
+          elim_live_null_or_varray ptr;
+          upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
+          upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
+          intro_live_null_or_varray ptr;
+          return ptr
+        )
+      else
+        slab_aligned_alloc_canary_i tl (i `US.add` 1sz) arena_id alignment bytes
 
 [@@ T.postprocess_with norm_full]
 val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:U32.t) (bytes:U32.t)
@@ -1151,7 +1216,11 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
   (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
-let slab_aligned_alloc arena_id alignment bytes = (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
+let slab_aligned_alloc arena_id alignment bytes =
+  if enable_slab_canaries then
+    (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
+  else
+    (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
 #pop-options
 
 inline_for_extraction noextract
@@ -1251,4 +1320,7 @@ let slab_getsize (ptr: array U8.t)
   let index = US.div diff_sz slab_size in
   let rem = US.rem diff_sz slab_size in
   let size = ROArray.index sc_all.ro_sizes index in
-  return (US.uint32_to_sizet size)
+  if enable_slab_canaries then
+    return (US.uint32_to_sizet (size `U32.sub` 2ul))
+  else
+    return (US.uint32_to_sizet size)
