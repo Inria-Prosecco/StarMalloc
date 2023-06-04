@@ -1,5 +1,6 @@
 module Config
 
+module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module US = FStar.SizeT
@@ -58,3 +59,10 @@ val enable_quarantine_trap: bool
 // TODO: controls whether zeroing is done at allocation time
 inline_for_extraction
 val enable_zeroing: bool
+
+/// Global setting to enable slab_canaries
+val enable_slab_canaries: bool
+
+/// Magic values for canaries
+val slab_canaries_magic1: U8.t
+val slab_canaries_magic2: U8.t

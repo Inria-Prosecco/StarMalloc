@@ -34,3 +34,9 @@ let enable_quarantine_trap = true
 
 // zeroing
 let enable_zeroing = true
+
+// slab canaries
+let enable_slab_canaries = true
+
+let slab_canaries_magic1 = 42uy
+let slab_canaries_magic2 = 23uy
