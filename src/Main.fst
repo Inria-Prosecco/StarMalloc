@@ -1287,7 +1287,20 @@ let slab_free ptr =
   let rem = US.rem diff_sz slab_size in
   (**) let g_sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
   (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
-  slab_free' index ptr rem
+
+  if enable_slab_canaries then (
+    let size = ROArray.index sc_all.ro_sizes index in
+    // The client needs to provide the full array back when deallocating.
+    // If so, it corresponds to a slot in the size class
+    assume (length ptr == U32.v size);
+    let magic1 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) in
+    let magic2 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) in
+    if magic1 = slab_canaries_magic1 && magic2 = slab_canaries_magic2 then
+      slab_free' index ptr rem
+    else
+      // Canary was overwritten
+      return false
+  ) else slab_free' index ptr rem
 
 let slab_getsize (ptr: array U8.t)
   : Steel US.t
