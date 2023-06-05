@@ -1066,6 +1066,7 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
   return ptr
 #pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// A wrapper around slab_malloc' that performs dispatch in the size classes
 /// for arena [arena_id] in a generic way.
 /// The list argument is not actually used, it just serves
@@ -1081,7 +1082,14 @@ let rec slab_malloc_i
   emp
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
-  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      Seq.length s >= 2
+    )
+  )
   = match l with
     | [] -> return_null ()
     | hd::tl ->
@@ -1091,7 +1099,9 @@ let rec slab_malloc_i
         slab_malloc_one idx bytes
       else
         slab_malloc_i tl (i `US.add` 1sz) arena_id bytes
+#pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// A variant of slab_malloc_i adding slab canaries
 [@@ reduce_attr]
 noextract
@@ -1104,7 +1114,16 @@ let rec slab_malloc_canary_i
   emp
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
-  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      Seq.length s >= 2 /\
+      Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+      Seq.index s (A.length r - 1) == slab_canaries_magic2
+    )
+  )
   = match l with
     | [] -> return_null ()
     | hd::tl ->
@@ -1122,6 +1141,7 @@ let rec slab_malloc_canary_i
         )
       else
         slab_malloc_canary_i tl (i `US.add` 1sz) arena_id bytes
+#pop-options
 
 module T = FStar.Tactics
 
@@ -1138,9 +1158,20 @@ val slab_malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (bytes:U32.t)
   emp
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
-  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      Seq.length s >= 2 /\
+      (enable_slab_canaries ==>
+        Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+        Seq.index s (A.length r - 1) == slab_canaries_magic2
+      )
+    )
+  )
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_malloc arena_id bytes =
   if enable_slab_canaries then
     (slab_malloc_canary_i sc_list 0sz) arena_id bytes
@@ -1148,6 +1179,7 @@ let slab_malloc arena_id bytes =
     (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
 /// The key difference lies in the condition of the if-branch: we only
 /// attempt to allocate in this size class if it satisfies the alignment
@@ -1164,7 +1196,14 @@ let rec slab_aligned_alloc_i
   emp
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
-  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      Seq.length s >= 2
+    )
+  )
   = match l with
     | [] -> return_null ()
     | hd::tl ->
@@ -1174,7 +1213,9 @@ let rec slab_aligned_alloc_i
         slab_malloc_one idx bytes
       else
         slab_aligned_alloc_i tl (i `US.add` 1sz) arena_id alignment bytes
+#pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// Version of `slab_aligned_alloc_i` with slab canaries
 [@@ reduce_attr]
 noextract
@@ -1188,7 +1229,16 @@ let rec slab_aligned_alloc_canary_i
   emp
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
-  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      Seq.length s >= 2 /\
+      Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+      Seq.index s (A.length r - 1) == slab_canaries_magic2
+    )
+  )
   = match l with
     | [] -> return_null ()
     | hd::tl ->
@@ -1206,6 +1256,7 @@ let rec slab_aligned_alloc_canary_i
         )
       else
         slab_aligned_alloc_canary_i tl (i `US.add` 1sz) arena_id alignment bytes
+#pop-options
 
 [@@ T.postprocess_with norm_full]
 val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:U32.t) (bytes:U32.t)
@@ -1213,9 +1264,20 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
   emp
   (fun r -> null_or_varray r)
   (requires fun _ -> True)
-  (ensures fun _ r _ -> not (is_null r) ==> A.length r >= U32.v bytes)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      Seq.length s >= 2 /\
+      (enable_slab_canaries ==>
+        Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+        Seq.index s (A.length r - 1) == slab_canaries_magic2
+      )
+    )
+  )
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_aligned_alloc arena_id alignment bytes =
   if enable_slab_canaries then
     (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
