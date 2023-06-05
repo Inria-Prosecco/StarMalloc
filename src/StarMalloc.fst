@@ -168,7 +168,7 @@ val free (ptr: array U8.t)
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
-  (requires fun _ -> True)
+  (requires fun _ -> within_size_classes_pred ptr )
   (ensures fun _ _ _ -> True)
 
 let free ptr =
@@ -203,7 +203,7 @@ let getsize (ptr: array U8.t)
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
-  (requires fun _ -> True)
+  (requires fun _ -> within_size_classes_pred ptr)
   (ensures fun h0 _ h1 ->
     //TODO: add precond+postcond
     A.asel ptr h1 == A.asel ptr h0
@@ -264,8 +264,7 @@ let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
-  //TODO: add precond+postcond (expected_size)
-  (requires fun _ -> True)
+  (requires fun _ -> within_size_classes_pred ptr)
   (ensures fun h0 r h1 ->
     let s0 : t_of (null_or_varray ptr)
       = h0 (null_or_varray ptr) in
