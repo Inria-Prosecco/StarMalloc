@@ -402,7 +402,10 @@ let calloc
     (A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
-  (requires fun _ -> US.fits (US.v size1 * US.v size2))
+  (requires fun _ ->
+    let size = US.v size1 * US.v size2 in
+    US.fits size /\
+    (enable_slab_canaries_malloc ==> US.fits (size + 2)))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
     let s : t_of (null_or_varray r)
