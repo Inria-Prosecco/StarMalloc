@@ -15,10 +15,15 @@ module I64 = FStar.Int64
 noextract inline_for_extraction
 let array = Steel.ST.Array.array
 
+open Config
+
 type data = x: (array U8.t * US.t){
   (
     US.v (snd x) > 0 /\
-    US.v (snd x) == A.length (fst x) /\
+    (enable_slab_canaries_malloc ==>
+      A.length (fst x) == US.v (snd x) + 2) /\
+    (not enable_slab_canaries_malloc ==>
+      A.length (fst x) == US.v (snd x)) /\
     A.is_full_array (fst x)
   )
   \/

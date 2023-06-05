@@ -96,6 +96,8 @@ let metadata : mmap_md = init_mmap_md ()
 
 #restart-solver
 
+open Config
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 inline_for_extraction noextract
 let large_malloc_aux
@@ -115,7 +117,8 @@ let large_malloc_aux
       = h0 (ind_linked_wf_tree metadata_ptr) in
     let t : wdm data = dsnd blob0 in
     Spec.size_of_tree t < c /\
-    US.v size > 0
+    US.v size > 0 /\
+    (enable_slab_canaries_malloc ==> US.fits (US.v size + 2))
   )
   (ensures fun h0 r h1 ->
     let blob0
@@ -130,7 +133,8 @@ let large_malloc_aux
       = h1 (null_or_varray r) in
     Spec.is_avl (spec_convert cmp) t /\
     (not (A.is_null r) ==> (
-      A.length r == US.v size /\
+      (enable_slab_canaries_malloc ==> A.length r == US.v size + 2) /\
+      (not enable_slab_canaries_malloc ==> A.length r == US.v size) /\
       A.is_full_array r /\
       zf_u8 s /\
       not (Spec.mem (spec_convert cmp) t (r, size)) /\
@@ -146,7 +150,8 @@ let large_malloc_aux
     (linked_tree md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree md_v h0);
-  let ptr = mmap size in
+  let size' = if enable_slab_canaries_malloc then US.add size 2sz else size in
+  let ptr = mmap size' in
   if (A.is_null ptr) then (
     (**) intro_vrefine (linked_tree md_v) is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
@@ -225,11 +230,16 @@ let large_free_aux
     let t' : wdm data = dsnd blob1 in
     b ==> (
       US.fits (A.length ptr) /\
+      A.length ptr >= 2 /\
       A.is_full_array ptr /\
-      Spec.mem (spec_convert cmp) t
-        (ptr, US.uint_to_t (A.length ptr)) /\
-      not (Spec.mem (spec_convert cmp) t'
-        (ptr, US.uint_to_t (A.length ptr)))
+      (let size = if enable_slab_canaries_malloc
+        then US.uint_to_t (A.length ptr - 2)
+        else US.uint_to_t (A.length ptr) in
+        Spec.mem (spec_convert cmp) t
+          (ptr, size) /\
+        not (Spec.mem (spec_convert cmp) t'
+          (ptr, size))
+      )
     ) /\
     not b ==> (
       not (Spec.mem (spec_convert cmp) t
@@ -250,7 +260,18 @@ let large_free_aux
   let size = find md_v k_elem in
   if Some? size then (
     let size = Some?.v size in
-    munmap ptr size;
+    A.length_fits ptr;
+    assert (US.fits (A.length ptr));
+    assert (
+      (enable_slab_canaries_malloc ==>
+        A.length ptr == US.v size + 2) /\
+      (not enable_slab_canaries_malloc ==>
+        A.length ptr == US.v size)
+    );
+    let size' = if enable_slab_canaries_malloc
+      then US.add size 2sz
+      else size in
+    munmap ptr size';
     let h0 = get () in
     let md_v' = delete md_v (ptr, size) in
     Spec.lemma_delete (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
@@ -278,12 +299,15 @@ let large_malloc (size: US.t)
   : Steel (array U8.t)
   emp
   (fun ptr -> null_or_varray ptr)
-  (requires fun _ -> US.v size > 0)
+  (requires fun _ ->
+    US.v size > 0 /\
+    (enable_slab_canaries_malloc ==> US.fits (US.v size + 2)))
   (ensures fun _ ptr h1 ->
     let s : (t_of (null_or_varray ptr))
       = h1 (null_or_varray ptr) in
     not (A.is_null ptr) ==> (
-      A.length ptr == US.v size /\
+      (enable_slab_canaries_malloc ==> A.length ptr == US.v size + 2) /\
+      (not enable_slab_canaries_malloc ==> A.length ptr == US.v size) /\
       A.is_full_array ptr /\
       zf_u8 s
     )
@@ -326,7 +350,10 @@ let large_getsize_aux (metadata: ref t) (ptr: array U8.t)
     h1 (ind_linked_wf_tree metadata)
     ==
     h0 (ind_linked_wf_tree metadata) /\
-    (US.v r > 0 ==> A.length ptr == US.v r)
+    (US.v r > 0 ==>
+      (enable_slab_canaries_malloc ==> A.length ptr == US.v r + 2) /\
+      (not enable_slab_canaries_malloc ==> A.length ptr == US.v r)
+    )
   )
   =
   (**) let t = elim_vdep (vptr metadata) linked_wf_tree in
@@ -355,7 +382,10 @@ let large_getsize (ptr: array U8.t)
   (requires fun _ -> True)
   (ensures fun h0 r h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
-    (US.v r > 0 ==> A.length ptr == US.v r)
+    (US.v r > 0 ==>
+      (enable_slab_canaries_malloc ==> A.length ptr == US.v r + 2) /\
+      (not enable_slab_canaries_malloc ==> A.length ptr == US.v r)
+    )
   )
   =
   L.acquire metadata.lock;

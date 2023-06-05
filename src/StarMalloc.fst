@@ -72,7 +72,8 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
-  (requires fun _ -> True)
+  (requires fun _ ->
+    (enable_slab_canaries_malloc ==> US.fits (US.v size + 2)))
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
@@ -87,6 +88,8 @@ assume val malloc_zeroing_die (ptr: array U8.t)
   : SteelT unit
   (A.varray ptr)
   (fun _ -> emp)
+
+module G = FStar.Ghost
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 let malloc arena_id size =
@@ -107,7 +110,13 @@ let malloc arena_id size =
       )
     )
   ) else (
-    large_malloc size
+    let r = large_malloc size in
+    let s : G.erased (t_of (null_or_varray r))
+      = gget (null_or_varray r) in
+    if not (A.is_null r)
+    then zf_u8_split s (A.length r - 2)
+    else ();
+    return r
   )
 #pop-options
 
@@ -116,7 +125,8 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
-  (requires fun _ -> True)
+  (requires fun _ ->
+    (enable_slab_canaries_malloc ==> US.fits (US.v size + 2)))
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
@@ -150,7 +160,14 @@ let aligned_alloc arena_id alignment size =
     // mmap returns page-aligned memory. We do not support alignment larger
     // than a page size.
     if alignment `US.rem` 16sz = 0sz && alignment `US.lte` (US.uint32_to_sizet page_size) then
-      large_malloc size
+
+      let r = large_malloc size in
+      let s : G.erased (t_of (null_or_varray r))
+        = gget (null_or_varray r) in
+      if not (A.is_null r)
+      then zf_u8_split s (A.length r - 2)
+      else ();
+      return r
     else
       intro_null_null_or_varray #U8.t
   ))
@@ -192,7 +209,7 @@ let free ptr =
   )
 
 let getsize (ptr: array U8.t)
-  : Steel US.t
+  : Steel (US.t)
   (
     A.varray ptr `star`
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
@@ -204,9 +221,16 @@ let getsize (ptr: array U8.t)
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
   (requires fun _ -> within_size_classes_pred ptr)
-  (ensures fun h0 _ h1 ->
-    //TODO: add precond+postcond
-    A.asel ptr h1 == A.asel ptr h0
+  (ensures fun h0 r h1 ->
+    A.asel ptr h1 == A.asel ptr h0 /\
+    (US.v r > 0 ==>
+      (enable_slab_canaries_malloc ==>
+        A.length ptr == US.v r + 2
+      ) /\
+      (not enable_slab_canaries_malloc ==>
+        A.length ptr == US.v r
+      )
+    )
   )
   =
   let b = SAA.within_bounds_intro
@@ -264,7 +288,8 @@ let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
-  (requires fun _ -> within_size_classes_pred ptr)
+  (requires fun _ -> within_size_classes_pred ptr /\
+    (enable_slab_canaries_malloc ==> US.fits (US.v new_size + 2)))
   (ensures fun h0 r h1 ->
     let s0 : t_of (null_or_varray ptr)
       = h0 (null_or_varray ptr) in
@@ -274,9 +299,15 @@ let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
     not (A.is_null (fst r)) ==> (
       A.length (fst r) >= US.v new_size /\
       (not (A.is_null ptr) ==>
-        Seq.slice s1 0 (min (A.length ptr) (US.v new_size))
-        ==
-        Seq.slice s0 0 (min (A.length ptr) (US.v new_size))
+        (enable_slab_canaries_malloc ==> A.length ptr >= 2) /\
+        (let size = if enable_slab_canaries_malloc
+          then A.length ptr - 2
+          else A.length ptr
+        in
+          Seq.slice s1 0 (min size (US.v new_size))
+          ==
+          Seq.slice s0 0 (min size (US.v new_size))
+        )
       )
     )
     // On failure, returns a null pointer.
@@ -316,35 +347,43 @@ let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
       // value of the newly allocated portion is indeterminate.
       elim_live_null_or_varray new_ptr;
       let old_size = getsize ptr in
-      // TODO: to be removed, refine large_getsize + add slab_getsize precondition
-      assume (US.v old_size == A.length ptr);
-      assert (A.length new_ptr >= US.v new_size);
-      let min_of_sizes =
-        if US.lte new_size old_size
-        then new_size
-        else old_size in
-      let _ = memcpy_u8 new_ptr ptr min_of_sizes in
-      intro_live_null_or_varray new_ptr;
-      intro_live_null_or_varray ptr;
-      let b = free ptr in
-      if b then (
-        change_equal_slprop
-          (if b then emp else A.varray ptr) emp;
-        change_equal_slprop
-          emp
-          (realloc_vp 0 ptr (A.null #U8.t));
-        return (new_ptr, G.hide (0, A.null #U8.t))
-      ) else (
-        //TODO: add a die(), internal error
-        change_equal_slprop
-          (if b then emp else A.varray ptr)
-          (A.varray ptr);
+      if (old_size = 0sz) then (
+        intro_live_null_or_varray new_ptr;
         intro_live_null_or_varray ptr;
         change_equal_slprop
           (null_or_varray ptr `star` null_or_varray new_ptr)
           (realloc_vp 2 ptr new_ptr);
         let r = intro_null_null_or_varray #U8.t in
         return (r, G.hide (2, new_ptr))
+      ) else (
+        assert (A.length new_ptr >= US.v new_size);
+        let min_of_sizes =
+          if US.lte new_size old_size
+          then new_size
+          else old_size in
+        let _ = memcpy_u8 new_ptr ptr min_of_sizes in
+        intro_live_null_or_varray new_ptr;
+        intro_live_null_or_varray ptr;
+        let b = free ptr in
+        if b then (
+          change_equal_slprop
+            (if b then emp else A.varray ptr) emp;
+          change_equal_slprop
+            emp
+            (realloc_vp 0 ptr (A.null #U8.t));
+          return (new_ptr, G.hide (0, A.null #U8.t))
+        ) else (
+          //TODO: add a die(), internal error
+          change_equal_slprop
+            (if b then emp else A.varray ptr)
+            (A.varray ptr);
+          intro_live_null_or_varray ptr;
+          change_equal_slprop
+            (null_or_varray ptr `star` null_or_varray new_ptr)
+            (realloc_vp 2 ptr new_ptr);
+          let r = intro_null_null_or_varray #U8.t in
+          return (r, G.hide (2, new_ptr))
+        )
       )
     )
   )

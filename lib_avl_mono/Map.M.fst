@@ -98,6 +98,8 @@ module A = Steel.Array
 
 #restart-solver
 
+open Config
+
 let rec find
   (ptr: t)
   (v: data)
@@ -116,14 +118,15 @@ let rec find
     (Some? r == Spec.mem (spec_convert cmp) (v_linked_tree ptr h0) v) /\
     (Some? r == Spec.memopt (spec_convert cmp) (v_linked_tree ptr h0) v) /\
     (Some? r ==> (
-      US.v (Some?.v r) == A.length (fst v)) /\
+      (enable_slab_canaries_malloc ==>
+        A.length (fst v) == US.v (Some?.v r) + 2) /\
+      (not enable_slab_canaries_malloc ==>
+        A.length (fst v) == US.v (Some?.v r)) /\
       A.is_full_array (fst v) /\
       Spec.mem (spec_convert cmp) (v_linked_tree ptr h0)
         (fst v, Some?.v r)
-    )
+    ))
   )
-  //TODO: add a more precise spec?
-    //r == Spec.Map.find_avl #a #b (spec_convert cmp) (v_linked_tree ptr h0) v)
   =
   let h = get () in
   Spec.equivmem (spec_convert cmp) (v_linked_tree ptr h) v;
@@ -140,7 +143,6 @@ let rec find
         (get_left node) (get_right node)
         (get_size node) (get_height node);
       let r = snd (get_data node) in
-      //assert (Spec.mem (spec_convert cmp) (v_linked_tree ptr h0) (get_data node));
       return (Some r)
     ) else (
       if I64.lt delta szero then (
@@ -148,17 +150,6 @@ let rec find
         pack_tree ptr
           (get_left node) (get_right node)
           (get_size node) (get_height node);
-        //Classical.move_requires
-        //  (Spec.unicity_left (spec_convert cmp) (v_linked_tree ptr h0))
-        //  v;
-        //assume (Spec.cleft (v_linked_tree ptr h0) == v_linked_tree (get_left node) h1);
-        //assume (I64.v delta == (spec_convert cmp) v (get_data node));
-        ////TODO: None? postcondition, fixme, is reasonable
-        //assume (
-        //Spec.mem (spec_convert cmp) (v_linked_tree ptr h0) v
-        //==
-        //Spec.mem (spec_convert cmp) (v_linked_tree (get_left node) h1) v
-        //);
         return r
       ) else (
         let r = find (get_right node) v in
