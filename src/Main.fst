@@ -1460,10 +1460,12 @@ val slab_free (ptr:array U8.t)
   (fun b ->
     (if b then emp else A.varray ptr) `star`
     A.varray (A.split_l sc_all.slab_region 0sz))
-  (requires fun _ -> SAA.within_bounds
-    (A.split_l (G.reveal sc_all.slab_region) 0sz)
-    ptr
-    (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
+  (requires fun _ ->
+    within_size_classes_pred ptr /\
+    SAA.within_bounds
+      (A.split_l (G.reveal sc_all.slab_region) 0sz)
+      ptr
+      (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
   )
   (ensures fun h0 r _ ->
     let s = A.asel ptr h0 in
@@ -1501,11 +1503,10 @@ let slab_free ptr =
     return false
   ) else (
     if enable_slab_canaries_free then (
-      // The client needs to provide the full array back when deallocating.
-      // If so, it corresponds to a slot in the size class
-      // TODO: add proper precondition @Aymeric,
-      // with the alignment property!
-      assume (length ptr == U32.v size);
+      (**) let sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
+      lemma_nlarith_aux diff_sz size;
+      (**) elim_within_size_class_i ptr (US.v index) size;
+      (**) assert (A.length ptr == U32.v size);
       enable_slab_canaries_lemma ();
       let magic1 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) in
       let magic2 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) in
