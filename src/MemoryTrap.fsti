@@ -28,6 +28,16 @@ val trap_array (arr: array U8.t) : vprop
 /// Introduction function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a mmap(PROT_NONE)
+val mmap_strict_trap
+  (arr: array U8.t)
+  (len: US.t{US.v len == A.length arr /\ US.v len > 0})
+  : SteelT unit
+  (A.varray arr)
+  (fun _ -> trap_array arr)
+///
+/// Introduction function for the abstract `trap_array`
+/// predicate above. Under the hood, this function will
+/// be implemented in C as a madvise(MADV_DONTNEED)
 val mmap_trap
   (arr: array U8.t)
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})

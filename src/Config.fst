@@ -31,12 +31,16 @@ let guard_pages_interval = 8sz
 // quarantine
 let enable_quarantine = true
 let enable_quarantine_trap = true
+let enable_quarantine_strict_trap = true
 
 // zeroing
-let enable_zeroing = true
+let enable_zeroing_malloc = true
+let enable_zeroing_free = true
+let enable_zeroing_lemma () = ()
 
 // slab canaries
-let enable_slab_canaries = true
-
+let enable_slab_canaries_malloc = true
+let enable_slab_canaries_free = true
+let enable_slab_canaries_lemma () = ()
 let slab_canaries_magic1 = 42uy
 let slab_canaries_magic2 = 23uy

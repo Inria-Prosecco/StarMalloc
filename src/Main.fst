@@ -1164,7 +1164,7 @@ val slab_malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (bytes:U32.t)
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
       Seq.length s >= 2 /\
-      (enable_slab_canaries ==>
+      (enable_slab_canaries_malloc ==>
         Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
         Seq.index s (A.length r - 1) == slab_canaries_magic2
       )
@@ -1173,7 +1173,7 @@ val slab_malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (bytes:U32.t)
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_malloc arena_id bytes =
-  if enable_slab_canaries then
+  if enable_slab_canaries_malloc then
     (slab_malloc_canary_i sc_list 0sz) arena_id bytes
   else
     (slab_malloc_i sc_list 0sz) arena_id bytes
@@ -1270,7 +1270,7 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
       Seq.length s >= 2 /\
-      (enable_slab_canaries ==>
+      (enable_slab_canaries_malloc ==>
         Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
         Seq.index s (A.length r - 1) == slab_canaries_magic2
       )
@@ -1279,7 +1279,7 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_aligned_alloc arena_id alignment bytes =
-  if enable_slab_canaries then
+  if enable_slab_canaries_malloc then
     (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
   else
     (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
@@ -1341,10 +1341,10 @@ let slab_getsize (ptr: array U8.t)
   (ensures fun h0 r h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
     (r <> 0sz ==>
-      (enable_slab_canaries ==>
+      (enable_slab_canaries_malloc ==>
         A.length ptr == US.v r + 2
       ) /\
-      (not enable_slab_canaries ==>
+      (not enable_slab_canaries_malloc ==>
         A.length ptr == US.v r
       )
     )
@@ -1372,7 +1372,7 @@ let slab_getsize (ptr: array U8.t)
     // TODO: remove assume
     // thanks to the ugly precondition
     assume (A.length ptr == U32.v size);
-    if enable_slab_canaries then
+    if enable_slab_canaries_malloc then
       return (US.uint32_to_sizet (size `U32.sub` 2ul))
     else
       return (US.uint32_to_sizet size)
@@ -1395,7 +1395,7 @@ val slab_free (ptr:array U8.t)
   )
   (ensures fun h0 r _ ->
     let s = A.asel ptr h0 in
-    enable_slab_canaries ==>
+    enable_slab_canaries_free ==>
       (r ==>
         A.length ptr >= 2 /\
         Seq.index s (A.length ptr - 2) == slab_canaries_magic1 /\
@@ -1428,12 +1428,13 @@ let slab_free ptr =
   if US.rem rem (US.uint32_to_sizet size) <> 0sz then (
     return false
   ) else (
-    if enable_slab_canaries then (
+    if enable_slab_canaries_free then (
       // The client needs to provide the full array back when deallocating.
       // If so, it corresponds to a slot in the size class
       // TODO: add proper precondition @Aymeric,
       // with the alignment property!
       assume (length ptr == U32.v size);
+      enable_slab_canaries_lemma ();
       let magic1 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) in
       let magic2 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) in
       if magic1 = slab_canaries_magic1 && magic2 = slab_canaries_magic2 then

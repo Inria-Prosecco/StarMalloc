@@ -54,15 +54,35 @@ val enable_quarantine: bool
 // controls whether quarantined slabs are unmapped
 inline_for_extraction
 val enable_quarantine_trap: bool
-
-// zeroing mechanism
-// TODO: controls whether zeroing is done at allocation time
+// controls whether quarantined slabs are protected
 inline_for_extraction
-val enable_zeroing: bool
+val enable_quarantine_strict_trap: bool
 
-/// Global setting to enable slab_canaries
-val enable_slab_canaries: bool
+// zeroing mechanism (slabs)
+// controls whether zeroing is checked at allocation
+inline_for_extraction
+val enable_zeroing_malloc: bool
+// controls whether allocations are zeroed at deallocation
+inline_for_extraction
+val enable_zeroing_free: bool
+// required
+val enable_zeroing_lemma (_:unit)
+  : Lemma
+  (enable_zeroing_malloc ==> enable_zeroing_free)
 
-/// Magic values for canaries
+// TODO: controls whether zeroing is done at allocation time
+
+// slab_canaries
+// controls whether canaries are set at allocation
+/// inline_for_extraction
+val enable_slab_canaries_malloc: bool
+// controls whether canaries are checked at deallocation
+inline_for_extraction
+val enable_slab_canaries_free: bool
+// required
+val enable_slab_canaries_lemma (_:unit)
+  : Lemma
+  (enable_slab_canaries_free ==> enable_slab_canaries_malloc)
+// magic values for canaries
 val slab_canaries_magic1: U8.t
 val slab_canaries_magic2: U8.t

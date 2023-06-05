@@ -24,6 +24,18 @@ open LargeAlloc
 
 #push-options "--fuel 0 --ifuel 0"
 
+assume val memcheck_u8 (ptr: array U8.t) (n: US.t)
+  : Steel bool
+  (A.varray ptr)
+  (fun _ -> A.varray ptr)
+  (requires fun _ ->
+    A.length ptr >= US.v n
+  )
+  (ensures fun h0 b h1 ->
+    A.length ptr >= US.v n /\
+    (b ==> zf_u8 (Seq.slice (A.asel ptr h1) 0 (US.v n)))
+  )
+
 assume val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
   : Steel (array U8.t)
   (A.varray dest)
@@ -66,23 +78,33 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= US.v size /\
-      (enable_zeroing ==> zf_u8 (Seq.slice s 0 (US.v size)))
+      (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
 #pop-options
+
+assume val malloc_zeroing_die (ptr: array U8.t)
+  : SteelT unit
+  (A.varray ptr)
+  (fun _ -> emp)
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 let malloc arena_id size =
   if US.lte size (US.uint32_to_sizet page_size)
   then (
     let ptr = slab_malloc arena_id (US.sizet_to_uint32 size) in
-    if (A.is_null ptr) then (
+    if (A.is_null ptr || not enable_zeroing_malloc) then (
       return ptr
     ) else (
       elim_live_null_or_varray ptr;
-      let _ = memset_u8 ptr 0z size in
-      intro_live_null_or_varray ptr;
-      return ptr
+      let b = memcheck_u8 ptr size in
+      if b then (
+        intro_live_null_or_varray ptr;
+        return ptr
+      ) else (
+        malloc_zeroing_die ptr;
+        intro_null_null_or_varray #U8.t
+      )
     )
   ) else (
     large_malloc size
@@ -100,7 +122,7 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= US.v size /\
-      (enable_zeroing ==> zf_u8 (Seq.slice s 0 (US.v size)))
+      (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
 #pop-options
@@ -111,13 +133,18 @@ let aligned_alloc arena_id alignment size =
   if US.lte size (US.uint32_to_sizet page_size) && US.lte alignment (US.uint32_to_sizet page_size)
   then (
     let ptr = slab_aligned_alloc arena_id (US.sizet_to_uint32 alignment) (US.sizet_to_uint32 size) in
-    if (A.is_null ptr) then (
+    if (A.is_null ptr || not enable_zeroing_malloc) then (
       return ptr
     ) else (
       elim_live_null_or_varray ptr;
-      let _ = memset_u8 ptr 0z size in
-      intro_live_null_or_varray ptr;
-      return ptr
+      let b = memcheck_u8 ptr size in
+      if b then (
+        intro_live_null_or_varray ptr;
+        return ptr
+      ) else (
+        malloc_zeroing_die ptr;
+        intro_null_null_or_varray #U8.t
+      )
     )
   ) else (
     // mmap returns page-aligned memory. We do not support alignment larger
