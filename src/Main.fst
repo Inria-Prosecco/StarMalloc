@@ -1315,6 +1315,72 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
 
 #restart-solver
 
+// within_bounds model is awkward, am I just tired?
+let slab_getsize (ptr: array U8.t)
+  : Steel US.t
+  (A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
+  (fun _ ->
+   A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
+  (requires fun _ ->
+    //let x = offset (ptr_of ptr) - offset (ptr_of sc_all.slab_region) in
+    //((x >= 0 /\ x < US.v slab_region_size) ==> (
+    //  (let y = x / US.v slab_size in
+    //  0 <= y /\ y < Seq.length sc_all.g_sizes /\
+    //  (let sc = Seq.index sc_all.g_sizes y in
+    //    (x % US.v slab_size) % (U32.v sc) == 0
+    //    ==>
+    //    A.length ptr == U32.v sc
+    //  ))
+    //))
+    ///\
+    SAA.within_bounds
+      (A.split_l (G.reveal sc_all.slab_region) 0sz)
+      ptr
+      (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
+  )
+  (ensures fun h0 r h1 ->
+    A.asel ptr h1 == A.asel ptr h0 /\
+    (r <> 0sz ==>
+      (enable_slab_canaries ==>
+        A.length ptr == US.v r + 2
+      ) /\
+      (not enable_slab_canaries ==>
+        A.length ptr == US.v r
+      )
+    )
+  )
+  =
+  SAA.within_bounds_elim
+    (A.split_l sc_all.slab_region 0sz)
+    (A.split_r sc_all.slab_region slab_region_size)
+    ptr;
+  UP.fits_lt
+    (A.offset (A.ptr_of ptr)
+    -
+    A.offset (A.ptr_of (A.split_l sc_all.slab_region 0sz)))
+    (US.v slab_region_size);
+  let diff = A.ptrdiff
+    ptr
+    (A.split_l sc_all.slab_region 0sz) in
+  let diff_sz = UP.ptrdifft_to_sizet diff in
+  assert (US.v slab_size > 0);
+  let index = US.div diff_sz slab_size in
+  let rem = US.rem diff_sz slab_size in
+  let size = ROArray.index sc_all.ro_sizes index in
+  // some refactor needed wrt SlotsFree
+  if US.rem rem (US.uint32_to_sizet size) = 0sz then (
+    // TODO: remove assume
+    // thanks to the ugly precondition
+    assume (A.length ptr == U32.v size);
+    if enable_slab_canaries then
+      return (US.uint32_to_sizet (size `U32.sub` 2ul))
+    else
+      return (US.uint32_to_sizet size)
+  ) else (
+    // invalid pointer
+    return 0sz
+  )
+
 val slab_free (ptr:array U8.t)
   : Steel bool
   (A.varray ptr `star`
@@ -1327,7 +1393,15 @@ val slab_free (ptr:array U8.t)
     ptr
     (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
   )
-  (ensures fun _ _ _ -> True)
+  (ensures fun h0 r _ ->
+    let s = A.asel ptr h0 in
+    enable_slab_canaries ==>
+      (r ==>
+        A.length ptr >= 2 /\
+        Seq.index s (A.length ptr - 2) == slab_canaries_magic1 /\
+        Seq.index s (A.length ptr - 1) == slab_canaries_magic2
+      )
+  )
 
 let slab_free ptr =
   SAA.within_bounds_elim
@@ -1349,53 +1423,25 @@ let slab_free ptr =
   let rem = US.rem diff_sz slab_size in
   (**) let g_sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
   (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
-
-  if enable_slab_canaries then (
-    let size = ROArray.index sc_all.ro_sizes index in
-    // The client needs to provide the full array back when deallocating.
-    // If so, it corresponds to a slot in the size class
-    assume (length ptr == U32.v size);
-    let magic1 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) in
-    let magic2 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) in
-    if magic1 = slab_canaries_magic1 && magic2 = slab_canaries_magic2 then
-      slab_free' index ptr rem
-    else
-      // Canary was overwritten
-      return false
-  ) else slab_free' index ptr rem
-
-let slab_getsize (ptr: array U8.t)
-  : Steel US.t
-  (A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
-  (fun _ ->
-   A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
-  (requires fun _ -> SAA.within_bounds
-    (A.split_l (G.reveal sc_all.slab_region) 0sz)
-    ptr
-    (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
-  )
-  (ensures fun h0 _ h1 ->
-    A.asel ptr h1 == A.asel ptr h0
-  )
-  =
-  SAA.within_bounds_elim
-    (A.split_l sc_all.slab_region 0sz)
-    (A.split_r sc_all.slab_region slab_region_size)
-    ptr;
-  UP.fits_lt
-    (A.offset (A.ptr_of ptr)
-    -
-    A.offset (A.ptr_of (A.split_l sc_all.slab_region 0sz)))
-    (US.v slab_region_size);
-  let diff = A.ptrdiff
-    ptr
-    (A.split_l sc_all.slab_region 0sz) in
-  let diff_sz = UP.ptrdifft_to_sizet diff in
-  assert (US.v slab_size > 0);
-  let index = US.div diff_sz slab_size in
-  let rem = US.rem diff_sz slab_size in
   let size = ROArray.index sc_all.ro_sizes index in
-  if enable_slab_canaries then
-    return (US.uint32_to_sizet (size `U32.sub` 2ul))
-  else
-    return (US.uint32_to_sizet size)
+  // some refactor needed wrt SlotsFree
+  if US.rem rem (US.uint32_to_sizet size) <> 0sz then (
+    return false
+  ) else (
+    if enable_slab_canaries then (
+      // The client needs to provide the full array back when deallocating.
+      // If so, it corresponds to a slot in the size class
+      // TODO: add proper precondition @Aymeric,
+      // with the alignment property!
+      assume (length ptr == U32.v size);
+      let magic1 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) in
+      let magic2 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) in
+      if magic1 = slab_canaries_magic1 && magic2 = slab_canaries_magic2 then
+        slab_free' index ptr rem
+      else
+        // Canary was overwritten
+        return false
+    ) else (
+      slab_free' index ptr rem
+    )
+  )
