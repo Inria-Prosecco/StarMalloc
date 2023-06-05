@@ -17,8 +17,8 @@ noeq type node (a: Type0) = {
   data: a;
   left: ref (node a);
   right: ref (node a);
-  size: ref U.t;
-  height: ref U.t;
+  size: U.t;
+  height: U.t;
 }
 #pop-options
 
@@ -48,8 +48,7 @@ let rec tree_sl' (#a: Type0) (ptr: t a) (tree: wdm (node a))
     pts_to_sl ptr full_perm data `Mem.star`
     tree_sl' (get_left data) left `Mem.star`
     tree_sl' (get_right data) right `Mem.star`
-    pts_to_sl (get_size data) full_perm (U.uint_to_t size) `Mem.star`
-    pts_to_sl (get_height data) full_perm (U.uint_to_t height)
+    Mem.pure (get_size data == U.uint_to_t size /\ get_height data == U.uint_to_t height)
 
 let tree_sl #a ptr = Mem.h_exists (tree_sl' ptr)
 
@@ -118,8 +117,8 @@ let tree_sl'_witinv (#a: Type0) (ptr: t a) : Lemma(is_witness_invariant (tree_sl
            let p1 = pts_to_sl ptr full_perm data in
            let p2 = tree_sl' (get_left data) left in
            let p3 = tree_sl' (get_right data) right in
-           let p4 = pts_to_sl (get_size data) full_perm (U.uint_to_t size) in
-           let p5 = pts_to_sl (get_height data) full_perm (U.uint_to_t height) in
+           let p4 = Mem.pure (get_size data == U.uint_to_t size) in
+           let p5 = Mem.pure (get_height data == U.uint_to_t height) in
            Mem.affine_star (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4) p5 m;
            Mem.affine_star (p1 `Mem.star` p2 `Mem.star` p3) p4 m;
            Mem.affine_star (p1 `Mem.star` p2) p3 m;
@@ -132,8 +131,8 @@ let tree_sl'_witinv (#a: Type0) (ptr: t a) : Lemma(is_witness_invariant (tree_sl
            let p1 = pts_to_sl ptr full_perm data1 in
            let p2 = tree_sl' (get_left data1) left1 in
            let p3 = tree_sl' (get_right data1) right1 in
-           let p4 = pts_to_sl (get_size data1) full_perm (U.uint_to_t size1) in
-           let p5 = pts_to_sl (get_height data1) full_perm (U.uint_to_t height1) in
+           let p4 = Mem.pure (get_size data1 == U.uint_to_t size1) in
+           let p5 = Mem.pure (get_height data1 == U.uint_to_t height1) in
            Mem.affine_star (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4) p5 m;
            Mem.affine_star (p1 `Mem.star` p2 `Mem.star` p3) p4 m;
            Mem.affine_star (p1 `Mem.star` p2) p3 m;
@@ -279,8 +278,7 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
     interp (pts_to_sl pt full_perm x `Mem.star`
       tree_sl' (get_left x) l `Mem.star`
       tree_sl' (get_right x) r `Mem.star`
-      pts_to_sl (get_size x) full_perm (U.uint_to_t s) `Mem.star`
-      pts_to_sl (get_height x) full_perm (U.uint_to_t h)
+      Mem.pure (get_size x == U.uint_to_t s /\ get_height x == U.uint_to_t h)
       ) m
     /\ s = Spec.size_of_tree l + Spec.size_of_tree r + 1
     /\ h = M.max (Spec.height_of_tree l) (Spec.height_of_tree r) + 1
@@ -321,23 +319,21 @@ let pack_tree_lemma_aux (#a:Type0) (pt:t a)
 *)
 
 // Maintenant, tenter en ajoutant s (et sr) en paramètre(s)
-let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr hr: ref U.t)
+let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr hr: U.t)
   (x: node a) (l r:wdm a) (s h:nat) (m:mem) : Lemma
   (requires
     s <= c /\
     h <= c /\
     interp (ptr pt `Mem.star`
       tree_sl left `Mem.star`
-      tree_sl right `Mem.star`
-      ptr sr `Mem.star`
-      ptr hr) m /\
+      tree_sl right) m /\
     get_left x == left /\
     get_right x == right /\
     get_size x == sr /\
     get_height x == hr /\
     sel_of (vptr pt) m == x /\
-    U.v (sel_of (vptr sr) m) == s /\
-    U.v (sel_of (vptr hr) m) == h /\
+    U.v sr == s /\
+    U.v hr == h /\
     sel_of (linked_tree left) m == l /\
     sel_of (linked_tree right) m == r /\
     s == Spec.size_of_tree l + Spec.size_of_tree r + 1 /\
@@ -361,11 +357,7 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr hr: ref U.t)
     let p1 = ptr pt in
     let p2 = tree_sl left in
     let p3 = tree_sl right in
-    let p4 = ptr sr in
-    let p5 = ptr hr in
-    let m1234, m5 = id_elim_star (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4) p5 m in
-    let m123, m4 = id_elim_star (p1 `Mem.star` p2 `Mem.star` p3) p4 m1234 in
-    let m12, m3 = id_elim_star (p1 `Mem.star` p2) p3 m123 in
+    let m12, m3 = id_elim_star (p1 `Mem.star` p2) p3 m in
     let m1, m2 = id_elim_star p1 p2 m12 in
     //assert (ptr_sel sr m == s);
     // #1
@@ -384,38 +376,28 @@ let pack_tree_lemma (#a:Type0) (pt left right:t a) (sr hr: ref U.t)
     tree_sl'_witinv right;
     assert (r2 == r');
     assert (interp (tree_sl' right r') m3);
-    // #4
-    ptr_sel_interp sr m4;
-    join_commutative m123 m4;
-    assert (U.v (ptr_sel sr m) == s);
-    // #5
-    ptr_sel_interp hr m5;
-    join_commutative m1234 m5;
-    assert (U.v (ptr_sel hr m) == h);
 
     intro_star (pts_to_sl pt full_perm x) (tree_sl' left l') m1 m2;
     intro_star
       (pts_to_sl pt full_perm x `Mem.star` tree_sl' left l')
       (tree_sl' right r')
       m12 m3;
-    intro_star
-      (pts_to_sl pt full_perm x `Mem.star`
+    Mem.emp_unit (pts_to_sl pt full_perm x `Mem.star`
       tree_sl' left l' `Mem.star`
-      tree_sl' right r')
-      (pts_to_sl sr full_perm (U.uint_to_t s))
-      m123 m4;
-    intro_star
-      (pts_to_sl pt full_perm x `Mem.star`
+      tree_sl' right r'
+      );
+    Mem.pure_star_interp (pts_to_sl pt full_perm x `Mem.star`
       tree_sl' left l' `Mem.star`
-      tree_sl' right r' `Mem.star`
-      pts_to_sl sr full_perm (U.uint_to_t s))
-      (pts_to_sl hr full_perm (U.uint_to_t h))
-      m1234 m5;
-    ();
+      tree_sl' right r'
+      )
+      (get_size x == U.uint_to_t s /\ get_height x == U.uint_to_t h)
+      m;
+
 
     let s = Spec.size_of_tree l' + Spec.size_of_tree r' + 1 in
     let h = M.max (Spec.height_of_tree l') (Spec.height_of_tree r') + 1 in
     let t = Spec.Node x l' r' s h in
+
     pack_tree_lemma_aux pt x l' r' s h m;
     intro_h_exists t (tree_sl' pt) m;
     tree_sel_interp pt t m
@@ -425,26 +407,15 @@ let pack_tree #opened #a ptr left right sr hr =
   let x = hide (sel ptr h0) in
   let l:wdm a = hide (v_linked_tree left h0) in
   let r:wdm a = hide (v_linked_tree right h0) in
-  let s:U.t = hide (sel sr h0) in
-  let h:U.t = hide (sel hr h0) in
-  //let s1 = Spec.size_of_tree (reveal l) in
-  //let s2 = Spec.size_of_tree (reveal r) in
-  //let s = s1 + s2 + 1 in
-// TODO : reveal_star_4 / arbitrary arity
-// TODO : pourquoi inutile finalement ?
-  //reveal_star_3 (vptr ptr) (linked_tree left) (linked_tree right);
-  //let t:wdm a = Spec.Node (get_data x) l r s in
-  let t = Spec.Node (get_data x) l r (U.v s) (U.v h) in
+  let t = Spec.Node (get_data x) l r (U.v sr) (U.v hr) in
 
   change_slprop
     (vptr ptr `star`
     linked_tree left `star`
-    linked_tree right `star`
-    vptr sr `star`
-    vptr hr)
+    linked_tree right)
     (linked_tree ptr)
-    ((((reveal x, reveal l), reveal r), reveal s), reveal h) t
-    (fun m -> pack_tree_lemma ptr left right sr hr x l r (U.v s) (U.v h) m)
+    ((reveal x, reveal l), reveal r) t
+    (fun m -> pack_tree_lemma ptr left right sr hr x l r (U.v sr) (U.v hr) m)
 
 [@@__steel_reduce__]
 let tree_node' #a r : vprop' =
@@ -519,15 +490,13 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:wdm (node a)) (m:mem) : Lemma
 
     interp (ptr pt `Mem.star`
       tree_sl (get_left x) `Mem.star`
-      tree_sl (get_right x) `Mem.star`
-      ptr (get_size x) `Mem.star`
-      ptr (get_height x)
+      tree_sl (get_right x)
     ) m /\
     sel_of (vptr pt) m == x /\
     tree_sel_node (get_left x) m == l /\
     tree_sel_node (get_right x) m == r /\
-    U.v (sel_of (vptr (get_size x)) m) == s /\
-    U.v (sel_of (vptr (get_height x)) m) == h /\
+    U.v (get_size x) == s /\
+    U.v (get_height x) == h /\
     Spec.is_wdm l /\
     Spec.is_wdm r /\
     s = Spec.size_of_tree t /\
@@ -549,20 +518,13 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:wdm (node a)) (m:mem) : Lemma
     let p1 = pts_to_sl pt full_perm x in
     let p2 = tree_sl' (get_left x) l in
     let p3 = tree_sl' (get_right x) r in
-    let p4 = pts_to_sl (get_size x) full_perm (U.uint_to_t s) in
-    let p5 = pts_to_sl (get_height x) full_perm (U.uint_to_t h) in
-    let sl = p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4 `Mem.star` p5 in
+    let sl = p1 `Mem.star` p2 `Mem.star` p3 in
     assert (interp sl m);
+    assert (interp (sl `Mem.star` Mem.pure (get_size x == U.uint_to_t s /\ (get_height x) == U.uint_to_t h))  m);
 
-    let m1234, m5 = id_elim_star
-      (p1 `Mem.star` p2 `Mem.star` p3 `Mem.star` p4) p5 m in
-    assert (join m1234 m5 == m);
-    let m123, m4 = id_elim_star
-      (p1 `Mem.star` p2 `Mem.star` p3) p4 m1234 in
-    assert (hide (join m123 m4) == m1234);
     let m12, m3 = id_elim_star
-      (p1 `Mem.star` p2) p3 m123 in
-    assert (hide (join m12 m3) == m123);
+      (p1 `Mem.star` p2) p3 m in
+    assert ((join m12 m3) == m);
     let m1, m2 = id_elim_star
       p1 p2 m12 in
     assert (hide (join m1 m2) == m12);
@@ -587,46 +549,14 @@ let unpack_tree_node_lemma (#a:Type0) (pt:t a) (t:wdm (node a)) (m:mem) : Lemma
       (ptr pt `Mem.star` tree_sl (get_left x))
       (tree_sl (get_right x)) m12 m3;
     join_commutative m12 m3;
-    assert (reveal m123 == join m12 m3);
+    assert (reveal m == join m12 m3);
     assert (interp (ptr pt `Mem.star`
       tree_sl (get_left x) `Mem.star`
       tree_sl (get_right x)
-    ) m123);
-    // #4
-    let sr = get_size x in
-    intro_ptr_interp sr (hide (U.uint_to_t s)) m4;
-    ptr_sel_interp sr m4;
-    pts_to_witinv sr full_perm;
-    intro_star
-      (ptr pt `Mem.star`
-      tree_sl (get_left x) `Mem.star`
-      tree_sl (get_right x))
-      (ptr sr) m123 m4;
-    join_commutative m123 m4;
-    assert (reveal m1234 == join m123 m4);
-    assert (interp (ptr sr) m4);
-    // #5
-    let hr = get_height x in
-    intro_ptr_interp hr (hide (U.uint_to_t h)) m5;
-    ptr_sel_interp hr m5;
-    pts_to_witinv hr full_perm;
-    intro_star
-      (ptr pt `Mem.star`
-      tree_sl (get_left x) `Mem.star`
-      tree_sl (get_right x) `Mem.star`
-      ptr sr)
-      (ptr hr) m1234 m5;
-    join_commutative m1234 m5;
-    assert (m == join m1234 m5);
-    assert (interp (ptr hr) m5);
-
-    assert (interp (ptr pt `Mem.star`
-      tree_sl (get_left x) `Mem.star`
-      tree_sl (get_right x) `Mem.star`
-      ptr sr `Mem.star`
-      ptr hr
     ) m);
-    ()
+
+    Mem.pure_star_interp sl (get_size x == U.uint_to_t s /\ (get_height x) == U.uint_to_t h) m
+
 
 let unpack_tree_node_lemma_size (#a:Type0) (pt:t a) (t:wdm (node a)) (m:mem) : Lemma
   (requires
@@ -634,7 +564,9 @@ let unpack_tree_node_lemma_size (#a:Type0) (pt:t a) (t:wdm (node a)) (m:mem) : L
     interp (tree_sl pt) m /\
     tree_sel_node pt m == t)
   (ensures (
-    reveal (gsize t) == Spec.size_of_tree t
+    reveal (gsize t) == Spec.size_of_tree t /\
+    reveal (gsize t) == U.v (get_size (head t)) /\
+    reveal (gheight t) == U.v (get_height (head t))
     )
   )
   = unpack_tree_node_lemma pt t m
@@ -646,9 +578,7 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
              (fun n ->
                vptr ptr `star`
                tree_node (get_left n) `star`
-               tree_node (get_right n) `star`
-               vptr (get_size n) `star`
-               vptr (get_height n))
+               tree_node (get_right n))
              (fun _ -> not (is_null_t ptr))
              (fun h0 n h1 ->
                Spec.Node? (v_node ptr h0) /\
@@ -657,16 +587,16 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
                  (sel ptr h1)
                  (v_node (get_left n) h1)
                  (v_node (get_right n) h1)
-                 (U.v (sel (get_size n) h1))
-                 (U.v (sel (get_height n) h1)) /\
-               U.v (sel (get_size n) h1)
+                 (U.v (get_size n))
+                 (U.v (get_height n)) /\
+               U.v (get_size n)
                == Spec.size_of_tree (v_node (get_left n) h1)
                 + Spec.size_of_tree (v_node (get_right n) h1) + 1 /\
-               U.v (sel (get_height n) h1)
+               U.v (get_height n)
                == M.max (Spec.height_of_tree (v_node (get_left n) h1))
                         (Spec.height_of_tree (v_node (get_right n) h1)) + 1 /\
-               U.v (sel (get_size n) h1) <= c /\
-               U.v (sel (get_height n) h1) <= c
+               U.v (get_size n) <= c /\
+               U.v (get_height n) <= c
              )
   =
   let h0 = get () in
@@ -675,8 +605,11 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
 
   let gn = head t in
   extract_info (tree_node ptr) t
-    (reveal (gsize (reveal t)) == Spec.size_of_tree (reveal t))
+    (reveal (gsize (reveal t)) == Spec.size_of_tree (reveal t) /\
+      reveal (gsize (reveal t)) == U.v (get_size (reveal gn)) /\
+      reveal (gheight (reveal t)) == U.v (get_height (reveal gn)))
     (fun m -> unpack_tree_node_lemma_size ptr t m);
+
   assert (reveal (gsize (reveal t)) == Spec.size_of_tree (reveal t));
   let s = hide (Spec.size_of_tree (reveal t)) in
   assert (s <= c);
@@ -687,20 +620,14 @@ let unpack_tree_node (#a:Type0) (ptr:t a)
     (tree_node ptr)
     (vptr ptr `star`
     tree_node (get_left gn) `star`
-    tree_node (get_right gn) `star`
-    vptr (get_size gn) `star`
-    vptr (get_height gn))
+    tree_node (get_right gn))
     t
-    ((((reveal gn, reveal (gleft t)), reveal (gright t)),
-    U.uint_to_t (Spec.size_of_tree (reveal t))),
-    U.uint_to_t (Spec.height_of_tree (reveal t)))
+    ((reveal gn, reveal (gleft t)), reveal (gright t))
     (fun m -> unpack_tree_node_lemma ptr t m);
 
   let n = read ptr in
   change_slprop_rel (tree_node (get_left gn)) (tree_node (get_left n)) (fun x y -> x == y) (fun _ -> ());
   change_slprop_rel (tree_node (get_right gn)) (tree_node (get_right n)) (fun x y -> x == y) (fun _ -> ());
-  change_slprop_rel (vptr (get_size gn)) (vptr (get_size n)) (fun x y -> x == y) (fun _ -> ());
-  change_slprop_rel (vptr (get_height gn)) (vptr (get_height n)) (fun x y -> x == y) (fun _ -> ());
 
   return n
 
@@ -710,26 +637,24 @@ let unpack_tree (#a: Type0) (ptr: t a)
       (fun node ->
         vptr ptr `star`
         linked_tree (get_left node) `star`
-        linked_tree (get_right node) `star`
-        vptr (get_size node) `star`
-        vptr (get_height node))
+        linked_tree (get_right node))
       (requires (fun h0 -> not (is_null_t ptr)))
       (ensures (fun h0 node h1 ->
         v_linked_tree ptr h0 == Spec.Node
           (get_data (sel ptr h1))
           (v_linked_tree (get_left node) h1)
           (v_linked_tree (get_right node) h1)
-          (U.v (sel (get_size node) h1))
-          (U.v (sel (get_height node) h1)) /\
+          (U.v (get_size node))
+          (U.v (get_height node)) /\
         (sel ptr h1) == node /\
-        U.v (sel (get_size node) h1)
+        U.v (get_size node)
         == Spec.size_of_tree (v_linked_tree (get_left node) h1)
          + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1 /\
-        U.v (sel (get_size node) h1) <= c /\
-        U.v (sel (get_height node) h1)
+        U.v (get_size node) <= c /\
+        U.v (get_height node)
         == M.max (Spec.height_of_tree (v_linked_tree (get_left node) h1))
                  (Spec.height_of_tree (v_linked_tree (get_right node) h1)) + 1 /\
-        U.v (sel (get_height node) h1) <= c
+        U.v (get_height node) <= c
       ))
   =
   let h0 = get() in
@@ -742,12 +667,6 @@ let unpack_tree (#a: Type0) (ptr: t a)
   assert (v_linked_tree ptr h0 == tree_view (v_node ptr h1));
   let n = unpack_tree_node ptr in
   let h2 = get () in
-  assert (U.v (sel (get_size n) h2)
-  == Spec.size_of_tree (v_node (get_left n) h2)
-   + Spec.size_of_tree (v_node (get_right n) h2) + 1);
-  assert (U.v (sel (get_height n) h2)
-  == M.max (Spec.height_of_tree (v_node (get_left n) h2))
-           (Spec.height_of_tree (v_node (get_right n) h2)) + 1);
 
   change_slprop_rel
     (tree_node (get_left n))

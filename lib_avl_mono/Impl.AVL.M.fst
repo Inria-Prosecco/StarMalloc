@@ -266,7 +266,7 @@ let rec insert_avl
       <= Spec.height_of_tree (v_linked_tree (get_left node) h0) + 1);
       let new_ptr = merge_tree_no_alloc
         (get_data node) new_left (get_right node)
-        (get_size node) (get_height node) ptr in
+        ptr in
       rebalance_avl new_ptr
     ) else (
       let h0 = get () in
@@ -283,7 +283,7 @@ let rec insert_avl
       <= Spec.height_of_tree (v_linked_tree (get_right node) h0) + 1);
       let new_ptr = merge_tree_no_alloc
         (get_data node) (get_left node) new_right
-        (get_size node) (get_height node) ptr in
+        ptr in
       rebalance_avl new_ptr
     )
   )
@@ -318,8 +318,6 @@ let rec remove_leftmost_avl (ptr: t)
   if is_null_t (get_left node) then (
     let data = get_data node in
     elim_linked_tree_leaf (get_left node);
-    trees_free (get_size node);
-    trees_free (get_height node);
     trees_free2 ptr;
     return {ptr = get_right node; data}
   ) else (
@@ -327,7 +325,6 @@ let rec remove_leftmost_avl (ptr: t)
     let r0 = remove_leftmost_avl (get_left node) in
     let new_ptr = merge_tree_no_alloc
       (get_data node) r0.ptr (get_right node)
-      (get_size node) (get_height node)
       ptr in
     let new_ptr = rebalance_avl new_ptr in
     return {ptr = new_ptr; data=r0.data}
@@ -364,14 +361,10 @@ let delete_avl_aux0
   (**) let node = unpack_tree ptr in
   if is_null_t (get_right node) then (
     elim_linked_tree_leaf (get_right node);
-    trees_free (get_size node);
-    trees_free (get_height node);
     trees_free2 ptr;
     return (get_left node)
   ) else if is_null_t (get_left node) then (
     elim_linked_tree_leaf (get_left node);
-    trees_free (get_size node);
-    trees_free (get_height node);
     trees_free2 ptr;
     return (get_right node)
   ) else (
@@ -379,7 +372,6 @@ let delete_avl_aux0
     let r0 = remove_leftmost_avl (get_right node) in
     let new_ptr = merge_tree_no_alloc r0.data
       (get_left node) r0.ptr
-      (get_size node) (get_height node)
       ptr in
     let new_ptr = rebalance_avl new_ptr in
     return new_ptr
@@ -424,7 +416,6 @@ let rec delete_avl
     <= Spec.height_of_tree (v_linked_tree (get_left node) h0));
     let new_ptr = merge_tree_no_alloc
       (get_data node) new_left (get_right node)
-      (get_size node) (get_height node)
       ptr in
     rebalance_avl new_ptr
   ) else (
@@ -442,7 +433,6 @@ let rec delete_avl
     <= Spec.height_of_tree (v_linked_tree (get_right node) h0));
     let new_ptr = merge_tree_no_alloc
       (get_data node) (get_left node) new_right
-      (get_size node) (get_height node)
       ptr in
     rebalance_avl new_ptr
   ))

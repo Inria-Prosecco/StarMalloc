@@ -39,12 +39,12 @@ val get_right (#a: Type0) (n: node a) : t a
 inline_for_extraction noextract
 val get_data (#a: Type0) (n: node a) : a
 inline_for_extraction noextract
-val get_size (#a: Type0) (n: node a) : ref U.t
+val get_size (#a: Type0) (n: node a) : U.t
 inline_for_extraction noextract
-val get_height (#a: Type0) (n: node a) : ref U.t
+val get_height (#a: Type0) (n: node a) : U.t
 inline_for_extraction noextract
 val mk_node (#a: Type0)
-  (data: a) (left right: t a) (size height: ref U.t)
+  (data: a) (left right: t a) (size height: U.t)
     : Pure (node a)
       (requires True)
       (ensures (fun n ->
@@ -141,36 +141,32 @@ val not_null_is_node (#opened:inames) (#a: Type0) (ptr: t a)
          v_linked_tree ptr h0 == v_linked_tree ptr h1))
 
 val pack_tree (#opened:inames) (#a: Type0)
-  (ptr: t a) (left right: t a) (sr hr: ref U.t)
+  (ptr: t a) (left right: t a) (sr hr: U.t)
     : SteelGhost unit
       opened
       (vptr ptr `star`
       linked_tree left `star`
-      linked_tree right `star`
-      vptr sr `star`
-      vptr hr)
+      linked_tree right)
       (fun _ -> linked_tree ptr)
       (requires fun h0 ->
         get_left (sel ptr h0) == left /\
         get_right (sel ptr h0) == right /\
         get_size (sel ptr h0) == sr /\
         get_height (sel ptr h0) == hr /\
-        U.v (sel sr h0) == Spec.size_of_tree (v_linked_tree left h0)
-                         + Spec.size_of_tree (v_linked_tree right h0)
-                         + 1 /\
-        U.v (sel hr h0) == M.max
+        U.v sr == Spec.size_of_tree (v_linked_tree left h0) +
+                  Spec.size_of_tree (v_linked_tree right h0) +
+                  1 /\
+        U.v hr == M.max
           (Spec.height_of_tree (v_linked_tree left h0))
           (Spec.height_of_tree (v_linked_tree right h0))
           + 1 /\
-        U.v (sel sr h0) <= c
+        U.v sr <= c
       )
       (ensures (fun h0 _ h1 ->
         let x = get_data (sel ptr h0) in
         let l = v_linked_tree left h0 in
         let r = v_linked_tree right h0 in
-        let s = sel sr h0 in
-        let h = sel hr h0 in
-        v_linked_tree ptr h1 == Spec.Node x l r (U.v s) (U.v h)))
+        v_linked_tree ptr h1 == Spec.Node x l r (U.v sr) (U.v hr)))
 
 inline_for_extraction noextract
 val unpack_tree (#a: Type0) (ptr: t a)
@@ -179,25 +175,23 @@ val unpack_tree (#a: Type0) (ptr: t a)
       (fun node ->
         vptr ptr `star`
         linked_tree (get_left node) `star`
-        linked_tree (get_right node) `star`
-        vptr (get_size node) `star`
-        vptr (get_height node))
+        linked_tree (get_right node))
       (requires (fun h0 -> not (is_null_t ptr)))
       (ensures (fun h0 node h1 ->
         v_linked_tree ptr h0 == Spec.Node
           (get_data (sel ptr h1))
           (v_linked_tree (get_left node) h1)
           (v_linked_tree (get_right node) h1)
-          (U.v (sel (get_size node) h1))
-          (U.v (sel (get_height node) h1))
+          (U.v (get_size node))
+          (U.v (get_height node))
         /\
         sel ptr h1 == node /\
-        U.v (sel (get_size node) h1)
+        U.v (get_size node)
         == Spec.size_of_tree (v_linked_tree (get_left node) h1)
          + Spec.size_of_tree (v_linked_tree (get_right node) h1) + 1 /\
-        U.v (sel (get_height node) h1)
+        U.v (get_height node)
         == M.max (Spec.height_of_tree (v_linked_tree (get_left node) h1))
                  (Spec.height_of_tree (v_linked_tree (get_right node) h1)) + 1 /\
-        U.v (sel (get_size node) h1) <= c /\
-        U.v (sel (get_height node) h1) <= c
+        U.v (get_size node) <= c /\
+        U.v (get_height node) <= c
       ))

@@ -49,10 +49,10 @@ let rotate_left (ptr: t)
 
   let new_subnode = merge_tree_no_alloc x
     (get_left x_node) (get_left z_node)
-    (get_size z_node) (get_height z_node) ptr in
+    ptr in
   let new_node = merge_tree_no_alloc z
     new_subnode (get_right z_node)
-    (get_size x_node) (get_height x_node) (get_right x_node) in
+    (get_right x_node) in
   return new_node
 #pop-options
 
@@ -84,9 +84,9 @@ let rotate_right (ptr: t)
 
   let new_subnode = merge_tree_no_alloc x
     (get_right z_node) (get_right x_node)
-    (get_size z_node) (get_height z_node) ptr in
+    ptr in
   let new_node = merge_tree_no_alloc z
     (get_left z_node) new_subnode
-    (get_size x_node) (get_height x_node) (get_left x_node) in
+    (get_left x_node) in
   return new_node
 #pop-options

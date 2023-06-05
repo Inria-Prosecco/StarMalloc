@@ -52,23 +52,11 @@ assume val cmp
 //  else -1L
 
 noextract
-assume val trees_malloc (x: U64.t) : Steel (ref U64.t)
-  emp (fun r -> vptr r)
-  (requires fun _ -> True)
-  (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
-
-noextract
 assume val trees_malloc2 (x: node)
   : Steel (ref node)
   emp (fun r -> vptr r)
   (requires fun _ -> True)
   (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
-
-noextract
-assume val trees_free (r: ref U64.t) : Steel unit
-  (vptr r) (fun _ -> emp)
-  (requires fun _ -> True)
-  (ensures fun _ _ _-> True)
 
 noextract
 assume val trees_free2 (r: ref node) : Steel unit

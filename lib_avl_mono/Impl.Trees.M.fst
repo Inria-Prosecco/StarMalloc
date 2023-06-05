@@ -47,8 +47,8 @@ let create_tree (v: data) : Steel t
   =
   let l = create_leaf () in
   let r = create_leaf () in
-  let sr = trees_malloc one in
-  let hr = trees_malloc one in
+  let sr = one in
+  let hr = one in
   let n = mk_node v l r sr hr in
   let ptr = trees_malloc2 n in
   pack_tree ptr l r sr hr;
@@ -87,8 +87,8 @@ let sot_wds (ptr: t)
       (get_data (sel ptr h2))
       (v_linked_tree (get_left node) h2)
       (v_linked_tree (get_right node) h2)
-      (U.v (sel (get_size node) h2))
-      (U.v (sel (get_height node) h2))
+      (U.v (get_size node))
+      (U.v (get_height node))
     ) in
     assert (reveal ptr_t1 == reveal ptr_t2);
     assert (Spec.is_wds (reveal ptr_t1));
@@ -96,7 +96,7 @@ let sot_wds (ptr: t)
     let ptr_s2 = hide (Spec.sot_wds ptr_t2) in
     assert (reveal ptr_s1 == reveal ptr_s2);
     assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
-    let s = read (get_size node) in
+    let s = (get_size node) in
     assert (U.v s == Spec.sot_wds (v_linked_tree ptr h1));
     pack_tree ptr
       (get_left node)
@@ -133,8 +133,8 @@ let hot_wdh (ptr: t)
       (get_data (sel ptr h2))
       (v_linked_tree (get_left node) h2)
       (v_linked_tree (get_right node) h2)
-      (U.v (sel (get_size node) h2))
-      (U.v (sel (get_height node) h2))
+      (U.v (get_size node))
+      (U.v (get_height node))
     ) in
     assert (reveal ptr_t1 == reveal ptr_t2);
     assert (Spec.is_wds (reveal ptr_t1));
@@ -142,7 +142,7 @@ let hot_wdh (ptr: t)
     let ptr_s2 = hide (Spec.sot_wds ptr_t2) in
     assert (reveal ptr_s1 == reveal ptr_s2);
     assert (reveal ptr_s1 == Spec.size_of_tree (reveal ptr_t1));
-    let h = read (get_height node) in
+    let h = (get_height node) in
     assert (U.v h == Spec.hot_wdh (v_linked_tree ptr h1));
     pack_tree ptr
       (get_left node)
@@ -177,24 +177,20 @@ let merge_tree (v: data) (l r: t) : Steel t
   let s1 = sot_wds l in
   let s2 = sot_wds r in
   let s = U.add (U.add s1 s2) one in
-  let sr = trees_malloc s in
   let h1 = hot_wdh l in
   let h2 = hot_wdh r in
   let h = U.add (umax h1 h2) one in
-  let hr = trees_malloc h in
-  let n = mk_node v l r sr hr in
+  let n = mk_node v l r s h in
   let ptr = trees_malloc2 n in
-  pack_tree ptr l r sr hr;
+  pack_tree ptr l r s h;
   return ptr
 
 inline_for_extraction noextract
 let merge_tree_no_alloc
-  (v: data) (l r: t) (sr hr: ref U.t) (ptr: ref node)
+  (v: data) (l r: t) (ptr: ref node)
   : Steel t
   (linked_tree l `star`
   linked_tree r `star`
-  vptr sr `star`
-  vptr hr `star`
   vptr ptr)
   (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
@@ -217,12 +213,10 @@ let merge_tree_no_alloc
   let s1 = sot_wds l in
   let s2 = sot_wds r in
   let s = U.add (U.add s1 s2) one in
-  write sr s;
   let h1 = hot_wdh l in
   let h2 = hot_wdh r in
   let h = U.add (umax h1 h2) one in
-  write hr h;
-  let n = mk_node v l r sr hr in
+  let n = mk_node v l r s h in
   write ptr n;
-  pack_tree ptr l r sr hr;
+  pack_tree ptr l r s h;
   return ptr
