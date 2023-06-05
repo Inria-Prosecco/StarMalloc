@@ -381,7 +381,7 @@ let calloc
   then (
     return ptr
   ) else (
-    if enable_zeroing then (
+    if enable_zeroing_malloc then (
       return ptr
     ) else (
       elim_live_null_or_varray ptr;
