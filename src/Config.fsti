@@ -74,7 +74,7 @@ val enable_zeroing_lemma (_:unit)
 
 // slab_canaries
 // controls whether canaries are set at allocation
-/// inline_for_extraction
+inline_for_extraction
 val enable_slab_canaries_malloc: bool
 // controls whether canaries are checked at deallocation
 inline_for_extraction
@@ -84,5 +84,7 @@ val enable_slab_canaries_lemma (_:unit)
   : Lemma
   (enable_slab_canaries_free ==> enable_slab_canaries_malloc)
 // magic values for canaries
+inline_for_extraction
 val slab_canaries_magic1: U8.t
+inline_for_extraction
 val slab_canaries_magic2: U8.t
