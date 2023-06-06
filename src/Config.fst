@@ -39,8 +39,8 @@ let enable_zeroing_free = true
 let enable_zeroing_lemma () = ()
 
 // slab canaries
-let enable_slab_canaries_malloc = true
-let enable_slab_canaries_free = true
+let enable_slab_canaries_malloc = false
+let enable_slab_canaries_free = false
 let enable_slab_canaries_lemma () = ()
 let slab_canaries_magic1 = 42uy
 let slab_canaries_magic2 = 23uy

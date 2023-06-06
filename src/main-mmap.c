@@ -1,4 +1,6 @@
 #include "main-mmap.h"
+
+#include <errno.h>
 #include <sys/mman.h>
 #include <assert.h>
 #include "internal/AVL.h"
@@ -51,13 +53,38 @@ uint32_t* mmap_sizes (size_t len) {
   return (uint32_t*) mmap_init(len * sizeof(uint32_t));
 }
 
-//TODO: check for mprotect return value (including ENOMEM)
-void mmap_trap (uint8_t* ptr, size_t len) {
-  bool b;
-  b = madvise ((void*) ptr, len, MADV_DONTNEED);
-  //b = mprotect((void*) ptr, len, PROT_NONE);
-  assert (! b);
+void mmap_strict_trap (uint8_t* ptr, size_t len) {
+  void* p = mmap((void*) ptr, len, PROT_NONE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
+  if (p == MAP_FAILED && errno != ENOMEM) {
+    assert (false);
+  }
   return;
+}
+
+void mmap_trap (uint8_t* ptr, size_t len) {
+  int r = madvise((void*) ptr, len, MADV_DONTNEED);
+  if (r && errno != ENOMEM) {
+    assert (false);
+  }
+  return;
+}
+
+void StarMalloc_malloc_zeroing_die(uint8_t* ptr) {
+  assert (false);
+}
+
+bool StarMalloc_memcheck_u8(uint8_t* ptr, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    if (ptr[i] != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
+  size_t len = (size_t) sc;
+  memset(ptr, 0, len);
 }
 
 uint64_t* Impl_Trees_Types_trees_malloc(uint64_t x) {
