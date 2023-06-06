@@ -104,6 +104,7 @@ void Impl_Trees_Types_trees_free(uint64_t* r) {
 }
 
 void Impl_Trees_Types_trees_free2(Impl_Trees_Types_node* r) {
+  munmap (r, sizeof(Impl_Trees_Types_node));
   return;
 }
 
