@@ -93,8 +93,10 @@ module G = FStar.Ghost
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 let malloc arena_id size =
-  if US.lte size (US.uint32_to_sizet page_size)
-  then (
+  let threshold = if enable_slab_canaries_malloc
+    then US.sub (US.uint32_to_sizet page_size) 2sz
+    else US.uint32_to_sizet page_size in
+  if (US.lte size threshold) then (
     let ptr = slab_malloc arena_id (US.sizet_to_uint32 size) in
     if (A.is_null ptr || not enable_zeroing_malloc) then (
       return ptr
