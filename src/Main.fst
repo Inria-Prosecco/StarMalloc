@@ -112,7 +112,6 @@ let normal (#a:Type) (x:a) =
 let ind_aux r idxs : vprop =
   SlabsCommon.ind_varraylist_aux r idxs
 
-//#push-options "--compat_pre_core 0 --compat_pre_typed_indexed_effects"
 val intro_ind_varraylist_nil (#opened:_)
   (r: A.array AL.cell)
   (r1 r2 r3 r4 r5: R.ref US.t)
