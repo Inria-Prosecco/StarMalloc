@@ -56,7 +56,7 @@ val elim_vrefinedep
   (ensures fun h res h' ->
     let (res : normal (t_of v){p res}) = res in
     p res /\
-    G.reveal res == h' v /\
+    h' v == res /\
     (let fs : x:t_of v{p x} = h' v in
     let sn : t_of (f (G.reveal res)) = h' (f (G.reveal res)) in
     let x2 = h (vrefinedep v p f) in
@@ -104,15 +104,12 @@ let vrefinedep_idem
     h' (vrefinedep v p f)
   )
   =
-  //let h0 = get () in
   let x0 = gget (vrefinedep v p f) in
   let x = elim_vrefinedep v p f in
   intro_vrefinedep v p  f (f (G.reveal x));
-  //let h1 = get () in
   let x1 = gget (vrefinedep v p f) in
   assert (dfst x0 == dfst x1);
   assert (dsnd x0 == dsnd x1);
-  //assert (x0 == x1);
-  ()
+  assert (x0 == x1)
 #pop-options
 #pop-options
