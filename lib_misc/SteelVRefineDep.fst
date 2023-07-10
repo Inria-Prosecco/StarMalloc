@@ -58,28 +58,12 @@ let vrefinedep_lemma2
     dsnd (sel_of (vrefinedep v p f) m) == dsnd (sel_of (vdep (vrefine v p) (vrefine_f v p f)) m) )
   = ()
 
-#push-options "--compat_pre_core 1"
+#push-options "--compat_pre_typed_indexed_effects"
 let elim_vrefinedep
   (#opened:_)
   (v: vprop)
   (p: ( (t_of v) -> Tot prop))
   (f: ( (t_of (vrefine v p)) -> Tot vprop))
-  : SteelGhost (G.erased (t_of (vrefine v p))) opened
-  (vrefinedep v p f)
-  (fun res -> v `star` f (G.reveal res))
-  (requires fun _ -> True)
-  (ensures fun h res h' ->
-    let (res : normal (t_of v){p res}) = res in
-    p res /\
-    G.reveal res == h' v /\
-    (let fs : x:t_of v{p x} = h' v in
-    let sn : t_of (f (G.reveal res)) = h' (f (G.reveal res)) in
-    let x2 = h (vrefinedep v p f) in
-    G.reveal res == fs /\
-    dfst x2 == fs /\
-    dsnd x2 == sn /\
-    True)
-  )
   =
     change_slprop_rel (vrefinedep v p f) (vdep (vrefine v p) (vrefine_f v p f))
       (fun x y -> dfst x == dfst y /\ dsnd x == dsnd y)
@@ -114,3 +98,5 @@ let intro_vrefinedep
     change_slprop_rel (vdep (vrefine v p) (vrefine_f v p f)) (vrefinedep v p f)
       (fun x y -> dfst x == dfst y /\ dsnd x == dsnd y)
       (vrefinedep_lemma2 v p f)
+
+#pop-options
