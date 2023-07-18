@@ -1181,6 +1181,77 @@ let lemma_extend_dlist (#a:Type0)
   = lemma_extend_dlist' pred hd s null FS.emptyset s' n
 #pop-options
 
+let rec lemma_extend_dlist_notmem' (#a:Type0)
+  (pred: a -> prop)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (prev: nat)
+  (visited: FS.set nat{Seq.length s >= FS.cardinality visited})
+  (n:nat{n >= Seq.length s})
+  : Lemma
+      (requires
+        is_dlist' pred hd s prev visited)
+      (ensures
+        ~ (mem n hd s)
+      )
+      (decreases (Seq.length s - FS.cardinality visited))
+  =
+  if hd = null then ()
+  else if FS.cardinality visited = Seq.length s ||
+     FS.mem hd visited ||
+     // If the prev pointer is not null, it should be in the visited set
+     not (prev = null || FS.mem prev visited) ||
+     hd >= Seq.length s then ()
+  else
+    let cur = Seq.index s hd in
+    let next = US.v cur.next in
+    lemma_extend_dlist_notmem' pred next s hd (FS.insert hd visited) n
+
+let lemma_extend_dlist_notmem (#a:Type0)
+  (pred: a -> prop)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (n:nat{n >= Seq.length s})
+  : Lemma
+      (requires
+        is_dlist pred hd s)
+      (ensures
+        ~ (mem n hd s)
+      )
+  = lemma_extend_dlist_notmem' pred hd s null FS.emptyset n
+
+#restart-solver
+
+let lemma_extend_dlist_notmem_all (#a:Type0)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
+  (hd1 hd2 hd3 hd4 hd5:nat)
+  (s:Seq.seq (cell a))
+  (l:nat)
+  (n:nat)
+  : Lemma
+      (requires
+        is_dlist pred1 hd1 s /\
+        is_dlist pred2 hd2 s /\
+        is_dlist pred3 hd3 s /\
+        is_dlist pred4 hd4 s /\
+        is_dlist pred5 hd5 s /\
+        Seq.length s == l)
+      (ensures
+        ~ (mem_all (l + n) hd1 hd2 hd3 hd4 hd5 s)
+      )
+  =
+  let n = l + n in
+  lemma_mem_ptrs_in hd1 s n;
+  lemma_mem_ptrs_in hd2 s n;
+  lemma_mem_ptrs_in hd3 s n;
+  lemma_mem_ptrs_in hd4 s n;
+  lemma_mem_ptrs_in hd5 s n;
+  lemma_extend_dlist_notmem pred1 hd1 s n;
+  lemma_extend_dlist_notmem pred2 hd2 s n;
+  lemma_extend_dlist_notmem pred3 hd3 s n;
+  lemma_extend_dlist_notmem pred4 hd4 s n;
+  lemma_extend_dlist_notmem pred5 hd5 s n
+
 #push-options "--z3rlimit 50"
 let extend_aux (#a:Type) (#opened:_)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
@@ -1252,9 +1323,12 @@ let extend_aux (#a:Type) (#opened:_)
   (**) let s1 = gget (varraylist pred1 pred2 pred3 pred4 pred5 (A.split_l r (k `US.add` n)) hd1 hd2 hd3 hd4 hd5) in
   // Derived from the postcondition of join
   (**) assert (Ghost.reveal s0 `Seq.equal` Seq.slice #(cell a) (Ghost.reveal s1) 0 (US.v k));
-  assume (
+  Classical.forall_intro (Classical.move_requires (
+    lemma_extend_dlist_notmem_all pred1 pred2 pred3 pred4 pred5 hd1 hd2 hd3 hd4 hd5 s0 (US.v k)
+  ));
+  assert (
     forall (j:nat{0 <= j /\ j < US.v n}).
-      ~ (mem_all #a (US.v k + j) hd1 hd2 hd3 hd4 hd5 s1)
+      ~ (mem_all #a (US.v k + j) hd1 hd2 hd3 hd4 hd5 (Seq.slice #(cell a) (G.reveal s1) 0 (US.v k)))
   )
   //// Move the slice out of dataify
   //(**) dataify_slice #a (Ghost.reveal s1) (US.v k)
