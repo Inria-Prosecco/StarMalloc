@@ -552,6 +552,26 @@ val set (bound1 bound2: nat)
 
 open Config
 
+val lemma_extend_dlist_subset_slice_all (#a:Type0)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
+  (hd1 hd2 hd3 hd4 hd5:nat)
+  (s:Seq.seq (cell a))
+  (n:nat)
+  : Lemma
+      (requires
+        is_dlist pred1 hd1 s /\
+        is_dlist pred2 hd2 s /\
+        is_dlist pred3 hd3 s /\
+        is_dlist pred4 hd4 s /\
+        is_dlist pred5 hd5 s /\
+        n <= Seq.length s)
+      (ensures
+        ptrs_all hd1 hd2 hd3 hd4 hd5 (Seq.slice s 0 n)
+        `FS.subset`
+        ptrs_all hd1 hd2 hd3 hd4 hd5 s
+      )
+
+
 val extend_insert (#a: Type)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (n1: US.t{2 <= US.v n1})

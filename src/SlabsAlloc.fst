@@ -1280,6 +1280,11 @@ let allocate_slab_aux_3_2_list_partition
   (idx1 idx2 idx3 idx4 idx5: US.t)
   : Lemma
   (requires
+    ALG.is_dlist pred1 (US.v idx1) s1 /\
+    ALG.is_dlist pred2 (US.v idx2) s1 /\
+    ALG.is_dlist pred3 (US.v idx3) s1 /\
+    ALG.is_dlist pred4 (US.v idx4) s1 /\
+    ALG.is_dlist pred5 (US.v idx5) s1 /\
     ALG.partition (Seq.slice s1 0 (US.v md_count_v))
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
     (forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
@@ -1339,8 +1344,12 @@ let allocate_slab_aux_3_2_list_partition
   let ps1' = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) s1' in
   let ps1 = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) s1 in
   let ps4 = ALG.ptrs_all (idx1') (US.v idx2) (US.v idx3) idx4' (US.v idx5) s4 in
-  // TODO: additional lemma required in ArrayList lib
-  assume (FS.subset ps1' ps1);
+  ALG.lemma_extend_dlist_subset_slice_all
+    pred1 pred2 pred3 pred4 pred5
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+    s1
+    (US.v md_count_v);
+  assert (FS.subset ps1' ps1);
   assert (forall (i:nat{i < US.v md_count_v}).
     FS.mem i ps1
   );

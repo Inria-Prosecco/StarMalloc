@@ -1252,6 +1252,81 @@ let lemma_extend_dlist_notmem_all (#a:Type0)
   lemma_extend_dlist_notmem pred4 hd4 s n;
   lemma_extend_dlist_notmem pred5 hd5 s n
 
+let rec lemma_extend_dlist_subset_slice' (#a:Type0)
+  (pred: a -> prop)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (prev: nat)
+  (n:nat{n <= Seq.length s})
+  (visited: FS.set nat{n >= FS.cardinality visited})
+  : Lemma
+      (requires
+        is_dlist' pred hd s prev visited)
+      (ensures
+        FS.subset
+          (ptrs_in' hd (Seq.slice s 0 n) visited)
+          (ptrs_in' hd s visited)
+      )
+      (decreases (Seq.length s - FS.cardinality visited))
+  =
+  if Seq.length s = n then ()
+  else
+    // no need to go further
+    if n = FS.cardinality visited then ()
+    else
+      if hd = null then ()
+      else if FS.cardinality visited = Seq.length s ||
+         FS.mem hd visited ||
+         // If the prev pointer is not null, it should be in the visited set
+         not (prev = null || FS.mem prev visited) ||
+         hd >= Seq.length s then ()
+      else
+        let cur = Seq.index s hd in
+        let next = US.v cur.next in
+        lemma_extend_dlist_subset_slice' pred next s hd n
+          (FS.insert hd visited)
+
+let lemma_extend_dlist_subset_slice (#a:Type0)
+  (pred: a -> prop)
+  (hd:nat)
+  (s:Seq.seq (cell a))
+  (n:nat{n <= Seq.length s})
+  : Lemma
+      (requires
+        is_dlist pred hd s)
+      (ensures
+        FS.subset
+          (ptrs_in hd (Seq.slice s 0 n))
+          (ptrs_in hd s)
+      )
+  =
+  lemma_extend_dlist_subset_slice' pred hd s null n FS.emptyset
+
+let lemma_extend_dlist_subset_slice_all (#a:Type0)
+  (pred1 pred2 pred3 pred4 pred5: a -> prop)
+  (hd1 hd2 hd3 hd4 hd5:nat)
+  (s:Seq.seq (cell a))
+  (n:nat)
+  : Lemma
+      (requires
+        is_dlist pred1 hd1 s /\
+        is_dlist pred2 hd2 s /\
+        is_dlist pred3 hd3 s /\
+        is_dlist pred4 hd4 s /\
+        is_dlist pred5 hd5 s /\
+        n <= Seq.length s)
+      (ensures
+        ptrs_all hd1 hd2 hd3 hd4 hd5 (Seq.slice s 0 n)
+        `FS.subset`
+        ptrs_all hd1 hd2 hd3 hd4 hd5 s
+      )
+  =
+  lemma_extend_dlist_subset_slice pred1 hd1 s n;
+  lemma_extend_dlist_subset_slice pred2 hd2 s n;
+  lemma_extend_dlist_subset_slice pred3 hd3 s n;
+  lemma_extend_dlist_subset_slice pred4 hd4 s n;
+  lemma_extend_dlist_subset_slice pred5 hd5 s n
+
 #push-options "--z3rlimit 50"
 let extend_aux (#a:Type) (#opened:_)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
