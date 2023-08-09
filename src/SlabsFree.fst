@@ -499,7 +499,8 @@ let deallocate_slab_aux_1
     sel r5 h0 == idx5 /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
-    Seq.index (G.reveal md_region_lv) (US.v pos) = 2ul
+    Seq.index (G.reveal md_region_lv) (US.v pos) = 2ul /\
+    A.length ptr == U32.v size_class
   )
   (ensures fun _ _ h1 ->
     let blob1
@@ -973,7 +974,8 @@ let deallocate_slab_aux_2
     sel r5 h0 == idx5 /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
-    Seq.index (G.reveal md_region_lv) (US.v pos) = 1ul
+    Seq.index (G.reveal md_region_lv) (US.v pos) = 1ul /\
+    A.length ptr == U32.v size_class
   )
   (ensures fun _ _ h1 ->
     let blob1
@@ -1183,7 +1185,8 @@ let deallocate_slab'
     US.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
-    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
+    A.length ptr == U32.v size_class
   )
   (ensures fun _ _ _ -> True)
   =
@@ -1268,7 +1271,8 @@ let deallocate_slab
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
     US.v diff_ == diff' /\
-    same_base_array ptr slab_region)
+    same_base_array ptr slab_region /\
+    A.length ptr == U32.v size_class)
   (ensures fun _ _ _ -> True)
   =
   let md_count_v

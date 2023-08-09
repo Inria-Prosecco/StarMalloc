@@ -33,8 +33,9 @@ type data = x: (array U8.t * US.t){
 let node = node data
 let t = t data
 
-noextract
-assume val ptr_to_u64 (x: array U8.t) : U64.t
+//TO BE REMOVED
+//noextract
+//assume val ptr_to_u64 (x: array U8.t) : U64.t
 
 // CAUTION:
 // the refinement implies that the injectivity

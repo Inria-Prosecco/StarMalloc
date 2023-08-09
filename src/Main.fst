@@ -1284,6 +1284,9 @@ let slab_aligned_alloc arena_id alignment bytes =
     (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
 #pop-options
 
+#restart-solver
+
+#push-options "--z3rlimit 50"
 inline_for_extraction noextract
 let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: array U8.t) (diff: US.t)
   : Steel bool
@@ -1295,6 +1298,7 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
     same_base_array ptr sc.data.slab_region /\
     0 <= diff' /\
     diff' < US.v slab_size /\
+    A.length ptr == U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size /\
     US.v diff = diff')
   (ensures fun h0 _ h1 -> True)
   =
@@ -1308,13 +1312,6 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
   L.release sc.lock;
   return res
 
-#restart-solver
-
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
-
-#restart-solver
-
-
 /// Precondition of free, capturing that a client must return an array corresponding to the
 /// entire memory provided by the allocator:
 /// If a pointer is within a size class and aligned with
@@ -1322,14 +1319,14 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
 let within_size_class_i (ptr:A.array U8.t) (sc: size_class_struct) : prop = (
   // If ptr is within the size class sc
   same_base_array sc.slab_region ptr /\
-  A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.slab_region)) >= 0 /\
-  A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.slab_region)) < US.v slab_size /\
+  A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region)) >= 0 /\
+  A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region)) < US.v slab_size /\
   // and it is aligned on the slots
-  (A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.slab_region))) % U32.v sc.size = 0) ==>
+  (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region))) % U32.v sc.size = 0) ==>
     // then its length is the length of a slot
     A.length ptr == U32.v sc.size
 
-#push-options "--z3rlimit 100"
+#push-options "--z3rlimit 150"
 /// Elimination lemma for `within_size_class_i`, triggering F* to prove the precondition
 /// of the implication
 let elim_within_size_class_i (ptr:A.array U8.t) (i:nat{i < Seq.length sc_all.g_size_classes}) (size:sc)

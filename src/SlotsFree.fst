@@ -305,7 +305,8 @@ let deallocate_slot_aux2
     same_base_array arr ptr /\
     0 <= diff /\
     diff < U32.v page_size /\
-    diff % (U32.v size_class) == 0
+    diff % (U32.v size_class) == 0 /\
+    A.length ptr == U32.v size_class
   ))
   (ensures (
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
@@ -326,8 +327,6 @@ let deallocate_slot_aux2
   assert (A.offset (A.ptr_of ptr) == A.offset (A.ptr_of ptr'));
   A.ptr_base_offset_inj (A.ptr_of ptr) (A.ptr_of ptr');
   assert (A.ptr_of ptr == A.ptr_of ptr');
-  //TODO: to be removed (free precondition)
-  assume (A.length ptr == U32.v size_class);
   assert (ptr == ptr')
 #pop-options
 
@@ -599,7 +598,8 @@ let deallocate_slot'
     0 <= diff /\
     diff < U32.v page_size /\
     US.v diff_ == diff /\
-    A.asel md h0 == G.reveal md_as_seq
+    A.asel md h0 == G.reveal md_as_seq /\
+    A.length ptr == U32.v size_class
   )
   (ensures fun h0 r h1 ->
     // using h0 (A.varray md) instead fails
@@ -705,7 +705,8 @@ let deallocate_slot
     same_base_array arr ptr /\
     0 <= diff /\
     diff < U32.v page_size /\
-    US.v diff_ = diff
+    US.v diff_ = diff /\
+    A.length ptr == U32.v size_class
   )
     //not (is_empty size_class v0))
   (ensures fun h0 b h1 ->
