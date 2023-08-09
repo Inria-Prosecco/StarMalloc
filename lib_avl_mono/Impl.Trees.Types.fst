@@ -38,23 +38,17 @@ assume val ptr_to_u64 (x: array U8.t) : U64.t
 
 // CAUTION:
 // the refinement implies that the injectivity
-// of the cast uint8_t* -> uintptr_t is assumed
+// of the cast uint8_t* -> uintptr_t
 // over:
 // - valid pointers of large allocations
 // (that is the set contained by the AVL tree)
-// - those supplied by free and realloc
+// - those supplied by the user to free and realloc functions
+// is part of the model
+
 assume val cmp
   : f:Impl.Common.cmp data{
     forall (x y: data). I64.v (f x y) == 0 ==> fst x == fst y
   }
-//  =
-//  let x = fst x in
-//  let y = fst y in
-//  let x = ptr_to_u64 x in
-//  let y = ptr_to_u64 y in
-//  if U64.gt x y then 1L
-//  else if U64.eq x y then 0L
-//  else -1L
 
 noextract
 assume val trees_malloc2 (x: node)
