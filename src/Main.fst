@@ -1372,6 +1372,7 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
   forall (i:nat{i < Seq.length sc_all.g_size_classes}).
     within_size_class_i ptr (Seq.index (G.reveal sc_all.g_size_classes) i).data
 
+#push-options "--fuel 0 --ifuel 0"
 /// Auxiliary lemma to reason about the non-linear arithmetic for pointer division/modulo
 /// in a smaller context
 let lemma_nlarith_aux (n:US.t) (size:sc) : Lemma
@@ -1389,6 +1390,7 @@ let lemma_nlarith_aux (n:US.t) (size:sc) : Lemma
       (==) { Math.Lemmas.modulo_modulo_lemma (US.v n) (U32.v size) (US.v metadata_max * div) }
       US.v n % U32.v size;
     }
+#pop-options
 
 #restart-solver
 #push-options "--z3rlimit 200"
