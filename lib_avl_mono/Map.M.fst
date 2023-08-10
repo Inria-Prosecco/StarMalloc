@@ -19,44 +19,44 @@ let spec_convert (#a: Type) (compare: Impl.Common.cmp a)
   //= Impl.Common.convert (convert compare)
   = Impl.Common.convert compare
 
-inline_for_extraction noextract
-let insert
-  (r: bool) (ptr: t)
-  (new_data: data)
-  : Steel t
-  (linked_tree ptr)
-  (fun ptr' -> linked_tree ptr')
-  (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
-    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0))
-  (ensures fun h0 ptr' h1 ->
-    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0) /\
-    v_linked_tree ptr' h1
-    == Spec.insert_avl r
-      (spec_convert cmp)
-      (v_linked_tree ptr h0) new_data)
-  =
-  let h0 = get () in
-  Spec.height_lte_size (v_linked_tree ptr h0);
-  Impl.Mono.insert_avl r ptr new_data
-
-inline_for_extraction noextract
-let delete
-  (ptr: t)
-  (data_to_rm: data)
-  : Steel t
-  (linked_tree ptr)
-  (fun ptr' -> linked_tree ptr')
-  (requires fun h0 ->
-    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0))
-  (ensures fun h0 ptr' h1 ->
-    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0) /\
-    v_linked_tree ptr' h1
-    == Spec.delete_avl (spec_convert cmp)
-      (v_linked_tree ptr h0)
-      data_to_rm)
-  =
-  Impl.Mono.delete_avl ptr data_to_rm
+//inline_for_extraction noextract
+//let insert
+//  (r: bool) (ptr: t)
+//  (new_data: data)
+//  : Steel t
+//  (linked_tree ptr)
+//  (fun ptr' -> linked_tree ptr')
+//  (requires fun h0 ->
+//    Spec.size_of_tree (v_linked_tree ptr h0) < c /\
+//    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0))
+//  (ensures fun h0 ptr' h1 ->
+//    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0) /\
+//    v_linked_tree ptr' h1
+//    == Spec.insert_avl r
+//      (spec_convert cmp)
+//      (v_linked_tree ptr h0) new_data)
+//  =
+//  let h0 = get () in
+//  Spec.height_lte_size (v_linked_tree ptr h0);
+//  Impl.Mono.insert_avl trees_malloc2 trees_free2 r ptr new_data
+//
+//inline_for_extraction noextract
+//let delete
+//  (ptr: t)
+//  (data_to_rm: data)
+//  : Steel t
+//  (linked_tree ptr)
+//  (fun ptr' -> linked_tree ptr')
+//  (requires fun h0 ->
+//    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0))
+//  (ensures fun h0 ptr' h1 ->
+//    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0) /\
+//    v_linked_tree ptr' h1
+//    == Spec.delete_avl (spec_convert cmp)
+//      (v_linked_tree ptr h0)
+//      data_to_rm)
+//  =
+//  Impl.Mono.delete_avl trees_malloc2 trees_free2 ptr data_to_rm
 
 inline_for_extraction noextract
 let cardinal

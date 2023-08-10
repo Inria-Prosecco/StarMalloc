@@ -201,6 +201,7 @@ let rebalance_avl (ptr: t)
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec insert_avl
+  (f1: f_malloc) (f2: f_free)
   (r:bool) (ptr: t) (new_data: data)
   : Steel t (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
@@ -231,7 +232,7 @@ let rec insert_avl
   if is_null_t ptr then (
     (**) null_is_leaf ptr;
     elim_linked_tree_leaf ptr;
-    create_tree new_data
+    create_tree f1 f2 new_data
   ) else (
     (**) let node = unpack_tree ptr in
     let delta = cmp (get_data node) new_data in
@@ -253,7 +254,7 @@ let rec insert_avl
       )
     ) else if I.gt delta szero then (
       let h0 = get () in
-      let new_left = insert_avl r (get_left node) new_data in
+      let new_left = insert_avl f1 f2 r (get_left node) new_data in
       let h1 = get () in
       assert (v_linked_tree new_left h1
       == Spec.insert_avl r (convert cmp)
@@ -270,7 +271,7 @@ let rec insert_avl
       rebalance_avl new_ptr
     ) else (
       let h0 = get () in
-      let new_right = insert_avl r (get_right node) new_data in
+      let new_right = insert_avl f1 f2 r (get_right node) new_data in
       let h1 = get () in
       assert (v_linked_tree new_right h1
       == Spec.insert_avl r (convert cmp)
@@ -294,7 +295,9 @@ type result =
   { ptr: t; data: data}
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let rec remove_leftmost_avl (ptr: t)
+let rec remove_leftmost_avl
+  (f1: f_malloc) (f2: f_free)
+  (ptr: t)
   : Steel result
   (linked_tree ptr)
   (fun r -> linked_tree r.ptr)
@@ -318,11 +321,11 @@ let rec remove_leftmost_avl (ptr: t)
   if is_null_t (get_left node) then (
     let data = get_data node in
     elim_linked_tree_leaf (get_left node);
-    trees_free2 ptr;
+    f2 ptr;
     return {ptr = get_right node; data}
   ) else (
     (**) not_null_is_node (get_left node);
-    let r0 = remove_leftmost_avl (get_left node) in
+    let r0 = remove_leftmost_avl f1 f2 (get_left node) in
     let new_ptr = merge_tree_no_alloc
       (get_data node) r0.ptr (get_right node)
       ptr in
@@ -341,6 +344,7 @@ let cheight = Spec.cheight
 //#push-options "--fuel 1 --ifuel 1"
 inline_for_extraction noextract
 let delete_avl_aux0
+  (f1: f_malloc) (f2: f_free)
   (ptr: t) (data_to_rm: data)
   : Steel t
   (linked_tree ptr)
@@ -361,15 +365,15 @@ let delete_avl_aux0
   (**) let node = unpack_tree ptr in
   if is_null_t (get_right node) then (
     elim_linked_tree_leaf (get_right node);
-    trees_free2 ptr;
+    f2 ptr;
     return (get_left node)
   ) else if is_null_t (get_left node) then (
     elim_linked_tree_leaf (get_left node);
-    trees_free2 ptr;
+    f2 ptr;
     return (get_right node)
   ) else (
     not_null_is_node (get_right node);
-    let r0 = remove_leftmost_avl (get_right node) in
+    let r0 = remove_leftmost_avl f1 f2 (get_right node) in
     let new_ptr = merge_tree_no_alloc r0.data
       (get_left node) r0.ptr
       ptr in
@@ -380,6 +384,7 @@ let delete_avl_aux0
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
 let rec delete_avl
+  (f1: f_malloc) (f2: f_free)
   (ptr: t) (data_to_rm: data)
   : Steel t (linked_tree ptr) (fun ptr' -> linked_tree ptr')
   (requires fun h0 ->
@@ -399,11 +404,11 @@ let rec delete_avl
     pack_tree ptr
       (get_left node) (get_right node)
       (get_size node) (get_height node);
-    let ptr = delete_avl_aux0 ptr data_to_rm in
+    let ptr = delete_avl_aux0 f1 f2 ptr data_to_rm in
     return ptr
   ) else if I.lt delta szero then (
     let h0 = get () in
-    let new_left = delete_avl (get_left node) data_to_rm in
+    let new_left = delete_avl f1 f2 (get_left node) data_to_rm in
     let h1 = get () in
     assert (v_linked_tree new_left h1
     == Spec.delete_avl (convert cmp)
@@ -420,7 +425,7 @@ let rec delete_avl
     rebalance_avl new_ptr
   ) else (
     let h0 = get () in
-    let new_right = delete_avl (get_right node) data_to_rm in
+    let new_right = delete_avl f1 f2 (get_right node) data_to_rm in
     let h1 = get () in
     assert (v_linked_tree new_right h1
     == Spec.delete_avl (convert cmp)

@@ -18,26 +18,30 @@ open Impl.Trees.Types
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-inline_for_extraction noextract
-let unpack_tree = unpack_tree #data
+//inline_for_extraction noextract
+//let unpack_tree = unpack_tree #data
 
 //@Trees
 inline_for_extraction noextract
-let create_leaf (_: unit) : Steel t
+let create_leaf
+  //(f1: f_malloc) (f2: f_free)
+  (_:unit)
+  : Steel t
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
     v_linked_tree ptr h1 == Spec.Leaf)
 
   = intro_linked_tree_leaf ();
-    // TODO: it should be possible to remove next line
-    let h = get () in
     return null_t
 
 //@Trees
 #push-options "--fuel 1 --ifuel 1"
 inline_for_extraction noextract
-let create_tree (v: data) : Steel t
+let create_tree
+  (f1: f_malloc) (f2: f_free)
+  (v: data)
+  : Steel t
   emp (fun ptr -> linked_tree ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
@@ -50,18 +54,17 @@ let create_tree (v: data) : Steel t
   let sr = one in
   let hr = one in
   let n = mk_node v l r sr hr in
-  let ptr = trees_malloc2 n in
+  let ptr = f1 n in
   pack_tree ptr l r sr hr;
   node_is_not_null ptr;
   return ptr
 #pop-options
 
-//inline_for_extraction noextract
-//let unpack_tree = unpack_tree #a
-
 //@Trees
 inline_for_extraction noextract
-let sot_wds (ptr: t)
+let sot_wds
+  //(f1: f_malloc) (f2: f_free)
+  (ptr: t)
   : Steel U.t
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
@@ -107,7 +110,9 @@ let sot_wds (ptr: t)
   )
 
 inline_for_extraction noextract
-let hot_wdh (ptr: t)
+let hot_wdh
+  //(f1: f_malloc) (f2: f_free)
+  (ptr: t)
   : Steel U.t
   (linked_tree ptr)
   (fun _ -> linked_tree ptr)
@@ -152,9 +157,11 @@ let hot_wdh (ptr: t)
     return h
   )
 
-
 //@Trees
-let merge_tree (v: data) (l r: t) : Steel t
+let merge_tree
+  (f1: f_malloc) (f2: f_free)
+  (v: data) (l r: t)
+  : Steel t
   (linked_tree l `star` linked_tree r)
   (fun ptr -> linked_tree ptr)
   (requires fun h0 ->
@@ -181,7 +188,7 @@ let merge_tree (v: data) (l r: t) : Steel t
   let h2 = hot_wdh r in
   let h = U.add (umax h1 h2) one in
   let n = mk_node v l r s h in
-  let ptr = trees_malloc2 n in
+  let ptr = f1 n in
   pack_tree ptr l r s h;
   return ptr
 

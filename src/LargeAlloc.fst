@@ -24,6 +24,9 @@ open NullOrVarray
 
 #set-options "--ide_id_info_off"
 
+assume val trees_malloc2 : f_malloc
+assume val trees_free2 : f_free
+
 // machine representation
 inline_for_extraction noextract
 unfold
@@ -38,9 +41,9 @@ let munmap = Mman.munmap_u8
 let create_leaf = Impl.Trees.M.create_leaf
 
 inline_for_extraction noextract
-let insert = Impl.Mono.insert_avl
+let insert = Impl.Mono.insert_avl trees_malloc2 trees_free2
 inline_for_extraction noextract
-let delete = Impl.Mono.delete_avl
+let delete = Impl.Mono.delete_avl trees_malloc2 trees_free2
 
 inline_for_extraction noextract
 let get_size = Impl.Mono.sot_wds

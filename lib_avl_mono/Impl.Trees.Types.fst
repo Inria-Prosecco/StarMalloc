@@ -51,15 +51,14 @@ assume val cmp
     forall (x y: data). I64.v (f x y) == 0 ==> fst x == fst y
   }
 
-noextract
-assume val trees_malloc2 (x: node)
-  : Steel (ref node)
+unfold type f_malloc
+  = (x: node) -> Steel (ref node)
   emp (fun r -> vptr r)
   (requires fun _ -> True)
   (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
 
-noextract
-assume val trees_free2 (r: ref node) : Steel unit
+unfold type f_free
+  = (r: ref node) -> Steel unit
   (vptr r) (fun _ -> emp)
   (requires fun _ -> True)
   (ensures fun _ _ _-> True)
