@@ -24,8 +24,153 @@ open NullOrVarray
 
 #set-options "--ide_id_info_off"
 
-assume val trees_malloc2 : f_malloc
-assume val trees_free2 : f_free
+open Steel.Reference
+
+// is well-formed (AVL + content)
+let is_wf (x: wdm data) : prop
+  =
+  (Spec.is_avl (spec_convert cmp) x &&
+  Spec.forall_keys x (fun x -> US.v (snd x) <> 0))
+  == true
+
+let linked_wf_tree (tree: t)
+  = linked_tree tree `vrefine` is_wf
+
+let ind_linked_wf_tree (metadata: ref t)
+  = vptr metadata `vdep` linked_wf_tree
+
+assume val mmap_ptr_metadata (_:unit)
+  : SteelT (ref t)
+  emp
+  (fun r -> vptr r)
+
+open Config
+
+//assume val get_sizeof_avl_data_as_bytes (_:unit) : sc
+
+//assume val get_sizeof_avl_data_as_bytes (_:unit)
+//  : Pure US.t
+//  (requires True)
+//  (fun r ->
+//    US.v r <= FStar.UInt.max_int 32 /\
+//    US.v r == 16 \/
+//    US.v r == 32 \/
+//    (
+//      US.v r <= 64 /\
+//      US.v r <= U32.v page_size /\
+//      (U32.v page_size) % (US.v r) == 0
+//    )
+//  )
+
+assume val avl_data_size : sc
+//= get_sizeof_avl_data_as_bytes ()
+
+open SizeClass
+open Main
+
+inline_for_extraction noextract
+val init_avl_scs (_:unit)
+  : Steel (size_class_struct)
+  emp
+  (fun r -> size_class_vprop r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ -> r.size = avl_data_size)
+
+let init_avl_scs (_:unit)
+  =
+  let slab_region_size = US.mul metadata_max (US.uint32_to_sizet Config.page_size) in
+  let md_bm_region_size = US.mul metadata_max 4sz in
+  let md_region_size = metadata_max in
+  let slab_region = mmap_u8 slab_region_size in
+  let md_bm_region = mmap_u64 md_bm_region_size in
+  let md_region = mmap_cell_status md_region_size in
+  let scs = init_struct_aux avl_data_size slab_region md_bm_region md_region in
+  return scs
+
+let avl_vprop (metadata: ref t) (scs: size_class_struct)
+  = ind_linked_wf_tree metadata `star` size_class_vprop scs
+
+module L = Steel.SpinLock
+
+noeq
+type mmap_md =
+  {
+    data: ref t;
+    scs: v:size_class_struct{v.size = avl_data_size};
+    lock : L.lock (ind_linked_wf_tree data);
+    lock2 : L.lock (size_class_vprop scs);
+  }
+
+let init_mmap_md (_:unit)
+  : SteelTop mmap_md false (fun _ -> emp) (fun _ _ _ -> True)
+  =
+  let ptr = mmap_ptr_metadata () in
+  let tree = create_leaf () in
+  let scs = init_avl_scs () in
+  write ptr tree;
+  (**) intro_vrefine (linked_tree tree) is_wf;
+  (**) intro_vdep (vptr ptr) (linked_wf_tree tree) linked_wf_tree;
+  let lock = L.new_lock (ind_linked_wf_tree ptr) in
+  let lock2 = L.new_lock (size_class_vprop scs) in
+  //change_equal_slprop
+  //  (ind_linked_wf_tree ptr `star` size_class_vprop scs)
+  //  (avl_vprop ptr scs);
+  //let lock = L.new_lock (avl_vprop ptr scs) in
+  { data=ptr; scs=scs; lock=lock; lock2=lock2 }
+
+// intentional top-level effect for initialization
+// corresponding warning temporarily disabled
+#push-options "--warn_error '-272'"
+let metadata : mmap_md = init_mmap_md ()
+#pop-options
+
+open Steel.Reference
+
+//TODO: discussion with Aymeric and Jonathan
+//generalizing the slabs allocator type should allow
+//to remove this cast
+//but polymorphic assumes are unsupported
+assume val array_u8__to__ref_node
+  (arr: array U8.t)
+  : Steel (ref node)
+  (A.varray arr)
+  (fun r -> vptr r)
+  (requires fun _ -> A.length arr >= U32.v avl_data_size)
+  (ensures fun _ r _ ->
+    A.is_null arr = is_null r
+  )
+
+let trees_malloc2 (x: node)
+  : Steel (ref node)
+  emp (fun r -> vptr r)
+  (requires fun _ -> True)
+  (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
+  =
+  L.acquire metadata.lock2;
+  let r = SizeClass.allocate_size_class metadata.scs in
+  if A.is_null r
+  then (
+    // this should trigger a fatal error
+    sladmit ();
+    L.release metadata.lock2;
+    return null
+  ) else (
+    change_equal_slprop
+      (if (A.is_null r) then emp else A.varray r)
+      (A.varray r);
+    let r' = array_u8__to__ref_node r in
+    L.release metadata.lock2;
+    write r' x;
+    return r'
+  )
+
+let trees_free2 (r: ref node)
+  : Steel unit
+  (vptr r) (fun _ -> emp)
+  (requires fun _ -> True)
+  (ensures fun _ _ _-> True)
+  =
+  sladmit ()
 
 // machine representation
 inline_for_extraction noextract
@@ -50,52 +195,6 @@ let get_size = Impl.Mono.sot_wds
 //let mem = Impl.Mono.member
 inline_for_extraction noextract
 let find = Map.M.find
-
-open Steel.Reference
-
-// is well-formed (AVL + content)
-let is_wf (x: wdm data) : prop
-  =
-  (Spec.is_avl (spec_convert cmp) x &&
-  Spec.forall_keys x (fun x -> US.v (snd x) <> 0))
-  == true
-
-let linked_wf_tree (tree: t)
-  = linked_tree tree `vrefine` is_wf
-
-let ind_linked_wf_tree (metadata: ref t)
-  = vptr metadata `vdep` linked_wf_tree
-
-assume val mmap_ptr_metadata (_:unit)
-  : SteelT (ref t)
-  emp
-  (fun r -> vptr r)
-
-module L = Steel.SpinLock
-
-noeq
-type mmap_md =
-  {
-    data: ref t;
-    lock : L.lock (ind_linked_wf_tree data);
-  }
-
-let init_mmap_md (_:unit)
-  : SteelTop mmap_md false (fun _ -> emp) (fun _ _ _ -> True)
-  =
-  let ptr = mmap_ptr_metadata () in
-  let tree = create_leaf () in
-  write ptr tree;
-  (**) intro_vrefine (linked_tree tree) is_wf;
-  (**) intro_vdep (vptr ptr) (linked_wf_tree tree) linked_wf_tree;
-  let lock = L.new_lock (ind_linked_wf_tree ptr) in
-  { data=ptr; lock=lock }
-
-// intentional top-level effect for initialization
-// corresponding warning temporarily disabled
-#push-options "--warn_error '-272'"
-let metadata : mmap_md = init_mmap_md ()
-#pop-options
 
 #restart-solver
 

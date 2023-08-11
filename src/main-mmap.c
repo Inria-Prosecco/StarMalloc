@@ -94,21 +94,23 @@ void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
 //  return ptr;
 //}
 
-Impl_Trees_Types_node* trees_malloc2(Impl_Trees_Types_node x) {
-  Impl_Trees_Types_node* ptr = (Impl_Trees_Types_node*) mmap_init(sizeof(Impl_Trees_Types_node));
-  *ptr = x;
-  return ptr;
-}
+//TO BE REMOVED
+//Impl_Trees_Types_node* trees_malloc2(Impl_Trees_Types_node x) {
+//  Impl_Trees_Types_node* ptr = (Impl_Trees_Types_node*) mmap_init(sizeof(Impl_Trees_Types_node));
+//  *ptr = x;
+//  return ptr;
+//}
 
 //TO BE REMOVED
 //void Impl_Trees_Types_trees_free(uint64_t* r) {
 //  return;
 //}
 
-void trees_free2(Impl_Trees_Types_node* r) {
-  munmap (r, sizeof(Impl_Trees_Types_node));
-  return;
-}
+//TO BE REMOVED
+//void trees_free2(Impl_Trees_Types_node* r) {
+//  munmap (r, sizeof(Impl_Trees_Types_node));
+//  return;
+//}
 
 Impl_Trees_Types_node** mmap_ptr_metadata() {
   return (Impl_Trees_Types_node**) mmap_init(sizeof(Impl_Trees_Types_node*));

@@ -19,3 +19,7 @@ uint64_t Impl_Trees_Types_cmp(
     return 1L;
   }
 }
+
+size_t get_sizeof_avl_data_as_bytes(){
+  return sizeof(Impl_Trees_Types_data);
+}
