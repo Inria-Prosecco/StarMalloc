@@ -94,6 +94,12 @@ void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
 //  return ptr;
 //}
 
+uint32_t avl_data_size = sizeof(Impl_Trees_Types_node);
+
+Impl_Trees_Types_node* array_u8__to__ref_node(uint8_t* arr) {
+  return (Impl_Trees_Types_node*) arr;
+}
+
 //TO BE REMOVED
 //Impl_Trees_Types_node* trees_malloc2(Impl_Trees_Types_node x) {
 //  Impl_Trees_Types_node* ptr = (Impl_Trees_Types_node*) mmap_init(sizeof(Impl_Trees_Types_node));

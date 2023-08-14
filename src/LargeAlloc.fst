@@ -87,18 +87,20 @@ let init_avl_scs (_:unit)
   let scs = init_struct_aux avl_data_size slab_region md_bm_region md_region in
   return scs
 
-let avl_vprop (metadata: ref t) (scs: size_class_struct)
-  = ind_linked_wf_tree metadata `star` size_class_vprop scs
-
 module L = Steel.SpinLock
 
 noeq
 type mmap_md =
   {
     data: ref t;
-    scs: v:size_class_struct{v.size = avl_data_size};
     lock : L.lock (ind_linked_wf_tree data);
-    lock2 : L.lock (size_class_vprop scs);
+  }
+
+noeq
+type mmap_md_slabs =
+  {
+    scs: v:size_class_struct{v.size = avl_data_size};
+    lock : L.lock (size_class_vprop scs);
   }
 
 let init_mmap_md (_:unit)
@@ -106,22 +108,24 @@ let init_mmap_md (_:unit)
   =
   let ptr = mmap_ptr_metadata () in
   let tree = create_leaf () in
-  let scs = init_avl_scs () in
   write ptr tree;
   (**) intro_vrefine (linked_tree tree) is_wf;
   (**) intro_vdep (vptr ptr) (linked_wf_tree tree) linked_wf_tree;
   let lock = L.new_lock (ind_linked_wf_tree ptr) in
-  let lock2 = L.new_lock (size_class_vprop scs) in
-  //change_equal_slprop
-  //  (ind_linked_wf_tree ptr `star` size_class_vprop scs)
-  //  (avl_vprop ptr scs);
-  //let lock = L.new_lock (avl_vprop ptr scs) in
-  { data=ptr; scs=scs; lock=lock; lock2=lock2 }
+  return { data=ptr; lock=lock; }
+
+let init_mmap_md_slabs (_:unit)
+  : SteelTop mmap_md_slabs false (fun _ -> emp) (fun _ _ _ -> True)
+  =
+  let scs = init_avl_scs () in
+  let lock = L.new_lock (size_class_vprop scs) in
+  return { scs=scs; lock=lock; }
 
 // intentional top-level effect for initialization
 // corresponding warning temporarily disabled
 #push-options "--warn_error '-272'"
 let metadata : mmap_md = init_mmap_md ()
+let metadata_slabs : mmap_md_slabs = init_mmap_md_slabs ()
 #pop-options
 
 open Steel.Reference
@@ -146,20 +150,20 @@ let trees_malloc2 (x: node)
   (requires fun _ -> True)
   (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
   =
-  L.acquire metadata.lock2;
-  let r = SizeClass.allocate_size_class metadata.scs in
+  L.acquire metadata_slabs.lock;
+  let r = SizeClass.allocate_size_class metadata_slabs.scs in
   if A.is_null r
   then (
     // this should trigger a fatal error
     sladmit ();
-    L.release metadata.lock2;
+    L.release metadata_slabs.lock;
     return null
   ) else (
     change_equal_slprop
       (if (A.is_null r) then emp else A.varray r)
       (A.varray r);
     let r' = array_u8__to__ref_node r in
-    L.release metadata.lock2;
+    L.release metadata_slabs.lock;
     write r' x;
     return r'
   )
