@@ -68,20 +68,26 @@ assume val avl_data_size : sc
 open SizeClass
 open Main
 
-inline_for_extraction noextract
-val init_avl_scs (_:unit)
-  : Steel (size_class_struct)
-  emp
-  (fun r -> size_class_vprop r)
-  (requires fun _ -> True)
-  (ensures fun _ r _ -> r.size = avl_data_size)
+open FStar.Mul
 
-let init_avl_scs (_:unit)
+inline_for_extraction noextract
+val init_avl_scs (slab_region: array U8.t)
+  : Steel (size_class_struct)
+  (A.varray slab_region)
+  (fun r -> size_class_vprop r)
+  (requires fun h0 ->
+    A.length slab_region = US.v metadata_max * U32.v Config.page_size /\
+    zf_u8 (A.asel slab_region h0)
+  )
+  (ensures fun _ r _ ->
+    r.size = avl_data_size /\
+    r.slab_region == slab_region
+  )
+
+let init_avl_scs (slab_region: array U8.t)
   =
-  let slab_region_size = US.mul metadata_max (US.uint32_to_sizet Config.page_size) in
   let md_bm_region_size = US.mul metadata_max 4sz in
   let md_region_size = metadata_max in
-  let slab_region = mmap_u8 slab_region_size in
   let md_bm_region = mmap_u64 md_bm_region_size in
   let md_region = mmap_cell_status md_region_size in
   let scs = init_struct_aux avl_data_size slab_region md_bm_region md_region in
@@ -99,8 +105,15 @@ type mmap_md =
 noeq
 type mmap_md_slabs =
   {
-    scs: v:size_class_struct{v.size = avl_data_size};
-    lock : L.lock (size_class_vprop scs);
+    slab_region: array U8.t;
+    scs: v:size_class_struct{
+      v.size = avl_data_size /\
+      v.slab_region == A.split_r slab_region 0sz
+    };
+    lock : L.lock (
+      size_class_vprop scs `star`
+      A.varray (A.split_l slab_region 0sz)
+    );
   }
 
 let init_mmap_md (_:unit)
@@ -117,9 +130,12 @@ let init_mmap_md (_:unit)
 let init_mmap_md_slabs (_:unit)
   : SteelTop mmap_md_slabs false (fun _ -> emp) (fun _ _ _ -> True)
   =
-  let scs = init_avl_scs () in
-  let lock = L.new_lock (size_class_vprop scs) in
-  return { scs=scs; lock=lock; }
+  let slab_region_size = US.mul metadata_max (US.uint32_to_sizet Config.page_size) in
+  let slab_region = mmap_u8 slab_region_size in
+  A.ghost_split slab_region 0sz;
+  let scs = init_avl_scs (A.split_r slab_region 0sz) in
+  let lock = L.new_lock (size_class_vprop scs `star` A.varray (A.split_l slab_region 0sz)) in
+  return { slab_region; scs; lock; }
 
 // intentional top-level effect for initialization
 // corresponding warning temporarily disabled
@@ -134,14 +150,26 @@ open Steel.Reference
 //generalizing the slabs allocator type should allow
 //to remove this cast
 //but polymorphic assumes are unsupported
+//pass corresponding mmap function (which is the needed one)
+//as argument to avoid this issue
 assume val array_u8__to__ref_node
   (arr: array U8.t)
   : Steel (ref node)
   (A.varray arr)
   (fun r -> vptr r)
-  (requires fun _ -> A.length arr >= U32.v avl_data_size)
+  (requires fun _ -> A.length arr == U32.v avl_data_size)
   (ensures fun _ r _ ->
     A.is_null arr = is_null r
+  )
+assume val ref_node__to__array_u8
+  (x: ref node)
+  : Steel (array U8.t)
+  (vptr x)
+  (fun r -> A.varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ ->
+    A.is_null r = is_null x /\
+    A.length r == U32.v avl_data_size
   )
 
 let trees_malloc2 (x: node)
@@ -154,9 +182,9 @@ let trees_malloc2 (x: node)
   let r = SizeClass.allocate_size_class metadata_slabs.scs in
   if A.is_null r
   then (
+    L.release metadata_slabs.lock;
     // this should trigger a fatal error
     sladmit ();
-    L.release metadata_slabs.lock;
     return null
   ) else (
     change_equal_slprop
@@ -168,13 +196,39 @@ let trees_malloc2 (x: node)
     return r'
   )
 
+module UP = FStar.PtrdiffT
+
 let trees_free2 (r: ref node)
   : Steel unit
   (vptr r) (fun _ -> emp)
   (requires fun _ -> True)
+  //not (is_null x) ?
   (ensures fun _ _ _-> True)
   =
-  sladmit ()
+  L.acquire metadata_slabs.lock;
+  let ptr = ref_node__to__array_u8 r in
+  //TODO: edit definition of data in Impl.Trees.Types.fst
+  //or use within_bounds
+  assume (same_base_array ptr metadata_slabs.slab_region);
+  assume (UP.fits (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)));
+  assume (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region) >= 0);
+  let diff = A.ptrdiff ptr (A.split_l metadata_slabs.slab_region 0sz) in
+  let diff_sz = UP.ptrdifft_to_sizet diff in
+  assert (UP.v diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region));
+  let b = SizeClass.deallocate_size_class metadata_slabs.scs ptr diff_sz in
+  if b
+  then (
+    change_equal_slprop
+      (if b then emp else A.varray ptr)
+      emp;
+    L.release metadata_slabs.lock;
+    return ()
+  ) else (
+    L.release metadata_slabs.lock;
+    // this should trigger a fatal error
+    sladmit ();
+    return ()
+  )
 
 // machine representation
 inline_for_extraction noextract

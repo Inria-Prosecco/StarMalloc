@@ -99,6 +99,9 @@ uint32_t avl_data_size = sizeof(Impl_Trees_Types_node);
 Impl_Trees_Types_node* array_u8__to__ref_node(uint8_t* arr) {
   return (Impl_Trees_Types_node*) arr;
 }
+uint8_t* ref_node__to__array_u8(Impl_Trees_Types_node* r) {
+  return (uint8_t*) r;
+}
 
 //TO BE REMOVED
 //Impl_Trees_Types_node* trees_malloc2(Impl_Trees_Types_node x) {
