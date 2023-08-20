@@ -33,7 +33,7 @@ open SlabsCommon
 
 #restart-solver
 
-#push-options "--fuel 1 --ifuel 0 --z3rlimit 50"
+#push-options "--z3rlimit 75"
 inline_for_extraction noextract
 let allocate_slab_aux_cond
   (size_class: sc)
@@ -57,7 +57,6 @@ let allocate_slab_aux_cond
     r == is_full size_class v0
   )
   =
-  admit ();
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in

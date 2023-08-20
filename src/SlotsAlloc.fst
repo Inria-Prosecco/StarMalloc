@@ -137,6 +137,54 @@ let slab_vprop
   `star`
   A.varray (A.split_r arr (rounding size_class))
 
+let slab_vprop_lemma_aux
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (md: slab_metadata)
+  : Lemma
+  (t_of (vrefinedep
+    (A.varray md)
+    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+    (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_l arr (rounding size_class)) md_as_seq)
+  )
+  ==
+    dtuple2
+      (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
+      (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
+  )
+  =
+  let aux (n1 n2:nat) (p:Seq.lseq U64.t n1 -> prop) : Lemma
+      (requires n1 == n2)
+      (ensures (x:Seq.lseq U64.t n1{p x}) == (x:Seq.lseq U64.t n2{p x}))
+    = () in
+    let aux2 (a a':Type) (b c:Type) : Lemma
+      (requires a == a' /\ b == c)
+      (ensures dtuple2 a (fun _ -> b) == dtuple2 a' (fun _ -> c))
+    = () in
+    // The SMT solver needs some help to prove type equality, with rewritings deep in the terms.
+    // In particular, it does not seem to be able to apply the rewritings for aux and aux2 without
+    // explicit calls to the lemmas when they occur under dtuple2
+    assert_norm (
+      t_of (vrefinedep
+        (A.varray md)
+        (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux2 size_class md_as_seq)
+        (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_l arr (rounding size_class)) md_as_seq)
+      )
+      ==
+      dtuple2
+        (x:Seq.lseq U64.t (A.length md){slab_vprop_aux2 size_class x})
+        (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
+          (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class)))))
+    );
+   aux (A.length md) 4 (slab_vprop_aux2 size_class);
+   aux2
+     (x:Seq.lseq U64.t (A.length md){slab_vprop_aux2 size_class x})
+     (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
+     (Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
+       (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class)))))
+     (Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
+       (U32.v (nb_slots size_class)))
+
 let slab_vprop_lemma
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -151,51 +199,26 @@ let slab_vprop_lemma
     Seq.lseq U8.t (U32.v page_size - US.v (rounding size_class))
   )
   =
-  admit ()
+  slab_vprop_lemma_aux size_class arr md;
+  assert(A.length (A.split_r arr (rounding size_class)) == U32.v page_size - US.v (rounding size_class));
+  assert(t_of (A.varray (A.split_r arr (rounding size_class))) == Seq.lseq U8.t (U32.v page_size - US.v (rounding size_class)))
 
-  //let aux (n1 n2:nat) (p:Seq.lseq U64.t n1 -> prop) : Lemma
-  //    (requires n1 == n2)
-  //    (ensures (x:Seq.lseq U64.t n1{p x}) == (x:Seq.lseq U64.t n2{p x}))
-  //  = () in
-  //  let aux2 (a a':Type) (b c:Type) : Lemma
-  //    (requires a == a' /\ b == c)
-  //    (ensures dtuple2 a (fun _ -> b) == dtuple2 a' (fun _ -> c))
-  //  = () in
-  //  // The SMT solver needs some help to prove type equality, with rewritings deep in the terms.
-  //  // In particular, it does not seem to be able to apply the rewritings for aux and aux2 without
-  //  // explicit calls to the lemmas when they occur under dtuple2
-  //  assert_norm (
-  //    t_of (slab_vprop size_class arr md)
-  //    ==
-  //    dtuple2
-  //      (x:Seq.lseq U64.t (A.length md){slab_vprop_aux2 size_class x})
-  //      (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
-  //        (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class)))))
-  //    &
-  //    Seq.lseq U8.t (U32.v page_size - US.v (rounding size_class))
-  //  );
-  //  aux (A.length md) 4 (slab_vprop_aux2 size_class);
-  //  aux2
-  //    (x:Seq.lseq U64.t (A.length md){slab_vprop_aux2 size_class x})
-  //    (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
-  //    (Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
-  //      (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class)))))
-  //    (Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
-  //      (U32.v (nb_slots size_class)))
-
-[@@ __steel_reduce__]
-let v_slab_vprop_md (#p:vprop)
-  (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (md: slab_metadata)
-  (h:rmem p{FStar.Tactics.with_tactic selector_tactic
-    (can_be_split p (slab_vprop size_class arr md) /\ True)})
-  : GTot (Seq.lseq U64.t 4)
-  =
-  let blob
-    : t_of (slab_vprop size_class arr md)
-    = h (slab_vprop size_class arr md) in
-  dfst (fst blob)
+//[@@ __steel_reduce__]
+//let v_slab_vprop_slabs (#p:vprop)
+//  (size_class: sc)
+//  (arr: array U8.t{A.length arr = U32.v page_size})
+//  (md: slab_metadata)
+//  (h:rmem p{FStar.Tactics.with_tactic selector_tactic
+//    (can_be_split p (slab_vprop size_class arr md) /\ True)})
+//  : GTot (
+//      Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class))
+//  )
+//  =
+//  let blob
+//    : t_of (slab_vprop size_class arr md)
+//    = h (slab_vprop size_class arr md) in
+//  slab_vprop_aux_lemma size_class (A.split_l arr (rounding size_class)) (dfst (fst blob));
+//  dsnd (fst blob)
 
 #push-options "--print_implicits"
 
@@ -755,9 +778,9 @@ let intro_slab_vprop (#opened:_)
   (arr: array U8.t{A.length arr = U32.v page_size})
   : SteelGhost unit opened
   (
+    slab_vprop_aux size_class (A.split_l arr (rounding size_class)) (G.reveal md_as_seq) `star`
     (A.varray md `star`
-    slab_vprop_aux size_class (A.split_l arr (rounding size_class)) (G.reveal md_as_seq)) `star`
-    A.varray (A.split_r arr (rounding size_class))
+    A.varray (A.split_r arr (rounding size_class)))
   )
   (fun _ -> slab_vprop size_class arr md)
   (requires fun h0 ->
@@ -769,9 +792,8 @@ let intro_slab_vprop (#opened:_)
       = h1 (slab_vprop size_class arr md) in
     let x1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
     x1 == A.asel md h0 /\
-    True
-    //TODO
-    //dsnd (fst blob1) == h0 (slab_vprop_aux size_class (A.split_l arr (rounding size_class)) (G.reveal md_as_seq))
+    dsnd (fst blob1) == h0 (slab_vprop_aux size_class (A.split_l arr (rounding size_class)) (G.reveal md_as_seq)) /\
+    snd blob1 == A.asel (A.split_r arr (rounding size_class)) h0
   )
   =
   intro_vrefinedep
@@ -798,8 +820,8 @@ let elim_slab_vprop (#opened:_)
   (slab_vprop size_class arr md)
   (fun r ->
     slab_vprop_aux size_class (A.split_l arr (rounding size_class)) r `star`
-    A.varray md `star`
-    A.varray (A.split_r arr (rounding size_class))
+    (A.varray md `star`
+    A.varray (A.split_r arr (rounding size_class)))
   )
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
@@ -809,9 +831,9 @@ let elim_slab_vprop (#opened:_)
     let x0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     G.reveal r == x0 /\
     G.reveal r == A.asel md h1 /\
-    //TODO
-    //dsnd (fst blob0) == h1 (slab_vprop_aux size_class arr r) /\
-    slab_vprop_aux2 size_class (G.reveal r)
+    dsnd (fst blob0) == h1 (slab_vprop_aux size_class (A.split_l arr (rounding size_class)) r) /\
+    slab_vprop_aux2 size_class (G.reveal r) /\
+    snd blob0 == A.asel (A.split_r arr (rounding size_class)) h1
   )
   =
   change_slprop_rel
