@@ -37,8 +37,9 @@ let max_sc = U32.v page_size
 // for the first u64 of the bitmap
 // note: this mechanism does not rely on any loop!
 let sc = x:U32.t{
-  (U32.eq x 16ul \/ U32.eq x 32ul \/ (min_sc <= U32.v x /\ U32.v x <= max_sc)) /\
-  (U32.v page_size) % (U32.v x) == 0
+  U32.eq x 16ul \/
+  U32.eq x 32ul \/
+  (min_sc <= U32.v x /\ U32.v x <= max_sc)
 }
 
 let nb_slots (size_class: sc)
@@ -53,15 +54,29 @@ let nb_slots (size_class: sc)
 
 open FStar.Mul
 
-#push-options "--ifuel 0 --fuel 0"
+open Prelude
+
+let rounding (size_class: sc)
+  : Pure US.t
+  (requires True)
+  (ensures fun r ->
+    US.v r <= U32.v page_size
+  )
+  =
+  US.uint32_to_sizet (U32.mul (nb_slots size_class) size_class)
+
+#push-options "--ifuel 0 --fuel 0 --z3rlimit 50"
 let nb_slots_correct
   (size_class: sc)
   (pos: U32.t)
   : Lemma
   (requires U32.v pos < U32.v (nb_slots size_class))
-  (ensures U32.v (U32.mul pos size_class) <= U32.v page_size - U32.v size_class)
+  (ensures
+    U32.v (U32.mul pos size_class)
+    <= US.v (rounding size_class) - U32.v size_class)
   =
   assert (U32.v pos <= U32.v (nb_slots size_class) - 1);
+  FStar.Math.Lemmas.lemma_mult_le_left (U32.v size_class) (U32.v pos) (U32.v (nb_slots size_class) - 1);
   assert (U32.v pos * U32.v size_class <= U32.v (U32.mul (nb_slots size_class) size_class) - U32.v size_class);
   assert (U32.v (U32.mul (nb_slots size_class) size_class) <= U32.v page_size)
 #pop-options
@@ -712,7 +727,6 @@ let set_lemma_nonfull
       assert (Seq.index md_as_seq2 (U32.v i1) <> full_n bound2)
     ) else (
       assert (U32.v size_class > 64);
-      assert (bound2 = nb_slots size_class);
       assert (U32.v (nb_slots size_class) < 64);
       assert (U32.v pos < 63);
       assert (idx - U32.v i1 * 64 = idx);

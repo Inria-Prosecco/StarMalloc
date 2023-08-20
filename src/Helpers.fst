@@ -400,7 +400,7 @@ let empty_md_lemma
 #push-options "--z3rlimit 50"
 let slab_to_slots_aux
   (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
+  (arr: array U8.t{A.length arr = US.v (rounding size_class)})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
   (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos
@@ -428,31 +428,45 @@ let slab_to_slots (#opened:_)
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
       #(option (Seq.lseq U8.t (U32.v size_class)))
-      (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr)
-      (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL) arr)
+      (slab_vprop_aux_f size_class (Seq.create 4 0UL)
+        (A.split_l arr (rounding size_class)))
+      (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL)
+        (A.split_l arr (rounding size_class)))
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    `star`
+    A.varray (A.split_r arr (rounding size_class))
   )
   =
-  array_to_pieces size_class (nb_slots size_class) arr;
+  A.ghost_split arr (rounding size_class);
+  array_to_pieces size_class (nb_slots size_class) (A.split_l arr (rounding size_class));
   starseq_weakening
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
-    (slot_vprop size_class (nb_slots size_class) arr)
-    (SlotsAlloc.slot_vprop size_class arr)
-    (slot_vprop_lemma size_class (nb_slots size_class) arr)
-    (SlotsAlloc.slot_vprop_lemma size_class arr)
+    (slot_vprop size_class (nb_slots size_class)
+      (A.split_l arr (rounding size_class)))
+    (SlotsAlloc.slot_vprop size_class
+      (A.split_l arr (rounding size_class)))
+    (slot_vprop_lemma size_class (nb_slots size_class)
+      (A.split_l arr (rounding size_class)))
+    (SlotsAlloc.slot_vprop_lemma size_class
+      (A.split_l arr (rounding size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
-  Classical.forall_intro (slab_to_slots_aux size_class arr);
+  Classical.forall_intro (slab_to_slots_aux size_class
+    (A.split_l arr (rounding size_class)));
   starseq_weakening_rel_some
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
-    (SlotsAlloc.slot_vprop size_class arr)
-    (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr)
-    (SlotsAlloc.slot_vprop_lemma size_class arr)
-    (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL) arr)
+    (SlotsAlloc.slot_vprop size_class
+      (A.split_l arr (rounding size_class)))
+    (slab_vprop_aux_f size_class (Seq.create 4 0UL)
+      (A.split_l arr (rounding size_class)))
+    (SlotsAlloc.slot_vprop_lemma size_class
+      (A.split_l arr (rounding size_class)))
+    (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL)
+      (A.split_l arr (rounding size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
 
@@ -478,7 +492,7 @@ let empty_not_bitmap
     assert (bv == 0UL);
     Classical.move_requires (lemma_nth_nonzero bv) (U64.n - (U32.v i % U64.n) - 1)
 
- let slots_to_slabs (#opened:_)
+let slots_to_slabs (#opened:_)
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
   (md: G.erased (Seq.lseq U64.t 4))
@@ -487,9 +501,13 @@ let empty_not_bitmap
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
       #(option (Seq.lseq U8.t (U32.v size_class)))
-      (slab_vprop_aux_f size_class md arr)
-      (slab_vprop_aux_f_lemma size_class md arr)
+      (slab_vprop_aux_f size_class md
+        (A.split_l arr (rounding size_class)))
+      (slab_vprop_aux_f_lemma size_class md
+        (A.split_l arr (rounding size_class)))
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
+    `star`
+    A.varray (A.split_r arr (rounding size_class))
   )
   (fun _ -> A.varray arr)
   (requires fun _ -> is_empty size_class md /\ zero_beyond_bound size_class md)
@@ -498,36 +516,49 @@ let empty_not_bitmap
   let s = SeqUtils.init_u32_refined (U32.v (nb_slots size_class)) in
   Classical.forall_intro (Classical.move_requires (empty_not_bitmap size_class md));
   assert (forall (k:nat{k < U32.v (nb_slots size_class)}).
-    slab_vprop_aux_f size_class md arr (Seq.index s k) ==
-    some_as_vp #((Seq.lseq U8.t (U32.v size_class))) (SlotsAlloc.slot_vprop size_class arr (Seq.index s k)));
+    slab_vprop_aux_f size_class md (A.split_l arr (rounding size_class)) (Seq.index s k) ==
+    some_as_vp #((Seq.lseq U8.t (U32.v size_class))) (SlotsAlloc.slot_vprop size_class (A.split_l arr (rounding size_class)) (Seq.index s k)));
   starseq_weakening_rel_from_some
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
-    (slab_vprop_aux_f size_class md arr)
-    (SlotsAlloc.slot_vprop size_class arr)
-    (slab_vprop_aux_f_lemma size_class md arr)
-    (SlotsAlloc.slot_vprop_lemma size_class arr)
+    (slab_vprop_aux_f size_class md
+      (A.split_l arr (rounding size_class)))
+    (SlotsAlloc.slot_vprop size_class
+      (A.split_l arr (rounding size_class)))
+    (slab_vprop_aux_f_lemma size_class md
+      (A.split_l arr (rounding size_class)))
+    (SlotsAlloc.slot_vprop_lemma size_class
+      (A.split_l arr (rounding size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
   starseq_weakening
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
-    (SlotsAlloc.slot_vprop size_class arr)
-    (slot_vprop size_class (nb_slots size_class) arr)
-    (SlotsAlloc.slot_vprop_lemma size_class arr)
-    (slot_vprop_lemma size_class (nb_slots size_class) arr)
+    (SlotsAlloc.slot_vprop size_class
+      (A.split_l arr (rounding size_class)))
+    (slot_vprop size_class (nb_slots size_class)
+      (A.split_l arr (rounding size_class)))
+    (SlotsAlloc.slot_vprop_lemma size_class
+      (A.split_l arr (rounding size_class)))
+    (slot_vprop_lemma size_class (nb_slots size_class)
+      (A.split_l arr (rounding size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
-  pieces_to_array size_class (nb_slots size_class) arr
+  pieces_to_array size_class (nb_slots size_class)
+    (A.split_l arr (rounding size_class));
+  sladmit ()
 
 let intro_empty_slab_varray (#opened:_)
   (size_class: sc)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = U32.v page_size})
   : SteelGhost unit opened
-  (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+  (
+    slab_vprop_aux size_class (A.split_l arr (rounding size_class)) (G.reveal md_as_seq) `star`
+    A.varray (A.split_r arr (rounding size_class))
+  )
   (fun _ -> A.varray arr)
   (requires fun h0 ->
     is_empty size_class (G.reveal md_as_seq) /\
@@ -536,14 +567,17 @@ let intro_empty_slab_varray (#opened:_)
   (ensures fun h0 _ h1 -> True)
   =
   change_equal_slprop
-    (slab_vprop_aux size_class arr (G.reveal md_as_seq))
+    (slab_vprop_aux size_class (A.split_l arr (rounding size_class)) (G.reveal md_as_seq))
     (starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
       #(option (Seq.lseq U8.t (U32.v size_class)))
-      (slab_vprop_aux_f size_class md_as_seq arr)
-      (slab_vprop_aux_f_lemma size_class md_as_seq arr)
+      (slab_vprop_aux_f size_class md_as_seq
+        (A.split_l arr (rounding size_class)))
+      (slab_vprop_aux_f_lemma size_class md_as_seq
+        (A.split_l arr (rounding size_class)))
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
-  slots_to_slabs size_class arr md_as_seq
+  slots_to_slabs size_class arr md_as_seq;
+  sladmit ()
 
 //array_to_pieces
 //starseq_weakening_ref

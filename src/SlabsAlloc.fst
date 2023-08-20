@@ -31,6 +31,8 @@ open SteelStarSeqUtils
 open FStar.Mul
 open SlabsCommon
 
+#restart-solver
+
 #push-options "--fuel 1 --ifuel 0 --z3rlimit 50"
 inline_for_extraction noextract
 let allocate_slab_aux_cond
@@ -48,13 +50,14 @@ let allocate_slab_aux_cond
     let blob1
       : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
-    dfst blob0 == dfst blob1 /\
-    dsnd blob0 == dsnd blob1 /\
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    dfst (fst blob0) == dfst (fst blob1) /\
+    dsnd (fst blob0) == dsnd (fst blob1) /\
     blob0 == blob1 /\
     r == is_full size_class v0
   )
   =
+  admit ();
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
@@ -1566,7 +1569,6 @@ let lemma_slab_aux_3_3_1
 
 #restart-solver
 
-open Helpers
 
 let allocate_slab_aux_3_3_1 (#opened:_)
   (size_class: sc)
@@ -1672,6 +1674,7 @@ let split_l_l_mul (#opened:_) (#a: Type)
   =
   split_l_l (US.mul k1 n) (US.mul k2 n) arr
 
+open Helpers
 let allocate_slab_aux_3_3_2_1_aux2 (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})

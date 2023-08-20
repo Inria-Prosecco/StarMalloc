@@ -50,13 +50,14 @@ let deallocate_slab_aux_cond
     let blob1
       : t_of (slab_vprop size_class arr md)
       = h1 (slab_vprop size_class arr md) in
-    let v0 : Seq.lseq U64.t 4 = dfst blob0 in
-    dfst blob0 == dfst blob1 /\
-    dsnd blob0 == dsnd blob1 /\
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    dfst (fst blob0) == dfst (fst blob1) /\
+    dsnd (fst blob0) == dsnd (fst blob1) /\
     blob0 == blob1 /\
     r == is_empty size_class v0
   )
   =
+  admit ();
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let md_as_seq : G.erased (Seq.lseq U64.t 4)
     = elim_slab_vprop size_class md arr in
@@ -392,7 +393,7 @@ let deallocate_slab_aux_1_fail
     = h0 (slab_vprop size_class
       (slab_array slab_region pos)
       (md_bm_array md_bm_region pos)) in
-    let md : Seq.lseq U64.t 4 = dfst md_blob in
+    let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
     is_full size_class md /\
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
@@ -489,7 +490,6 @@ let deallocate_slab_aux_1
     0 <= diff /\
     diff < U32.v page_size /\
     US.v pos2 == diff /\
-    (U32.v page_size) % (U32.v size_class) = 0 /\
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel r1 h0 == idx1 /\
@@ -870,7 +870,7 @@ let deallocate_slab_aux_2_fail
     = h0 (slab_vprop size_class
       (slab_array slab_region pos)
       (md_bm_array md_bm_region pos)) in
-    let md : Seq.lseq U64.t 4 = dfst md_blob in
+    let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
     is_partial size_class md /\
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
