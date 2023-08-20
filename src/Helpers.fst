@@ -548,7 +548,15 @@ let slots_to_slabs (#opened:_)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
   pieces_to_array size_class (nb_slots size_class)
     (A.split_l arr (rounding size_class));
-  sladmit ()
+  A.ghost_join
+    (A.split_l arr (rounding size_class))
+    (A.split_r arr (rounding size_class))
+    ();
+  change_equal_slprop
+    (A.varray (A.merge
+      (A.split_l arr (rounding size_class))
+      (A.split_r arr (rounding size_class))))
+    (A.varray arr)
 
 let intro_empty_slab_varray (#opened:_)
   (size_class: sc)
@@ -576,8 +584,7 @@ let intro_empty_slab_varray (#opened:_)
       (slab_vprop_aux_f_lemma size_class md_as_seq
         (A.split_l arr (rounding size_class)))
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
-  slots_to_slabs size_class arr md_as_seq;
-  sladmit ()
+  slots_to_slabs size_class arr md_as_seq
 
 //array_to_pieces
 //starseq_weakening_ref
