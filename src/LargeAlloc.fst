@@ -13,6 +13,7 @@ module U8 = FStar.UInt8
 module US = FStar.SizeT
 
 module P = Steel.FractionalPermission
+module G = FStar.Ghost
 
 open Impl.Mono
 open Map.M
@@ -34,7 +35,7 @@ let is_wf (x: wdm data) : prop
   == true
 
 let linked_wf_tree (tree: t)
-  = linked_tree tree `vrefine` is_wf
+  = linked_tree p tree `vrefine` is_wf
 
 let ind_linked_wf_tree (metadata: ref t)
   = vptr metadata `vdep` linked_wf_tree
@@ -46,39 +47,6 @@ assume val mmap_ptr_metadata (_:unit)
 
 open Config
 
-assume val avl_data_size_aux : v:U32.t{U32.v v <= U32.v page_size}
-
-let avl_data_size : sc =
-  if U32.lte avl_data_size_aux 64ul then 64ul else avl_data_size_aux
-
-open SizeClass
-open Main
-
-open FStar.Mul
-
-inline_for_extraction noextract
-val init_avl_scs (slab_region: array U8.t)
-  : Steel (size_class_struct)
-  (A.varray slab_region)
-  (fun r -> size_class_vprop r)
-  (requires fun h0 ->
-    A.length slab_region = US.v metadata_max * U32.v Config.page_size /\
-    zf_u8 (A.asel slab_region h0)
-  )
-  (ensures fun _ r _ ->
-    r.size = avl_data_size /\
-    r.slab_region == slab_region
-  )
-
-let init_avl_scs (slab_region: array U8.t)
-  =
-  let md_bm_region_size = US.mul metadata_max 4sz in
-  let md_region_size = metadata_max in
-  let md_bm_region = mmap_u64 md_bm_region_size in
-  let md_region = mmap_cell_status md_region_size in
-  let scs = init_struct_aux avl_data_size slab_region md_bm_region md_region in
-  return scs
-
 module L = Steel.SpinLock
 
 noeq
@@ -88,81 +56,34 @@ type mmap_md =
     lock : L.lock (ind_linked_wf_tree data);
   }
 
-noeq
-type mmap_md_slabs =
-  {
-    slab_region: array U8.t;
-    scs: v:size_class_struct{
-      v.size = avl_data_size /\
-      v.slab_region == A.split_r slab_region 0sz
-    };
-    lock : L.lock (
-      size_class_vprop scs `star`
-      A.varray (A.split_l slab_region 0sz)
-    );
-  }
-
 let init_mmap_md (_:unit)
   : SteelTop mmap_md false (fun _ -> emp) (fun _ _ _ -> True)
   =
   let ptr = mmap_ptr_metadata () in
   let tree = create_leaf () in
   write ptr tree;
-  (**) intro_vrefine (linked_tree tree) is_wf;
+  (**) intro_vrefine (linked_tree p tree) is_wf;
   (**) intro_vdep (vptr ptr) (linked_wf_tree tree) linked_wf_tree;
   let lock = L.new_lock (ind_linked_wf_tree ptr) in
   return { data=ptr; lock=lock; }
-
-let init_mmap_md_slabs (_:unit)
-  : SteelTop mmap_md_slabs false (fun _ -> emp) (fun _ _ _ -> True)
-  =
-  let slab_region_size = US.mul metadata_max (US.uint32_to_sizet Config.page_size) in
-  let slab_region = mmap_u8 slab_region_size in
-  A.ghost_split slab_region 0sz;
-  let scs = init_avl_scs (A.split_r slab_region 0sz) in
-  let lock = L.new_lock (size_class_vprop scs `star` A.varray (A.split_l slab_region 0sz)) in
-  return { slab_region; scs; lock; }
 
 // intentional top-level effect for initialization
 // corresponding warning temporarily disabled
 #push-options "--warn_error '-272'"
 let metadata : mmap_md = init_mmap_md ()
-let metadata_slabs : mmap_md_slabs = init_mmap_md_slabs ()
 #pop-options
 
 open Steel.Reference
-
-//TODO: discussion with Aymeric and Jonathan
-//generalizing the slabs allocator type should allow
-//to remove this cast
-//but polymorphic assumes are unsupported
-//pass corresponding mmap function (which is the needed one)
-//as argument to avoid this issue
-assume val array_u8__to__ref_node
-  (arr: array U8.t)
-  : Steel (ref node)
-  (A.varray arr)
-  (fun r -> vptr r)
-  (requires fun _ -> A.length arr == U32.v avl_data_size)
-  (ensures fun _ r _ ->
-    A.is_null arr = is_null r
-  )
-assume val ref_node__to__array_u8
-  (x: ref node)
-  : Steel (array U8.t)
-  (vptr x)
-  (fun r -> A.varray r)
-  (requires fun _ -> True)
-  (ensures fun _ r _ ->
-    A.is_null r = is_null x /\
-    A.length r == U32.v avl_data_size
-  )
 
 let trees_malloc2 (x: node)
   : Steel (ref node)
   emp (fun r -> vptr r)
   (requires fun _ -> True)
-  (ensures fun _ r h1 -> sel r h1 == x /\ not (is_null r))
+  (ensures fun _ r h1 ->
+    sel r h1 == x /\
+    not (is_null r) /\
+    (G.reveal p) r
+  )
   =
   L.acquire metadata_slabs.lock;
   let r = SizeClass.allocate_size_class metadata_slabs.scs in
@@ -179,6 +100,7 @@ let trees_malloc2 (x: node)
     let r' = array_u8__to__ref_node r in
     L.release metadata_slabs.lock;
     write r' x;
+    admit ();
     return r'
   )
 
@@ -187,18 +109,13 @@ module UP = FStar.PtrdiffT
 let trees_free2 (r: ref node)
   : Steel unit
   (vptr r) (fun _ -> emp)
-  (requires fun _ -> True)
+  (requires fun _ -> (G.reveal p) r)
   //not (is_null x) ?
   (ensures fun _ _ _-> True)
   =
-  //TODO: edit definition of data in Impl.Trees.Types.fst
+  vptr_not_null r;
   let ptr = ref_node__to__array_u8 r in
-  //or use within_bounds
   L.acquire metadata_slabs.lock;
-  assume (same_base_array ptr metadata_slabs.scs.slab_region);
-  assume (UP.fits (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)));
-  assume (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region) >= 0);
-  assume (((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) % U32.v page_size) % U32.v metadata_slabs.scs.size = 0);
   let diff = A.ptrdiff ptr (A.split_l metadata_slabs.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert (US.v diff_sz = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region));
@@ -290,23 +207,23 @@ let large_malloc_aux
   )
   =
   (**) let t = elim_vdep (vptr metadata_ptr) linked_wf_tree in
-  (**) elim_vrefine (linked_tree t) is_wf;
+  (**) elim_vrefine (linked_tree p t) is_wf;
   let md_v = read metadata_ptr in
   (**) change_equal_slprop
-    (linked_tree t)
-    (linked_tree md_v);
+    (linked_tree p t)
+    (linked_tree p md_v);
   (**) let h0 = get () in
-  (**) Spec.height_lte_size (v_linked_tree md_v h0);
+  (**) Spec.height_lte_size (v_linked_tree p md_v h0);
   let size' = if enable_slab_canaries_malloc then US.add size 2sz else size in
   let ptr = mmap size' in
   if (A.is_null ptr) then (
-    (**) intro_vrefine (linked_tree md_v) is_wf;
+    (**) intro_vrefine (linked_tree p md_v) is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
     return ptr
   ) else (
     let b = mem md_v (ptr, size) in
     if b then (
-      (**) intro_vrefine (linked_tree md_v) is_wf;
+      (**) intro_vrefine (linked_tree p md_v) is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
       //TODO: add a die()
       drop (null_or_varray ptr);
@@ -315,10 +232,10 @@ let large_malloc_aux
     ) else (
       let h0 = get () in
       let md_v' = insert false md_v (ptr, size) in
-      Spec.lemma_insert false (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
-      Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
+      Spec.lemma_insert false (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size);
+      Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
       write metadata_ptr md_v';
-      (**) intro_vrefine (linked_tree md_v') is_wf;
+      (**) intro_vrefine (linked_tree p md_v') is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
       return ptr
     )
@@ -340,13 +257,13 @@ let _size (metadata: ref t) : Steel U64.t
   )
   =
   (**) let t = elim_vdep (vptr metadata) linked_wf_tree in
-  (**) elim_vrefine (linked_tree t) is_wf;
+  (**) elim_vrefine (linked_tree p t) is_wf;
   let md_v = read metadata in
   (**) change_equal_slprop
-    (linked_tree t)
-    (linked_tree md_v);
+    (linked_tree p t)
+    (linked_tree p md_v);
   let size = get_size md_v in
-  (**) intro_vrefine (linked_tree md_v) is_wf;
+  (**) intro_vrefine (linked_tree p md_v) is_wf;
   (**) intro_vdep (vptr metadata) (linked_wf_tree md_v) linked_wf_tree;
   return size
 
@@ -396,13 +313,13 @@ let large_free_aux
   )
   =
   (**) let t = elim_vdep (vptr metadata_ptr) linked_wf_tree in
-  (**) elim_vrefine (linked_tree t) is_wf;
+  (**) elim_vrefine (linked_tree p t) is_wf;
   let md_v = read metadata_ptr in
   (**) change_equal_slprop
-    (linked_tree t)
-    (linked_tree md_v);
+    (linked_tree p t)
+    (linked_tree p md_v);
   (**) let h0 = get () in
-  (**) Spec.height_lte_size (v_linked_tree md_v h0);
+  (**) Spec.height_lte_size (v_linked_tree p md_v h0);
   let k_elem : data = (ptr, 0sz) in
   let size = find md_v k_elem in
   if Some? size then (
@@ -421,10 +338,10 @@ let large_free_aux
     munmap ptr size';
     let h0 = get () in
     let md_v' = delete md_v (ptr, size) in
-    Spec.lemma_delete (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size);
-    Spec.lemma_delete2 (spec_convert cmp) (v_linked_tree md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
+    Spec.lemma_delete (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size);
+    Spec.lemma_delete2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
     write metadata_ptr md_v';
-    (**) intro_vrefine (linked_tree md_v') is_wf;
+    (**) intro_vrefine (linked_tree p md_v') is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
     [@inline_let] let b = true in
     change_equal_slprop
@@ -432,7 +349,7 @@ let large_free_aux
       (if b then emp else A.varray ptr);
     return b
   ) else (
-    (**) intro_vrefine (linked_tree md_v) is_wf;
+    (**) intro_vrefine (linked_tree p md_v) is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
     [@inline_let] let b = false in
     change_equal_slprop
@@ -504,21 +421,21 @@ let large_getsize_aux (metadata: ref t) (ptr: array U8.t)
   )
   =
   (**) let t = elim_vdep (vptr metadata) linked_wf_tree in
-  (**) elim_vrefine (linked_tree t) is_wf;
+  (**) elim_vrefine (linked_tree p t) is_wf;
   let md_v = read metadata in
   (**) change_equal_slprop
-    (linked_tree t)
-    (linked_tree md_v);
+    (linked_tree p t)
+    (linked_tree p md_v);
   (**) let h0 = get () in
-  (**) Spec.height_lte_size (v_linked_tree md_v h0);
+  (**) Spec.height_lte_size (v_linked_tree p md_v h0);
   let size = find md_v (ptr, 0sz) in
   if Some? size then (
     let size = Some?.v size in
-    (**) intro_vrefine (linked_tree md_v) is_wf;
+    (**) intro_vrefine (linked_tree p md_v) is_wf;
     (**) intro_vdep (vptr metadata) (linked_wf_tree md_v) linked_wf_tree;
     return size
   ) else (
-    (**) intro_vrefine (linked_tree md_v) is_wf;
+    (**) intro_vrefine (linked_tree p md_v) is_wf;
     (**) intro_vdep (vptr metadata) (linked_wf_tree md_v) linked_wf_tree;
     return 0sz
   )

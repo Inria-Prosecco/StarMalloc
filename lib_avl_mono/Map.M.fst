@@ -62,13 +62,13 @@ inline_for_extraction noextract
 let cardinal
   (ptr: t)
   : Steel (U64.t)
-  (linked_tree ptr)
-  (fun _ -> linked_tree ptr)
+  (linked_tree p ptr)
+  (fun _ -> linked_tree p ptr)
   (requires fun _ -> True)
   (ensures fun h0 s h1 ->
-    v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-    U64.v s == Spec.sot_wds (v_linked_tree ptr h0) /\
-    U64.v s == Spec.size_of_tree (v_linked_tree ptr h0))
+    v_linked_tree p ptr h0 == v_linked_tree p ptr h1 /\
+    U64.v s == Spec.sot_wds (v_linked_tree p ptr h0) /\
+    U64.v s == Spec.size_of_tree (v_linked_tree p ptr h0))
   =
   Impl.Mono.sot_wds ptr
 
@@ -77,15 +77,15 @@ let mem
   (ptr: t)
   (v: data)
   : Steel bool
-  (linked_tree ptr)
-  (fun _ -> linked_tree ptr)
+  (linked_tree p ptr)
+  (fun _ -> linked_tree p ptr)
   (requires fun h0 ->
-    Spec.is_bst (spec_convert cmp) (v_linked_tree ptr h0))
+    Spec.is_bst (spec_convert cmp) (v_linked_tree p ptr h0))
   (ensures fun h0 b h1 ->
-    v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
-    (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b) /\
-    (Spec.memopt (convert cmp) (v_linked_tree ptr h0) v <==> b)
+    v_linked_tree p ptr h0 == v_linked_tree p ptr h1 /\
+    Spec.is_bst (convert cmp) (v_linked_tree p ptr h0) /\
+    (Spec.mem (convert cmp) (v_linked_tree p ptr h0) v <==> b) /\
+    (Spec.memopt (convert cmp) (v_linked_tree p ptr h0) v <==> b)
   )
   =
   Impl.Mono.member ptr v
@@ -104,42 +104,42 @@ let rec find
   (ptr: t)
   (v: data)
   : Steel (option US.t)
-  (linked_tree ptr)
-  (fun _ -> linked_tree ptr)
+  (linked_tree p ptr)
+  (fun _ -> linked_tree p ptr)
   (requires fun h0 ->
-    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0) /\
+    Spec.is_avl (spec_convert cmp) (v_linked_tree p ptr h0) /\
     Spec.forall_keys
-      (v_linked_tree ptr h0)
+      (v_linked_tree p ptr h0)
       (fun x -> US.v (snd x) <> 0)
   )
   (ensures fun h0 r h1 ->
-    v_linked_tree ptr h1 == v_linked_tree ptr h0 /\
-    Spec.is_avl (spec_convert cmp) (v_linked_tree ptr h0) /\
-    (Some? r == Spec.mem (spec_convert cmp) (v_linked_tree ptr h0) v) /\
-    (Some? r == Spec.memopt (spec_convert cmp) (v_linked_tree ptr h0) v) /\
+    v_linked_tree p ptr h1 == v_linked_tree p ptr h0 /\
+    Spec.is_avl (spec_convert cmp) (v_linked_tree p ptr h0) /\
+    (Some? r == Spec.mem (spec_convert cmp) (v_linked_tree p ptr h0) v) /\
+    (Some? r == Spec.memopt (spec_convert cmp) (v_linked_tree p ptr h0) v) /\
     (Some? r ==> (
       (enable_slab_canaries_malloc ==>
         A.length (fst v) == US.v (Some?.v r) + 2) /\
       (not enable_slab_canaries_malloc ==>
         A.length (fst v) == US.v (Some?.v r)) /\
       A.is_full_array (fst v) /\
-      Spec.mem (spec_convert cmp) (v_linked_tree ptr h0)
+      Spec.mem (spec_convert cmp) (v_linked_tree p ptr h0)
         (fst v, Some?.v r)
     ))
   )
   =
   let h = get () in
-  Spec.equivmem (spec_convert cmp) (v_linked_tree ptr h) v;
+  Spec.equivmem (spec_convert cmp) (v_linked_tree p ptr h) v;
   if is_null_t ptr then (
-    null_is_leaf ptr;
+    null_is_leaf p ptr;
     return None
   ) else (
     let h0 = get () in
-    let node = unpack_tree ptr in
+    let node = unpack_tree p ptr in
     let h1 = get () in
     let delta = cmp v (get_data node) in
     if I64.eq delta szero then (
-      pack_tree ptr
+      pack_tree p ptr
         (get_left node) (get_right node)
         (get_size node) (get_height node);
       let r = snd (get_data node) in
@@ -147,13 +147,13 @@ let rec find
     ) else (
       if I64.lt delta szero then (
         let r = find (get_left node) v in
-        pack_tree ptr
+        pack_tree p ptr
           (get_left node) (get_right node)
           (get_size node) (get_height node);
         return r
       ) else (
         let r = find (get_right node) v in
-        pack_tree ptr
+        pack_tree p ptr
           (get_left node) (get_right node)
           (get_size node) (get_height node);
         return r

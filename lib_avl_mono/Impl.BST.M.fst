@@ -22,36 +22,36 @@ open Impl.Trees.M
 //@BST
 #push-options "--fuel 1 --ifuel 1"
 let rec member (ptr: t) (v: data)
-  : Steel bool (linked_tree ptr) (fun _ -> linked_tree ptr)
+  : Steel bool (linked_tree p ptr) (fun _ -> linked_tree p ptr)
   (requires fun h0 ->
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0))
+    Spec.is_bst (convert cmp) (v_linked_tree p ptr h0))
   (ensures fun h0 b h1 ->
-    v_linked_tree ptr h0 == v_linked_tree ptr h1 /\
-    Spec.is_bst (convert cmp) (v_linked_tree ptr h0) /\
-    (Spec.mem (convert cmp) (v_linked_tree ptr h0) v <==> b) /\
-    (Spec.memopt (convert cmp) (v_linked_tree ptr h0) v <==> b))
+    v_linked_tree p ptr h0 == v_linked_tree p ptr h1 /\
+    Spec.is_bst (convert cmp) (v_linked_tree p ptr h0) /\
+    (Spec.mem (convert cmp) (v_linked_tree p ptr h0) v <==> b) /\
+    (Spec.memopt (convert cmp) (v_linked_tree p ptr h0) v <==> b))
   =
   let h = get () in
-  Spec.equivmem (convert cmp) (v_linked_tree ptr h) v;
+  Spec.equivmem (convert cmp) (v_linked_tree p ptr h) v;
   if is_null_t ptr then (
-    (**) null_is_leaf ptr;
+    (**) null_is_leaf p ptr;
     return false
   ) else (
-    (**) let node = unpack_tree ptr in
+    (**) let node = unpack_tree p ptr in
     let data = get_data node in
     let delta = cmp v data in
     if I.eq delta szero then begin
-      (**) pack_tree ptr (get_left node) (get_right node)
+      (**) pack_tree p ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       return true
     end else if I.lt delta szero then begin
       let b = member (get_left node) v in
-      (**) pack_tree ptr (get_left node) (get_right node)
+      (**) pack_tree p ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       return b
     end else begin
       let b = member (get_right node) v in
-      (**) pack_tree ptr (get_left node) (get_right node)
+      (**) pack_tree p ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       return b
     end
