@@ -193,6 +193,7 @@ let deallocate_size_class
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
     0 <= diff' /\
     US.v diff = diff' /\
+    (diff' % U32.v page_size) % U32.v scs.size == 0 /\
     A.length ptr == U32.v scs.size /\
     same_base_array ptr scs.slab_region)
   (ensures fun h0 _ h1 -> True)

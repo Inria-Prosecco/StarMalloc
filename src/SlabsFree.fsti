@@ -49,6 +49,7 @@ val deallocate_slab
     same_base_array ptr slab_region /\
     US.v diff_ = diff' /\
     0 <= diff' /\
+    (diff' % U32.v page_size) % U32.v size_class == 0 /\
     //diff' < US.v metadata_max * U32.v page_size /\
     //diff' % U32.v size_class = 0 /\
     A.length ptr == U32.v size_class

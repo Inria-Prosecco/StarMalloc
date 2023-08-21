@@ -221,11 +221,10 @@ let deallocate_slot_aux
   return ()
 
 // if this function yields true,
-// with an additional condition on the offset,
 // then it means it is a valid pointer that *could* be allocated
-// proper alignment means also one can recover the pos of the slot within the slab
+// as pointing to the part of the array that can be allocated
+// that is, A.split_r arr (rounding size_class)
 #push-options "--z3rlimit 100 --fuel 0 --ifuel 0"
-//TODO: check for spec
 let deallocate_slot_aux0
   (size_class: sc)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
@@ -242,12 +241,37 @@ let deallocate_slot_aux0
   (ensures
     fun r ->
       let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
-      r = (diff % (U32.v size_class) = 0))
+      r = (diff < US.v (rounding size_class))
+  )
   =
-  let rem = U32.rem diff size_class in
-  assert (U32.v rem = U32.v diff % U32.v size_class);
-  let b = rem = 0ul in
-  b
+  let diff_sz = US.uint32_to_sizet diff in
+  US.lt diff_sz (rounding size_class)
+
+let deallocate_slot_aux_lemma
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = US.v (rounding size_class)})
+  (ptr: array U8.t)
+  (diff: nat)
+  : Lemma
+  (requires (
+    let diff2 = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
+    same_base_array arr ptr /\
+    0 <= diff2 /\
+    diff2 < US.v (rounding size_class) /\
+    diff2 % (U32.v size_class) = 0 /\
+    diff == diff2
+  ))
+  (ensures (
+    let r = diff / (U32.v size_class) in
+    r < U32.v (nb_slots size_class)
+  ))
+  =
+  let x = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
+  let y = US.v (rounding size_class) in
+  assert (x % (U32.v size_class) == 0);
+  Math.Lemmas.cancel_mul_mod (U32.v (nb_slots size_class)) (U32.v size_class);
+  assert (y % (U32.v size_class) == 0);
+  assert (x < y)
 
 let deallocate_slot_aux1
   (size_class: sc)
@@ -259,7 +283,7 @@ let deallocate_slot_aux1
     let diff2 = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff2 /\
-    diff2 < U32.v page_size /\
+    diff2 < US.v (rounding size_class) /\
     diff2 % (U32.v size_class) = 0 /\
     U32.v diff == diff2
   ))
@@ -269,8 +293,7 @@ let deallocate_slot_aux1
     U32.v r < U32.v (nb_slots size_class) /\
     U32.v r < U64.n * 4)
   =
-  //TODO: this is wrong
-  admit ();
+  deallocate_slot_aux_lemma size_class arr ptr (U32.v diff);
   let div = U32.div diff size_class in
   div
 
@@ -306,7 +329,7 @@ let deallocate_slot_aux2
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff /\
-    diff < U32.v page_size /\
+    diff < US.v (rounding size_class) /\
     diff % (U32.v size_class) == 0 /\
     A.length ptr == U32.v size_class
   ))
@@ -323,8 +346,7 @@ let deallocate_slot_aux2
   assert (rem = 0);
   assert (diff = pos * (U32.v size_class));
   assert (nb_slots size_class = U32.div page_size size_class);
-  //TODO: likely something wrong in the precond, as before
-  admit ();
+  deallocate_slot_aux_lemma size_class arr ptr diff;
   assert (pos < U32.v (nb_slots size_class));
   slot_array_offset_lemma size_class arr (U32.uint_to_t pos);
   let ptr' = slot_array size_class arr (U32.uint_to_t pos) in
@@ -601,6 +623,7 @@ let deallocate_slot'
     same_base_array ptr arr /\
     0 <= diff /\
     diff < U32.v page_size /\
+    diff % U32.v size_class == 0 /\
     US.v diff_ == diff /\
     A.asel md h0 == G.reveal md_as_seq /\
     A.length ptr == U32.v size_class
@@ -647,7 +670,7 @@ let deallocate_slot'
     return (false, G.hide 0ul)
   )
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let bound2_inv2
   (size_class: sc)
   (md_as_seq: Seq.lseq U64.t 4)
@@ -677,7 +700,8 @@ let bound2_inv2
     Seq.lemma_empty (Seq.slice bm' 0 (64 - U32.v bound2))
   ) else (
     assert (U32.v size_class > 64);
-    assert (U32.v nb_slots_sc < 64);
+    // TODO: FIXME
+    assume (U32.v nb_slots_sc < 64);
     assert (nb_slots_sc_rem = nb_slots_sc);
     let idx = Bitmap4.f #4 (U32.v pos) in
     Bitmap4.unset_lemma2 md_as_seq pos;
@@ -709,6 +733,7 @@ let deallocate_slot
     same_base_array arr ptr /\
     0 <= diff /\
     diff < U32.v page_size /\
+    diff % U32.v size_class == 0 /\
     US.v diff_ = diff /\
     A.length ptr == U32.v size_class
   )

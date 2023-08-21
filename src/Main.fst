@@ -1298,7 +1298,8 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
     same_base_array ptr sc.data.slab_region /\
     0 <= diff' /\
     diff' < US.v slab_size /\
-    A.length ptr == U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size /\
+    (diff' % U32.v page_size) % U32.v sc.data.size == 0 /\
+    A.length ptr == U32.v sc.data.size /\
     US.v diff = diff')
   (ensures fun h0 _ h1 -> True)
   =
@@ -1330,14 +1331,20 @@ let within_size_class_i (ptr:A.array U8.t) (sc: size_class_struct) : prop = (
 /// Elimination lemma for `within_size_class_i`, triggering F* to prove the precondition
 /// of the implication
 let elim_within_size_class_i (ptr:A.array U8.t) (i:nat{i < Seq.length sc_all.g_size_classes}) (size:sc)
-  : Lemma (requires (let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
-  size == sc.data.size /\
-  within_size_class_i ptr sc.data /\
-  same_base_array sc.data.slab_region ptr /\
-  A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) >= 0 /\
-  A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) < US.v slab_size /\
-  ((A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc_all.slab_region))) % U32.v page_size) % U32.v size = 0))
-    (ensures A.length ptr == U32.v size)
+  : Lemma
+  (requires (
+    let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
+    size == sc.data.size /\
+    within_size_class_i ptr sc.data /\
+    same_base_array sc.data.slab_region ptr /\
+    A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) >= 0 /\
+    A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) < US.v slab_size /\
+    ((A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc_all.slab_region))) % U32.v page_size) % U32.v size = 0))
+  (ensures (
+    let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
+    ((A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region))) % U32.v page_size) % U32.v size = 0 /\
+    A.length ptr == U32.v size
+  ))
   =
   let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
   let off_ptr = A.offset (A.ptr_of ptr) in
@@ -1405,7 +1412,7 @@ let slab_getsize (ptr: array U8.t)
   let index = US.div diff_sz slab_size in
   let size = ROArray.index sc_all.ro_sizes index in
   let rem_slab = US.rem diff_sz slab_size in
-  let rem_slot = US.rem rem_slab (u32_to_sz page_size) in
+  let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
   if US.rem rem_slot (US.uint32_to_sizet size) = 0sz then (
     (**) let sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
@@ -1468,7 +1475,7 @@ let slab_free ptr =
   (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
   let size = ROArray.index sc_all.ro_sizes index in
   let rem_slab = US.rem diff_sz slab_size in
-  let rem_slot = US.rem rem_slab (u32_to_sz page_size) in
+  let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
   if US.rem rem_slot (US.uint32_to_sizet size) <> 0sz then (
     return false
@@ -1486,6 +1493,7 @@ let slab_free ptr =
         // Canary was overwritten
         return false
     ) else (
+      (**) elim_within_size_class_i ptr (US.v index) size;
       slab_free' index ptr rem_slab
     )
   )

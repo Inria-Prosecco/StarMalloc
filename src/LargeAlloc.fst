@@ -46,24 +46,10 @@ assume val mmap_ptr_metadata (_:unit)
 
 open Config
 
-//assume val get_sizeof_avl_data_as_bytes (_:unit) : sc
+assume val avl_data_size_aux : v:U32.t{U32.v v <= U32.v page_size}
 
-//assume val get_sizeof_avl_data_as_bytes (_:unit)
-//  : Pure US.t
-//  (requires True)
-//  (fun r ->
-//    US.v r <= FStar.UInt.max_int 32 /\
-//    US.v r == 16 \/
-//    US.v r == 32 \/
-//    (
-//      US.v r <= 64 /\
-//      US.v r <= U32.v page_size /\
-//      (U32.v page_size) % (US.v r) == 0
-//    )
-//  )
-
-assume val avl_data_size : sc
-//= get_sizeof_avl_data_as_bytes ()
+let avl_data_size : sc =
+  if U32.lte avl_data_size_aux 64ul then 64ul else avl_data_size_aux
 
 open SizeClass
 open Main
@@ -205,16 +191,17 @@ let trees_free2 (r: ref node)
   //not (is_null x) ?
   (ensures fun _ _ _-> True)
   =
-  L.acquire metadata_slabs.lock;
-  let ptr = ref_node__to__array_u8 r in
   //TODO: edit definition of data in Impl.Trees.Types.fst
+  let ptr = ref_node__to__array_u8 r in
   //or use within_bounds
-  assume (same_base_array ptr metadata_slabs.slab_region);
+  L.acquire metadata_slabs.lock;
+  assume (same_base_array ptr metadata_slabs.scs.slab_region);
   assume (UP.fits (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)));
   assume (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region) >= 0);
+  assume (((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) % U32.v page_size) % U32.v metadata_slabs.scs.size = 0);
   let diff = A.ptrdiff ptr (A.split_l metadata_slabs.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
-  assert (UP.v diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region));
+  assert (US.v diff_sz = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region));
   let b = SizeClass.deallocate_size_class metadata_slabs.scs ptr diff_sz in
   if b
   then (

@@ -87,14 +87,7 @@ void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
   memset(ptr, 0, len);
 }
 
-//TO BE REMOVED
-//uint64_t* Impl_Trees_Types_trees_malloc(uint64_t x) {
-//  uint64_t* ptr = mmap_u64(1);
-//  *ptr = x;
-//  return ptr;
-//}
-
-uint32_t avl_data_size = sizeof(Impl_Trees_Types_node);
+uint32_t avl_data_size_aux = sizeof(Impl_Trees_Types_node);
 
 Impl_Trees_Types_node* array_u8__to__ref_node(uint8_t* arr) {
   return (Impl_Trees_Types_node*) arr;
@@ -102,24 +95,6 @@ Impl_Trees_Types_node* array_u8__to__ref_node(uint8_t* arr) {
 uint8_t* ref_node__to__array_u8(Impl_Trees_Types_node* r) {
   return (uint8_t*) r;
 }
-
-//TO BE REMOVED
-//Impl_Trees_Types_node* trees_malloc2(Impl_Trees_Types_node x) {
-//  Impl_Trees_Types_node* ptr = (Impl_Trees_Types_node*) mmap_init(sizeof(Impl_Trees_Types_node));
-//  *ptr = x;
-//  return ptr;
-//}
-
-//TO BE REMOVED
-//void Impl_Trees_Types_trees_free(uint64_t* r) {
-//  return;
-//}
-
-//TO BE REMOVED
-//void trees_free2(Impl_Trees_Types_node* r) {
-//  munmap (r, sizeof(Impl_Trees_Types_node));
-//  return;
-//}
 
 Impl_Trees_Types_node** mmap_ptr_metadata() {
   return (Impl_Trees_Types_node**) mmap_init(sizeof(Impl_Trees_Types_node*));

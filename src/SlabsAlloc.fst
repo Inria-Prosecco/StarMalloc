@@ -65,6 +65,7 @@ let allocate_slab_aux_cond
   return r
 #pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50 --compat_pre_typed_indexed_effects"
 let slab_region_mon_split
   (#opened:_)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -154,6 +155,7 @@ let md_region_mon_split
   change_equal_slprop
     (A.varray (A.split_r (A.split_r md_region md_count) 1sz))
     (A.varray (A.split_r md_region (US.add md_count 1sz)))
+#pop-options
 
 open SteelVRefineDep
 
