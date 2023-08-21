@@ -1531,7 +1531,21 @@ let allocate_slab_aux_3_2
       (US.v md_count_v + US.v guard_pages_interval - 1)
       (US.v idx5))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun m -> ALG.varraylist_to_varraylist_lemma #AL.status
+      #pred1 #pred2 #pred3 #pred4 #pred5
+      guard_pages_interval
+      md_region
+      md_count_v
+      (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
+      (US.v idx2) (US.v idx3)
+      (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
+      (US.v idx5)
+      (US.v md_count_v + US.v guard_pages_interval - 2)
+      (US.v idx2) (US.v idx3)
+      (US.v md_count_v + US.v guard_pages_interval - 1)
+      (US.v idx5)
+      m
+    );
   ()
 //#pop-options
 
@@ -2640,7 +2654,21 @@ let allocate_slab'
           (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
           (US.v idx5))
         (fun x y -> x == y)
-        (fun _ -> admit ());
+        (fun m -> ALG.varraylist_to_varraylist_lemma #AL.status
+          #pred1 #pred2 #pred3 #pred4 #pred5
+          guard_pages_interval
+          md_region
+          md_count_v
+          (US.v md_count_v + US.v guard_pages_interval - 2)
+          (US.v idx2) (US.v idx3)
+          (US.v md_count_v + US.v guard_pages_interval - 1)
+          (US.v idx5)
+          (US.v (US.sub (US.add md_count_v guard_pages_interval) 2sz))
+          (US.v idx2) (US.v idx3)
+          (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
+          (US.v idx5)
+          m
+        );
       let r = allocate_slab_aux_1 size_class
         slab_region md_bm_region md_region
         md_count r1 r2 r3 r4 r5

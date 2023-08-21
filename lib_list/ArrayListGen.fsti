@@ -571,6 +571,48 @@ val set (bound1 bound2: nat)
 
 open Config
 
+module SM = Steel.Memory
+
+val varraylist_to_varraylist_lemma
+  (#a: Type)
+  (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
+  (n1: US.t{2 <= US.v n1})
+  (r: A.array (cell a))
+  (k: US.t{0 <= US.v k /\ US.v k + US.v n1 <= A.length r /\ US.fits (US.v k + US.v n1)})
+  (x1 x2 x3 x4 x5: G.erased nat)
+  (y1 y2 y3 y4 y5: G.erased nat)
+  (m: SM.mem)
+  : Lemma
+  (requires
+    x1 == y1 /\
+    x2 == y2 /\
+    x3 == y3 /\
+    x4 == y4 /\
+    x5 == y5 /\
+    SM.interp (hp_of (
+      varraylist pred1 pred2 pred3 pred4 pred5
+        (A.split_l r (k `US.add` n1))
+        x1 x2 x3 x4 x5
+    )) m
+  )
+  (ensures
+    SM.interp (hp_of (
+      varraylist pred1 pred2 pred3 pred4 pred5
+        (A.split_l r (k `US.add` n1))
+        y1 y2 y3 y4 y5
+    )) m /\
+    sel_of (
+      varraylist pred1 pred2 pred3 pred4 pred5
+        (A.split_l r (k `US.add` n1))
+        y1 y2 y3 y4 y5
+    ) m
+    ==
+    sel_of (
+      varraylist pred1 pred2 pred3 pred4 pred5
+        (A.split_l r (k `US.add` n1))
+        x1 x2 x3 x4 x5
+    ) m
+  )
 
 val extend_insert (#a: Type)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
