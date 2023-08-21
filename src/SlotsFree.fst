@@ -670,6 +670,15 @@ let deallocate_slot'
     return (false, G.hide 0ul)
   )
 
+let lemma_div_lt
+  (d: nat)
+  (x: pos)
+  (y: pos)
+  : Lemma
+  (requires d % x == 0 /\ x < y /\ d / x > 0)
+  (ensures d / x > d / y)
+  = ()
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let bound2_inv2
   (size_class: sc)
@@ -700,8 +709,8 @@ let bound2_inv2
     Seq.lemma_empty (Seq.slice bm' 0 (64 - U32.v bound2))
   ) else (
     assert (U32.v size_class > 64);
-    // TODO: FIXME
-    assume (U32.v nb_slots_sc < 64);
+    lemma_div_lt (U32.v page_size) 64 (U32.v size_class);
+    assert (U32.v nb_slots_sc < 64);
     assert (nb_slots_sc_rem = nb_slots_sc);
     let idx = Bitmap4.f #4 (U32.v pos) in
     Bitmap4.unset_lemma2 md_as_seq pos;
