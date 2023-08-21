@@ -1322,11 +1322,11 @@ let within_size_class_i (ptr:A.array U8.t) (sc: size_class_struct) : prop = (
   A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region)) >= 0 /\
   A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region)) < US.v slab_size /\
   // and it is aligned on the slots
-  (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region))) % U32.v sc.size = 0) ==>
+  ((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region))) % U32.v page_size) % U32.v sc.size = 0) ==>
     // then its length is the length of a slot
     A.length ptr == U32.v sc.size
 
-#push-options "--z3rlimit 150"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
 /// Elimination lemma for `within_size_class_i`, triggering F* to prove the precondition
 /// of the implication
 let elim_within_size_class_i (ptr:A.array U8.t) (i:nat{i < Seq.length sc_all.g_size_classes}) (size:sc)
@@ -1336,65 +1336,30 @@ let elim_within_size_class_i (ptr:A.array U8.t) (i:nat{i < Seq.length sc_all.g_s
   same_base_array sc.data.slab_region ptr /\
   A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) >= 0 /\
   A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) < US.v slab_size /\
-  (A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc_all.slab_region))) % U32.v size = 0))
+  ((A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc_all.slab_region))) % U32.v page_size) % U32.v size = 0))
     (ensures A.length ptr == U32.v size)
   =
-  admit ();
   let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
   let off_ptr = A.offset (A.ptr_of ptr) in
   let off1 = A.offset (A.ptr_of (G.reveal sc_all.slab_region)) in
   let off2 = A.offset (A.ptr_of (G.reveal sc.data.slab_region)) in
   assert (off2 - off1 = i * US.v slab_size);
-  let div = U32.v page_size / U32.v size in
-  //assert (US.v slab_size == (US.v metadata_max * div) * U32.v size);
-  let n = U32.v size in
-  Math.Lemmas.div_exact_r (U32.v page_size) n;
-  assert (n * div == U32.v page_size);
-  calc (==) {
-    off1 % n;
-    (==) { Math.Lemmas.modulo_modulo_lemma off1 n div }
-    (off1 % U32.v page_size) % n;
-    (==) { Math.Lemmas.lemma_mod_plus off1 (US.v metadata_max * i) (U32.v page_size) }
-    (off2 % U32.v page_size) % n;
-    (==) { Math.Lemmas.modulo_modulo_lemma off2 n div }
-    off2 % n;
-  };
-  calc (==) {
-    (off_ptr - off1) % n;
-    (==) { Math.Lemmas.lemma_mod_sub_distr off_ptr off1 n }
-    (off_ptr - off1 % n) % n;
-    (==) { }
-    (off_ptr - off2 % n) % n;
-    (==) { Math.Lemmas.lemma_mod_sub_distr off_ptr off2 n }
-    (off_ptr - off2) % n;
-  }
+  assert (off_ptr - off1 = off_ptr - off2 + i * US.v slab_size);
+  assert (i * US.v slab_size == i * US.v metadata_max * U32.v page_size);
+  Math.Lemmas.lemma_mod_plus
+    (off_ptr - off2)
+    (i * US.v metadata_max)
+    (U32.v page_size);
+  assert (
+    (off_ptr - off1) % U32.v page_size
+    ==
+    (off_ptr - off2) % U32.v page_size
+  )
 #pop-options
 
 let within_size_classes_pred (ptr:A.array U8.t) : prop =
   forall (i:nat{i < Seq.length sc_all.g_size_classes}).
     within_size_class_i ptr (Seq.index (G.reveal sc_all.g_size_classes) i).data
-
-#push-options "--fuel 0 --ifuel 0"
-/// Auxiliary lemma to reason about the non-linear arithmetic for pointer division/modulo
-/// in a smaller context
-let lemma_nlarith_aux (n:US.t) (size:sc) : Lemma
-  (US.v (US.rem (US.rem n slab_size) (US.uint32_to_sizet size)) == US.v n % U32.v size)
-  =
-  admit ();
-  assert (US.v slab_size == US.v metadata_max * U32.v page_size);
-  assert (U32.v page_size % U32.v size == 0);
-  let div = U32.v page_size / U32.v size in
-  assert (US.v slab_size == (US.v metadata_max * div) * U32.v size);
-  calc (==) {
-    US.v (US.rem (US.rem n slab_size) (US.uint32_to_sizet size));
-    (==) { }
-    US.v (US.rem n slab_size) % (U32.v size);
-    (==) { }
-    (US.v n % US.v slab_size) % U32.v size;
-    (==) { Math.Lemmas.modulo_modulo_lemma (US.v n) (U32.v size) (US.v metadata_max * div) }
-    US.v n % U32.v size;
-  }
-#pop-options
 
 #restart-solver
 #push-options "--z3rlimit 200"
@@ -1438,12 +1403,13 @@ let slab_getsize (ptr: array U8.t)
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
-  let rem = US.rem diff_sz slab_size in
   let size = ROArray.index sc_all.ro_sizes index in
-  // some refactor needed wrt SlotsFree
-  if US.rem rem (US.uint32_to_sizet size) = 0sz then (
+  let rem_slab = US.rem diff_sz slab_size in
+  let rem_slot = US.rem rem_slab (u32_to_sz page_size) in
+  // TODO: some refactor needed wrt SlotsFree
+  if US.rem rem_slot (US.uint32_to_sizet size) = 0sz then (
     (**) let sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
-    lemma_nlarith_aux diff_sz size;
+    //lemma_nlarith_aux diff_sz size;
     (**) elim_within_size_class_i ptr (US.v index) size;
     (**) assert (A.length ptr == U32.v size);
     if enable_slab_canaries_malloc then
@@ -1479,6 +1445,8 @@ val slab_free (ptr:array U8.t)
       )
   )
 
+#restart-solver
+
 let slab_free ptr =
   SAA.within_bounds_elim
     (A.split_l sc_all.slab_region 0sz)
@@ -1496,28 +1464,28 @@ let slab_free ptr =
   assert (ptr_of (A.split_l sc_all.slab_region 0sz) == ptr_of (sc_all.slab_region));
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
-  let rem = US.rem diff_sz slab_size in
   (**) let g_sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
   (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
   let size = ROArray.index sc_all.ro_sizes index in
-  // some refactor needed wrt SlotsFree
-  if US.rem rem (US.uint32_to_sizet size) <> 0sz then (
+  let rem_slab = US.rem diff_sz slab_size in
+  let rem_slot = US.rem rem_slab (u32_to_sz page_size) in
+  // TODO: some refactor needed wrt SlotsFree
+  if US.rem rem_slot (US.uint32_to_sizet size) <> 0sz then (
     return false
   ) else (
     if enable_slab_canaries_free then (
       (**) let sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
-      lemma_nlarith_aux diff_sz size;
       (**) elim_within_size_class_i ptr (US.v index) size;
       (**) assert (A.length ptr == U32.v size);
       enable_slab_canaries_lemma ();
       let magic1 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) in
       let magic2 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) in
       if magic1 = slab_canaries_magic1 && magic2 = slab_canaries_magic2 then
-        slab_free' index ptr rem
+        slab_free' index ptr rem_slab
       else
         // Canary was overwritten
         return false
     ) else (
-      slab_free' index ptr rem
+      slab_free' index ptr rem_slab
     )
   )
