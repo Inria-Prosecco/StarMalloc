@@ -334,6 +334,8 @@ let allocate_slab_aux_1_full
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
     idx1' idx2 idx1 idx4 idx5
 
+#restart-solver
+
 // Slab initially empty
 inline_for_extraction noextract
 let allocate_slab_aux_1
@@ -394,7 +396,10 @@ let allocate_slab_aux_1
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
     ) in
     md_count_v == dfst blob1 /\
-    A.length r == U32.v size_class
+    A.length r == U32.v size_class /\
+    same_base_array r slab_region /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
+    ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
   )
   =
   (**) ALG.lemma_head1_in_bounds pred1 pred2 pred3 pred4 pred5
@@ -667,7 +672,10 @@ let allocate_slab_aux_2
       (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
     ) in
     md_count_v == dfst blob1 /\
-    A.length r == U32.v size_class
+    A.length r == U32.v size_class /\
+    same_base_array r slab_region /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
+    ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
   )
   =
   (**) ALG.lemma_head2_in_bounds pred1 pred2 pred3 pred4 pred5
@@ -2590,7 +2598,12 @@ let allocate_slab'
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv
   )
   (ensures fun _ r _ ->
-    not (A.is_null r) ==> A.length r == U32.v size_class
+    not (A.is_null r) ==> (
+      A.length r == U32.v size_class /\
+      same_base_array r slab_region /\
+      A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
+    )
   )
   =
   if (idx2 <> AL.null_ptr) then (
@@ -2731,7 +2744,12 @@ let allocate_slab
   )
   (requires fun _ -> True)
   (ensures fun _ r _ ->
-    not (A.is_null r) ==> A.length r == U32.v size_class
+    not (A.is_null r) ==> (
+      A.length r == U32.v size_class /\
+      same_base_array r slab_region /\
+      A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
+    )
   )
   =
   let md_count_v

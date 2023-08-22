@@ -33,12 +33,14 @@ val init_avl_scs (slab_region: array U8.t)
   (A.varray slab_region)
   (fun r -> size_class_vprop r)
   (requires fun h0 ->
+    A.is_full_array slab_region /\
     A.length slab_region = US.v metadata_max `FStar.Mul.op_Star` U32.v Config.page_size /\
     zf_u8 (A.asel slab_region h0)
   )
   (ensures fun _ r _ ->
     r.size = avl_data_size /\
-    r.slab_region == slab_region
+    r.slab_region == slab_region /\
+    A.is_full_array r.slab_region
   )
 
 let init_avl_scs (slab_region: array U8.t)
@@ -58,7 +60,8 @@ type mmap_md_slabs =
     slab_region: array U8.t;
     scs: v:size_class_struct{
       v.size = avl_data_size /\
-      v.slab_region == A.split_r slab_region 0sz
+      v.slab_region == A.split_r slab_region 0sz /\
+      A.is_full_array v.slab_region
     };
     lock : L.lock (
       size_class_vprop scs `star`
@@ -97,14 +100,38 @@ type data = x: (array U8.t * US.t){
   US.v (snd x) == 0
 }
 
-//TODO: discussion with Aymeric and Jonathan
-//generalizing the slabs allocator type should allow
-//to remove this cast
-//but polymorphic assumes are unsupported
-//pass corresponding mmap function (which is the needed one)
-//as argument to avoid this issue
-
 let node = node data
+
+module G = FStar.Ghost
+
+assume val ref_node__to__array_u8_tot
+  (x: ref node)
+  : Pure (G.erased (array U8.t))
+  (requires True)
+  (ensures fun r ->
+    A.is_null (G.reveal r) = is_null x /\
+    A.length (G.reveal r) == U32.v avl_data_size
+  )
+
+assume val ref_node__to__array_u8
+  (x: ref node)
+  : Steel (array U8.t)
+  (vptr x)
+  (fun r -> A.varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r _ ->
+    A.is_null r = is_null x /\
+    A.length r == U32.v avl_data_size /\
+    r == G.reveal (ref_node__to__array_u8_tot x)
+  )
+
+assume val array_u8__to__ref_node_tot
+  (arr: array U8.t)
+  : Pure (G.erased (ref node))
+  (requires A.length arr == U32.v avl_data_size)
+  (ensures fun r ->
+    A.is_null arr = is_null (G.reveal r)
+  )
 
 assume val array_u8__to__ref_node
   (arr: array U8.t)
@@ -113,21 +140,23 @@ assume val array_u8__to__ref_node
   (fun r -> vptr r)
   (requires fun _ -> A.length arr == U32.v avl_data_size)
   (ensures fun _ r _ ->
-    A.is_null arr = is_null r
+    A.is_null arr = is_null r /\
+    A.length arr == U32.v avl_data_size /\
+    r == G.reveal (array_u8__to__ref_node_tot arr)
   )
 
-assume val ref_node__to__array_u8_tot
-  (x: ref node)
-  : Pure (array U8.t)
-  (requires True)
-  (ensures fun r ->
-    A.is_null r = is_null x /\
-    A.length r == U32.v avl_data_size
-  )
+//CAUTION
+assume val array_u8__to__ref_node_bijectivity
+  (ptr: array U8.t)
+  : Lemma
+  (requires A.length ptr == U32.v avl_data_size)
+  (ensures (
+    let x_cast1 = G.reveal (array_u8__to__ref_node_tot ptr) in
+    let x_cast2 = G.reveal (ref_node__to__array_u8_tot x_cast1) in
+    ptr == x_cast2
+  ))
 
 module UP = FStar.PtrdiffT
-
-module G = FStar.Ghost
 
 #push-options "--fuel 0 --ifuel 0"
 let p : hpred data
@@ -142,18 +171,6 @@ let p : hpred data
   )
 #pop-options
 
-assume val ref_node__to__array_u8
-  (x: ref node)
-  : Steel (array U8.t)
-  (vptr x)
-  (fun r -> A.varray r)
-  (requires fun _ -> True)
-  (ensures fun _ r _ ->
-    A.is_null r = is_null x /\
-    A.length r == U32.v avl_data_size /\
-    r == ref_node__to__array_u8_tot x
-  )
-
 let t = t data
 
 // CAUTION:
@@ -164,7 +181,6 @@ let t = t data
 // (that is the set contained by the AVL tree)
 // - those supplied by the user to free and realloc functions
 // is part of the model
-
 assume val cmp
   : f:Impl.Common.cmp data{
     forall (x y: data). I64.v (f x y) == 0 ==> fst x == fst y

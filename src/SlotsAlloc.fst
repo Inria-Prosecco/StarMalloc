@@ -22,7 +22,7 @@ open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   : Pure (array U8.t)
   (requires
@@ -30,16 +30,23 @@ let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
     A.length arr >= US.v (rounding size_class))
   (ensures fun r ->
     A.length r == U32.v size_class /\
-    same_base_array r arr)
+    same_base_array r arr /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) >= 0 /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) < U32.v page_size /\
+    (A.offset (A.ptr_of r) - A.offset (A.ptr_of arr)) % (U32.v size_class) == 0
+  )
   =
   let ptr = A.ptr_of arr in
   let shift = U32.mul pos size_class in
+  Math.Lemmas.cancel_mul_mod (U32.v pos) (U32.v size_class);
+  assert (U32.v shift % U32.v size_class == 0);
   nb_slots_correct size_class pos;
   assert (U32.v shift <= U32.v page_size);
   assert_norm (U32.v shift <= FI.max_int U16.n);
   assert (U32.v shift <= FI.max_int U16.n);
   let shift_size_t = US.uint32_to_sizet shift in
   assert (US.v shift_size_t < A.length arr);
+  assert (US.v shift_size_t % U32.v size_class == 0);
   let ptr_shifted = A.ptr_shift ptr shift_size_t in
   (| ptr_shifted, G.hide (U32.v size_class) |)
 #pop-options
@@ -486,7 +493,13 @@ let get_slot_as_returned_value
   (requires fun h0 ->
     let bm = a2bv md_as_seq in
     Seq.index bm (Bitmap5.f #4 (U32.v pos)) = false)
-  (ensures fun h0 r h1 -> A.length r == U32.v size_class)
+  (ensures fun h0 r h1 ->
+    A.length r == U32.v size_class /\
+    same_base_array r arr /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) >= 0 /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) < U32.v page_size /\
+    (A.offset (A.ptr_of r) - A.offset (A.ptr_of arr)) % (U32.v size_class) == 0
+  )
   =
   starseq_upd_aux_lemma3 size_class (G.reveal md_as_seq) arr pos;
   change_slprop_rel
@@ -578,7 +591,12 @@ let allocate_slot_aux
     let v2 = A.asel md h1 in
     //let idx = Bitmap5.f #4 (U32.v pos) in
     v2 == Bitmap4.set v1 pos /\
-    A.length r == U32.v size_class)
+    A.length r == U32.v size_class /\
+    same_base_array r arr /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) >= 0 /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) < U32.v page_size /\
+    (A.offset (A.ptr_of r) - A.offset (A.ptr_of arr)) % (U32.v size_class) == 0
+  )
     //blob2 == Seq.upd blob1 (U32.v pos) None /\
   =
   assert_norm (4 < FI.max_int U16.n);
@@ -923,7 +941,12 @@ let allocate_slot
     let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
     let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
     not (is_empty size_class v1) /\
-    A.length r == U32.v size_class)
+    A.length r == U32.v size_class /\
+    same_base_array r arr /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) >= 0 /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) < U32.v page_size /\
+    (A.offset (A.ptr_of r) - A.offset (A.ptr_of arr)) % (U32.v size_class) == 0
+  )
     //U32.v (G.reveal (snd r)) < U64.n * 4 /\
     //v1 == Bitmap4.set v0 (G.reveal (snd r)))
     //TODO: is it worth having such a precise spec?

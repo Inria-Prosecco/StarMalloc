@@ -75,6 +75,19 @@ let metadata : mmap_md = init_mmap_md ()
 
 open Steel.Reference
 
+module UP = FStar.PtrdiffT
+
+let up_fits_propagation (ptr1 ptr2: array U8.t)
+  : Lemma
+  (requires
+    same_base_array ptr1 ptr2 /\
+    UP.fits (A.base_len (A.base (A.ptr_of ptr1)))
+  )
+  (ensures
+    UP.fits (A.length ptr1)
+  )
+  = ()
+
 let trees_malloc2 (x: node)
   : Steel (ref node)
   emp (fun r -> vptr r)
@@ -86,8 +99,8 @@ let trees_malloc2 (x: node)
   )
   =
   L.acquire metadata_slabs.lock;
-  let r = SizeClass.allocate_size_class metadata_slabs.scs in
-  if A.is_null r
+  let ptr = SizeClass.allocate_size_class metadata_slabs.scs in
+  if A.is_null ptr
   then (
     L.release metadata_slabs.lock;
     // this should trigger a fatal error
@@ -95,12 +108,14 @@ let trees_malloc2 (x: node)
     return null
   ) else (
     change_equal_slprop
-      (if (A.is_null r) then emp else A.varray r)
-      (A.varray r);
-    let r' = array_u8__to__ref_node r in
+      (if (A.is_null ptr) then emp else A.varray ptr)
+      (A.varray ptr);
+    metadata_max_up_fits ();
+    up_fits_propagation ptr metadata_slabs.scs.slab_region;
+    let r' = array_u8__to__ref_node ptr in
+    array_u8__to__ref_node_bijectivity ptr;
     L.release metadata_slabs.lock;
     write r' x;
-    admit ();
     return r'
   )
 

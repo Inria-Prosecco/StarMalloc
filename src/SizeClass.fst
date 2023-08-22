@@ -143,7 +143,12 @@ let allocate_size_class
     size_class_vprop scs)
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
-    not (A.is_null r) ==> A.length r == U32.v scs.size
+    not (A.is_null r) ==> (
+      A.length r == U32.v scs.size /\
+      same_base_array r scs.slab_region /\
+      A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v scs.size) == 0
+    )
   )
   =
   change_slprop_rel
