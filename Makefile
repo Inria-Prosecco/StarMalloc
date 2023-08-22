@@ -72,8 +72,7 @@ extract: $(ALL_KRML_FILES)
 	$(KRML_EXE) -skip-compilation -tmpdir dist \
     -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
-		-bundle 'Map.\*,Impl.\*,Spec.\*'[rename=AVL] \
-		-bundle 'StarMalloc=Main,LargeAlloc'[rename=StarMalloc] \
+		-bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,LargeAlloc'[rename=StarMalloc] \
 		-bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
 		-bundle 'SlotsFree,SlotsAlloc'[rename=Slots] \
 		-bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
@@ -94,7 +93,6 @@ test: verify extract
 FILES = \
 $(STEEL_HOME)/src/c/steel_spinlock.c \
 dist/ArrayList.c \
-dist/AVL.c \
 dist/krmlinit.c \
 dist/StarMalloc.c \
 dist/Slabs.c \

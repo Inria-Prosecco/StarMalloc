@@ -3,7 +3,6 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <assert.h>
-#include "internal/AVL.h"
 #include "internal/StarMalloc.h"
 
 static const size_t page_size = 4096UL;
@@ -87,12 +86,12 @@ void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
   memset(ptr, 0, len);
 }
 
-uint32_t avl_data_size_aux = sizeof(Impl_Trees_Types_node);
+uint32_t Impl_Trees_Types_avl_data_size_aux = sizeof(Impl_Trees_Types_node);
 
-Impl_Trees_Types_node* array_u8__to__ref_node(uint8_t* arr) {
+Impl_Trees_Types_node* Impl_Trees_Types_array_u8__to__ref_node(uint8_t* arr) {
   return (Impl_Trees_Types_node*) arr;
 }
-uint8_t* ref_node__to__array_u8(Impl_Trees_Types_node* r) {
+uint8_t* Impl_Trees_Types_ref_node__to__array_u8(Impl_Trees_Types_node* r) {
   return (uint8_t*) r;
 }
 

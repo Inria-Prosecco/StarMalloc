@@ -1,6 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
-#include "internal/AVL.h"
+#include "internal/StarMalloc.h"
 
 uint32_t Utils2_ffs64(uint64_t x) {
   return __builtin_ctzll(~x);
