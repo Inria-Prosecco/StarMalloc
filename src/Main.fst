@@ -1369,7 +1369,8 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
     within_size_class_i ptr (Seq.index (G.reveal sc_all.g_size_classes) i).data
 
 #restart-solver
-#push-options "--z3rlimit 200"
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 
 let slab_getsize (ptr: array U8.t)
   : Steel US.t
@@ -1480,10 +1481,10 @@ let slab_free ptr =
   if US.rem rem_slot (US.uint32_to_sizet size) <> 0sz then (
     return false
   ) else (
+    (**) let sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
+    (**) elim_within_size_class_i ptr (US.v index) size;
+    (**) assert (A.length ptr == U32.v size);
     if enable_slab_canaries_free then (
-      (**) let sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
-      (**) elim_within_size_class_i ptr (US.v index) size;
-      (**) assert (A.length ptr == U32.v size);
       enable_slab_canaries_lemma ();
       let magic1 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) in
       let magic2 = A.index ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) in
@@ -1493,7 +1494,6 @@ let slab_free ptr =
         // Canary was overwritten
         return false
     ) else (
-      (**) elim_within_size_class_i ptr (US.v index) size;
       slab_free' index ptr rem_slab
     )
   )
