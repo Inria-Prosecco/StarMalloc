@@ -324,7 +324,7 @@ let pack_tree_lemma_aux (#a:Type0) (p: hpred a) (pt:t a)
       m
 *)
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 30 --fuel 1 --ifuel 1"
 // Maintenant, tenter en ajoutant s (et sr) en paramètre(s)
 let pack_tree_lemma (#a:Type0) (p: hpred a) (pt left right:t a) (sr hr: U.t)
   (x: node a) (l r:wdm a) (s h:nat) (m:mem) : Lemma
@@ -401,6 +401,11 @@ let pack_tree_lemma (#a:Type0) (p: hpred a) (pt left right:t a) (sr hr: U.t)
       )
       (get_size x == U.uint_to_t s /\ get_height x == U.uint_to_t h)
       m;
+    Mem.emp_unit (pts_to_sl pt full_perm x `Mem.star`
+      tree_sl' p left l' `Mem.star`
+      tree_sl' p right r' `Mem.star`
+      Mem.pure (get_size x == U.uint_to_t s /\ get_height x == U.uint_to_t h)
+      );
     Mem.pure_star_interp (pts_to_sl pt full_perm x `Mem.star`
       tree_sl' p left l' `Mem.star`
       tree_sl' p right r' `Mem.star`
@@ -409,12 +414,11 @@ let pack_tree_lemma (#a:Type0) (p: hpred a) (pt left right:t a) (sr hr: U.t)
       ((G.reveal p) (get_left x) /\ (G.reveal p) (get_right x))
       m;
 
-
     let s = Spec.size_of_tree l' + Spec.size_of_tree r' + 1 in
     let h = M.max (Spec.height_of_tree l') (Spec.height_of_tree r') + 1 in
     let t = Spec.Node x l' r' s h in
 
-    assume (interp (pts_to_sl pt full_perm x `Mem.star`
+    assert (interp (pts_to_sl pt full_perm x `Mem.star`
       tree_sl' p (get_left x) l' `Mem.star`
       tree_sl' p (get_right x) r' `Mem.star`
       Mem.pure (get_size x == U.uint_to_t s /\ get_height x == U.uint_to_t h) `Mem.star`
