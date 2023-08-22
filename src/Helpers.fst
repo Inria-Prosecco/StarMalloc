@@ -479,6 +479,7 @@ let zero_beyond_bound
   let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
   zf_b (Seq.slice bm 0 (64 - U32.v bound2))
 
+#push-options "--fuel 0 --ifuel 0"
 let empty_not_bitmap
   (size_class:sc)
   (s:Seq.lseq U64.t 4)
@@ -491,6 +492,7 @@ let empty_not_bitmap
     let bv = Seq.index s idx in
     assert (bv == 0UL);
     Classical.move_requires (lemma_nth_nonzero bv) (U64.n - (U32.v i % U64.n) - 1)
+#pop-options
 
 let slots_to_slabs (#opened:_)
   (size_class: sc)
