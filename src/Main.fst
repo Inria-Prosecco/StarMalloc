@@ -1370,7 +1370,7 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
 
 #restart-solver
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 
 let slab_getsize (ptr: array U8.t)
   : Steel US.t
