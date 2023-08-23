@@ -660,7 +660,7 @@ let lemma_nth_nonfull
   ) else ()
 #pop-options
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 75"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 open FStar.UInt
 let set_lemma_nonempty
   (size_class: sc)
