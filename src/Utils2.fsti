@@ -13,6 +13,8 @@ module A = Steel.Array
 
 open Config
 
+#push-options "--fuel 1 --ifuel 1"
+
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
 
