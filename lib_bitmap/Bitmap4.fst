@@ -8,6 +8,8 @@ module FBV = FStar.BitVector
 open FStar.UInt
 open FStar.Mul
 
+#push-options "--fuel 1 --ifuel 1"
+
 noextract
 let rec array_to_bv_aux
   (#n: nat)
