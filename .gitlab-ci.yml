@@ -1,0 +1,7 @@
+build-job:
+  stage: build
+  script:
+    - nix build
+  tags:
+    - nix
+
