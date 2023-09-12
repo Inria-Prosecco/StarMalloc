@@ -1,7 +1,7 @@
 build-job:
   stage: build
   script:
-    - nix build
+    - nix --extra-experimental-features "nix-command flakes" build
   tags:
     - nix
 

@@ -9,15 +9,15 @@
     };
     steel-src = {
       url = "github:FStarLang/steel";
-      inputs.fstar.follows = "fstar-src";
-      inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "fstar-src/flake-utils";
+      inputs.fstar.follows = "fstar-src";
     };
     krml-src = {
       url = "github:FStarLang/karamel";
-      inputs.fstar.follows = "fstar-src";
-      inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "fstar-src/flake-utils";
+      inputs.fstar.follows = "fstar-src";
     };
   };
 
@@ -51,8 +51,8 @@
     in
     {
       packages.${system} = { inherit steel-experiments; default=steel-experiments; };
-      hydraJobs = {
-        inherit steel-experiments;
-      };
+      #checks.${system} = {
+      #  inherit steel-experiments;
+      #};
     };
 }
