@@ -39,9 +39,15 @@ let max_sc = U32.v page_size
 // for the first u64 of the bitmap
 // note: this mechanism does not rely on any loop!
 let sc = x:U32.t{
-  U32.eq x 16ul \/
-  U32.eq x 32ul \/
-  (min_sc <= U32.v x /\ U32.v x <= max_sc)
+  (
+    U32.eq x 16ul \/
+    U32.eq x 32ul \/
+    (min_sc <= U32.v x /\ U32.v x <= max_sc)
+  ) /\
+  // https://www.intel.com/content/dam/develop/external/us/en/documents/mpx-linux64-abi.pdf
+  // allocated arrays should have alignment of at least 16 bytes,
+  // allowing use of SSE instructions
+  (U32.v x % 16 == 0)
 }
 
 let nb_slots (size_class: sc)
