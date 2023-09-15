@@ -19,10 +19,10 @@ let array = Steel.ST.Array.array
 open Config
 open Utils2
 
-assume val avl_data_size_aux : v:U32.t{U32.v v <= U32.v page_size}
+//TODO: add a static assert about avl_data_size_aux bound
+assume val avl_data_size_aux : v:U32.t{U32.v v <= 64}
 
-let avl_data_size : sc =
-  if U32.lte avl_data_size_aux 64ul then 64ul else avl_data_size_aux
+let avl_data_size : v:sc{U32.v avl_data_size_aux <= U32.v v} = 64ul
 
 open SizeClass
 open Main
