@@ -25,6 +25,9 @@ open FStar.Mul
 open SlotsAlloc
 
 open FStar.Mul
+
+#push-options "--fuel 0 --ifuel 0"
+
 #push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
 let slot_array (#a: Type)
   (size: U32.t)
@@ -62,6 +65,7 @@ let slot_vprop (#a: Type)
   =
   A.varray (slot_array size max arr pos)
 
+#push-options "--fuel 1 --ifuel 1"
 let slot_vprop_lemma (#a: Type)
   (size: U32.t{U32.v size > 0})
   (max: U32.t{U32.v max * U32.v size <= FI.max_int U32.n})
@@ -71,6 +75,7 @@ let slot_vprop_lemma (#a: Type)
   (t_of (slot_vprop size max arr pos) == Seq.lseq a (U32.v size))
   =
   ()
+#pop-options
 
 let starseq_to_singleton_s (#opened:_) (#a #b: Type0)
   (f: a -> vprop)
@@ -282,7 +287,7 @@ let array_to_pieces (#opened:_)
   =
   array_to_pieces_rec size max arr
 
-#push-options "--z3rlimit 100"
+#push-options "--z3rlimit 50 --fuel 1 --ifuel 1"
 let rec pieces_to_array_rec (#opened:_)
   (#a: Type)
   (size: U32.t{U32.v size > 0})
@@ -397,7 +402,7 @@ let empty_md_lemma
   assert (r == Seq.index (FU.to_vec #U64.n 0) (idx%U64.n));
   assert (FU.to_vec #U64.n 0 == FU.to_vec #U64.n (FU.zero U64.n))
 
-#push-options "--z3rlimit 50"
+#push-options "--z3rlimit 50 --fuel 1 --ifuel 1"
 let slab_to_slots_aux
   (size_class: sc)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
@@ -418,6 +423,7 @@ let slab_to_slots_aux
     some_as_vp #(Seq.lseq U8.t (U32.v size_class))
       (SlotsAlloc.slot_vprop size_class arr pos)
   )
+#pop-options
 
 let slab_to_slots (#opened:_)
   (size_class: sc)
@@ -479,19 +485,21 @@ let zero_beyond_bound
   let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
   zf_b (Seq.slice bm 0 (64 - U32.v bound2))
 
-#push-options "--fuel 0 --ifuel 0"
+#push-options "--z3rlimit 60"
 let empty_not_bitmap
   (size_class:sc)
   (s:Seq.lseq U64.t 4)
   (i:U32.t{U32.v i < U32.v (nb_slots size_class)})
-  : Lemma (requires is_empty size_class s /\ zero_beyond_bound size_class s)
-          (ensures not (Bitmap4.get s i))
-  = Bitmap4.get_lemma s i;
-    let v = FStar.UInt.nth (U64.v (Seq.index s (U32.v i / U64.n))) (U64.n - (U32.v i % U64.n) - 1) in
-    let idx = U32.v i / U64.n in
-    let bv = Seq.index s idx in
-    assert (bv == 0UL);
-    Classical.move_requires (lemma_nth_nonzero bv) (U64.n - (U32.v i % U64.n) - 1)
+  : Lemma
+  (requires is_empty size_class s /\ zero_beyond_bound size_class s)
+  (ensures not (Bitmap4.get s i))
+  =
+  Bitmap4.get_lemma s i;
+  let v = FStar.UInt.nth (U64.v (Seq.index s (U32.v i / U64.n))) (U64.n - (U32.v i % U64.n) - 1) in
+  let idx = U32.v i / U64.n in
+  let bv = Seq.index s idx in
+  assert (bv == 0UL);
+  Classical.move_requires (lemma_nth_nonzero bv) (U64.n - (U32.v i % U64.n) - 1)
 #pop-options
 
 let slots_to_slabs (#opened:_)
@@ -560,6 +568,7 @@ let slots_to_slabs (#opened:_)
       (A.split_r arr (rounding size_class))))
     (A.varray arr)
 
+#push-options "--fuel 1 --ifuel 1"
 let intro_empty_slab_varray (#opened:_)
   (size_class: sc)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
@@ -587,8 +596,4 @@ let intro_empty_slab_varray (#opened:_)
         (A.split_l arr (rounding size_class)))
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
   slots_to_slabs size_class arr md_as_seq
-
-//array_to_pieces
-//starseq_weakening_ref
-//pieces_to_slots
-//starseq_weakening_rel
+#pop-options
