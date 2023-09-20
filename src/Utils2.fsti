@@ -50,6 +50,26 @@ let sc = x:U32.t{
   (U32.v x % 16 == 0)
 }
 
+// abstract property that the underlying pointer is 16-bytes aligned
+//assume
+val array_u8_proper_alignment (arr: array U8.t): prop
+
+// no model for the memory considered as the "root" array in a tree-like representation
+// thus, this *axiom* is required
+// to convey that if arr (of type uint8_t*) is 16-bytes aligned,
+// then so is, forall k, arr[16*k]
+//assume
+val array_u8_proper_alignment_lemma
+  (arr1: array U8.t)
+  (arr2: array U8.t)
+  : Lemma
+  (requires
+    same_base_array arr1 arr2 /\
+    array_u8_proper_alignment arr1 /\
+    (A.offset (A.ptr_of arr2) - A.offset (A.ptr_of arr1)) % 16 == 0)
+  (ensures
+    array_u8_proper_alignment arr2)
+
 let nb_slots (size_class: sc)
   : Pure U32.t
   (requires True)

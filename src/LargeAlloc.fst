@@ -27,6 +27,11 @@ open NullOrVarray
 
 open Steel.Reference
 
+assume val mmap_ptr_metadata (_:unit)
+  : SteelT (ref t)
+  emp
+  (fun r -> vptr r)
+
 // is well-formed (AVL + content)
 let is_wf (x: wdm data) : prop
   =
@@ -39,11 +44,6 @@ let linked_wf_tree (tree: t)
 
 let ind_linked_wf_tree (metadata: ref t)
   = vptr metadata `vdep` linked_wf_tree
-
-assume val mmap_ptr_metadata (_:unit)
-  : SteelT (ref t)
-  emp
-  (fun r -> vptr r)
 
 open Config
 
@@ -155,7 +155,7 @@ unfold
 let linked_tree = Impl.Core.linked_tree #data
 
 noextract inline_for_extraction
-let mmap = Mman.mmap_noinit
+let mmap = Mman.mmap_u8
 
 noextract inline_for_extraction
 let munmap = Mman.munmap_u8
@@ -215,6 +215,7 @@ let large_malloc_aux
       (enable_slab_canaries_malloc ==> A.length r == US.v size + 2) /\
       (not enable_slab_canaries_malloc ==> A.length r == US.v size) /\
       A.is_full_array r /\
+      array_u8_proper_alignment r /\
       zf_u8 s /\
       not (Spec.mem (spec_convert cmp) t (r, size)) /\
       Spec.mem (spec_convert cmp) t' (r, size)
@@ -387,6 +388,7 @@ let large_malloc (size: US.t)
     not (A.is_null ptr) ==> (
       (enable_slab_canaries_malloc ==> A.length ptr == US.v size + 2) /\
       (not enable_slab_canaries_malloc ==> A.length ptr == US.v size) /\
+      array_u8_proper_alignment ptr /\
       A.is_full_array ptr /\
       zf_u8 s
     )

@@ -35,6 +35,7 @@ val init_avl_scs (slab_region: array U8.t)
   (requires fun h0 ->
     A.is_full_array slab_region /\
     A.length slab_region = US.v metadata_max `FStar.Mul.op_Star` U32.v Config.page_size /\
+    array_u8_proper_alignment slab_region /\
     zf_u8 (A.asel slab_region h0)
   )
   (ensures fun _ r _ ->
@@ -43,12 +44,13 @@ val init_avl_scs (slab_region: array U8.t)
     A.is_full_array r.slab_region
   )
 
+open Mman
 let init_avl_scs (slab_region: array U8.t)
   =
   let md_bm_region_size = US.mul metadata_max 4sz in
   let md_region_size = metadata_max in
-  let md_bm_region = mmap_u64 md_bm_region_size in
-  let md_region = mmap_cell_status md_region_size in
+  let md_bm_region = mmap_u64_init md_bm_region_size in
+  let md_region = mmap_cell_status_init md_region_size in
   let scs = init_struct_aux avl_data_size slab_region md_bm_region md_region in
   return scs
 
@@ -73,8 +75,11 @@ let init_mmap_md_slabs (_:unit)
   : SteelTop mmap_md_slabs false (fun _ -> emp) (fun _ _ _ -> True)
   =
   let slab_region_size = US.mul metadata_max (US.uint32_to_sizet Config.page_size) in
-  let slab_region = mmap_u8 slab_region_size in
+  let slab_region = mmap_u8_init slab_region_size in
   A.ghost_split slab_region 0sz;
+  A.ptr_base_offset_inj
+    (A.ptr_of slab_region)
+    (A.ptr_of (A.split_r slab_region 0sz));
   let scs = init_avl_scs (A.split_r slab_region 0sz) in
   let lock = L.new_lock (size_class_vprop scs `star` A.varray (A.split_l slab_region 0sz)) in
   return { slab_region; scs; lock; }

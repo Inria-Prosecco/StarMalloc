@@ -18,37 +18,42 @@ uint8_t *mmap_noinit(size_t size) {
   return mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
 }
 
+uint8_t *mmap_u8(size_t len) {
+  return (uint8_t*) mmap_noinit(len * sizeof(uint8_t));
+}
+
 void munmap_u8(uint8_t* ptr, size_t len) {
   bool b = munmap((void*) ptr, len);
   assert (! b);
   return;
 }
 
-uint8_t *mmap_u8(size_t len) {
+uint8_t *mmap_u8_init(size_t len) {
   return (uint8_t*) mmap_init(len * sizeof(uint8_t));
 }
 
-uint64_t *mmap_u64(size_t len) {
+uint64_t *mmap_u64_init(size_t len) {
   return (uint64_t*) mmap_init(len * sizeof(uint64_t));
 }
 
-ArrayList_cell *mmap_cell_status(size_t len) {
+ArrayList_cell *mmap_cell_status_init(size_t len) {
   return (ArrayList_cell*) mmap_init(len * sizeof(ArrayList_cell));
 }
 
-uint32_t *mmap_ptr_u32() {
-  return (uint32_t*) mmap_init(sizeof(uint32_t));
-}
+//TODO: to be removed
+//uint32_t *mmap_ptr_u32() {
+//  return (uint32_t*) mmap_init(sizeof(uint32_t));
+//}
 
-size_t *mmap_ptr_us() {
+size_t *mmap_ptr_us_init() {
   return (size_t*) mmap_init(sizeof(size_t));
 }
 
-size_class* mmap_sc(size_t len) {
+size_class* mmap_sc_init(size_t len) {
   return (size_class*) mmap_init(len * sizeof(size_class));
 }
 
-uint32_t* mmap_sizes (size_t len) {
+uint32_t* mmap_sizes_init (size_t len) {
   return (uint32_t*) mmap_init(len * sizeof(uint32_t));
 }
 
@@ -89,6 +94,7 @@ void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
 uint32_t Impl_Trees_Types_avl_data_size_aux = sizeof(Impl_Trees_Types_node);
 
 Impl_Trees_Types_node* Impl_Trees_Types_array_u8__to__ref_node(uint8_t* arr) {
+  static_assert(sizeof(Impl_Trees_Types_node) <= 64);
   return (Impl_Trees_Types_node*) arr;
 }
 uint8_t* Impl_Trees_Types_ref_node__to__array_u8(Impl_Trees_Types_node* r) {

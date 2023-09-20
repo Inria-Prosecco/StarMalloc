@@ -79,6 +79,7 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= US.v size /\
+      array_u8_proper_alignment r /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
@@ -134,6 +135,7 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= US.v size /\
+      array_u8_proper_alignment r /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
@@ -414,7 +416,8 @@ let calloc
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= size /\
-      zf_u8 (Seq.slice s 0 size)
+      zf_u8 (Seq.slice s 0 size) /\
+      array_u8_proper_alignment r
     )
   )
   =

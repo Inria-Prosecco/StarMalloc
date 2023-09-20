@@ -24,78 +24,12 @@ open SteelStarSeqUtils
 
 open Config
 open Utils2
-
+open Mman
 
 #push-options  "--ide_id_info_off"
 (**  Handwritten mmap functions to allocate basic data structures *)
 
-assume val mmap_u8 (len: US.t)
-  : Steel (array U8.t)
-    emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v len) U8.zero
-    )
-
-assume val mmap_u64 (len: US.t)
-  : Steel (array U64.t)
-    emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v len) U64.zero
-    )
-
-assume val mmap_ptr_us (_:unit)
-  : SteelT (R.ref US.t)
-    emp
-    (fun r -> R.vptr r)
-
-assume val mmap_cell_status (len: US.t)
-  : Steel (array AL.cell)
-     emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a
-    )
-
-noeq
-type size_class =
-  {
-    // The content of the sizeclass
-    data : size_class_struct;
-    // Mutex locking ownership of the sizeclass
-    lock : L.lock (size_class_vprop data);
-  }
-
-assume val mmap_sc (len: US.t)
-  : Steel (array size_class)
-     emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a
-    )
-
-assume val mmap_sizes (len: US.t)
-  : Steel (array sc)
-     emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a
-    )
-
-/// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
+// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
 irreducible let reduce_attr : unit = ()
 
 /// The normalization steps for reduction at compile-time
@@ -271,6 +205,7 @@ let init_struct_aux
   )
   (fun scs -> size_class_vprop scs)
   (requires fun h0 ->
+    array_u8_proper_alignment slab_region /\
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0)
   )
@@ -297,11 +232,11 @@ let init_struct_aux
 
   intro_right_vprop_empty slab_region md_bm_region md_region;
 
-  let ptr_partial = mmap_ptr_us () in
-  let ptr_empty = mmap_ptr_us () in
-  let ptr_full = mmap_ptr_us () in
-  let ptr_guard = mmap_ptr_us () in
-  let ptr_quarantine = mmap_ptr_us () in
+  let ptr_partial = mmap_ptr_us_init () in
+  let ptr_empty = mmap_ptr_us_init () in
+  let ptr_full = mmap_ptr_us_init () in
+  let ptr_guard = mmap_ptr_us_init () in
+  let ptr_quarantine = mmap_ptr_us_init () in
 
   R.write ptr_partial AL.null_ptr;
   R.write ptr_empty AL.null_ptr;
@@ -313,7 +248,7 @@ let init_struct_aux
     slab_region md_bm_region md_region
     ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine;
 
-  let md_count = mmap_ptr_us () in
+  let md_count = mmap_ptr_us_init () in
   R.write md_count 0sz;
 
   intro_vrefinedep
@@ -434,6 +369,7 @@ let init_struct
   assert (A.length slab_region' == US.v metadata_max * U32.v page_size);
   assert (A.length md_bm_region' == US.v metadata_max * US.v 4sz);
   assert (A.length md_region' == US.v metadata_max);
+  assume (array_u8_proper_alignment slab_region');
   let scs = init_struct_aux sc slab_region' md_bm_region' md_region' in
   return scs
 
@@ -944,9 +880,9 @@ let init
     US.fits (US.v metadata_max * US.v n) /\
     True
   );
-  let slab_region = mmap_u8 (US.mul (US.mul metadata_max (u32_to_sz page_size)) n) in
-  let md_bm_region = mmap_u64 (US.mul (US.mul metadata_max 4sz) n) in
-  let md_region = mmap_cell_status (US.mul metadata_max n) in
+  let slab_region = mmap_u8_init (US.mul (US.mul metadata_max (u32_to_sz page_size)) n) in
+  let md_bm_region = mmap_u64_init (US.mul (US.mul metadata_max 4sz) n) in
+  let md_region = mmap_cell_status_init (US.mul metadata_max n) in
 
   Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max (u32_to_sz page_size)));
   Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max 4sz));
@@ -969,8 +905,8 @@ let init
   assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
   assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
 
-  let size_classes = mmap_sc n in
-  let sizes = mmap_sizes n in
+  let size_classes = mmap_sc_init n in
+  let sizes = mmap_sizes_init n in
 
   init_size_classes arena_sc_list n slab_region md_bm_region md_region size_classes sizes;
 
@@ -1028,7 +964,12 @@ val allocate_size_class
   (size_class_vprop scs)
   (fun r -> null_or_varray r `star` size_class_vprop scs)
   (requires fun h0 -> True)
-  (ensures fun h0 r h1 -> not (is_null r) ==> A.length r == U32.v scs.size)
+  (ensures fun h0 r h1 ->
+    not (is_null r) ==> (
+      A.length r == U32.v scs.size /\
+      array_u8_proper_alignment r
+    )
+  )
 
 let allocate_size_class scs =
   let r = SizeClass.allocate_size_class scs in
@@ -1051,8 +992,10 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
   (ensures fun _ r _ ->
     not (is_null r) ==> (
       A.length r == U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size /\
-      A.length r >= U32.v bytes
-  ))
+      A.length r >= U32.v bytes /\
+      array_u8_proper_alignment r
+    )
+  )
   =
   let sc = index sc_all.ro_perm i in
   L.acquire sc.lock;
@@ -1086,6 +1029,7 @@ let rec slab_malloc_i
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
+      array_u8_proper_alignment r /\
       Seq.length s >= 2
     )
   )
@@ -1118,6 +1062,7 @@ let rec slab_malloc_canary_i
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
+      array_u8_proper_alignment r /\
       Seq.length s >= 2 /\
       Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
       Seq.index s (A.length r - 1) == slab_canaries_magic2
@@ -1162,6 +1107,7 @@ val slab_malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (bytes:U32.t)
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
+      array_u8_proper_alignment r /\
       Seq.length s >= 2 /\
       (enable_slab_canaries_malloc ==>
         Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
@@ -1200,6 +1146,7 @@ let rec slab_aligned_alloc_i
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
+      array_u8_proper_alignment r /\
       Seq.length s >= 2
     )
   )
@@ -1233,6 +1180,7 @@ let rec slab_aligned_alloc_canary_i
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
+      array_u8_proper_alignment r /\
       Seq.length s >= 2 /\
       Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
       Seq.index s (A.length r - 1) == slab_canaries_magic2
@@ -1268,6 +1216,7 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
+      array_u8_proper_alignment r /\
       Seq.length s >= 2 /\
       (enable_slab_canaries_malloc ==>
         Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
