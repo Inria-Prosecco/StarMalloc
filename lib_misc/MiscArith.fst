@@ -58,5 +58,14 @@ let lemma_mod_mul2 (a k: int) (n: pos)
   =
   Math.Lemmas.lemma_mod_mul_distr_r a k n
 
-let lemma_mul_le (a b c c':nat) : Lemma (requires c <= c') (ensures a * b * c <= a * b * c')
+let lemma_mul_le (a b c c':nat)
+  : Lemma
+  (requires c <= c')
+  (ensures a * b * c <= a * b * c')
+  = ()
+
+let lemma_div_le (a:pos) (b c k:nat)
+  : Lemma
+  (requires k <= a * b * c)
+  (ensures k / a <= b * c)
   = ()

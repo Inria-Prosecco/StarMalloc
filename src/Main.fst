@@ -1342,7 +1342,7 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 
 let slab_getsize (ptr: array U8.t)
   : Steel US.t
@@ -1383,6 +1383,7 @@ let slab_getsize (ptr: array U8.t)
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
+  lemma_div_le (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
   let size = ROArray.index sc_all.ro_sizes index in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
@@ -1444,6 +1445,7 @@ let slab_free ptr =
   assert (ptr_of (A.split_l sc_all.slab_region 0sz) == ptr_of (sc_all.slab_region));
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
+  lemma_div_le (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
   (**) let g_sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
   (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
   let size = ROArray.index sc_all.ro_sizes index in
