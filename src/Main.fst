@@ -303,6 +303,8 @@ let init_struct_aux
 #restart-solver
 
 //#push-options "--split_queries always --query_stats"
+
+open MiscArith
 #push-options "--z3rlimit 100"
 noextract inline_for_extraction
 let init_struct
@@ -331,11 +333,13 @@ let init_struct
     A.varray (A.split_r md_region metadata_max)
   )
   (requires fun h0 ->
+    array_u8_proper_alignment slab_region /\
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0)
   )
   (ensures fun _ r h1 ->
     U32.eq r.size sc /\
+    array_u8_proper_alignment (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size))) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size))) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul metadata_max 4sz)) h1) /\
     A.ptr_of r.slab_region == A.ptr_of slab_region /\
@@ -369,7 +373,15 @@ let init_struct
   assert (A.length slab_region' == US.v metadata_max * U32.v page_size);
   assert (A.length md_bm_region' == US.v metadata_max * US.v 4sz);
   assert (A.length md_region' == US.v metadata_max);
-  assume (array_u8_proper_alignment slab_region');
+  assert (US.v (US.mul metadata_max (u32_to_sz page_size))
+  == US.v metadata_max * U32.v page_size
+  );
+  lemma_mod_mul2 (US.v metadata_max) (U32.v page_size) 16;
+  assert (US.v (US.mul metadata_max (u32_to_sz page_size)) % 16 == 0);
+  array_u8_proper_alignment_lemma slab_region slab_region';
+  array_u8_proper_alignment_lemma slab_region
+    (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size)));
+  assert (array_u8_proper_alignment slab_region');
   let scs = init_struct_aux sc slab_region' md_bm_region' md_region' in
   return scs
 
@@ -389,6 +401,9 @@ let split_r_r (#opened:_) (#a: Type)
   ))
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
+    A.split_r (A.split_r arr k1) k2
+    ==
+    A.split_r arr (US.add k1 k2) /\
     A.asel (A.split_r (A.split_r arr k1) k2) h0
     ==
     A.asel (A.split_r arr (US.add k1 k2)) h1
@@ -418,6 +433,9 @@ let split_r_r_mul (#opened:_) (#a: Type)
   ))
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
+    A.split_r (A.split_r arr (US.mul n k1)) n
+    ==
+    A.split_r arr (US.mul n k2) /\
     A.asel (A.split_r (A.split_r arr (US.mul n k1)) n) h0
     ==
     A.asel (A.split_r arr (US.mul n k2)) h1
@@ -508,11 +526,13 @@ val init_wrapper2
   (requires fun h0 ->
     US.v k < US.v n /\
     US.v k' == US.v k + 1 /\
+    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
     True
   )
   (ensures fun _ r h1 ->
+    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
     U32.eq r.data.size sc /\
@@ -681,12 +701,14 @@ val init_size_class
   )
   (requires fun h0 ->
     US.v k' == US.v k + 1 /\
+    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
     synced_sizes (US.v k) (asel sizes h0) (asel size_classes h0) /\
     (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
+    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
     synced_sizes (US.v k') (asel sizes h1) (asel size_classes h1) /\
@@ -761,23 +783,22 @@ val init_size_classes_aux (l:list sc)
     Cons? l /\
 
     US.v k' == US.v k + 1 /\
+    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
     synced_sizes (US.v k) (asel sizes h0) (asel size_classes h0) /\
     (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
+    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
     synced_sizes (US.v n) (asel sizes h1) (asel size_classes h1) /\
     (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
   )
 
-/// Small non-linear arithmetic lemma to help with proof obligations below
-let lemma_mul_le (a b c c':nat) : Lemma (requires c <= c') (ensures a * b * c <= a * b * c')
-  = ()
-
 #restart-solver
+
 // We need to bump the fuel to reason about the length of the lists
 #push-options "--z3rlimit 300 --fuel 2 --ifuel 2 --query_stats"
 let rec init_size_classes_aux l n k k' slab_region md_bm_region md_region size_classes sizes = match l with
@@ -846,12 +867,14 @@ val init_size_classes (l:list sc)
     List.length l == US.v n /\
     Cons? l /\
 
+    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) h0) /\
     synced_sizes 0 (asel sizes h0) (asel size_classes h0) /\
     (forall (i:nat{i < 0}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
+    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
     synced_sizes (US.v n) (asel sizes h1) (asel size_classes h1) /\
