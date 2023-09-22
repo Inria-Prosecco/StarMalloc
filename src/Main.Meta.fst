@@ -2,9 +2,6 @@ module Main.Meta
 
 friend Config
 
-// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
-irreducible let reduce_attr : unit = ()
-
 [@@ reduce_attr]
 inline_for_extraction noextract
 let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}

@@ -27,6 +27,9 @@ open NullOrVarray
 open Main
 open ROArray
 
+/// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
+irreducible let reduce_attr : unit = ()
+
 /// The total number of size classes in the allocator, across all arenas.
 /// Used as an abbreviation for specification purposes
 inline_for_extraction noextract
