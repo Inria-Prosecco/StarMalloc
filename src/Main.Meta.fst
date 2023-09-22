@@ -8,7 +8,7 @@ irreducible let reduce_attr : unit = ()
 [@@ reduce_attr]
 inline_for_extraction noextract
 let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
-  = normalize_term sc_list
+= normalize_term sc_list
 
 /// Number of arenas as a nat, for specification purposes. Not relying on US.v
 /// allows better normalization for extraction
@@ -39,7 +39,7 @@ let rec arena_sc_list'
     == { FStar.Math.Lemmas.swap_mul nb_arenas_nat (US.v nb_size_classes) }
     US.v nb_size_classes * nb_arenas_nat;
   };
-  assume (total_nb_sc == nb_arenas_nat * US.v nb_size_classes);
+  assert (total_nb_sc == nb_arenas_nat * US.v nb_size_classes);
   if i = nb_arenas_nat then acc
   else (
     List.append_length acc sc_list;
