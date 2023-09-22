@@ -1,16 +1,18 @@
 module Config
 
 open FStar.Mul
-
-// required for metadata_max values
-// such that nb_size_classes * page_size * metadata_max > max_int 32
 module A = Steel.Array
+
+// the allocator uses a contiguous region
+// formed by all arenas containing all size classes,
+// of the following size:
+// s = nb_arenas * nb_size_classes * metadata_max * page_size
+// thus, these hypotheses are required for practical use
+// note: when quarantine will be improved,
+// it should be impossible to use the allocator even
+// with smaller values of metadata_max
 let _ : squash (US.fits_u64)
   = A.intro_fits_u64 ()
-
-let _ : squash (US.fits_u32)
-  = A.intro_fits_u32 ()
-
 let _ : squash (UP.fits (FStar.Int.max_int 64))
   = A.intro_fits_ptrdiff64 ()
 
@@ -19,9 +21,6 @@ let sc_list = [
     128ul; 256ul; 512ul;
     1024ul; 2048ul; 4096ul
   ]
-
-module U16 = FStar.UInt16
-module U32 = FStar.UInt32
 
 //DO NOT EDIT, edit sc_list instead
 let nb_size_classes
@@ -34,8 +33,11 @@ let nb_size_classes
   normalize_term_spec (U32.uint_to_t l);
   assert (U32.v l_as_u32 == L.length sc_list);
   // do not normalize cast to size_t,
-  // as it is internally represented uint64_t
-  // and yields a type mismatch
+  // as FStar.SizeT.t is internally represented
+  // as FStar.UInt64.t and yields a type mismatch
+  // between uint64_t (result after this possible normalization)
+  // and size_t (expected type)
+  US.fits_u64_implies_fits_32 ();
   US.of_u32 l_as_u32
 
 let nb_arenas = 4sz
@@ -43,16 +45,28 @@ let nb_arenas = 4sz
 inline_for_extraction noextract
 let metadata_max' = 1048576UL
 
+//DO NOT EDIT
+let metadata_max_fits_lemma (_:unit)
+  : Lemma
+  (let x = U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas in
+  x < FStar.UInt.max_int U64.n /\
+  x < FStar.Int.max_int U64.n)
+  =
+  let l = normalize_term (L.length sc_list) in
+  normalize_term_spec (L.length sc_list);
+  assert (US.v nb_size_classes = l)
+
 //DO NOT EDIT, edit metadata_max' instead
 let metadata_max =
-  admit ();
-  assert_norm (U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas < U64.n);
+  metadata_max_fits_lemma ();
   US.fits_u64_implies_fits (U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas);
   US.fits_u64_implies_fits (U64.v metadata_max');
   US.of_u64 metadata_max'
 
 //DO NOT EDIT
-let metadata_max_up_fits _ = ()
+let metadata_max_up_fits _ =
+  metadata_max_fits_lemma ()
+
 //DO NOT EDIT
 let alg_null = US.v metadata_max + 1
 //DO NOT EDIT
