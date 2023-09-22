@@ -115,7 +115,11 @@ let trees_malloc2 (x: node)
       (if (A.is_null ptr) then emp else A.varray ptr)
       (A.varray ptr);
     metadata_max_up_fits ();
-    assume
+    FStar.Math.Lemmas.lemma_mult_le_left
+      (US.v metadata_max * U32.v page_size)
+      1
+      (US.v nb_size_classes * US.v nb_arenas);
+    assert
       (A.length metadata_slabs.scs.slab_region
       <=
       (US.v metadata_max * U32.v page_size) * US.v nb_size_classes * US.v nb_arenas);
