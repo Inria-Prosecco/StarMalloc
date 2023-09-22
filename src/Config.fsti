@@ -39,11 +39,6 @@ let sc = x:U32.t{
   (U32.v x % 16 == 0)
 }
 
-
-// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
-irreducible let reduce_attr : unit = ()
-
-[@@ reduce_attr]
 /// List of size classes used in each arena
 inline_for_extraction noextract
 val sc_list : (l:list sc{Cons? l})

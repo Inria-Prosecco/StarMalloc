@@ -2,7 +2,13 @@ module Main.Meta
 
 friend Config
 
-//TODO: try to bring back here sc_list, thus removing any attribute from the configuration file
+// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
+irreducible let reduce_attr : unit = ()
+
+[@@ reduce_attr]
+inline_for_extraction noextract
+let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
+  = normalize_term sc_list
 
 /// Number of arenas as a nat, for specification purposes. Not relying on US.v
 /// allows better normalization for extraction
