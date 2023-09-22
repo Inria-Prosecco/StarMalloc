@@ -10,6 +10,7 @@ module US = FStar.SizeT
 module AL = ArrayList
 module R = Steel.Reference
 
+open Config
 open Utils2
 
 //TODO: TO BE REMOVED

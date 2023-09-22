@@ -20,10 +20,13 @@ open Map.M
 open Impl.Core
 open Impl.Trees.Types
 
+open Prelude
 open Utils2
 open NullOrVarray
 
 #set-options "--ide_id_info_off"
+
+#push-options "--fuel 0 --ifuel 0"
 
 open Steel.Reference
 
@@ -88,6 +91,7 @@ let up_fits_propagation (ptr1 ptr2: array U8.t)
   )
   = ()
 
+open FStar.Mul
 let trees_malloc2 (x: node)
   : Steel (ref node)
   emp (fun r -> vptr r)
@@ -111,6 +115,10 @@ let trees_malloc2 (x: node)
       (if (A.is_null ptr) then emp else A.varray ptr)
       (A.varray ptr);
     metadata_max_up_fits ();
+    assume
+      (A.length metadata_slabs.scs.slab_region
+      <=
+      (US.v metadata_max * U32.v page_size) * US.v nb_size_classes * US.v nb_arenas);
     up_fits_propagation ptr metadata_slabs.scs.slab_region;
     let r' = array_u8__to__ref_node ptr in
     array_u8__to__ref_node_bijectivity ptr;
@@ -375,6 +383,7 @@ let large_free_aux
   )
 #pop-options
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let large_malloc (size: US.t)
   : Steel (array U8.t)
   emp

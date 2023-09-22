@@ -5,6 +5,7 @@ module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module US = FStar.SizeT
 module UP = FStar.PtrdiffT
+module L =  FStar.List
 
 open FStar.Mul
 
@@ -12,13 +13,48 @@ open FStar.Mul
 inline_for_extraction
 let page_size: U32.t = 4096ul
 
+noextract
+let min_sc = 64
+noextract
+let max_sc = U32.v page_size
+
+// TODO: this could be improved
+// currently does not support size classes
+// such that:
+// - sc < 64, thus nb_slot sc > 64
+// and
+// - (nb_slots sc) % 64 <> 0
+// this allows to only have a particular mechanism
+// for the first u64 of the bitmap
+// note: this mechanism does not rely on any loop!
+let sc = x:U32.t{
+  (
+    U32.eq x 16ul \/
+    U32.eq x 32ul \/
+    (min_sc <= U32.v x /\ U32.v x <= max_sc)
+  ) /\
+  // https://www.intel.com/content/dam/develop/external/us/en/documents/mpx-linux64-abi.pdf
+  // allocated arrays should have alignment of at least 16 bytes,
+  // allowing use of SSE instructions
+  (U32.v x % 16 == 0)
+}
+
+
+// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
+irreducible let reduce_attr : unit = ()
+
+[@@ reduce_attr]
+/// List of size classes used in each arena
+inline_for_extraction noextract
+val sc_list : (l:list sc{Cons? l})
+
 /// Number of size classes per arena
 inline_for_extraction
-let nb_size_classes: v:US.t{US.v v > 0} = 9sz
+val nb_size_classes: v:US.t{US.v v > 0 /\ US.v v == L.length sc_list}
 
-/// Number of arenas supported
+/// Number of arenas
 inline_for_extraction
-let nb_arenas: v:US.t{US.v v > 0} = 4sz
+val nb_arenas: v:US.t{US.v v > 0}
 
 inline_for_extraction
 val metadata_max: v:US.t{

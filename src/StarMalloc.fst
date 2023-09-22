@@ -19,6 +19,7 @@ open NullOrVarray
 
 // slab allocator
 open Main
+open Main.Meta
 // AVL+mmap allocator
 open LargeAlloc
 
