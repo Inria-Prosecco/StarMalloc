@@ -170,6 +170,7 @@ src/lib-alloc.c
 
 # foptimize-strlen = gcc issue culprit
 lib: verify extract
+	mkdir -p out
 	$(CC) -O3 \
 	-DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
@@ -180,13 +181,14 @@ lib: verify extract
 -shared -fPIC \
 $(FILES) \
 src/lib-alloc.c \
--o bench/starmalloc.so
+-o out/starmalloc.so
 
 #-Wmissing-prototypes
 #-std=c17
 #-Wall -Wextra -Wcast-align=strict -Wcast-qual
 #-fvisibility=hidden
 hardened_lib: verify extract
+	mkdir -p out
 	$(CC) -DKRML_VERIFIED_UINT128 \
 	-pipe -O3 -flto -fPIC \
 	-fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
@@ -199,7 +201,7 @@ hardened_lib: verify extract
 -shared -fPIC \
 $(FILES) \
 src/lib-alloc.c \
--o bench/h_starmalloc.so \
+-o out/h_starmalloc.so \
 
 # test the allocator as a shared library with a simple program
 test-alloc1: lib

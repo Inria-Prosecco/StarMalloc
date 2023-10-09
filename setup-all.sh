@@ -92,7 +92,7 @@ apply_starmalloc_tweak() {
     install StarMalloc libs within mimalloc-bench dir"
   pushd extern/mimalloc-bench 1>/dev/null
   mkdir -p extern/st
-  cp out/*.so extern/st
+  cp ../../out/*.so extern/st
   if [[ -f "../mb-tweak-starmalloc.txt" ]]; then
   	echo "StarMalloc tweak already applied to mimalloc-bench"
   else
@@ -165,7 +165,7 @@ else
   cat <<-EOF
   Now, everything is ready to bench StarMalloc wrt to other allocators,
   using mimalloc-bench.
-  From the mimalloc-bench/out/bench directory,
+  From the extern/mimalloc-bench/out/bench directory,
   you can use the following command:
   bash ../../bench.sh \$ALLOCATORS \$BENCHES,
   e.g.
