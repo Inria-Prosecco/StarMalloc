@@ -91,3 +91,13 @@ void* calloc(size_t nb_elem, size_t size_elem) {
   uint8_t* ptr = StarMalloc_calloc(thread_arena, nb_elem, size_elem);
   return (void*) ptr;
 }
+
+size_t malloc_usable_size(void* ptr) {
+  if (! init_status) {
+    pthread_mutex_lock(&m);
+    krmlinit_globals();
+    init_status=1UL;
+    pthread_mutex_unlock(&m);
+  }
+  return StarMalloc_getsize(ptr);
+}
