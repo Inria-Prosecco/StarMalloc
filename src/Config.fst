@@ -43,7 +43,7 @@ let nb_size_classes
 let nb_arenas = 4sz
 
 inline_for_extraction noextract
-let metadata_max' = 1048576UL
+let metadata_max' = 16777216UL
 
 //DO NOT EDIT
 let metadata_max_fits_lemma (_:unit)
