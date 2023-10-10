@@ -29,7 +29,7 @@
       fstar = fstar-src.packages.${system}.fstar;
       steel = steel-src.packages.${system}.steel;
       karamel = krml-src.packages.${system}.karamel.home;
-      steel-experiments = pkgs.stdenv.mkDerivation {
+      starmalloc = pkgs.stdenv.mkDerivation {
         name = "steel-experiments";
         src = ./.;
         enableParallelBuilding = true;
@@ -37,7 +37,7 @@
         FSTAR_HOME = fstar;
         STEEL_HOME = steel;
         KRML_HOME = karamel;
-        installPhase = "mkdir $out && cp -r dist bench/starmalloc.so $out";
+        installPhase = "mkdir $out && cp -r dist out/*.so $out";
         buildFlags = [ "lib" "hardened_lib" ];
         postInstall = ''
           find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
@@ -50,7 +50,10 @@
       };
     in
     {
-      packages.${system} = { inherit steel-experiments; default=steel-experiments; };
+      packages.${system} = {
+        inherit starmalloc;
+        default=starmalloc;
+      };
       #checks.${system} = {
       #  inherit steel-experiments;
       #};
