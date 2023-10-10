@@ -25,13 +25,25 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
+      inherit (pkgs) lib;
       z3 = fstar-src.packages.${system}.z3;
       fstar = fstar-src.packages.${system}.fstar;
       steel = steel-src.packages.${system}.steel;
       karamel = krml-src.packages.${system}.karamel.home;
+
+      # allocator derivation
       starmalloc = pkgs.stdenv.mkDerivation {
         name = "steel-experiments";
-        src = ./.;
+        src = lib.sourceByRegex ./. [
+          "lib_avl_common(/.*)?"
+          "lib_avl_mono(/.*)?"
+          "lib_bitmap(/.*)?"
+          "lib_list(/.*)?"
+          "lib_misc(/.*)?"
+          "src(/.*)?"
+          "Makefile.include"
+          "Makefile"
+        ];
         enableParallelBuilding = true;
         buildInputs = [ fstar steel karamel pkgs.removeReferencesTo ];
         FSTAR_HOME = fstar;
@@ -42,11 +54,6 @@
         postInstall = ''
           find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
         '';
-        #buildPhase = ''
-        ##  echo "${fstar}"
-        ##  echo "${karamel}"
-        #make lib -j 1
-        #'';
       };
     in
     {
@@ -54,8 +61,5 @@
         inherit starmalloc;
         default=starmalloc;
       };
-      #checks.${system} = {
-      #  inherit steel-experiments;
-      #};
     };
 }
