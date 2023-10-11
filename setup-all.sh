@@ -43,8 +43,8 @@ setup() {
       autoconf sed ghostscript time curl \
       automake libatomic1 libgflags-dev libsnappy-dev zlib1g-dev \
       libbz2-dev liblz4-dev libzstd-dev libreadline-dev \
-      gawk bazel-bootstrap 1>/dev/null
-      #last line = missing for tcg/pa
+      gawk 1>/dev/null
+      #last line = missing for tcg/pa, with bazel-bootstrap
     echo "Required Debian packages are installed"
   fi
 }
@@ -82,8 +82,11 @@ build_mimalloc_bench() {
 
   echo "2.b build allocators to be benched"
   pushd extern/mimalloc-bench 1>/dev/null
-  #TODO: fix pa + tcg
-  bash build-bench-env.sh all no-pa no-tcg no-packages
+  # no-pa: fetches >1G of binaries, will patch mimalloc-bench
+  # no-tcg: depends on a modified version of bazel, see upstream
+  # no-packages: do not use sudo within this script (hygiene)
+  # no-rp: compilation error with clang-16, will patch it
+  bash build-bench-env.sh all no-pa no-tcg no-packages no-rp
   popd 1>/dev/null
 }
 
