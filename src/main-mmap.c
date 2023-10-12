@@ -24,7 +24,9 @@ uint8_t *mmap_u8(size_t len) {
 
 void munmap_u8(uint8_t* ptr, size_t len) {
   bool b = munmap((void*) ptr, len);
-  assert (! b);
+  if (b && errno != ENOMEM) {
+    assert (false);
+  }
   return;
 }
 
