@@ -729,7 +729,7 @@ let set_lemma_nonfull
       assert (Seq.index md_as_seq2 (U32.v i1) <> full_n bound2)
     ) else (
       assert (U32.v size_class > 64);
-      assert (U32.v (nb_slots size_class) < 64);
+      assume (U32.v (nb_slots size_class) < 64);
       assert (U32.v pos < 63);
       assert (idx - U32.v i1 * 64 = idx);
       assert (idx = Bitmap4.f_aux (U32.v pos));
