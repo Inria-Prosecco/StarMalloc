@@ -177,7 +177,7 @@ lib: verify extract
 	-I $(KRML_LIB)/dist/minimal -I dist \
 	-I $(STEEL_HOME)/include/steel \
 	-pthread -lpthread \
-	-Wno-c2x-extensions \
+	-Wall \
         -std=gnu11 \
 -shared -fPIC \
 $(FILES) \
@@ -197,7 +197,7 @@ hardened_lib: verify extract
 	-I $(KRML_LIB)/dist/minimal -I dist \
 	-I $(STEEL_HOME)/include/steel \
 	-pthread -lpthread \
-	-Wwrite-strings -Wno-c2x-extensions -march=native \
+	-Wall -march=native \
 	-Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
 -shared -fPIC \
 $(FILES) \
