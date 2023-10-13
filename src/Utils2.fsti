@@ -691,6 +691,30 @@ let set_lemma_nonempty
   assert (x <> 0UL);
   assert (Seq.index md_as_seq2 (U32.v i1) <> 0UL)
 
+let lemma_div_lt_aux
+  (x y: pos) (z: nat)
+  : Lemma
+  (requires
+    z >= x /\
+    z % x == 0 /\
+    y > x
+  )
+  (ensures
+    z/y < z/x
+  )
+  =
+  let k = z/x in
+  FStar.Math.Lemmas.lemma_div_mod z x;
+  // (z/x)*x = z, as z % x = 0
+  assert (k * x == z);
+  // (b < c /\ a > 0) ==> a * b < a * c
+  FStar.Math.Lemmas.lemma_mult_lt_left k x y;
+  assert (k * x < k * y);
+  assert (z < k * y);
+  // (k * y) / y = k
+  FStar.Math.Lemmas.cancel_mul_div k y;
+  assert (k > z/y)
+
 let set_lemma_nonfull
   (size_class: sc)
   (md_as_seq1: Seq.lseq U64.t 4)
@@ -729,7 +753,9 @@ let set_lemma_nonfull
       assert (Seq.index md_as_seq2 (U32.v i1) <> full_n bound2)
     ) else (
       assert (U32.v size_class > 64);
-      assume (U32.v (nb_slots size_class) < 64);
+      lemma_div_lt_aux 64 (U32.v size_class) (U32.v page_size);
+      assert ((U32.v page_size)/64 == 64);
+      assert (U32.v (nb_slots size_class) < 64);
       assert (U32.v pos < 63);
       assert (idx - U32.v i1 * 64 = idx);
       assert (idx = Bitmap4.f_aux (U32.v pos));
