@@ -50,7 +50,7 @@ setup() {
 }
 
 build_starmalloc() {
-  echo "1. Build StarMalloc"
+  echo "1. Building StarMalloc"
   #echo "1.a clone StarMalloc"
   #if [[ -d "StarMalloc" ]]; then
   #	echo "StarMalloc repo has already been cloned, skipping"
@@ -58,7 +58,7 @@ build_starmalloc() {
   #	git clone git@github.com:Inria-Prosecco/StarMalloc.git
   #fi
 
-  echo "1.b build StarMalloc"
+  echo "1.b building StarMalloc"
   if [[ -f "StarMalloc/out/h_starmalloc.so" ]]; then
   	echo "StarMalloc lib is already built, skipping"
   else
@@ -68,9 +68,9 @@ build_starmalloc() {
 }
 
 build_mimalloc_bench() {
-  echo "2. Build mimalloc-bench"
+  echo "2. Building mimalloc-bench"
 
-  echo "2.a clone mimalloc-bench"
+  echo "2.a cloning mimalloc-bench"
   if [[ -d "extern/mimalloc-bench" ]]; then
   	echo "mimalloc-bench repo has already been cloned, skipping"
   else
@@ -80,19 +80,18 @@ build_mimalloc_bench() {
     popd 1>/dev/null
   fi
 
-  echo "2.b build allocators to be benched"
+  echo "2.b building allocators to be benched"
   pushd extern/mimalloc-bench 1>/dev/null
   # no-pa: fetches >1G of binaries, will patch mimalloc-bench
   # no-tcg: depends on a modified version of bazel, see upstream
   # no-packages: do not use sudo within this script (hygiene)
-  # no-rp: compilation error with clang-16, will patch it
-  bash build-bench-env.sh all no-pa no-tcg no-packages no-rp
+  bash build-bench-env.sh all no-pa no-tcg no-packages
   popd 1>/dev/null
 }
 
 apply_starmalloc_tweak() {
   echo "3. StarMalloc tweak: \
-    install StarMalloc libs within mimalloc-bench dir"
+    installing StarMalloc libs within mimalloc-bench dir"
   pushd extern/mimalloc-bench 1>/dev/null
   mkdir -p extern/st
   cp ../../out/*.so extern/st
@@ -110,7 +109,7 @@ apply_starmalloc_tweak() {
 
 apply_mimalloc_bench_tweak() {
   echo "4. Mimalloc-bench tweak:\
-    fix mimalloc-bench, allt should run all tests"
+    fixing mimalloc-bench, allt should run all tests"
   pushd extern/mimalloc-bench 1>/dev/null
   if [[ -f "../mb-tweak-allt.txt" ]]; then
   	echo "Allt tweak already applied to mimalloc-bench/"
