@@ -32,7 +32,9 @@
       karamel = krml-src.packages.${system}.karamel.home;
 
       # allocator derivation
-      starmalloc = pkgs.llvmPackages_latest.stdenv.mkDerivation {
+      # TODO: use pkgs.llvmPackages_latest.stdenv.mkDerivation
+      # currently, there is some linking issue, try to fix it/report it
+      starmalloc = pkgs.clangStdenv.mkDerivation {
         name = "steel-experiments";
         src = lib.sourceByRegex ./. [
           "lib_avl_common(/.*)?"
