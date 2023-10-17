@@ -8,7 +8,7 @@
 
 #define N_ARENA 4
 
-static uint32_t init_status = 0UL;
+static atomic_uint init_status = 0UL;
 static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
 __attribute__((tls_model("initial-exec")))
@@ -25,9 +25,9 @@ uint8_t* StarMalloc_memset_u8(uint8_t* dest, uint8_t v, size_t n) {
 
 void* malloc(size_t size) {
   if (! init_status) {
+    init_status=1UL;
     pthread_mutex_lock(&m);
     krmlinit_globals();
-    init_status=1UL;
     pthread_mutex_unlock(&m);
   }
   if (thread_arena == N_ARENA) {
