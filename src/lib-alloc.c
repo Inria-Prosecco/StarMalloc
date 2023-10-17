@@ -38,9 +38,9 @@ void* malloc(size_t size) {
 
 void* aligned_alloc(size_t alignment, size_t size) {
   if (! init_status) {
+    init_status=1UL;
     pthread_mutex_lock(&m);
     krmlinit_globals();
-    init_status=1UL;
     pthread_mutex_unlock(&m);
   }
   if (thread_arena == N_ARENA) {
@@ -51,9 +51,9 @@ void* aligned_alloc(size_t alignment, size_t size) {
 
 void free(void *ptr) {
   if (! init_status) {
+    init_status=1UL;
     pthread_mutex_lock(&m);
     krmlinit_globals();
-    init_status=1UL;
     pthread_mutex_unlock(&m);
   }
   //printf("free ptr: %p\n", ptr);
@@ -64,9 +64,9 @@ void free(void *ptr) {
 
 void* realloc(void* ptr, size_t new_size) {
   if (! init_status) {
+    init_status=1UL;
     pthread_mutex_lock(&m);
     krmlinit_globals();
-    init_status=1UL;
     pthread_mutex_unlock(&m);
   }
   if (thread_arena == N_ARENA) {
@@ -80,9 +80,9 @@ void* realloc(void* ptr, size_t new_size) {
 
 void* calloc(size_t nb_elem, size_t size_elem) {
   if (! init_status) {
+    init_status=1UL;
     pthread_mutex_lock(&m);
     krmlinit_globals();
-    init_status=1UL;
     pthread_mutex_unlock(&m);
   }
   if (thread_arena == N_ARENA) {
@@ -94,9 +94,9 @@ void* calloc(size_t nb_elem, size_t size_elem) {
 
 size_t malloc_usable_size(void* ptr) {
   if (! init_status) {
+    init_status=1UL;
     pthread_mutex_lock(&m);
     krmlinit_globals();
-    init_status=1UL;
     pthread_mutex_unlock(&m);
   }
   return StarMalloc_getsize(ptr);
