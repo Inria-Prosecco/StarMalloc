@@ -24,12 +24,12 @@ uint8_t* StarMalloc_memset_u8(uint8_t* dest, uint8_t v, size_t n) {
 }
 
 void* malloc(size_t size) {
+  pthread_mutex_lock(&m);
   if (! init_status) {
     init_status=1UL;
-    pthread_mutex_lock(&m);
     krmlinit_globals();
-    pthread_mutex_unlock(&m);
   }
+  pthread_mutex_unlock(&m);
   if (thread_arena == N_ARENA) {
     thread_arena = thread_arena_counter++ % N_ARENA;
   }
@@ -37,12 +37,12 @@ void* malloc(size_t size) {
 }
 
 void* aligned_alloc(size_t alignment, size_t size) {
+  pthread_mutex_lock(&m);
   if (! init_status) {
-    pthread_mutex_lock(&m);
     krmlinit_globals();
     init_status=1UL;
-    pthread_mutex_unlock(&m);
   }
+  pthread_mutex_unlock(&m);
   if (thread_arena == N_ARENA) {
     thread_arena = thread_arena_counter++ % N_ARENA;
   }
@@ -50,12 +50,12 @@ void* aligned_alloc(size_t alignment, size_t size) {
 }
 
 void free(void *ptr) {
+  pthread_mutex_lock(&m);
   if (! init_status) {
-    pthread_mutex_lock(&m);
     krmlinit_globals();
     init_status=1UL;
-    pthread_mutex_unlock(&m);
   }
+  pthread_mutex_unlock(&m);
   //printf("free ptr: %p\n", ptr);
   bool b = StarMalloc_free(ptr);
   //printf("  result: %b\n");
@@ -63,12 +63,12 @@ void free(void *ptr) {
 }
 
 void* realloc(void* ptr, size_t new_size) {
+  pthread_mutex_lock(&m);
   if (! init_status) {
-    pthread_mutex_lock(&m);
     krmlinit_globals();
     init_status=1UL;
-    pthread_mutex_unlock(&m);
   }
+  pthread_mutex_unlock(&m);
   if (thread_arena == N_ARENA) {
     thread_arena = thread_arena_counter++ % N_ARENA;
   }
@@ -79,12 +79,12 @@ void* realloc(void* ptr, size_t new_size) {
 }
 
 void* calloc(size_t nb_elem, size_t size_elem) {
+  pthread_mutex_lock(&m);
   if (! init_status) {
-    pthread_mutex_lock(&m);
     krmlinit_globals();
     init_status=1UL;
-    pthread_mutex_unlock(&m);
   }
+  pthread_mutex_unlock(&m);
   if (thread_arena == N_ARENA) {
     thread_arena = thread_arena_counter++ % N_ARENA;
   }
@@ -93,11 +93,11 @@ void* calloc(size_t nb_elem, size_t size_elem) {
 }
 
 size_t malloc_usable_size(void* ptr) {
+  pthread_mutex_lock(&m);
   if (! init_status) {
-    pthread_mutex_lock(&m);
     krmlinit_globals();
     init_status=1UL;
-    pthread_mutex_unlock(&m);
   }
+  pthread_mutex_unlock(&m);
   return StarMalloc_getsize(ptr);
 }
