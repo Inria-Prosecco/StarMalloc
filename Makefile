@@ -171,7 +171,7 @@ src/lib-alloc.c
 # foptimize-strlen = gcc issue culprit
 lib: verify extract
 	mkdir -p out
-	$(CC) -O3 \
+	$(CC) -O3 -g \
 	-DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
@@ -191,7 +191,7 @@ src/lib-alloc.c \
 hardened_lib: verify extract
 	mkdir -p out
 	$(CC) -DKRML_VERIFIED_UINT128 \
-	-pipe -O3 -flto -fPIC \
+	-pipe -O3 -g -flto -fPIC \
 	-fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
