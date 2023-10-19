@@ -57,26 +57,35 @@ static inline unsigned init(void) {
   return arena;
 }
 
+// returned pointer not null => (
+//   - 16-bytes aligned
+//   - at least of the requested size
+// )
 void* malloc(size_t size) {
   unsigned arena = init();
   return StarMalloc_malloc(arena, size);
 }
 
-void* aligned_alloc(size_t alignment, size_t size) {
-  unsigned arena = init();
-  return StarMalloc_aligned_alloc(arena, alignment, size);
-}
-
+// returned pointer not null => (
+//   - 16-bytes aligned
+//   - at least of the requested size (nb_elem * size_elem)
+//   - filled with zeroes for subarray corresponding to the requested size
+// )
 void* calloc(size_t nb_elem, size_t size_elem) {
   unsigned arena = init();
   return StarMalloc_calloc(arena, nb_elem, size_elem);
 }
 
+// [...]
 void* realloc(void* ptr, size_t new_size) {
   unsigned arena = init();
   return StarMalloc_realloc(arena, ptr, new_size);
 }
 
+// noop if ptr is null
+// deallocates previously allocated memory by (malloc / ...)
+// UAF + DF = undefined
+// TODO: ensure it stops the execution when the deallocation process fails
 void free(void *ptr) {
   // use enforce_init
   unsigned arena = init();
@@ -88,12 +97,53 @@ void free(void *ptr) {
   return;
 }
 
+// returned value is the number of usable bytes
+// in the block pointed to by ptr,
+// a pointer to a block of memory allocated by (malloc / ...)
 size_t malloc_usable_size(void* ptr) {
   // not needed for correctness, but way faster
-  if (ptr == NULL) {
-    return 0;
-  }
+  //if (ptr == NULL) {
+  //  return 0;
+  //}
   // use enforce_init
   init();
   return StarMalloc_getsize(ptr);
 }
+
+//aligned_alloc, posix_memalign, memalign
+void* aligned_alloc(size_t alignment, size_t size) {
+  unsigned arena = init();
+  return StarMalloc_aligned_alloc(arena, alignment, size);
+}
+
+//TODO: refine this, free_sized is part of C23
+void free_sized(void* ptr, size_t /*size*/) {
+  free(ptr);
+}
+
+int posix_memalign(void **memptr, size_t alignment, size_t size) {
+  assert (false);
+  return 0;
+}
+void *memalign(size_t alignment, size_t size) {
+  assert (false);
+  return NULL;
+}
+
+// wrapper using large_alloc, with rounding for pvalloc
+void *valloc(size_t size) {
+  assert (false);
+  return NULL;
+}
+void *pvalloc(size_t size) {
+  assert (false);
+  return NULL;
+}
+
+//TODO: cfree: removed from glibc >= 2.26
+void cfree(void*) {
+  assert (false);
+}
+
+//later on
+//TODO: C++ stubs
