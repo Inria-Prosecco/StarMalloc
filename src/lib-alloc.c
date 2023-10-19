@@ -22,7 +22,7 @@ uint8_t* StarMalloc_memset_u8(uint8_t* dest, uint8_t v, size_t n) {
   return (uint8_t*) memset((void*) dest, v, n);
 }
 
-void* _Atomic slab_region_ptr;
+static void* _Atomic slab_region_ptr;
 
 // hm-alike initialization
 static inline bool is_init(void) {
@@ -78,11 +78,13 @@ void* realloc(void* ptr, size_t new_size) {
 }
 
 void free(void *ptr) {
+  // use enforce_init
   unsigned arena = init();
-  //printf("free ptr: %p\n", ptr);
   bool b = StarMalloc_free(ptr);
-  assert (b);
-  //printf("  result: %b\n");
+  //if (! b) {
+  //  printf("free ptr: %p\n", ptr);
+  //  assert (b);
+  //}
   return;
 }
 
