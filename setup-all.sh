@@ -73,9 +73,7 @@ build_starmalloc() {
   fi
 }
 
-build_mimalloc_bench() {
-  echo "2. Building mimalloc-bench"
-
+clone_mimalloc_bench() {
   echo "2.a cloning mimalloc-bench"
   if [[ -d "extern/mimalloc-bench" ]]; then
   	echo "mimalloc-bench repo has already been cloned, skipping"
@@ -85,8 +83,10 @@ build_mimalloc_bench() {
   	git clone https://github.com/daanx/mimalloc-bench
     popd 1>/dev/null
   fi
+}
 
-  echo "2.b building allocators to be benched"
+build_mimalloc_bench() {
+  echo "2.b building allocators and benches"
   pushd extern/mimalloc-bench 1>/dev/null
   # no-pa: fetches >1G of binaries, will patch mimalloc-bench
   # no-tcg: depends on a modified version of bazel, see upstream
@@ -140,6 +140,7 @@ usage() {
 
   OPTIONS:
     -h --help show this help
+    -st       build + upd st, do not build mimalloc-bench
 
   This script assumes that:
   - the z3+F*+Steel+KaRaMeL toolchain has been set up
@@ -158,6 +159,7 @@ EOF
 main() {
   setup
   build_starmalloc
+  clone_mimalloc_bench
   build_mimalloc_bench
   apply_starmalloc_tweak
   apply_mimalloc_bench_tweak
@@ -165,11 +167,18 @@ main() {
 
 readonly ARGS=${1:-""}
 
-if test "$ARGS" = "-h"; then
-  usage
-else
-  main
-
+case "$ARGS" in
+  -h)
+	usage;;
+  -st-only)
+	setup
+	build_starmalloc
+	clone_mimalloc_bench
+	#no build of mimalloc-bench
+	apply_starmalloc_tweak
+	apply_mimalloc_bench_tweak;;
+  *)
+	main
   cat <<-EOF
   Now, everything is ready to bench StarMalloc wrt to other allocators,
   using mimalloc-bench.
@@ -180,4 +189,4 @@ else
   bash ../../bench.sh sys mi hm st allt.
 EOF
 
-fi
+esac
