@@ -51,8 +51,6 @@ obj/%.krml:
 	$(Q)$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
 	--extract_module $(basename $(notdir $(subst .checked,,$<)))
 
-ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
-
 # TODO: remove following hack:
 # add-include 'Steel_Spinlock:"steel_base.h"'
 # steel_base.h defines symbols required by Steel.ArrayArith
@@ -219,6 +217,7 @@ c/lib-alloc.c \
 #bench: testopt testocaml testcpp
 #	./bench/bench.sh
 
+#ALL_MODULE_NAMES=$(basename $(ALL_SOURCE_FILES))
 #ALL_C_FILES=$(addsuffix .c,$(ALL_MODULE_NAMES))
 #
 #$(ALL_C_FILES): extract
