@@ -1,9 +1,5 @@
 .depend
-old/*
-dist/
-hints/
 obj/
+dist/
+out/
 a.out
-
-*.swp
-*~
