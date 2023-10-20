@@ -29,7 +29,7 @@ void calloc_overflow(void) {
 
 void calloc0(void) {
   char* ptr = calloc(0, 1000);
-  assert (ptr[15] == 0);
+  assert (ptr[13] == 0);
   free(ptr);
 }
 

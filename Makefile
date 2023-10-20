@@ -89,27 +89,27 @@ c/fatal_error.c \
 c/memory.c
 
 # test the allocator with a static binary
-test-alloc0: verify extract
+test-alloc: verify extract
 	$(CC) -O0 -g -DKRML_VERIFIED_UINT126 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
 	-I $(STEEL_HOME)/include/steel \
--o bench/a.out \
+-o a.out \
 $(FILES) \
-bench/test-alloc.c \
+tests/test-alloc.c \
 c/lib-alloc.c
-	./bench/a.out
-test-alloc0bis: verify extract
+	./a.out
+test-alloc2: verify extract
 	$(CC) -O0 -g -DKRML_VERIFIED_UINT128 \
 	-I $(KRML_HOME)/include \
 	-I $(KRML_LIB)/dist/minimal -I dist \
 	-I $(STEEL_HOME)/include/steel \
   -pthread \
--o bench/a.out \
+-o a.out \
 $(FILES) \
-bench/test-alloc2.c \
+tests/test-alloc2.c \
 c/lib-alloc.c
-	./bench/a.out
+	./a.out
 
 lib: verify extract
 	mkdir -p out
