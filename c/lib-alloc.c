@@ -1,26 +1,19 @@
-#include <stdint.h>
-#include <stddef.h>
 #include <stdlib.h>
 #include <stdatomic.h>
+
 #include "krmlinit.h"
-#include "Config.h"
+//TODO: mark Config_nb_arenas as const (correctness + performance)
+//#include "Config.h"
 #include "StarMalloc.h"
 #include "internal/StarMalloc.h"
+#include "fatal_error.h"
 
-//TODO: remove, mark Config as const (correctness + performance)
+//TODO: remove, mark Config_nb_arenas as const (correctness + performance)
 #define N_ARENAS 4
 
 __attribute__((tls_model("initial-exec")))
 static _Thread_local unsigned thread_arena = N_ARENAS;
 static atomic_uint thread_arena_counter = 0;
-
-uint8_t* StarMalloc_memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
-  return (uint8_t*) memcpy((void*) dest, (void*) src, n);
-}
-
-uint8_t* StarMalloc_memset_u8(uint8_t* dest, uint8_t v, size_t n) {
-  return (uint8_t*) memset((void*) dest, v, n);
-}
 
 static void* _Atomic slab_region_ptr;
 
@@ -92,7 +85,7 @@ void free(void *ptr) {
   bool b = StarMalloc_free(ptr);
   //if (! b) {
   //  printf("free ptr: %p\n", ptr);
-  //  assert (b);
+  //  fatal_error(...)
   //}
   return;
 }
@@ -117,32 +110,34 @@ void* aligned_alloc(size_t alignment, size_t size) {
 }
 
 //TODO: refine this, free_sized is part of C23
-void free_sized(void* ptr, size_t /*size*/) {
+void free_sized(void* ptr, size_t size) {
   free(ptr);
 }
 
+//TODO: metaprogrammation like aligned_alloc
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
-  assert (false);
+  fatal_error ("posix_memalign not yet implemented");
   return 0;
 }
+//TODO: metaprogrammation like aligned_alloc
 void *memalign(size_t alignment, size_t size) {
-  assert (false);
+  fatal_error ("memalign not yet implemented");
   return NULL;
 }
 
-// wrapper using large_alloc, with rounding for pvalloc
+// TODO: wrapper using large_alloc
 void *valloc(size_t size) {
-  assert (false);
+  fatal_error ("valloc not yet implemented");
   return NULL;
 }
+// TODO: wrapper using large_alloc
 void *pvalloc(size_t size) {
-  assert (false);
+  fatal_error ("pvalloc not yet implemented");
   return NULL;
 }
 
-//TODO: cfree: removed from glibc >= 2.26
-void cfree(void*) {
-  assert (false);
+void cfree(void* ptr) {
+  fatal_error ("cfree is not implemented: removed since glibc 2.26");
 }
 
 //later on

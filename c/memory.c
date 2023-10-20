@@ -1,12 +1,11 @@
-#include "main-mmap.h"
+#include "memory.h"
 
 #include <errno.h>
 #include <sys/mman.h>
 #include <assert.h>
-#include "internal/StarMalloc.h"
 
-static const size_t page_size = 4096UL;
-static const size_t max_slabs = 1024UL;
+#include "internal/StarMalloc.h"
+#include "fatal_error.h"
 
 uint8_t *mmap_init(size_t size) {
   void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_NORESERVE, -1, 0);
@@ -25,7 +24,7 @@ uint8_t *mmap_u8(size_t len) {
 void munmap_u8(uint8_t* ptr, size_t len) {
   bool b = munmap((void*) ptr, len);
   if (b && errno != ENOMEM) {
-    assert (false);
+    fatal_error("non-ENOMEM munmap failure");
   }
   return;
 }
@@ -75,33 +74,6 @@ void mmap_trap (uint8_t* ptr, size_t len) {
   return;
 }
 
-void StarMalloc_malloc_zeroing_die(uint8_t* ptr) {
-  assert (false);
-}
-
-bool StarMalloc_memcheck_u8(uint8_t* ptr, size_t len) {
-  for (size_t i = 0; i < len; i++) {
-    if (ptr[i] != 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
-  size_t len = (size_t) sc;
-  memset(ptr, 0, len);
-}
-
-uint32_t Impl_Trees_Types_avl_data_size_aux = sizeof(Impl_Trees_Types_node);
-
-Impl_Trees_Types_node* Impl_Trees_Types_array_u8__to__ref_node(uint8_t* arr) {
-  static_assert(sizeof(Impl_Trees_Types_node) <= 64);
-  return (Impl_Trees_Types_node*) arr;
-}
-uint8_t* Impl_Trees_Types_ref_node__to__array_u8(Impl_Trees_Types_node* r) {
-  return (uint8_t*) r;
-}
 
 Impl_Trees_Types_node** mmap_ptr_metadata() {
   return (Impl_Trees_Types_node**) mmap_init(sizeof(Impl_Trees_Types_node*));

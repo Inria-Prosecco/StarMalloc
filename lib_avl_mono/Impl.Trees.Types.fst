@@ -19,7 +19,7 @@ let array = Steel.ST.Array.array
 open Config
 open Utils2
 
-//TODO: add a static assert about avl_data_size_aux bound
+// this is a compilation-time assert, see c/utils.c static_assert usage
 assume val avl_data_size_aux : v:U32.t{U32.v v <= 64}
 
 let avl_data_size : v:sc{U32.v avl_data_size_aux <= U32.v v} = 64ul

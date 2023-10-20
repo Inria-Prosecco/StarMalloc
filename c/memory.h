@@ -1,5 +1,5 @@
-#ifndef MAIN_MMAP_H_
-#define MAIN_MMAP_H_
+#ifndef MEMORY_H_
+#define MEMORY_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -17,5 +17,5 @@ size_t *mmap_ptr_us(void);
 
 void mmap_trap (uint8_t* ptr, size_t len);
 
-#endif // MAIN_MMAP_H_
+#endif // MEMORY_H_
 

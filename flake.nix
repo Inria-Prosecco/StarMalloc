@@ -43,6 +43,7 @@
           "lib_list(/.*)?"
           "lib_misc(/.*)?"
           "src(/.*)?"
+          "c(/.*)?"
           "Makefile.include"
           "Makefile"
         ];
