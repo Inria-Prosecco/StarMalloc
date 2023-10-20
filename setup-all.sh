@@ -47,6 +47,12 @@ setup() {
       #last line = missing for tcg/pa, with bazel-bootstrap
     echo "Required Debian packages are installed"
   fi
+
+  if [[ "$(sysctl -n vm.max_map_count)" -lt 1048576 ]]; then
+	  echo "sysctl vm.max_map_count < 1048576, not OK, please fix it, exiting"
+  else
+	  echo "sysctl vm.max_map_count >= 1048576, OK"
+  fi
 }
 
 build_starmalloc() {
