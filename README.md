@@ -79,19 +79,28 @@ Verified code:
 - functional correctness 1: malloc returns NULL or an array of at least the requested size
 - functional correctness 2: malloc returns a 16-bytes aligned array
 - functional correctness 3: thread-safety (mutexes)
+- (WIP) functional correctness 4: allocation size limited to `PTRDIFF_MAX` to avoid undefined behaviour
 - memory safety
-- deadlock-free(?)
+- (WIP?) deadlock-free(?)
 
 C wrapper/low-level initialization:
 - based on hardened\_malloc's init, relies on atomic instructions to avoid race conditions
 - short, auditable
-- defensive programming
+- (WIP) defensive programming
+
+## CI
+
+3 sorts of jobs:
+1. Basic: on every push, try to build the project.
+2. (WIP) Improved: on every push, test the project on all mimalloc-bench benches.
+3. (WIP) PR development model, refresh dist/: track dist/ under version control, no PR should be merged without the build succeeding and dist/ being (automatically?) refreshed.
+4. (WIP) nightly: every day, build StarMalloc main branch using bleeding-edge F\*, Steel, KaRaMeL, and compare on the same commit using the flake.lock dependencies versions.
 
 ## TODO
 - remove last assume (t\_of casts...)
-- replace last sladmits with proper fatal\_error stubs
+- replace last sladmits with proper fatal error stubs
 - pthread\_atfork hook
-- initial large memory mappings should have PROT\_NONE permissions
+- initial large memory mappings should have `PROT_NONE` permissions
 - debug flag/distinct debug targets (remove -g as default compilation flag)
 - compilation flags
   - limit visible symbols
@@ -99,7 +108,7 @@ C wrapper/low-level initialization:
 - use hacl-star libmemzero
 - C defensive programming:
   - more memory-related errno checks wrt ENOMEM
-  - limit allocation size to PTRDIFF\_MAX (glibc behaviour)
+  - limit allocation size to `PTRDIFF_MAX` (glibc behaviour)
   - calloc: remove overflow risk
   - fatal\_error if StarMalloc\_free fails
 - C++ stubs
@@ -109,6 +118,10 @@ C wrapper/low-level initialization:
   - -Wunused
     - src/lib-alloc.c, free: replace init with enforce\_init
     - src/lib-alloc.c, free: StarMalloc\_free returned value
+- PRs:
+  - KaRaMeL: test for `size_t`
+  - mimalloc-bench: install all allocators and benches using Nix
+- CI: [...]
 - benches
   - fix mimalloc-bench/perf
     - rptest: missing memalign symbol
@@ -120,3 +133,14 @@ C wrapper/low-level initialization:
   - HardsHeap?
 - cleaning
   - remove
+
+## External repositories
+
+- hardened\_malloc: https://github.com/GrapheneOS/hardened_malloc
+- F\*: https://github.com/FStarLang/FStar
+- Steel: https://github.com/FStarLang/steel
+- KaRaMeL: https://github.com/FStarLang/karamel
+- mimalloc-bench: https://github.com/daanx/mimalloc-bench
+- NixOS: https://github.com/NixOS/nixpkgs
+[...]
+
