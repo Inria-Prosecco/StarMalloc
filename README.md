@@ -91,6 +91,7 @@ C wrapper/low-level initialization:
 - based on hardened\_malloc's init, relies on atomic instructions to avoid race conditions
 - short, auditable
 - (WIP) defensive programming
+- (WIP) correct behaviour wrt fork syscall using pthread\_atfork hook
 
 ## Security mechanisms of the allocator
 
