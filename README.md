@@ -67,11 +67,15 @@ A few examples:
 
 ### mimalloc-bench
 
-[...]
+mimalloc-bench is a memory allocators benchmarking suite.
+Most of its benches are currently working with StarMalloc, including on a 64-core machine (it allowed us to catch bugs!).
 
 ### WIP: Firefox
 
-[...]
+All of this is very much WIP.
+- Build Firefox with `--disable-jemalloc` flag.
+- Test it with StarMalloc.
+- Bench it wrt to other allocators.
 
 ## Properties of the allocator
 
@@ -87,6 +91,17 @@ C wrapper/low-level initialization:
 - based on hardened\_malloc's init, relies on atomic instructions to avoid race conditions
 - short, auditable
 - (WIP) defensive programming
+
+## Security mechanisms of the allocator
+
+- size classes + arenas
+- out-of-band metadata
+- no free lists/no size class cache
+- zeroing on free
+- zeroing check on allocation
+- guard pages
+- quarantine
+- canaries
 
 ## CI
 
@@ -105,7 +120,9 @@ C wrapper/low-level initialization:
 - compilation flags
   - limit visible symbols
   - -fhardened flag: FORTIFY\_SOURCE, stack-clash protection, etc
-- use hacl-star libmemzero
+- hacl-star:
+  - use libmemzero
+  - use cryptographic primitives for canaries
 - C defensive programming:
   - more memory-related errno checks wrt ENOMEM
   - limit allocation size to `PTRDIFF_MAX` (glibc behaviour)
@@ -142,5 +159,11 @@ C wrapper/low-level initialization:
 - KaRaMeL: https://github.com/FStarLang/karamel
 - mimalloc-bench: https://github.com/daanx/mimalloc-bench
 - NixOS: https://github.com/NixOS/nixpkgs
-[...]
+- [...]
+
+## Authors
+
+Antonin Reitz antonin.reitz@inria.fr
+Aymeric Fromherz aymeric.fromherz@inria.fr
+Jonathan Protzenko protz@microsoft.com
 
