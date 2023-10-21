@@ -114,6 +114,11 @@ void free_sized(void* ptr, size_t size) {
   free(ptr);
 }
 
+//TODO: refine this, free_sized is part of C23
+void free_aligned_sized(void* ptr, size_t size) {
+  free(ptr);
+}
+
 //TODO: metaprogrammation like aligned_alloc
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
   fatal_error ("posix_memalign not yet implemented");

@@ -4,7 +4,7 @@ A verified security-oriented general-purpose userspace memory allocator,
 that can be used as a drop-in replacement for the libc allocator.
 It is heavily inspired from hardened\_malloc's design.
 
-The following symbols are/will be/will not be provided: except when explicitly mentioned, symbols are provided.
+The following symbols are/will be/will not be provided: except when explicitly mentioned, symbols are provided. ? indicates that no standard defining the corresponding symbol was found.
 1. as part of C standard library
 - malloc
 - calloc
@@ -12,7 +12,7 @@ The following symbols are/will be/will not be provided: except when explicitly m
 - free
 - aligned\_alloc (C11, TODO: check current implem)
 - free\_sized (C23, TODO: refine)
-- free\_aligned\_sized (C23, TODO: provide it)
+- free\_aligned\_sized (C23, TODO: refine)
 
 2. misc
 - posix\_memalign (POSIX, TODO: provide it)
@@ -29,7 +29,7 @@ The following symbols are/will be/will not be provided: except when explicitly m
 - clone mimalloc-bench inside `extern/mimalloc-bench`,
 - build all of mimalloc-bench allocators + benches,
 - install StarMalloc within mimalloc-bench dir (`extern/mimalloc-bench/extern/st`),
-- tweaks mimalloc-bench.
+- tweak mimalloc-bench.
 
 Then, lets bench StarMalloc (`st`) against the system allocator (`sys`) and hardened\_malloc (`hm`) on all benches (`allt`).
 ```
@@ -93,6 +93,40 @@ C wrapper/low-level initialization:
 - (WIP) defensive programming
 - (WIP) correct behaviour wrt fork syscall using pthread\_atfork hook
 
+## Structure of the allocator
+
+### Allocation process (malloc case)
+
+malloc(size)
+0. size <= PAGE\_SIZE (this bound has to be adjusted when using canaries), if so goto 10., otherwise goto 20.
+
+10. within the arena corresponding to the thread, find corresponding size class
+11. find a slab with at least one free slot
+  - look for partial slabs
+  - look for empty slabs
+  - if there is none in these two categories, add slabs to the empty slabs list from the so-far unused memory space
+12. find free slot position
+13. update metadata, return corresponding pointer
+
+20. ptr = mmap(size), check result
+21. insert (ptr, size) into the AVL tree containing metadata
+22. return corresponding pointer
+
+### Deallocation process (free case)
+
+free(ptr)
+0. is the pointer within the very large contiguous memory regions containing adjacent arenas, which are containg adjacent size classes? if so goto 10., otherwise goto 20.
+
+10. using pointer difference between ptr and the start of the slab region, find the corresponding arena
+11. using pointer difference between ptr and the start of the arena, find the corresponding size class
+12. using pointer difference between ptr and the start of the size class, find the corresponding slab
+13. using pointer difference between ptr and the start of the slab, find the corresponding slot
+14. check using slot metadata whether ptr corresponds to an actual allocation, if so goto 15., otherwise fail
+15. update metadata
+
+20. check whether corresponds to an actual allocation by looking for ptr in the metadata map (which is an AVL tree); if so goto 21., otherwise fail
+21. corresponding size is now known; remove (ptr, size) from the map
+
 ## Security mechanisms of the allocator
 
 - size classes + arenas
@@ -116,6 +150,8 @@ C wrapper/low-level initialization:
 - remove last assume (t\_of casts...)
 - replace last sladmits with proper fatal error stubs
 - pthread\_atfork hook
+  - handwritten implementation
+  - generated implementation(?)
 - initial large memory mappings should have `PROT_NONE` permissions
 - debug flag/distinct debug targets (remove -g as default compilation flag)
 - compilation flags
@@ -148,6 +184,10 @@ C wrapper/low-level initialization:
     - fix sh6bench/sh8bench exit statuses(?)
   - fix mimalloc-bench/security
   - large application: Firefox?
+    - (WIP) build Firefox
+      So far, using a systemd-nspawn Arch Linux container (built from a systemd-nspawn Debian container, Ubuntu does not provide pacstrap; patch and pkgconf seem to be missing build dependencies of the firefox Arch Linux package), obtained a patched version of firefox 118.
+      Incompatibility between glibc versions of the build container (2.38) and my OS (2.37), I will need to use a Arch Linux container and try some hackery to use Wayland from inside the systemd-nspawn container.
+      [...]
   - HardsHeap?
 - cleaning
   - remove
