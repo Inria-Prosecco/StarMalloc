@@ -56,7 +56,7 @@ obj/%.krml:
 # steel_base.h defines symbols required by Steel.ArrayArith
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
-	$(KRML_EXE) -skip-compilation -tmpdir dist \
+	$(KRML_EXE) -skip-compilation -fparentheses -tmpdir dist \
     -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 		-bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 		-bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main.Meta,LargeAlloc'[rename=StarMalloc] \
@@ -117,7 +117,7 @@ lib: verify extract
 	-I $(KRML_LIB)/dist/minimal -I dist \
 	-I $(STEEL_HOME)/include/steel \
 	-pthread -lpthread \
-	-Wall \
+	-Wall -Wextra \
         -std=gnu11 \
 -shared -fPIC \
 $(FILES) \
@@ -137,7 +137,8 @@ hardened_lib: verify extract
 	-I $(KRML_LIB)/dist/minimal -I dist \
 	-I $(STEEL_HOME)/include/steel \
 	-pthread -lpthread \
-	-Wall -march=native \
+	-Wall -Wextra \
+	-march=native \
 	-Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
 -shared -fPIC \
 $(FILES) \
