@@ -73,8 +73,11 @@ Most of its benches are currently working with StarMalloc, including on a 64-cor
 ### WIP: Firefox
 
 All of this is very much WIP.
-- Build Firefox with `--disable-jemalloc` flag.
-- Test it with StarMalloc.
+[ok] - Build Firefox with `--disable-jemalloc` flag.
+[ok] - Test it with StarMalloc.
+  - issue with posix\_memalign
+  - expose all symbols
+  - C++ stubs with fatal\_error
 - Bench it wrt to other allocators.
 
 ## Properties of the allocator
@@ -166,8 +169,7 @@ free(ptr)
   - calloc: remove overflow risk
   - fatal\_error if StarMalloc\_free fails
 - C++ stubs
-- remaining warnings using -Wall
-  - -Wlogical-op-parentheses: krml fix?
+- remaining warnings using -Wall -Wextra
   - -Wc++17-extensions (static\_assert with no message)
   - -Wunused
     - src/lib-alloc.c, free: replace init with enforce\_init
@@ -175,7 +177,14 @@ free(ptr)
 - PRs:
   - KaRaMeL: test for `size_t`
   - mimalloc-bench: install all allocators and benches using Nix
-- CI: [...]
+- CI:
+  - dist/ auto-refresh, forcing PR usage
+  - nightly
+  - benches
+    - mimalloc-bench (upstream nix first!)
+    - Firefox
+      - firefox build
+      - firefox benchmark in headless mode, using local speedometer
 - benches
   - fix mimalloc-bench/perf
     - rptest: missing memalign symbol
@@ -184,10 +193,12 @@ free(ptr)
     - fix sh6bench/sh8bench exit statuses(?)
   - fix mimalloc-bench/security
   - large application: Firefox?
-    - (WIP) build Firefox
+    - [ok] build Firefox
       So far, using a systemd-nspawn Arch Linux container (built from a systemd-nspawn Debian container, Ubuntu does not provide pacstrap; patch and pkgconf seem to be missing build dependencies of the firefox Arch Linux package), obtained a patched version of firefox 118.
-      Incompatibility between glibc versions of the build container (2.38) and my OS (2.37), I will need to use a Arch Linux container and try some hackery to use Wayland from inside the systemd-nspawn container.
-      [...]
+    - [ok] use Firefox from container using xwayland
+      Incompatibility between glibc versions of the build container (2.38) and my OS (2.37), need to use a Arch Linux container + some hackery to make it work.
+    - [wip] use Firefox with StarMalloc
+      - fix posix_memalign
   - HardsHeap?
 - cleaning
   - remove
