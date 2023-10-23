@@ -2,20 +2,47 @@
 #include <stdatomic.h>
 
 #include "krmlinit.h"
-//TODO: mark Config_nb_arenas as const (correctness + performance)
-//#include "Config.h"
+#include "Config.h"
 #include "StarMalloc.h"
 #include "internal/StarMalloc.h"
 #include "fatal_error.h"
 
-//TODO: remove, mark Config_nb_arenas as const (correctness + performance)
-#define N_ARENAS 4
-
 __attribute__((tls_model("initial-exec")))
-static _Thread_local unsigned thread_arena = N_ARENAS;
+static _Thread_local unsigned thread_arena = CONFIG_NB_ARENAS;
 static atomic_uint thread_arena_counter = 0;
 
 static void* _Atomic slab_region_ptr;
+
+static void full_lock(void) {
+  pthread_mutex_lock(&metadata.lock);
+  for (size_t i = 0; i < CONFIG_NB_ARENAS; i++) {
+    for (size_t j = 0; j < CONFIG_NB_SIZE_CLASSES; j++) {
+      pthread_mutex_lock(&Main_Meta_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock);
+    }
+  }
+}
+
+static void full_unlock(void) {
+  pthread_mutex_unlock(&metadata.lock);
+  for (size_t i = 0; i < CONFIG_NB_ARENAS; i++) {
+    for (size_t j = 0; j < CONFIG_NB_SIZE_CLASSES; j++) {
+      pthread_mutex_unlock(&Main_Meta_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock);
+    }
+  }
+}
+
+static void post_fork_child(void) {
+  size_t status = 0;
+  status += pthread_mutex_init(&metadata.lock, NULL);
+  for (size_t i = 0; i < CONFIG_NB_ARENAS; i++) {
+    for (size_t j = 0; j < CONFIG_NB_SIZE_CLASSES; j++) {
+      status += pthread_mutex_init(&Main_Meta_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock, NULL);
+    }
+  }
+  if (status) {
+    fatal_error("fork child: mutexes initialization failed");
+  }
+}
 
 // hm-alike initialization
 static inline bool is_init(void) {
@@ -34,16 +61,18 @@ static void init_slow_path(void) {
   krmlinit_globals();
   atomic_store_explicit(&slab_region_ptr, Main_Meta_sc_all.slab_region, memory_order_release);
   pthread_mutex_unlock(&m);
-  // TODO: pthread_atfork
+  if (pthread_atfork(full_lock, full_unlock, post_fork_child)) {
+    fatal_error("pthread_atfork failed");
+  }
 }
 
 // hm-alike
 static inline unsigned init(void) {
   unsigned arena = thread_arena;
-  if (arena < N_ARENAS) {
+  if (arena < CONFIG_NB_ARENAS) {
     return arena;
   }
-  thread_arena = arena = thread_arena_counter++ % N_ARENAS;
+  thread_arena = arena = thread_arena_counter++ % CONFIG_NB_ARENAS;
   if (!is_init ()) {
     init_slow_path();
   }
@@ -80,8 +109,8 @@ void* realloc(void* ptr, size_t new_size) {
 // UAF + DF = undefined
 // TODO: ensure it stops the execution when the deallocation process fails
 void free(void *ptr) {
-  // use enforce_init
-  unsigned arena = init();
+  // TODO: use enforce_init instead
+  init();
   bool b = StarMalloc_free(ptr);
   //if (! b) {
   //  printf("free ptr: %p\n", ptr);
@@ -98,7 +127,7 @@ size_t malloc_usable_size(void* ptr) {
   //if (ptr == NULL) {
   //  return 0;
   //}
-  // use enforce_init
+  // TODO: use enforce_init instead
   init();
   return StarMalloc_getsize(ptr);
 }

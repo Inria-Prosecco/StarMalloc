@@ -45,10 +45,12 @@ val sc_list : (l:list sc{Cons? l})
 
 /// Number of size classes per arena
 inline_for_extraction
+[@ CMacro ]
 val nb_size_classes: v:US.t{US.v v > 0 /\ US.v v == L.length sc_list}
 
 /// Number of arenas
 inline_for_extraction
+[@ CMacro ]
 val nb_arenas: v:US.t{US.v v > 0}
 
 inline_for_extraction

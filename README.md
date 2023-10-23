@@ -150,33 +150,40 @@ free(ptr)
 4. (WIP) nightly: every day, build StarMalloc main branch using bleeding-edge F\*, Steel, KaRaMeL, and compare on the same commit using the flake.lock dependencies versions.
 
 ## TODO
-- remove last assume (t\_of casts...)
-- replace last sladmits with proper fatal error stubs
-- pthread\_atfork hook
-  - handwritten implementation
-  - generated implementation(?)
-- initial large memory mappings should have `PROT_NONE` permissions
-- debug flag/distinct debug targets (remove -g as default compilation flag)
-- compilation flags
-  - limit visible symbols
-  - -fhardened flag: FORTIFY\_SOURCE, stack-clash protection, etc
-- hacl-star:
-  - use libmemzero
-  - use cryptographic primitives for canaries
-- C defensive programming:
+- F\*/Steel
+  - remove last assume (t\_of casts...)
+  - replace last sladmits with proper fatal error stubs
+  - improve quarantine
+  - initial large memory mappings should have `PROT_NONE` permissions
+  - hidden page size
+  - calloc: remove overflow risk
+
+- C code
   - more memory-related errno checks wrt ENOMEM
   - limit allocation size to `PTRDIFF_MAX` (glibc behaviour)
-  - calloc: remove overflow risk
   - fatal\_error if StarMalloc\_free fails
-- C++ stubs
-- remaining warnings using -Wall -Wextra
-  - -Wc++17-extensions (static\_assert with no message)
-  - -Wunused
-    - src/lib-alloc.c, free: replace init with enforce\_init
-    - src/lib-alloc.c, free: StarMalloc\_free returned value
+  - C++ stubs
+  - [ok] pthread\_atfork hook
+    - [ok] handwritten implementation
+    - [sk] generated implementation(?)
+
+- Makefile
+  - debug flag/distinct debug targets (remove -g as default compilation flag)
+  - compilation flags
+    - limit visible symbols
+    - -fhardened flag: FORTIFY\_SOURCE, stack-clash protection, etc
+  - remaining warnings using -Wall -Wextra
+    - -Wc++17-extensions (static\_assert with no message)
+    - -Wunused (variable/parameter)
+
+- hacl-star reuse:
+  - use libmemzero
+  - use cryptographic primitives for canaries
+
 - PRs:
   - KaRaMeL: test for `size_t`
   - mimalloc-bench: install all allocators and benches using Nix
+
 - CI:
   - dist/ auto-refresh, forcing PR usage
   - nightly
@@ -185,6 +192,7 @@ free(ptr)
     - Firefox
       - firefox build
       - firefox benchmark in headless mode, using local speedometer
+
 - benches
   - fix mimalloc-bench/perf
     - rptest: missing memalign symbol
@@ -198,7 +206,7 @@ free(ptr)
     - [ok] use Firefox from container using xwayland
       Incompatibility between glibc versions of the build container (2.38) and my OS (2.37), need to use a Arch Linux container + some hackery to make it work.
     - [wip] use Firefox with StarMalloc
-      - fix posix_memalign
+      - fix posix_memalign (currently works when removing this stub)
   - HardsHeap?
 - cleaning
   - remove
