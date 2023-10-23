@@ -145,37 +145,40 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 let aligned_alloc arena_id alignment size =
   if size = 0sz then intro_null_null_or_varray #U8.t else (
-  if US.lte size (US.uint32_to_sizet page_size) && US.lte alignment (US.uint32_to_sizet page_size)
-  then (
-    let ptr = slab_aligned_alloc arena_id (US.sizet_to_uint32 alignment) (US.sizet_to_uint32 size) in
-    if (A.is_null ptr || not enable_zeroing_malloc) then (
-      return ptr
-    ) else (
-      elim_live_null_or_varray ptr;
-      let b = memcheck_u8 ptr size in
-      if b then (
-        intro_live_null_or_varray ptr;
-        return ptr
-      ) else (
-        malloc_zeroing_die ptr;
-        intro_null_null_or_varray #U8.t
-      )
-    )
-  ) else (
-    // mmap returns page-aligned memory. We do not support alignment larger
-    // than a page size.
-    if alignment `US.rem` 16sz = 0sz && alignment `US.lte` (US.uint32_to_sizet page_size) then
+//  if US.lte size (US.uint32_to_sizet page_size) && US.lte alignment (US.uint32_to_sizet page_size)
+//  then (
+//    let ptr = slab_aligned_alloc arena_id (US.sizet_to_uint32 alignment) (US.sizet_to_uint32 size) in
+//    if (A.is_null ptr || not enable_zeroing_malloc) then (
+//      return ptr
+//    ) else (
+//      elim_live_null_or_varray ptr;
+//      let b = memcheck_u8 ptr size in
+//      if b then (
+//        intro_live_null_or_varray ptr;
+//        return ptr
+//      ) else (
+//        malloc_zeroing_die ptr;
+//        intro_null_null_or_varray #U8.t
+//      )
+//    )
+//  ) else (
+//    // mmap returns page-aligned memory. We do not support alignment larger
+//    // than a page size.
+    if alignment `US.rem` 16sz = 0sz && alignment `US.lte` (US.uint32_to_sizet page_size) then (
 
       let r = large_malloc size in
       let s : G.erased (t_of (null_or_varray r))
         = gget (null_or_varray r) in
-      if not (A.is_null r)
-      then zf_u8_split s (A.length r - 2)
-      else ();
+      admit ();
+      //if not (A.is_null r)
+      //then zf_u8_split s (A.length r - 2)
+      //else ();
       return r
-    else
+    ) else (
       intro_null_null_or_varray #U8.t
-  ))
+    )
+  )
+ // ))
 #pop-options
 
 val free (ptr: array U8.t)

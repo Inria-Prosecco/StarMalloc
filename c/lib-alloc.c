@@ -150,13 +150,19 @@ void free_aligned_sized(void* ptr, size_t size) {
 
 //TODO: metaprogrammation like aligned_alloc
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
-  fatal_error ("posix_memalign not yet implemented");
+  printf("%lu/%lu\n", alignment, size);
+  void* ptr = aligned_alloc(alignment, size);
+  *memptr = ptr;
+  //fatal_error ("posix_memalign not yet implemented");
   return 0;
 }
 //TODO: metaprogrammation like aligned_alloc
 void *memalign(size_t alignment, size_t size) {
-  fatal_error ("memalign not yet implemented");
-  return NULL;
+  printf("%lu/%lu\n", alignment, size);
+  void* ptr = aligned_alloc(alignment, size);
+  //assert (
+  //fatal_error ("memalign not yet implemented");
+  //return NULL;
 }
 
 // TODO: wrapper using large_alloc
