@@ -164,8 +164,8 @@ let aligned_alloc arena_id alignment size =
 //  ) else (
 //    // mmap returns page-aligned memory. We do not support alignment larger
 //    // than a page size.
-    if alignment `US.rem` 16sz = 0sz && alignment `US.lte` (US.uint32_to_sizet page_size) then (
-
+    if alignment `US.lte` (US.uint32_to_sizet page_size) then (
+      //TODO: check that the alignment is a power of two
       let r = large_malloc size in
       let s : G.erased (t_of (null_or_varray r))
         = gget (null_or_varray r) in
@@ -175,6 +175,7 @@ let aligned_alloc arena_id alignment size =
       //else ();
       return r
     ) else (
+      //TODO: add some warning that the alignment is unsupported
       intro_null_null_or_varray #U8.t
     )
   )
