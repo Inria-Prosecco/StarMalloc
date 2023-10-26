@@ -112,10 +112,10 @@ void free(void *ptr) {
   // TODO: use enforce_init instead
   init();
   bool b = StarMalloc_free(ptr);
-  //if (! b) {
-  //  printf("free ptr: %p\n", ptr);
-  //  fatal_error(...)
-  //}
+  if (! b) {
+    printf("free ptr: %p\n", ptr);
+    fatal_error("invalid free");
+  }
   return;
 }
 
@@ -157,9 +157,10 @@ int posix_memalign(void **memptr, size_t alignment, size_t size) {
   return 0;
 }
 //TODO: metaprogrammation like aligned_alloc
-void *memalign(size_t alignment, size_t size) {
+void* memalign(size_t alignment, size_t size) {
   printf("%lu/%lu\n", alignment, size);
   void* ptr = aligned_alloc(alignment, size);
+  return ptr;
   //assert (
   //fatal_error ("memalign not yet implemented");
   //return NULL;
