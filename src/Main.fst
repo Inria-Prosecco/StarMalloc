@@ -739,7 +739,7 @@ open MiscArith
 #restart-solver
 
 // We need to bump the fuel to reason about the length of the lists
-#push-options "--z3rlimit 200 --fuel 2 --ifuel 1 --query_stats"
+#push-options "--z3rlimit 300 --fuel 2 --ifuel 1 --query_stats"
 let rec init_size_classes_aux l n k k' slab_region md_bm_region md_region size_classes sizes
   = match l with
   | [hd] ->
