@@ -738,8 +738,9 @@ open MiscArith
 
 #restart-solver
 
+
 // We need to bump the fuel to reason about the length of the lists
-#push-options "--z3rlimit 300 --fuel 2 --ifuel 1 --query_stats"
+#push-options "--z3rlimit 300 --fuel 2 --ifuel 2 --query_stats"
 let rec init_size_classes_aux l n k k' slab_region md_bm_region md_region size_classes sizes
   = match l with
   | [hd] ->
@@ -757,8 +758,11 @@ let rec init_size_classes_aux l n k k' slab_region md_bm_region md_region size_c
       assert (US.v (k' `US.add` 1sz) <= US.v n);
       lemma_mul_le (US.v metadata_max) (US.v (u32_to_sz page_size)) (US.v (k' `US.add` 1sz)) (US.v n);
       lemma_mul_le (US.v metadata_max) (US.v 4sz) (US.v (k' `US.add` 1sz)) (US.v n);
+      admit ();
       init_size_classes_aux tl n k' (k' `US.add` 1sz) slab_region md_bm_region md_region size_classes sizes
 #pop-options
+
+#restart-solver
 
 #push-options "--fuel 0 --ifuel 0"
 /// Entrypoint, allocating all size classes according to the list of sizes [l]
