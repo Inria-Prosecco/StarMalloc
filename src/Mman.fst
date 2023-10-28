@@ -13,60 +13,45 @@ module R = Steel.Reference
 open Config
 open Utils2
 
-//TODO: TO BE REMOVED
-// only used during allocator initialization
-// checks that the return ptr is not null
-//assume val mmap_init
-//  (size: US.t)
-//  : Steel (array U8.t)
-//    emp
-//    (fun r -> A.varray r)
-//    (requires fun _ -> True)
-//    (ensures fun _ ptr h1 ->
-//      A.length ptr == US.v size /\
-//      A.is_full_array ptr /\
-//      A.asel ptr h1 == Seq.create (US.v size) U8.zero
-//    )
-
 /// 1) Initialization of the allocator
 // all functions with a _init suffix
 // are only meant to be used at initialization
 // and fail if the underlying mmap operation fails
 
-// mmap_u8_init returns a page-aligned array of bytes
-// that is, with an alignment of at least 16 bytes
-// hence the abstract property array_u8_proper_alignment here
+// POSIX spec: mmap returns a page-aligned array of bytes;
+// thus, mmap_u8_init returns a page-aligned array of bytes;
+// hence the postcondition array_u8_alignment page_size
 assume val mmap_u8_init (len: US.t)
   : Steel (array U8.t)
     emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v len) U8.zero /\
-      array_u8_proper_alignment a
+    (fun r -> A.varray r)
+    (fun _ -> US.v len > 0)
+    (fun _ r h1 ->
+      A.length r == US.v len /\
+      A.is_full_array r /\
+      A.asel r h1 == Seq.create (US.v len) U8.zero /\
+      array_u8_alignment r page_size
     )
 
 assume val mmap_u64_init (len: US.t)
   : Steel (array U64.t)
     emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a /\
-      A.asel a h1 == Seq.create (US.v len) U64.zero
+    (fun r -> A.varray r)
+    (fun _ -> US.v len > 0)
+    (fun _ r h1 ->
+      A.length r == US.v len /\
+      A.is_full_array r /\
+      A.asel r h1 == Seq.create (US.v len) U64.zero
     )
 
 assume val mmap_cell_status_init (len: US.t)
   : Steel (array AL.cell)
      emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a
+    (fun r -> A.varray r)
+    (fun _ -> US.v len > 0)
+    (fun _ r h1 ->
+      A.length r == US.v len /\
+      A.is_full_array r
     )
 
 assume val mmap_ptr_us_init (_:unit)
@@ -89,21 +74,21 @@ type size_class =
 assume val mmap_sc_init (len: US.t)
   : Steel (array size_class)
      emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a
+    (fun r -> A.varray r)
+    (fun _ -> US.v len > 0)
+    (fun _ r h1 ->
+      A.length r == US.v len /\
+      A.is_full_array r
     )
 
 assume val mmap_sizes_init (len: US.t)
   : Steel (array sc)
      emp
-    (fun a -> A.varray a)
-    (fun _ -> True)
-    (fun _ a h1 ->
-      A.length a == US.v len /\
-      A.is_full_array a
+    (fun r -> A.varray r)
+    (fun _ -> US.v len > 0)
+    (fun _ r h1 ->
+      A.length r == US.v len /\
+      A.is_full_array r
     )
 
 // used in src/LargeAlloc.fst
@@ -113,24 +98,28 @@ assume val mmap_sizes_init (len: US.t)
 
 open NullOrVarray
 
+// POSIX spec: mmap returns a page-aligned array of bytes;
+// thus, mmap_u8 returns a page-aligned array of bytes;
+// hence the postcondition array_u8_alignment page_size
 //noextract
 assume val mmap_u8
   (size: US.t)
   : Steel (array U8.t)
     emp
     (fun ptr -> null_or_varray ptr)
-    (requires fun _ -> True)
+    (requires fun _ -> US.v size > 0)
     (ensures fun _ ptr h1 ->
       let s : t_of (null_or_varray ptr)
         = h1 (null_or_varray ptr) in
       not (A.is_null ptr) ==> (
         A.length ptr == US.v size /\
         A.is_full_array ptr /\
-        array_u8_proper_alignment ptr /\
+        array_u8_alignment ptr page_size /\
         zf_u8 s
       )
     )
 
+// TODO: should the underlying munmap fail in a stricter manner?
 //noextract
 assume val munmap_u8 (ptr: array U8.t) (size: US.t)
   : Steel unit

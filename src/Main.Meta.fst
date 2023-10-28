@@ -51,248 +51,6 @@ inline_for_extraction noextract
 let arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l}) = arena_sc_list' 0 []
 #pop-options
 
-#push-options "--fuel 0 --ifuel 0"
-
-/// Performs the initialization of one size class of length [size_c], and stores it in the
-/// size_classes array at index [k]
-val init_size_class
-  (size_c: sc)
-  (n: US.t{
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
-    US.fits (US.v metadata_max * US.v n)
-  })
-  (k: US.t{US.v k < US.v n})
-  (k': US.t{US.v k' <= US.v n})
-  (slab_region: array U8.t{
-    A.length slab_region == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
-    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k /\
-    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k'
-  })
-  (md_bm_region: array U64.t{
-    A.length md_bm_region == US.v metadata_max * US.v 4sz * US.v n /\
-    A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v k /\
-    A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v k'
-  })
-  (md_region: array AL.cell{
-    A.length md_region == US.v metadata_max * US.v n /\
-    A.length md_region >= US.v metadata_max * US.v k /\
-    A.length md_region >= US.v metadata_max * US.v k'
-  })
-  (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: array sc{A.length sizes == US.v n})
-  : Steel unit
-  (
-    A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) `star`
-    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) `star`
-    A.varray (A.split_r md_region (US.mul metadata_max k)) `star`
-    A.varray size_classes `star`
-    A.varray sizes
-  )
-  (fun r ->
-    A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) `star`
-    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) `star`
-    A.varray (A.split_r md_region (US.mul metadata_max k')) `star`
-    A.varray size_classes `star`
-    A.varray sizes
-  )
-  (requires fun h0 ->
-    US.v k' == US.v k + 1 /\
-    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) /\
-    zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
-    zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
-    synced_sizes (US.v k) (asel sizes h0) (asel size_classes h0) /\
-    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
-  )
-  (ensures fun _ r h1 ->
-    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) /\
-    zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
-    zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
-    synced_sizes (US.v k') (asel sizes h1) (asel size_classes h1) /\
-    (forall (i:nat{i <= US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
-  )
-
-let init_size_class size n k k' slab_region md_bm_region md_region size_classes sizes =
-  (**) let g0 = gget (varray size_classes) in
-  (**) let g_sizes0 = gget (varray sizes) in
-  f_lemma n k;
-  upd sizes k size;
-  let sc = init_wrapper2 size n k k' slab_region md_bm_region md_region in
-  upd size_classes k sc;
-
-  (**) let g1 = gget (varray size_classes) in
-  (**) let g_sizes1 = gget (varray sizes) in
-  (**) assert (Ghost.reveal g_sizes1 == Seq.upd (Ghost.reveal g_sizes0) (US.v k) size);
-  (**) assert (Ghost.reveal g1 == Seq.upd (Ghost.reveal g0) (US.v k) sc)
-
-/// Wrapper around `init_size_class`. It takes as argument a list [l] of sizes
-/// for size classes to be created, creates them, and stores them in order in
-/// the [size_classes] array. Note, this function should not be extracted as is,
-/// it will be reduced at compile-time to yield an idiomatic sequence of calls
-/// to `init_size_class`
-[@@ reduce_attr]
-noextract
-val init_size_classes_aux (l:list sc)
-  (n: US.t{
-    US.fits (US.v n) /\
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
-    US.fits (US.v metadata_max * US.v n)
-  })
-  (k: US.t{US.v k < US.v n})
-  (k': US.t{US.v k' <= US.v n})
-  (slab_region: array U8.t{
-    A.length slab_region == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
-    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k /\
-    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * US.v k'
-  })
-  (md_bm_region: array U64.t{
-    A.length md_bm_region == US.v metadata_max * US.v 4sz * US.v n /\
-    A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v k /\
-    A.length md_bm_region >= US.v metadata_max * US.v 4sz * US.v k'
-  })
-  (md_region: array AL.cell{
-    A.length md_region == US.v metadata_max * US.v n /\
-    A.length md_region >= US.v metadata_max * US.v k /\
-    A.length md_region >= US.v metadata_max * US.v k'
-  })
-  (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: array sc{A.length sizes == US.v n})
-  : Steel unit
-  (
-    A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) `star`
-    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) `star`
-    A.varray (A.split_r md_region (US.mul metadata_max k)) `star`
-    A.varray size_classes `star`
-    A.varray sizes
-  )
-  (fun r ->
-    A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) `star`
-    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) `star`
-    A.varray (A.split_r md_region (US.mul metadata_max n)) `star`
-    A.varray size_classes `star`
-    A.varray sizes
-  )
-  (requires fun h0 ->
-    // Invariant needed to link the list against the size classes
-    // allocated in previous iterations
-    US.v k + List.length l == US.v n /\
-    Cons? l /\
-
-    US.v k' == US.v k + 1 /\
-    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) /\
-    zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
-    zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
-    synced_sizes (US.v k) (asel sizes h0) (asel size_classes h0) /\
-    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
-  )
-  (ensures fun _ r h1 ->
-    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) /\
-    zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
-    zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
-    synced_sizes (US.v n) (asel sizes h1) (asel size_classes h1) /\
-    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
-  )
-
-#restart-solver
-
-open MiscArith
-// We need to bump the fuel to reason about the length of the lists
-#push-options "--z3rlimit 300 --fuel 2 --ifuel 2 --query_stats"
-let rec init_size_classes_aux l n k k' slab_region md_bm_region md_region size_classes sizes = match l with
-  | [hd] ->
-      assert (US.v k' == US.v n);
-      init_size_class hd n k k' slab_region md_bm_region md_region size_classes sizes;
-      // Need to rewrite the k' into n to satisfy the postcondition
-      change_equal_slprop (A.varray (split_r md_bm_region _)) (A.varray (split_r md_bm_region _));
-      change_equal_slprop (A.varray (split_r md_region _)) (A.varray (split_r md_region _));
-      change_equal_slprop (A.varray (split_r slab_region _)) (A.varray (split_r slab_region _))
-  | hd::tl ->
-      init_size_class hd n k k' slab_region md_bm_region md_region size_classes sizes;
-      // This proof obligation in the recursive call seems especially problematic.
-      // The call to the lemma alleviates the issue, we might need something similar for
-      // the md_region and md_bm_region in the future
-      assert (US.v (k' `US.add` 1sz) <= US.v n);
-      lemma_mul_le (US.v metadata_max) (US.v (u32_to_sz page_size)) (US.v (k' `US.add` 1sz)) (US.v n);
-      lemma_mul_le (US.v metadata_max) (US.v 4sz) (US.v (k' `US.add` 1sz)) (US.v n);
-      init_size_classes_aux tl n k' (k' `US.add` 1sz) slab_region md_bm_region md_region size_classes sizes
-#pop-options
-
-/// Entrypoint, allocating all size classes according to the list of sizes [l]
-inline_for_extraction noextract
-val init_size_classes (l:list sc)
-  (n: US.t{
-    US.fits (US.v n) /\
-    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
-    US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
-    US.fits (US.v metadata_max * US.v n)
-  })
-  (slab_region: array U8.t{
-    A.length slab_region == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n /\
-    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * 0 /\
-    A.length slab_region >= US.v metadata_max * US.v (u32_to_sz page_size) * 1
-  })
-  (md_bm_region: array U64.t{
-    A.length md_bm_region == US.v metadata_max * US.v 4sz * US.v n /\
-    A.length md_bm_region >= US.v metadata_max * US.v 4sz * 0 /\
-    A.length md_bm_region >= US.v metadata_max * US.v 4sz * 1
-  })
-  (md_region: array AL.cell{
-    A.length md_region == US.v metadata_max * US.v n /\
-    A.length md_region >= US.v metadata_max * 0 /\
-    A.length md_region >= US.v metadata_max * 1
-  })
-  (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: array sc{A.length sizes == US.v n})
-  : Steel unit
-  (
-    A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) `star`
-    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) `star`
-    A.varray (A.split_r md_region (US.mul metadata_max 0sz)) `star`
-    A.varray size_classes `star`
-    A.varray sizes
-  )
-  (fun r ->
-    A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) `star`
-    A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) `star`
-    A.varray (A.split_r md_region (US.mul metadata_max n)) `star`
-    A.varray size_classes `star`
-    A.varray sizes
-  )
-  (requires fun h0 ->
-    // Invariant needed to link the list against the size classes
-    // allocated in previous iterations
-    List.length l == US.v n /\
-    Cons? l /\
-
-    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) /\
-    zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) h0) /\
-    zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) h0) /\
-    synced_sizes 0 (asel sizes h0) (asel size_classes h0) /\
-    (forall (i:nat{i < 0}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
-  )
-  (ensures fun _ r h1 ->
-    array_u8_proper_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) /\
-    zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
-    zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
-    synced_sizes (US.v n) (asel sizes h1) (asel size_classes h1) /\
-    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
-  )
-
-/// The normalization steps for reduction at compile-time
-unfold
-let normal_steps = [
-      delta_attr [`%reduce_attr];
-      delta_only [`%List.append];
-      iota; zeta; primops]
-
-unfold
-let normal (#a:Type) (x:a) =
-  Pervasives.norm normal_steps x
-
-let init_size_classes l n slab_region md_bm_region md_region size_classes sizes =
-  (normal (init_size_classes_aux l n 0sz 1sz)) slab_region md_bm_region md_region size_classes sizes
-
 #push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
 let init
   (_:unit)
@@ -403,7 +161,8 @@ val allocate_size_class
   (ensures fun h0 r h1 ->
     not (is_null r) ==> (
       A.length r == U32.v scs.size /\
-      array_u8_proper_alignment r
+      array_u8_alignment r 16ul /\
+      ((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
     )
   )
 
@@ -429,7 +188,7 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
     not (is_null r) ==> (
       A.length r == U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size /\
       A.length r >= U32.v bytes /\
-      array_u8_proper_alignment r
+      array_u8_alignment r 16ul
     )
   )
   =
@@ -465,7 +224,7 @@ let rec slab_malloc_i
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
-      array_u8_proper_alignment r /\
+      array_u8_alignment r 16ul /\
       Seq.length s >= 2
     )
   )
@@ -498,7 +257,7 @@ let rec slab_malloc_canary_i
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
-      array_u8_proper_alignment r /\
+      array_u8_alignment r 16ul /\
       Seq.length s >= 2 /\
       Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
       Seq.index s (A.length r - 1) == slab_canaries_magic2
@@ -531,94 +290,94 @@ let slab_malloc arena_id bytes =
     (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-/// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
-/// The key difference lies in the condition of the if-branch: we only
-/// attempt to allocate in this size class if it satisfies the alignment
-/// constraint, i.e., alignment % size == 0
-[@@ reduce_attr]
-noextract
-let rec slab_aligned_alloc_i
-  (l:list sc{List.length l <= length sc_all.size_classes})
-  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
-  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
-  (alignment:U32.t)
-  bytes
-  : Steel (array U8.t)
-  emp
-  (fun r -> null_or_varray r)
-  (requires fun _ -> True)
-  (ensures fun _ r h1 ->
-    let s : t_of (null_or_varray r)
-      = h1 (null_or_varray r) in
-    not (is_null r) ==> (
-      A.length r >= U32.v bytes /\
-      array_u8_proper_alignment r /\
-      Seq.length s >= 2
-    )
-  )
-  = match l with
-    | [] -> return_null ()
-    | hd::tl ->
-      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = index sc_all.ro_sizes idx in
-      if bytes `U32.lte` size && alignment `U32.rem` size = 0ul then
-        slab_malloc_one idx bytes
-      else
-        slab_aligned_alloc_i tl (i `US.add` 1sz) arena_id alignment bytes
-#pop-options
-
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-/// Version of `slab_aligned_alloc_i` with slab canaries
-[@@ reduce_attr]
-noextract
-let rec slab_aligned_alloc_canary_i
-  (l:list sc{List.length l <= length sc_all.size_classes})
-  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
-  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
-  (alignment:U32.t)
-  bytes
-  : Steel (array U8.t)
-  emp
-  (fun r -> null_or_varray r)
-  (requires fun _ -> True)
-  (ensures fun _ r h1 ->
-    let s : t_of (null_or_varray r)
-      = h1 (null_or_varray r) in
-    not (is_null r) ==> (
-      A.length r >= U32.v bytes /\
-      array_u8_proper_alignment r /\
-      Seq.length s >= 2 /\
-      Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
-      Seq.index s (A.length r - 1) == slab_canaries_magic2
-    )
-  )
-  = match l with
-    | [] -> return_null ()
-    | hd::tl ->
-      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = index sc_all.ro_sizes idx in
-      if bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.rem` size = 0ul then
-        let ptr = slab_malloc_one idx bytes in
-        if is_null ptr then return ptr
-        else (
-          elim_live_null_or_varray ptr;
-          upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
-          upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
-          intro_live_null_or_varray ptr;
-          return ptr
-        )
-      else
-        slab_aligned_alloc_canary_i tl (i `US.add` 1sz) arena_id alignment bytes
-#pop-options
-
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let slab_aligned_alloc arena_id alignment bytes =
-  if enable_slab_canaries_malloc then
-    (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
-  else
-    (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
-#pop-options
+//#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+///// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
+///// The key difference lies in the condition of the if-branch: we only
+///// attempt to allocate in this size class if it satisfies the alignment
+///// constraint, i.e., alignment % size == 0
+//[@@ reduce_attr]
+//noextract
+//let rec slab_aligned_alloc_i
+//  (l:list sc{List.length l <= length sc_all.size_classes})
+//  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
+//  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+//  (alignment:U32.t)
+//  bytes
+//  : Steel (array U8.t)
+//  emp
+//  (fun r -> null_or_varray r)
+//  (requires fun _ -> True)
+//  (ensures fun _ r h1 ->
+//    let s : t_of (null_or_varray r)
+//      = h1 (null_or_varray r) in
+//    not (is_null r) ==> (
+//      A.length r >= U32.v bytes /\
+//      array_u8_proper_alignment r /\
+//      Seq.length s >= 2
+//    )
+//  )
+//  = match l with
+//    | [] -> return_null ()
+//    | hd::tl ->
+//      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+//      let size = index sc_all.ro_sizes idx in
+//      if bytes `U32.lte` size && alignment `U32.rem` size = 0ul then
+//        slab_malloc_one idx bytes
+//      else
+//        slab_aligned_alloc_i tl (i `US.add` 1sz) arena_id alignment bytes
+//#pop-options
+//
+//#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+///// Version of `slab_aligned_alloc_i` with slab canaries
+//[@@ reduce_attr]
+//noextract
+//let rec slab_aligned_alloc_canary_i
+//  (l:list sc{List.length l <= length sc_all.size_classes})
+//  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
+//  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+//  (alignment:U32.t)
+//  bytes
+//  : Steel (array U8.t)
+//  emp
+//  (fun r -> null_or_varray r)
+//  (requires fun _ -> True)
+//  (ensures fun _ r h1 ->
+//    let s : t_of (null_or_varray r)
+//      = h1 (null_or_varray r) in
+//    not (is_null r) ==> (
+//      A.length r >= U32.v bytes /\
+//      array_u8_proper_alignment r /\
+//      Seq.length s >= 2 /\
+//      Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+//      Seq.index s (A.length r - 1) == slab_canaries_magic2
+//    )
+//  )
+//  = match l with
+//    | [] -> return_null ()
+//    | hd::tl ->
+//      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+//      let size = index sc_all.ro_sizes idx in
+//      if bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.rem` size = 0ul then
+//        let ptr = slab_malloc_one idx bytes in
+//        if is_null ptr then return ptr
+//        else (
+//          elim_live_null_or_varray ptr;
+//          upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
+//          upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
+//          intro_live_null_or_varray ptr;
+//          return ptr
+//        )
+//      else
+//        slab_aligned_alloc_canary_i tl (i `US.add` 1sz) arena_id alignment bytes
+//#pop-options
+//
+//#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+//let slab_aligned_alloc arena_id alignment bytes =
+//  if enable_slab_canaries_malloc then
+//    (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
+//  else
+//    (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
+//#pop-options
 
 #restart-solver
 
@@ -707,6 +466,8 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
+
+open MiscArith
 
 let slab_getsize (ptr: array U8.t)
   : Steel US.t

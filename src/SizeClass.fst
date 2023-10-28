@@ -58,7 +58,7 @@ let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size})
 
 type size_class_struct = s:size_class_struct'{
   A.length s.slab_region == US.v slab_size /\
-  array_u8_proper_alignment s.slab_region /\
+  array_u8_alignment s.slab_region page_size /\
   A.length s.md_bm_region == US.v metadata_max * 4 /\
   A.length s.md_region == US.v metadata_max
 }
@@ -181,7 +181,8 @@ let allocate_size_class_aux
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
       ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v scs.size) == 0 /\
-      array_u8_proper_alignment r
+      array_u8_alignment r 16ul /\
+      ((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
     )
   )
   =
@@ -189,14 +190,23 @@ let allocate_size_class_aux
   then (
     assert (same_base_array r scs.slab_region);
     assert (same_base_array scs.slab_region r);
-    assert (array_u8_proper_alignment scs.slab_region);
+    assert (array_u8_alignment scs.slab_region page_size);
     mod_arith_lemma_applied
       (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region))
       (U32.v page_size)
       (U32.v scs.size)
       16;
     assert ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % 16 == 0);
-    array_u8_proper_alignment_lemma scs.slab_region r
+    array_u8_alignment_lemma scs.slab_region r page_size 16ul;
+    if ((U32.v page_size) % (U32.v scs.size) = 0) then (
+      mod_arith_lemma_applied
+        (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region))
+        (U32.v page_size)
+        (U32.v scs.size)
+        (U32.v scs.size);
+      assert ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % (U32.v scs.size) == 0);
+      array_u8_alignment_lemma scs.slab_region r page_size scs.size
+    ) else ()
   ) else ()
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
@@ -214,7 +224,8 @@ let allocate_size_class
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
       ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v scs.size) == 0 /\
-      array_u8_proper_alignment r
+      array_u8_alignment r 16ul /\
+      ((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
     )
   )
   =

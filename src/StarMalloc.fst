@@ -80,7 +80,7 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= US.v size /\
-      array_u8_proper_alignment r /\
+      array_u8_alignment r 16ul /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
@@ -118,8 +118,14 @@ let malloc arena_id size =
     let s : G.erased (t_of (null_or_varray r))
       = gget (null_or_varray r) in
     if not (A.is_null r)
-    then zf_u8_split s (A.length r - 2)
-    else ();
+    then (
+      zf_u8_split s (A.length r - 2);
+      array_u8_alignment_lemma
+        r
+        r
+        page_size
+        16ul
+    ) else ();
     return r
   )
 #pop-options
@@ -136,7 +142,7 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= US.v size /\
-      array_u8_proper_alignment r /\
+      array_u8_alignment r 16ul /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
@@ -422,7 +428,7 @@ let calloc
     not (A.is_null r) ==> (
       A.length r >= size /\
       zf_u8 (Seq.slice s 0 size) /\
-      array_u8_proper_alignment r
+      array_u8_alignment r 16ul
     )
   )
   =
