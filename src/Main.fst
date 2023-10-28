@@ -584,6 +584,8 @@ let size_class_pred (slab_region:array U8.t) (sc:size_class) (i:nat) : prop =
 let synced_sizes (#n:nat) (k:nat{k <= n}) (sizes:Seq.lseq sc n) (size_classes:Seq.lseq size_class n) : prop =
   forall (i:nat{i < k}). Seq.index sizes i == (Seq.index size_classes i).data.size
 
+#push-options "--fuel 0 --ifuel 0"
+
 /// Performs the initialization of one size class of length [size_c], and stores it in the
 /// size_classes array at index [k]
 val init_size_class
@@ -659,6 +661,8 @@ let init_size_class size n k k' slab_region md_bm_region md_region size_classes 
 /// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
 irreducible let reduce_attr : unit = ()
 
+#restart-solver
+
 /// Wrapper around `init_size_class`. It takes as argument a list [l] of sizes
 /// for size classes to be created, creates them, and stores them in order in
 /// the [size_classes] array. Note, this function should not be extracted as is,
@@ -731,8 +735,11 @@ val init_size_classes_aux (l:list sc)
 #restart-solver
 
 open MiscArith
+
+#restart-solver
+
 // We need to bump the fuel to reason about the length of the lists
-#push-options "--z3rlimit 300 --fuel 2 --ifuel 2 --query_stats"
+#push-options "--z3rlimit 200 --fuel 2 --ifuel 1 --query_stats"
 let rec init_size_classes_aux l n k k' slab_region md_bm_region md_region size_classes sizes
   = match l with
   | [hd] ->
