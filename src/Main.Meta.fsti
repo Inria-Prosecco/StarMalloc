@@ -89,10 +89,15 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
-  (requires fun _ -> True)
+  (requires fun _ ->
+    U32.v alignment > 0 /\
+    (U32.v page_size) % (U32.v alignment) = 0
+  )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
+    U32.v alignment > 0 /\
+    (U32.v page_size) % (U32.v alignment) = 0 /\
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
       array_u8_alignment r 16ul /\

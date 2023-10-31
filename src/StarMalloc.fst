@@ -141,51 +141,62 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
+      0 < US.v alignment /\
+      US.v alignment <= U32.v page_size /\
       A.length r >= US.v size /\
       array_u8_alignment r 16ul /\
+      array_u8_alignment r (US.sizet_to_uint32 alignment) /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
-let aligned_alloc arena_id alignment size =
-  if size = 0sz then intro_null_null_or_varray #U8.t else (
-//  if US.lte size (US.uint32_to_sizet page_size) && US.lte alignment (US.uint32_to_sizet page_size)
-//  then (
-//    let ptr = slab_aligned_alloc arena_id (US.sizet_to_uint32 alignment) (US.sizet_to_uint32 size) in
-//    if (A.is_null ptr || not enable_zeroing_malloc) then (
-//      return ptr
-//    ) else (
-//      elim_live_null_or_varray ptr;
-//      let b = memcheck_u8 ptr size in
-//      if b then (
-//        intro_live_null_or_varray ptr;
-//        return ptr
-//      ) else (
-//        malloc_zeroing_die ptr;
-//        intro_null_null_or_varray #U8.t
-//      )
-//    )
-//  ) else (
-//    // mmap returns page-aligned memory. We do not support alignment larger
-//    // than a page size.
-    if alignment `US.lte` (US.uint32_to_sizet page_size) then (
-      //TODO: check that the alignment is a power of two
-      let r = large_malloc size in
-      let s : G.erased (t_of (null_or_varray r))
-        = gget (null_or_varray r) in
-      admit ();
-      //if not (A.is_null r)
-      //then zf_u8_split s (A.length r - 2)
-      //else ();
-      return r
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
+let aligned_alloc arena_id alignment size
+  =
+  let page_as_sz = US.uint32_to_sizet page_size in
+  let check = US.gt alignment 0sz && US.rem (US.uint32_to_sizet page_size) alignment = 0sz in
+  if check then (
+    let alignment_as_u32 = US.sizet_to_uint32 alignment in
+    let threshold = if enable_slab_canaries_malloc
+      then US.sub page_as_sz 2sz
+      else page_as_sz in
+    if (US.lte size threshold) then (
+      let ptr = slab_aligned_alloc arena_id alignment_as_u32 (US.sizet_to_uint32 size) in
+      if (A.is_null ptr || not enable_zeroing_malloc) then (
+        return ptr
+      ) else (
+        elim_live_null_or_varray ptr;
+        let b = memcheck_u8 ptr size in
+        if b then (
+          intro_live_null_or_varray ptr;
+          return ptr
+        ) else (
+          malloc_zeroing_die ptr;
+          intro_null_null_or_varray #U8.t
+        )
+      )
     ) else (
-      //TODO: add some warning that the alignment is unsupported
-      intro_null_null_or_varray #U8.t
+      let ptr = large_malloc size in
+      assume (array_u8_alignment ptr (US.sizet_to_uint32 alignment));
+      let s : G.erased (t_of (null_or_varray ptr))
+        = gget (null_or_varray ptr) in
+      if not (A.is_null ptr)
+      then (
+        zf_u8_split s (A.length ptr - 2);
+        array_u8_alignment_lemma
+          ptr
+          ptr
+          page_size
+          16ul
+      ) else ();
+      return ptr
     )
+  ) else (
+    // TODO: add some warning, failure
+    let r = intro_null_null_or_varray #U8.t in
+    return r
   )
- // ))
 #pop-options
 
 val free (ptr: array U8.t)

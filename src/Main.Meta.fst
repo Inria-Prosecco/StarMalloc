@@ -7,23 +7,20 @@ inline_for_extraction noextract
 let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
 = normalize_term sc_list
 
-let temp_thm (sc: sc)
-  : Lemma
-  (requires True)
-  (ensures U32.v sc > 0)
-  = ()
-
-let t = sc * bool
-
-[@@ reduce_attr]
-inline_for_extraction noextract
-let sc_list_aligned: l:(list t){List.length l == List.length sc_list}
-= admit ();
-  normalize_term (List.map
-  (fun s -> temp_thm s; (s, (U32.v page_size) % (U32.v s) = 0))
-  sc_list
-)
-
+//let temp_thm (sc: sc)
+//  : Lemma
+//  (requires True)
+//  (ensures U32.v sc > 0)
+//  = ()
+//let t = sc * bool
+//[@@ reduce_attr]
+//inline_for_extraction noextract
+//let sc_list_aligned: l:(list t){List.length l == List.length sc_list}
+//= admit ();
+//  normalize_term (List.map
+//  (fun s -> temp_thm s; (s, (U32.v page_size) % (U32.v s) = 0))
+//  sc_list
+//)
 //let nb_size_classes_aligned: v:US.t{US.v v ==  List.length sc_list_aligned}
 //  =
 //  assume (List.length sc_list_aligned < U32.n);
@@ -384,7 +381,7 @@ let rec slab_aligned_alloc_i
     | hd::tl ->
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
       let size = index sc_all.ro_sizes idx in
-      let b = U32.eq (U32.rem page_size size) U32.zero in
+      let b = U32.eq (U32.rem page_size size) 0ul in
       if b && bytes `U32.lte` size && alignment `U32.lte` size then (
         let r = slab_malloc_one idx bytes in
         let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
@@ -430,7 +427,7 @@ let rec slab_aligned_alloc_canary_i
     | hd::tl ->
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
       let size = index sc_all.ro_sizes idx in
-      let b = U32.eq (U32.rem page_size size) U32.zero in
+      let b = U32.eq (U32.rem page_size size) 0ul in
       if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then
         let ptr = slab_malloc_one idx bytes in
         let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
@@ -453,15 +450,10 @@ let rec slab_aligned_alloc_canary_i
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_aligned_alloc arena_id alignment bytes =
-  let check = U32.gt alignment 0ul && U32.eq (U32.rem page_size alignment) 0ul in
-  if check then (
-    if enable_slab_canaries_malloc then
-      (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
-    else
-      (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
-  ) else (
-    return_null ()
-  )
+  if enable_slab_canaries_malloc then
+    (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
+  else
+    (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
 #pop-options
 
 #restart-solver
