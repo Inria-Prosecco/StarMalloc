@@ -7,6 +7,35 @@ inline_for_extraction noextract
 let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
 = normalize_term sc_list
 
+let temp_thm (sc: sc)
+  : Lemma
+  (requires True)
+  (ensures U32.v sc > 0)
+  = ()
+
+let t = sc * bool
+
+[@@ reduce_attr]
+inline_for_extraction noextract
+let sc_list_aligned: l:(list t){List.length l == List.length sc_list}
+= admit ();
+  normalize_term (List.map
+  (fun s -> temp_thm s; (s, (U32.v page_size) % (U32.v s) = 0))
+  sc_list
+)
+
+//let nb_size_classes_aligned: v:US.t{US.v v ==  List.length sc_list_aligned}
+//  =
+//  assume (List.length sc_list_aligned < U32.n);
+//  [@inline_let] let l = normalize_term (List.length sc_list_aligned) in
+//  normalize_term_spec (List.length sc_list_aligned);
+//  assert (l == List.length sc_list_aligned);
+//  [@inline_let] let l_as_u32 = normalize_term (U32.uint_to_t l) in
+//  normalize_term_spec (U32.uint_to_t l);
+//  assert (U32.v l_as_u32 == List.length sc_list_aligned);
+//  US.fits_u64_implies_fits_32 ();
+//  US.of_u32 l_as_u32
+
 /// Number of arenas as a nat, for specification purposes. Not relying on US.v
 /// allows better normalization for extraction
 [@@ reduce_attr]
@@ -14,11 +43,13 @@ inline_for_extraction noextract
 let nb_arenas_nat : n:nat{n == US.v nb_arenas}
 = normalize_term (US.v nb_arenas)
 
+open FStar.Mul
 let total_nb_sc : n:nat{
   n == US.v nb_size_classes * US.v nb_arenas /\
   n == US.v nb_size_classes * nb_arenas_nat
 }
-= normalize_term (US.v nb_size_classes * US.v nb_arenas)
+=
+normalize_term (US.v nb_size_classes * US.v nb_arenas)
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// Duplicating the list of size_classes sizes for each arena, which enables a simpler
@@ -185,10 +216,12 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
     U32.v bytes <= U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size
   )
   (ensures fun _ r _ ->
+    let size = (Seq.index sc_all.g_size_classes (US.v i)).data.size in
     not (is_null r) ==> (
       A.length r == U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size /\
       A.length r >= U32.v bytes /\
-      array_u8_alignment r 16ul
+      array_u8_alignment r 16ul /\
+      ((U32.v page_size) % (U32.v size) == 0 ==> array_u8_alignment r size)
     )
   )
   =
@@ -290,94 +323,146 @@ let slab_malloc arena_id bytes =
     (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
-//#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-///// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
-///// The key difference lies in the condition of the if-branch: we only
-///// attempt to allocate in this size class if it satisfies the alignment
-///// constraint, i.e., alignment % size == 0
-//[@@ reduce_attr]
-//noextract
-//let rec slab_aligned_alloc_i
-//  (l:list sc{List.length l <= length sc_all.size_classes})
-//  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
-//  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
-//  (alignment:U32.t)
-//  bytes
-//  : Steel (array U8.t)
-//  emp
-//  (fun r -> null_or_varray r)
-//  (requires fun _ -> True)
-//  (ensures fun _ r h1 ->
-//    let s : t_of (null_or_varray r)
-//      = h1 (null_or_varray r) in
-//    not (is_null r) ==> (
-//      A.length r >= U32.v bytes /\
-//      array_u8_proper_alignment r /\
-//      Seq.length s >= 2
-//    )
-//  )
-//  = match l with
-//    | [] -> return_null ()
-//    | hd::tl ->
-//      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-//      let size = index sc_all.ro_sizes idx in
-//      if bytes `U32.lte` size && alignment `U32.rem` size = 0ul then
-//        slab_malloc_one idx bytes
-//      else
-//        slab_aligned_alloc_i tl (i `US.add` 1sz) arena_id alignment bytes
-//#pop-options
-//
-//#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-///// Version of `slab_aligned_alloc_i` with slab canaries
-//[@@ reduce_attr]
-//noextract
-//let rec slab_aligned_alloc_canary_i
-//  (l:list sc{List.length l <= length sc_all.size_classes})
-//  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
-//  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
-//  (alignment:U32.t)
-//  bytes
-//  : Steel (array U8.t)
-//  emp
-//  (fun r -> null_or_varray r)
-//  (requires fun _ -> True)
-//  (ensures fun _ r h1 ->
-//    let s : t_of (null_or_varray r)
-//      = h1 (null_or_varray r) in
-//    not (is_null r) ==> (
-//      A.length r >= U32.v bytes /\
-//      array_u8_proper_alignment r /\
-//      Seq.length s >= 2 /\
-//      Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
-//      Seq.index s (A.length r - 1) == slab_canaries_magic2
-//    )
-//  )
-//  = match l with
-//    | [] -> return_null ()
-//    | hd::tl ->
-//      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-//      let size = index sc_all.ro_sizes idx in
-//      if bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.rem` size = 0ul then
-//        let ptr = slab_malloc_one idx bytes in
-//        if is_null ptr then return ptr
-//        else (
-//          elim_live_null_or_varray ptr;
-//          upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
-//          upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
-//          intro_live_null_or_varray ptr;
-//          return ptr
-//        )
-//      else
-//        slab_aligned_alloc_canary_i tl (i `US.add` 1sz) arena_id alignment bytes
-//#pop-options
-//
-//#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-//let slab_aligned_alloc arena_id alignment bytes =
-//  if enable_slab_canaries_malloc then
-//    (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
-//  else
-//    (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
-//#pop-options
+let power2_lemma
+  (x y: pos)
+  : Lemma
+  (requires
+    (U32.v page_size) % x = 0 /\
+    (U32.v page_size) % y = 0 /\
+    x <= y
+  )
+  (ensures
+    y % x = 0
+  )
+  = admit ()
+
+let array_u8_alignment_lemma2
+  (arr: array U8.t)
+  (v1 v2: (v:U32.t{U32.v v > 0}))
+  : Lemma
+  (requires
+    (U32.v v1) % (U32.v v2) == 0 /\
+    (not (is_null arr) ==> array_u8_alignment arr v1)
+  )
+  (ensures
+    (not (is_null arr) ==> array_u8_alignment arr v2)
+  )
+  =
+  if not (is_null arr) then
+    array_u8_alignment_lemma arr arr v1 v2
+  else ()
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+/// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
+/// The key difference lies in the condition of the if-branch: we only
+/// attempt to allocate in this size class if it satisfies the alignment
+/// constraint, i.e., alignment % size == 0
+[@@ reduce_attr]
+noextract
+let rec slab_aligned_alloc_i
+  (l:list sc{List.length l <= length sc_all.size_classes})
+  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
+  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v page_size) % (U32.v v) = 0}))
+  bytes
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      array_u8_alignment r 16ul /\
+      array_u8_alignment r alignment /\
+      Seq.length s >= 2
+    )
+  )
+  = match l with
+    | [] -> return_null ()
+    | hd::tl ->
+      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+      let size = index sc_all.ro_sizes idx in
+      let b = U32.eq (U32.rem page_size size) U32.zero in
+      if b && bytes `U32.lte` size && alignment `U32.lte` size then (
+        let r = slab_malloc_one idx bytes in
+        let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
+        assert (G.reveal size_ = size);
+        assert ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
+        power2_lemma (U32.v alignment) (U32.v size);
+        assert (U32.v size % U32.v alignment = 0);
+        array_u8_alignment_lemma2 r size alignment;
+        return r
+      ) else (
+        slab_aligned_alloc_i tl (i `US.add` 1sz) arena_id alignment bytes
+      )
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+/// Version of `slab_aligned_alloc_i` with slab canaries
+[@@ reduce_attr]
+noextract
+let rec slab_aligned_alloc_canary_i
+  (l:list sc{List.length l <= length sc_all.size_classes})
+  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
+  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v page_size) % (U32.v v) = 0}))
+  bytes
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      array_u8_alignment r 16ul /\
+      array_u8_alignment r alignment /\
+      Seq.length s >= 2 /\
+      Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+      Seq.index s (A.length r - 1) == slab_canaries_magic2
+    )
+  )
+  = match l with
+    | [] -> return_null ()
+    | hd::tl ->
+      [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+      let size = index sc_all.ro_sizes idx in
+      let b = U32.eq (U32.rem page_size size) U32.zero in
+      if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then
+        let ptr = slab_malloc_one idx bytes in
+        let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
+        assert (G.reveal size_ = size);
+        assert ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
+        power2_lemma (U32.v alignment) (U32.v size);
+        assert (U32.v size % U32.v alignment = 0);
+        array_u8_alignment_lemma2 ptr size alignment;
+        if is_null ptr then return ptr
+        else (
+          elim_live_null_or_varray ptr;
+          upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
+          upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
+          intro_live_null_or_varray ptr;
+          return ptr
+        )
+      else
+        slab_aligned_alloc_canary_i tl (i `US.add` 1sz) arena_id alignment bytes
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+let slab_aligned_alloc arena_id alignment bytes =
+  let check = U32.gt alignment 0ul && U32.eq (U32.rem page_size alignment) 0ul in
+  if check then (
+    if enable_slab_canaries_malloc then
+      (slab_aligned_alloc_canary_i sc_list 0sz) arena_id alignment bytes
+    else
+      (slab_aligned_alloc_i sc_list 0sz) arena_id alignment bytes
+  ) else (
+    return_null ()
+  )
+#pop-options
 
 #restart-solver
 

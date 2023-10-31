@@ -16,7 +16,6 @@ module SAA = Steel.ArrayArith
 module L = Steel.SpinLock
 
 open Prelude
-open FStar.Mul
 open SlabsCommon
 open SizeClass
 open Main
@@ -85,25 +84,26 @@ val slab_malloc
     )
   )
 
-//[@@ T.postprocess_with norm_full]
-//val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:U32.t) (bytes:U32.t)
-//  : Steel (array U8.t)
-//  emp
-//  (fun r -> null_or_varray r)
-//  (requires fun _ -> True)
-//  (ensures fun _ r h1 ->
-//    let s : t_of (null_or_varray r)
-//      = h1 (null_or_varray r) in
-//    not (is_null r) ==> (
-//      A.length r >= U32.v bytes /\
-//      array_u8_proper_alignment r /\
-//      Seq.length s >= 2 /\
-//      (enable_slab_canaries_malloc ==>
-//        Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
-//        Seq.index s (A.length r - 1) == slab_canaries_magic2
-//      )
-//    )
-//  )
+[@@ T.postprocess_with norm_full]
+val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:U32.t) (bytes:U32.t)
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      array_u8_alignment r 16ul /\
+      array_u8_alignment r alignment /\
+      Seq.length s >= 2 /\
+      (enable_slab_canaries_malloc ==>
+        Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+        Seq.index s (A.length r - 1) == slab_canaries_magic2
+      )
+    )
+  )
 
 val within_size_classes_pred (ptr:A.array U8.t) : prop
 
