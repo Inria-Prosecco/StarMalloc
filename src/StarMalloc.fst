@@ -178,7 +178,9 @@ let aligned_alloc arena_id alignment size
       )
     ) else (
       let ptr = large_malloc size in
-      assume (array_u8_alignment ptr (US.sizet_to_uint32 alignment));
+      assert_norm (pow2 12 == U32.v page_size);
+      MiscArith.alignment_lemma (U32.v page_size) 12 (US.v alignment) (U32.v page_size);
+      array_u8_alignment_lemma2 ptr page_size (US.sizet_to_uint32 alignment);
       let s : G.erased (t_of (null_or_varray ptr))
         = gget (null_or_varray ptr) in
       if not (A.is_null ptr)

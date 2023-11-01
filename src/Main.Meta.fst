@@ -320,34 +320,7 @@ let slab_malloc arena_id bytes =
     (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
-let power2_lemma
-  (x y: pos)
-  : Lemma
-  (requires
-    (U32.v page_size) % x = 0 /\
-    (U32.v page_size) % y = 0 /\
-    x <= y
-  )
-  (ensures
-    y % x = 0
-  )
-  = admit ()
-
-let array_u8_alignment_lemma2
-  (arr: array U8.t)
-  (v1 v2: (v:U32.t{U32.v v > 0}))
-  : Lemma
-  (requires
-    (U32.v v1) % (U32.v v2) == 0 /\
-    (not (is_null arr) ==> array_u8_alignment arr v1)
-  )
-  (ensures
-    (not (is_null arr) ==> array_u8_alignment arr v2)
-  )
-  =
-  if not (is_null arr) then
-    array_u8_alignment_lemma arr arr v1 v2
-  else ()
+open MiscArith
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
@@ -387,7 +360,8 @@ let rec slab_aligned_alloc_i
         let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
         assert (G.reveal size_ = size);
         assert ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
-        power2_lemma (U32.v alignment) (U32.v size);
+        assert_norm (U32.v page_size = pow2 12);
+        alignment_lemma (U32.v page_size) 12 (U32.v alignment) (U32.v size);
         assert (U32.v size % U32.v alignment = 0);
         array_u8_alignment_lemma2 r size alignment;
         return r
@@ -433,7 +407,8 @@ let rec slab_aligned_alloc_canary_i
         let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
         assert (G.reveal size_ = size);
         assert ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
-        power2_lemma (U32.v alignment) (U32.v size);
+        assert_norm (U32.v page_size = pow2 12);
+        alignment_lemma (U32.v page_size) 12 (U32.v alignment) (U32.v size);
         assert (U32.v size % U32.v alignment = 0);
         array_u8_alignment_lemma2 ptr size alignment;
         if is_null ptr then return ptr
@@ -544,7 +519,6 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 
-open MiscArith
 
 let slab_getsize (ptr: array U8.t)
   : Steel US.t

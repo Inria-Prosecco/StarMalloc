@@ -112,3 +112,22 @@ let elim_live_null_or_varray (#opened:_) (#a: Type)
   change_equal_slprop
     (if A.is_null r then emp else A.varray r)
     (A.varray r)
+
+module U8 = FStar.UInt8
+module U32 = FStar.UInt32
+open Utils2
+let array_u8_alignment_lemma2
+  (arr: array U8.t)
+  (v1 v2: (v:U32.t{U32.v v > 0}))
+  : Lemma
+  (requires
+    (U32.v v1) % (U32.v v2) == 0 /\
+    (not (A.is_null arr) ==> array_u8_alignment arr v1)
+  )
+  (ensures
+    (not (A.is_null arr) ==> array_u8_alignment arr v2)
+  )
+  =
+  if not (A.is_null arr) then
+    array_u8_alignment_lemma arr arr v1 v2
+  else ()
