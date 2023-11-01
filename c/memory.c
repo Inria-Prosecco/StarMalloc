@@ -20,6 +20,9 @@ uint8_t *mmap_init(size_t size) {
 
 // syscall wrapper (large allocator allocation wrapper, can return NULL)
 uint8_t *mmap_noinit(size_t size) {
+  if (size > PTRDIFF_MAX) {
+    fatal_error("allocation size should be <= PTRDIFF_MAX, returning NULL");
+  }
   void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_NORESERVE, -1, 0);
   if (ptr == MAP_FAILED) {
     if (errno != ENOMEM) {
