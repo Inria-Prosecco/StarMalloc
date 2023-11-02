@@ -190,7 +190,7 @@ val allocate_size_class
     not (is_null r) ==> (
       A.length r == U32.v scs.size /\
       array_u8_alignment r 16ul /\
-      ((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
+      ((U32.v scs.size > 0 /\ (U32.v page_size) % (U32.v scs.size) == 0) ==> array_u8_alignment r scs.size)
     )
   )
 

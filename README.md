@@ -4,21 +4,21 @@ A verified security-oriented general-purpose userspace memory allocator,
 that can be used as a drop-in replacement for the libc allocator.
 It is heavily inspired from hardened\_malloc's design.
 
-The following symbols are/will be/will not be provided: except when explicitly mentioned, symbols are provided. ? indicates that no standard defining the corresponding symbol was found.
+The following symbols are/will be/will not be provided: except when explicitly mentioned, symbols are provided.
 1. as part of C standard library
 - malloc
 - calloc
 - realloc
 - free
-- aligned\_alloc (C11, TODO: check current implem)
+- aligned\_alloc (C11)
 - free\_sized (C23, TODO: refine)
 - free\_aligned\_sized (C23, TODO: refine)
 
 2. misc
-- posix\_memalign (POSIX, TODO: provide it)
+- posix\_memalign (POSIX)
 - malloc\_usable\_size (GNU)
-- memalign (?, TODO: provide it)
-- valloc (?, TODO: provide it)
+- memalign (standard?)
+- valloc (standard?, TODO: provide it)
 - (deprecated) pvalloc (GNU, TODO: provide it)
 - (deprecated) cfree (?, defined symbol as a fatal\_error, removed since glibc 2.26 (Debian oldoldstable glibc = 2.28, as of 2023-10-21))
 
@@ -75,7 +75,7 @@ Most of its benches are currently working with StarMalloc, including on a 64-cor
 All of this is very much WIP.
 [ok] - Build Firefox with `--disable-jemalloc` flag.
 [ok] - Test it with StarMalloc.
-  - issue with posix\_memalign
+  [ok] - issue with posix\_memalign
   - expose all symbols
   - C++ stubs with fatal\_error
 - Bench it wrt to other allocators.
@@ -84,17 +84,19 @@ All of this is very much WIP.
 
 Verified code:
 - functional correctness 1: malloc returns NULL or an array of at least the requested size
-- functional correctness 2: malloc returns a 16-bytes aligned array
+- functional correctness 2: malloc returns a 16-bytes aligned array, aligned\_alloc returns pointers that are aligned as requested
 - functional correctness 3: thread-safety (mutexes)
-- (WIP) functional correctness 4: allocation size limited to `PTRDIFF_MAX` to avoid undefined behaviour
+- [sk] functional correctness 4: allocation size limited to `PTRDIFF_MAX` to avoid undefined behaviour (for now, only a check in c/memory.c)
 - memory safety
 - (WIP?) deadlock-free(?)
 
 C wrapper/low-level initialization:
 - based on hardened\_malloc's init, relies on atomic instructions to avoid race conditions
 - short, auditable
+- correct behaviour wrt fork syscall using pthread\_atfork hook
 - (WIP) defensive programming
-- (WIP) correct behaviour wrt fork syscall using pthread\_atfork hook
+  - calloc: overflow check when multiplying sizes
+  - allocation size: should be <= PTRDIFF\_MAX
 
 ## Structure of the allocator
 
@@ -160,8 +162,8 @@ free(ptr)
 
 - C code
   - more memory-related errno checks wrt ENOMEM
-  - limit allocation size to `PTRDIFF_MAX` (glibc behaviour)
-  - fatal\_error if StarMalloc\_free fails
+  - [ok] limit allocation size to `PTRDIFF_MAX` (glibc behaviour)
+  - [ok] fatal\_error if StarMalloc\_free fails
   - C++ stubs
   - [ok] pthread\_atfork hook
     - [ok] handwritten implementation
@@ -205,8 +207,8 @@ free(ptr)
       So far, using a systemd-nspawn Arch Linux container (built from a systemd-nspawn Debian container, Ubuntu does not provide pacstrap; patch and pkgconf seem to be missing build dependencies of the firefox Arch Linux package), obtained a patched version of firefox 118.
     - [ok] use Firefox from container using xwayland
       Incompatibility between glibc versions of the build container (2.38) and my OS (2.37), need to use a Arch Linux container + some hackery to make it work.
-    - [wip] use Firefox with StarMalloc
-      - fix posix_memalign (currently works when removing this stub)
+    - [ok] use Firefox with StarMalloc
+      [ok] - fix posix\_memalign (currently works when removing this stub)
   - HardsHeap?
 - cleaning
   - remove
