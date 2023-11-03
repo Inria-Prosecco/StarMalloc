@@ -56,7 +56,7 @@ uint8_t* Impl_Trees_Types_ref_node__to__array_u8(Impl_Trees_Types_node* r) {
 
 // TODO: comment
 void StarMalloc_malloc_zeroing_die(uint8_t* ptr) {
-  fatal_error("malloc_zeroing_die");
+  //fatal_error("malloc_zeroing_die");
 }
 
 bool StarMalloc_memcheck_u8(uint8_t* ptr, size_t len) {

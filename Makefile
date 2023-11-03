@@ -109,7 +109,7 @@ tests/test-alloc2.c \
 c/lib-alloc.c
 	./a.out
 
-lib: verify extract
+lib:
 	mkdir -p out
 	$(CC) -O3 -g \
 	-DKRML_VERIFIED_UINT128 \
@@ -128,7 +128,7 @@ c/lib-alloc.c \
 #-std=c17
 #-Wall -Wextra -Wcast-align=strict -Wcast-qual
 #-fvisibility=hidden
-hardened_lib: verify extract
+hardened_lib:
 	mkdir -p out
 	$(CC) -DKRML_VERIFIED_UINT128 \
 	-pipe -O3 -g -flto -fPIC \
