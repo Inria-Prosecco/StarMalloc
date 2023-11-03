@@ -416,6 +416,13 @@ let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
     )
   )
 
+assume val builtin_mul_overflow(x y: US.t)
+  : Pure US.t
+  (requires True)
+  (ensures fun r ->
+    US.fits (US.v x * US.v y) /\
+    US.v r == US.v x * US.v y)
+
 //TODO: there should be defensive checks and no precondition
 let calloc
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
@@ -432,7 +439,6 @@ let calloc
   )
   (requires fun _ ->
     let size = US.v size1 * US.v size2 in
-    US.fits size /\
     (enable_slab_canaries_malloc ==> US.fits (size + 2)))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
@@ -445,7 +451,7 @@ let calloc
     )
   )
   =
-  let size = US.mul size1 size2 in
+  let size = builtin_mul_overflow size1 size2 in
   let ptr = malloc arena_id size in
   if A.is_null ptr
   then (

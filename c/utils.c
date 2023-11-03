@@ -8,6 +8,16 @@ uint32_t Utils2_ffs64(uint64_t x) {
   return __builtin_ctzll(~x);
 }
 
+// glue
+size_t StarMalloc_builtin_mul_overflow(size_t x, size_t y) {
+  size_t z;
+  int r = __builtin_mul_overflow(x, y, &z);
+  if (r) {
+    fatal_error("calloc requested size leads to overflow");
+  }
+  return z;
+}
+
 // required comparison using uintptr_t
 uint64_t Impl_Trees_Types_cmp(
   Impl_Trees_Types_data x,
