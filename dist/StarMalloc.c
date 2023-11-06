@@ -1331,6 +1331,11 @@ static inline uint64_t log2u64(uint64_t x) {
 static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
 {
   uint64_t idx = log2u64(((uint64_t) bytes) - 1) + 1;
+  if (idx < 4UL) {
+    idx = 0UL;
+  } else {
+    idx -= 4UL;
+  }
   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)9U + (size_t)idx].lock);
   uint8_t
   *r =
