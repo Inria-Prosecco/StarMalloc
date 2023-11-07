@@ -86,7 +86,7 @@ let enable_guard_pages = true
 let guard_pages_interval = 2sz
 
 // quarantine
-let enable_quarantine = true
+let enable_quarantine = false
 let enable_quarantine_trap = true
 let enable_quarantine_strict_trap = true
 
