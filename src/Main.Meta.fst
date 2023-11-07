@@ -547,7 +547,8 @@ let rec slab_malloc_i
     | [] -> return_null ()
     | hd::tl ->
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sc_all.sizes idx in
+      admit ();
+      let size = TLA.get sc_all.sizes (US.sizet_to_uint32 idx) in
       if bytes `U32.lte` size then
         slab_malloc_one idx bytes
       else
@@ -582,7 +583,8 @@ let rec slab_malloc_canary_i
     | [] -> return_null ()
     | hd::tl ->
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = index sc_all.ro_sizes idx in
+      admit ();
+      let size = TLA.get sc_all.sizes (US.sizet_to_uint32 idx) in
       if bytes `U32.lte` (size `U32.sub` 2ul) then
         let ptr = slab_malloc_one idx bytes in
         if is_null ptr then return ptr
@@ -638,7 +640,8 @@ let rec slab_aligned_alloc_i
     | [] -> return_null ()
     | hd::tl ->
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = index sc_all.ro_sizes idx in
+      admit ();
+      let size = TLA.get sc_all.sizes (US.sizet_to_uint32 idx) in
       let b = U32.eq (U32.rem page_size size) 0ul in
       if b && bytes `U32.lte` size && alignment `U32.lte` size then (
         let r = slab_malloc_one idx bytes in
@@ -685,7 +688,8 @@ let rec slab_aligned_alloc_canary_i
     | [] -> return_null ()
     | hd::tl ->
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = index sc_all.ro_sizes idx in
+      admit ();
+      let size = TLA.get sc_all.sizes (US.sizet_to_uint32 idx) in
       let b = U32.eq (U32.rem page_size size) 0ul in
       if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then
         let ptr = slab_malloc_one idx bytes in
