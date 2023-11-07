@@ -14,6 +14,7 @@ module A = Steel.Array
 module AL = ArrayList
 module SAA = Steel.ArrayArith
 module L = Steel.SpinLock
+module TLA = Steel.TLArray
 
 open Prelude
 open SlabsCommon
@@ -37,13 +38,13 @@ val total_nb_sc: nat
 noeq
 type size_classes_all =
   { size_classes : sc:array size_class{length sc == total_nb_sc}; // The array of size_classes
-    sizes : sz:array sc{length sz == total_nb_sc}; // An array of the sizes of [size_classes]
+    sizes : sz:TLA.t sc{TLA.length sz == total_nb_sc}; // An array of the sizes of [size_classes]
     g_size_classes: Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
-    g_sizes: Ghost.erased (Seq.lseq sc (length sizes)); // The ghost representation of sizes
+    //g_sizes: Ghost.erased (Seq.lseq sc (length sizes)); // The ghost representation of sizes
     ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
-    ro_sizes: ro_array sizes g_sizes;
+    //ro_sizes: ro_array sizes g_sizes;
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
-      synced_sizes total_nb_sc g_sizes g_size_classes /\
+      //synced_sizes total_nb_sc g_sizes g_size_classes /\
       A.length arr == US.v slab_region_size /\
       (forall (i:nat{i < Seq.length g_size_classes}).
         size_class_pred arr (Seq.index g_size_classes i) i)
