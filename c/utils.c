@@ -9,6 +9,11 @@ uint32_t Utils2_ffs64(uint64_t x) {
 }
 
 // glue
+uint32_t Main_Meta_ceil_log(uint64_t x) {
+  return 63 - __builtin_clzll(x - 1) + 1;
+}
+
+// glue
 size_t StarMalloc_builtin_mul_overflow(size_t x, size_t y) {
   size_t z;
   int r = __builtin_mul_overflow(x, y, &z);

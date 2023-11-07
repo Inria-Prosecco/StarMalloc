@@ -16,20 +16,21 @@ let _ : squash (US.fits_u64)
 let _ : squash (UP.fits (FStar.Int.max_int 64))
   = A.intro_fits_ptrdiff64 ()
 
-let sc_list = [
-    16ul; 32ul; 64ul;
-    80ul; 96ul; 112ul; 128ul;
-    160ul; 192ul; 224ul; 256ul;
-    320ul; 384ul; 448ul; 512ul;
-    640ul; 768ul; 896ul; 1024ul;
-    1280ul; 1536ul; 1792ul; 2048ul;
-    2560ul; 3072ul; 3584ul; 4096ul
-  ]
 //let sc_list = [
 //    16ul; 32ul; 64ul;
-//    128ul; 256ul; 512ul;
-//    1024ul; 2048ul; 4096ul
+//    80ul; 96ul; 112ul; 128ul;
+//    160ul; 192ul; 224ul; 256ul;
+//    320ul; 384ul; 448ul; 512ul;
+//    640ul; 768ul; 896ul; 1024ul;
+//    1280ul; 1536ul; 1792ul; 2048ul;
+//    2560ul; 3072ul; 3584ul; 4096ul
 //  ]
+
+let sc_list = [
+    16ul; 32ul; 64ul;
+    128ul; 256ul; 512ul;
+    1024ul; 2048ul; 4096ul
+  ]
 
 //DO NOT EDIT, edit sc_list instead
 let nb_size_classes

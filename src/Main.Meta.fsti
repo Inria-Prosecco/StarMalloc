@@ -41,14 +41,17 @@ let norm_full () : T.Tac unit =
   T.norm [zeta_full; iota; primops; delta_attr [`%reduce_attr]];
   T.trefl ()
 
-[@@ T.postprocess_with norm_full]
+//[@@ T.postprocess_with norm_full]
 val slab_malloc
   (arena_id: US.t{US.v arena_id < US.v nb_arenas})
   (bytes: U32.t)
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
-  (requires fun _ -> True)
+  (requires fun _ ->
+    (enable_slab_canaries_malloc ==> U32.v bytes <= U32.v page_size - 2) /\
+    (not enable_slab_canaries_malloc ==> U32.v bytes <= U32.v page_size)
+  )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in

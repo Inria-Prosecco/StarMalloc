@@ -7,12 +7,181 @@ inline_for_extraction noextract
 let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
 = normalize_term sc_list
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+module L2 = FStar.List.Tot
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
+let f (k:nat{k <= 8}) : sc = admit (); U32.uint_to_t (pow2 (k + 4))
+#pop-options
+
+let bound (x bound: nat) : bool
+  =
+  x <= pow2 bound
+
+assume val ceil_log (x: U64.t)
+  : Pure U32.t
+  (requires
+    U64.v x > 0)
+  (ensures fun r ->
+    bound (U64.v x) (U32.v r) /\
+    (forall (r':U32.t{bound (U64.v x) (U32.v r')}).
+      U32.v r <= U32.v r')
+  )
+
+#push-options "--fuel 0 --ifuel 0"
+let ceil_log_lemma_le (x y: U64.t)
+  : Lemma
+  (requires
+    0 < U64.v x /\
+    0 < U64.v y /\
+    U64.v x <= U64.v y
+  )
+  (ensures (
+    let k1 = ceil_log x in
+    let k2 = ceil_log y in
+    U32.v k1 <= U32.v k2
+  ))
+  =
+  let k1 = ceil_log x in
+  let k2 = ceil_log y in
+  if U32.v k1 > U32.v k2 then (
+    Math.Lemmas.pow2_lt_compat (U32.v k1) (U32.v k2)
+  ) else ()
+
+let ceil_log_lemma_witness (x: U64.t) (k: U32.t)
+  : Lemma
+  (requires
+    U32.v k > 0 /\
+    pow2 (U32.v k - 1) < U64.v x /\
+    U64.v x <= pow2 (U32.v k)
+  )
+  (ensures
+    k == ceil_log x
+  )
+  =
+  Classical.forall_intro_2 (
+    Classical.move_requires_2 (
+      FStar.Math.Lemmas.pow2_le_compat
+    )
+  )
+#pop-options
+
+module G = FStar.Ghost
+
+let ceil_log_specialized (x: U32.t)
+  : Pure U32.t
+  (requires
+    U32.v x >= 14 /\
+    U32.v x <= U32.v page_size)
+  (ensures fun r ->
+    U32.v r >= 4 /\
+    U32.v r <= 12 /\
+    bound (U32.v x) (U32.v r)
+  )
+  =
+  let page_size_as_u64 = G.hide (FStar.Int.Cast.uint32_to_uint64 page_size) in
+  [@inline_let] let x_as_u64 = FStar.Int.Cast.uint32_to_uint64 x in
+  ceil_log_lemma_witness 14UL 4ul;
+  ceil_log_lemma_witness (G.reveal page_size_as_u64) 12ul;
+  ceil_log_lemma_le 14UL x_as_u64;
+  ceil_log_lemma_le x_as_u64 (G.reveal page_size_as_u64);
+  ceil_log x_as_u64
+
+let temp (_:unit)
+  =
+  let base = Seq.seq_of_list [0; 1; 2; 3; 4; 5; 6; 7; 8] in
+  let t = Seq.map_seq f base in
+  Seq.map_seq_len f base;
+  let t' = Seq.seq_to_list t in
+  admit ();
+  Seq.lemma_eq_intro (Seq.seq_of_list sc_list) t
+  //assert_norm (sc_list == t)
+
+  //Seq.seq_to_list
+  //List.Tot.map f [0; 1; 2; 3; 4; 5; 6; 7; 8])
+
+
+let sc_selection (x: U32.t)
+  : Pure (US.t)
+  (requires
+    U32.v x >= 14 /\
+    U32.v x <= U32.v page_size)
+  (ensures fun r ->
+    US.v r < L2.length sc_list /\
+    U32.v x <= U32.v (L2.index sc_list (US.v r))
+  )
+  =
+  assert_norm (L2.length sc_list = 9);
+  assert_norm (sc_list == List.Tot.map f [0; 1; 2; 3; 4; 5; 6; 7; 8]);
+  assume (forall (x:nat{x < 9}). U32.v (L2.index sc_list x) == pow2 (x + 4));
+  let idx = ceil_log_specialized x in
+  let idx' = U32.sub idx 4ul in
+  assume (US.fits_u32);
+  US.uint32_to_sizet idx'
+
+let sc_size (x: US.t)
+  : Pure (U32.t)
+  (requires US.v x < L2.length sc_list)
+  (ensures fun r ->
+    r = L2.index sc_list (US.v x)
+  )
+  =
+  assert_norm (L2.length sc_list = 9);
+  assert_norm (sc_list == List.Tot.map f [0; 1; 2; 3; 4; 5; 6; 7; 8]);
+  assume (forall (x:nat{x < 9}). U32.v (L2.index sc_list x) == pow2 (x + 4));
+  admit ();
+  U32.shift_left 1ul (U32.add (US.sizet_to_uint32 x) 4ul)
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
 let slab_malloc arena_id bytes =
-  if enable_slab_canaries_malloc then
-    (slab_malloc_canary_i sc_list 0sz) arena_id bytes
-  else
-    (slab_malloc_i sc_list 0sz) arena_id bytes
+  let bytes = if U32.lt bytes 14ul then 14ul else bytes in
+  if enable_slab_canaries_malloc then (
+    let bytes = U32.add bytes 2ul in
+    let idx = sc_selection bytes in
+    let idx' = US.add (US.mul arena_id nb_size_classes) idx in
+    admit ();
+    let ptr = slab_malloc_one idx' bytes in
+    if is_null ptr then (
+      return ptr
+    ) else (
+      let size = sc_size idx in
+      elim_live_null_or_varray ptr;
+      sladmit ();
+      upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
+      upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
+      intro_live_null_or_varray ptr;
+      return ptr
+    )
+  ) else (
+    let idx = sc_selection bytes in
+    let idx = US.add (US.mul arena_id nb_size_classes) idx in
+    slab_malloc_one idx bytes
+  )
+#pop-options
+
+
+
+
+//type selection' = (f:(x:U32.t{U32.v x <= U32.v page_size}) -> US.t)
+//
+//#push-options "--print_universes"
+//
+//type selection = f:selection'{
+//  forall (x: U32.t{
+//    16 <= U32.v x /\
+//    U32.v x <= U32.v page_size
+//  }). (
+//    US.v (f x) < L.length sc_list /\
+//    U32.v x <= U32.v (L.index sc_list (US.v (f x)))
+//  )
+//}
+
+
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+  //if enable_slab_canaries_malloc then
+  //  (slab_malloc_canary_i sc_list 0sz) arena_id bytes
+  //else
+  //  (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
