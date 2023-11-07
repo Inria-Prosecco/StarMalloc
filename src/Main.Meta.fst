@@ -849,7 +849,8 @@ let slab_getsize (ptr: array U8.t)
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   lemma_div_le (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
-  let size = ROArray.index sc_all.ro_sizes index in
+  admit ();
+  let size = TLA.get sc_all.sizes (US.sizet_to_uint32 index) in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
@@ -889,7 +890,8 @@ let slab_free ptr =
   lemma_div_le (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
   (**) let g_sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
   (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
-  let size = ROArray.index sc_all.ro_sizes index in
+  admit ();
+  let size = TLA.get sc_all.sizes (US.sizet_to_uint32 index) in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
