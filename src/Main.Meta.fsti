@@ -26,31 +26,10 @@ open NullOrVarray
 open ROArray
 open Main
 
-/// The total number of size classes in the allocator, across all arenas.
-/// Used as an abbreviation for specification purposes
-inline_for_extraction noextract
-val total_nb_sc: nat
-
-/// This gathers all the data for small allocations.
-/// In particular, it contains an array with all size_classes data,
-/// as well as the slab_region containing the actual memory
-noeq
-type size_classes_all =
-  { size_classes : sc:array size_class{length sc == total_nb_sc}; // The array of size_classes
-    sizes : sz:array sc{length sz == total_nb_sc}; // An array of the sizes of [size_classes]
-    g_size_classes: Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
-    g_sizes: Ghost.erased (Seq.lseq sc (length sizes)); // The ghost representation of sizes
-    ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
-    ro_sizes: ro_array sizes g_sizes;
-    slab_region: arr:array U8.t{ // The region of memory handled by this size class
-      synced_sizes total_nb_sc g_sizes g_size_classes /\
-      A.length arr == US.v slab_region_size /\
-      (forall (i:nat{i < Seq.length g_size_classes}).
-        size_class_pred arr (Seq.index g_size_classes i) i)
-    }
-  }
-
-val sc_all : size_classes_all
+///// The total number of size classes in the allocator, across all arenas.
+///// Used as an abbreviation for specification purposes
+//inline_for_extraction noextract
+//val total_nb_sc: nat
 
 module T = FStar.Tactics
 
