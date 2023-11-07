@@ -127,7 +127,7 @@ val ffs64 (x: U64.t) (bound: G.erased U32.t)
     U32.v r < U32.v (G.reveal bound) /\
     nth_is_zero x r /\
     (forall (k:nat{k < U64.n /\ nth_is_zero x (U32.uint_to_t k)}).
-      U32.v r <= k
+      k <= U32.v r
     )
   )
 
