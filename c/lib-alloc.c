@@ -17,7 +17,7 @@ static void full_lock(void) {
   pthread_mutex_lock(&metadata.lock);
   for (size_t i = 0; i < CONFIG_NB_ARENAS; i++) {
     for (size_t j = 0; j < CONFIG_NB_SIZE_CLASSES; j++) {
-      pthread_mutex_lock(&Main_Meta_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock);
+      pthread_mutex_lock(&Main_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock);
     }
   }
 }
@@ -26,7 +26,7 @@ static void full_unlock(void) {
   pthread_mutex_unlock(&metadata.lock);
   for (size_t i = 0; i < CONFIG_NB_ARENAS; i++) {
     for (size_t j = 0; j < CONFIG_NB_SIZE_CLASSES; j++) {
-      pthread_mutex_unlock(&Main_Meta_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock);
+      pthread_mutex_unlock(&Main_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock);
     }
   }
 }
@@ -36,7 +36,7 @@ static void post_fork_child(void) {
   status += pthread_mutex_init(&metadata.lock, NULL);
   for (size_t i = 0; i < CONFIG_NB_ARENAS; i++) {
     for (size_t j = 0; j < CONFIG_NB_SIZE_CLASSES; j++) {
-      status += pthread_mutex_init(&Main_Meta_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock, NULL);
+      status += pthread_mutex_init(&Main_sc_all.size_classes[i * CONFIG_NB_SIZE_CLASSES + j].lock, NULL);
     }
   }
   if (status) {
@@ -59,7 +59,7 @@ static void init_slow_path(void) {
     return;
   }
   krmlinit_globals();
-  atomic_store_explicit(&slab_region_ptr, Main_Meta_sc_all.slab_region, memory_order_release);
+  atomic_store_explicit(&slab_region_ptr, Main_sc_all.slab_region, memory_order_release);
   pthread_mutex_unlock(&m);
   if (pthread_atfork(full_lock, full_unlock, post_fork_child)) {
     fatal_error("pthread_atfork failed");
