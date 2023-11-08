@@ -33,7 +33,18 @@ irreducible let reduce_attr : unit = ()
 /// The total number of size classes in the allocator, across all arenas.
 /// Used as an abbreviation for specification purposes
 inline_for_extraction noextract
-val total_nb_sc: nat
+val total_nb_sc: x:nat{UInt.size x U32.n}
+
+inline_for_extraction noextract
+val arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l})
+
+let sizes_t = r:TLA.t sc{
+  TLA.length r == total_nb_sc /\
+  (forall (k:U32.t{U32.v k < total_nb_sc}).
+    TLA.get r k == List.Tot.index arena_sc_list (U32.v k))
+}
+
+val sizes : sizes_t
 
 /// This gathers all the data for small allocations.
 /// In particular, it contains an array with all size_classes data,
@@ -41,13 +52,13 @@ val total_nb_sc: nat
 noeq
 type size_classes_all =
   { size_classes : sc:array size_class{length sc == total_nb_sc}; // The array of size_classes
-    sizes : sz:TLA.t sc{TLA.length sz == total_nb_sc}; // An array of the sizes of [size_classes]
+    //sizes : sz:TLA.t sc{TLA.length sz == total_nb_sc}; // An array of the sizes of [size_classes]
     g_size_classes: Ghost.erased (Seq.lseq size_class (length size_classes)); // The ghost representation of size_classes
     //g_sizes: Ghost.erased (Seq.lseq sc (length sizes)); // The ghost representation of sizes
     ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
     //ro_sizes: ro_array sizes g_sizes;
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
-      //synced_sizes total_nb_sc g_sizes g_size_classes /\
+      synced_sizes total_nb_sc sizes g_size_classes /\
       A.length arr == US.v slab_region_size /\
       (forall (i:nat{i < Seq.length g_size_classes}).
         size_class_pred arr (Seq.index g_size_classes i) i)

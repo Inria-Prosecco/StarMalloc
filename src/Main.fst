@@ -474,6 +474,11 @@ let f_lemma
 
 #restart-solver
 
+unfold
+let size_class_pred (slab_region:array U8.t) (sc:size_class) (i:nat) : prop =
+  same_base_array slab_region sc.data.slab_region /\
+  A.offset (A.ptr_of sc.data.slab_region) == A.offset (A.ptr_of slab_region) + i * US.v slab_size
+
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 
 noextract inline_for_extraction
@@ -525,8 +530,9 @@ val init_wrapper2
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
     U32.eq r.data.size sc /\
-    same_base_array slab_region r.data.slab_region /\
-    A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
+    size_class_pred slab_region r (US.v k)
+    //same_base_array slab_region r.data.slab_region /\
+    //A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
   )
 
 #restart-solver
@@ -576,12 +582,14 @@ let slab_region_size
   metadata_max_up_fits ();
   slab_size `US.mul` nb_size_classes `US.mul` nb_arenas
 
-unfold
-let size_class_pred (slab_region:array U8.t) (sc:size_class) (i:nat) : prop =
-  same_base_array slab_region sc.data.slab_region /\
-  A.offset (A.ptr_of sc.data.slab_region) == A.offset (A.ptr_of slab_region) + i * US.v slab_size
+///// A logical predicate indicating that a list of sizes corresponds
+///// to the sizes of a list of size_classes
+//let synced_sizes (#n:nat) (k:nat{k <= n}) (sizes:Seq.lseq sc n) (size_classes:Seq.lseq size_class n) : prop =
+//  forall (i:nat{i < k}). Seq.index sizes i == (Seq.index size_classes i).data.size
 
 /// A logical predicate indicating that a list of sizes corresponds
 /// to the sizes of a list of size_classes
-let synced_sizes (#n:nat) (k:nat{k <= n}) (sizes:Seq.lseq sc n) (size_classes:Seq.lseq size_class n) : prop =
-  forall (i:nat{i < k}). Seq.index sizes i == (Seq.index size_classes i).data.size
+let synced_sizes (#n:nat{UInt.size n U32.n}) (k:nat{k <= n})
+  (sizes:TLA.t sc{TLA.length sizes >= n})
+  (size_classes:Seq.lseq size_class n) : prop =
+  forall (i:nat{i < k}). TLA.get sizes (U32.uint_to_t i) == (Seq.index size_classes i).data.size
