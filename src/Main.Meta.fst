@@ -38,7 +38,7 @@ let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
 /// allows better normalization for extraction
 [@@ reduce_attr]
 inline_for_extraction noextract
-let nb_arenas_nat : n:nat{n == US.v nb_arenas}
+let nb_arenas_nat : n:nat{n == US.v nb_arenas /\ n < pow2 32}
 = normalize_term (US.v nb_arenas)
 
 open FStar.Mul
@@ -518,15 +518,20 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
   return ptr
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+let cons_implies_positive_length (#a: Type) (l: list a)
+  : Lemma
+  (requires Cons? l)
+  (ensures List.length l > 0)
+  = ()
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --query_stats"
 let aux_lemma
-  (l:list sc{List.length l <= length sc_all.size_classes})
+  (l:list sc{List.length l <= length sc_all.size_classes /\ Cons? l})
   (i:US.t{US.v i + List.length l == US.v nb_size_classes})
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   : Lemma
   (
-    (US.v arena_id) * (US.v nb_size_classes) + (US.v i)
-    < total_nb_sc /\
+    (US.v arena_id) * (US.v nb_size_classes) + (US.v i) < total_nb_sc /\
     0 <= (US.v arena_id) * (US.v nb_size_classes) /\
     US.fits ((US.v arena_id) * (US.v nb_size_classes)) /\
     0 <= (US.v arena_id) * (US.v nb_size_classes) + (US.v i) /\
@@ -536,7 +541,24 @@ let aux_lemma
     US.v idx == U32.v idx' /\
     US.v idx < TLA.length sizes)
   )
-  = admit ()
+  =
+  cons_implies_positive_length l;
+  assert (US.v i < US.v nb_size_classes);
+  assert ((US.v arena_id) * (US.v nb_size_classes) + (US.v i) < (US.v arena_id + 1) * (US.v nb_size_classes));
+  Math.Lemmas.lemma_mult_le_right (US.v nb_size_classes) (US.v arena_id + 1) (US.v nb_arenas);
+  assert ((US.v arena_id) * (US.v nb_size_classes) + (US.v i) < (US.v nb_arenas) * (US.v nb_size_classes));
+  Math.Lemmas.swap_mul (US.v nb_arenas) (US.v nb_size_classes);
+  assert ((US.v arena_id) * (US.v nb_size_classes) + (US.v i) < total_nb_sc);
+  US.fits_lte
+    ((US.v arena_id) * (US.v nb_size_classes))
+    ((US.v arena_id) * (US.v nb_size_classes) + (US.v i));
+  US.fits_lte
+    ((US.v arena_id) * (US.v nb_size_classes) + (US.v i))
+    total_nb_sc;
+  assert (total_nb_sc < pow2 32);
+  assert (US.fits_u32);
+  assert (US.fits (total_nb_sc));
+  ()
 #pop-options
 
 #restart-solver
@@ -581,6 +603,35 @@ let rec slab_malloc_i
 
 #restart-solver
 
+[@@ reduce_attr]
+inline_for_extraction noextract
+let set_canary
+  (ptr: array U8.t)
+  (size: sc)
+  : Steel unit
+  (null_or_varray ptr) (fun _ -> null_or_varray ptr)
+  (requires fun _ ->
+    not (is_null ptr) ==> A.length ptr = U32.v size)
+  (ensures fun _ _ h1 ->
+    let s : t_of (null_or_varray ptr)
+      = h1 (null_or_varray ptr) in
+    not (is_null ptr) ==> (
+      Seq.length s >= 2 /\
+      Seq.index s (A.length ptr - 2) == slab_canaries_magic1 /\
+      Seq.index s (A.length ptr - 1) == slab_canaries_magic2
+    )
+  )
+  =
+  assume (UInt.size (U32.v size - 2) U32.n);
+  assume (UInt.size (U32.v size - 1) U32.n);
+  if is_null ptr then return ()
+  else (
+    elim_live_null_or_varray ptr;
+    upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
+    upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
+    intro_live_null_or_varray ptr
+  )
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// A variant of slab_malloc_i adding slab canaries
 [@@ reduce_attr]
@@ -614,14 +665,8 @@ let rec slab_malloc_canary_i
       let size = TLA.get sizes idx' in
       if bytes `U32.lte` (size `U32.sub` 2ul) then
         let ptr = slab_malloc_one idx bytes in
-        if is_null ptr then return ptr
-        else (
-          elim_live_null_or_varray ptr;
-          upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
-          upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
-          intro_live_null_or_varray ptr;
-          return ptr
-        )
+        set_canary ptr size;
+        return ptr
       else
         slab_malloc_canary_i tl (i `US.add` 1sz) arena_id bytes
 #pop-options
@@ -724,7 +769,7 @@ let rec slab_aligned_alloc_canary_i
       [@inline_let] let idx' = US.sizet_to_uint32 idx in
       let size = TLA.get sizes idx' in
       let b = U32.eq (U32.rem page_size size) 0ul in
-      if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then
+      if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then (
         let ptr = slab_malloc_one idx bytes in
         let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
         assert (G.reveal size_ = size);
@@ -733,16 +778,11 @@ let rec slab_aligned_alloc_canary_i
         alignment_lemma (U32.v page_size) 12 (U32.v alignment) (U32.v size);
         assert (U32.v size % U32.v alignment = 0);
         array_u8_alignment_lemma2 ptr size alignment;
-        if is_null ptr then return ptr
-        else (
-          elim_live_null_or_varray ptr;
-          upd ptr (US.uint32_to_sizet (size `U32.sub` 2ul)) slab_canaries_magic1;
-          upd ptr (US.uint32_to_sizet (size `U32.sub` 1ul)) slab_canaries_magic2;
-          intro_live_null_or_varray ptr;
-          return ptr
-        )
-      else
+        set_canary ptr size;
+        return ptr
+      ) else (
         slab_aligned_alloc_canary_i tl (i `US.add` 1sz) arena_id alignment bytes
+      )
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
