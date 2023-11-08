@@ -519,6 +519,29 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+let aux_lemma
+  (l:list sc{List.length l <= length sc_all.size_classes})
+  (i:US.t{US.v i + List.length l == US.v nb_size_classes})
+  (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+  : Lemma
+  (
+    (US.v arena_id) * (US.v nb_size_classes) + (US.v i)
+    < total_nb_sc /\
+    0 <= (US.v arena_id) * (US.v nb_size_classes) /\
+    US.fits ((US.v arena_id) * (US.v nb_size_classes)) /\
+    0 <= (US.v arena_id) * (US.v nb_size_classes) + (US.v i) /\
+    US.fits ((US.v arena_id) * (US.v nb_size_classes) + (US.v i)) /\
+    (let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+    let idx' = US.sizet_to_uint32 idx in
+    US.v idx == U32.v idx' /\
+    US.v idx < TLA.length sizes)
+  )
+  = admit ()
+#pop-options
+
+#restart-solver
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// A wrapper around slab_malloc' that performs dispatch in the size classes
 /// for arena [arena_id] in a generic way.
 /// The list argument is not actually used, it just serves
@@ -546,14 +569,17 @@ let rec slab_malloc_i
   = match l with
     | [] -> return_null ()
     | hd::tl ->
-      admit ();
+      aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sizes (US.sizet_to_uint32 idx) in
+      [@inline_let] let idx' = US.sizet_to_uint32 idx in
+      let size = TLA.get sizes idx' in
       if bytes `U32.lte` size then
         slab_malloc_one idx bytes
       else
         slab_malloc_i tl (i `US.add` 1sz) arena_id bytes
 #pop-options
+
+#restart-solver
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// A variant of slab_malloc_i adding slab canaries
@@ -582,9 +608,10 @@ let rec slab_malloc_canary_i
   = match l with
     | [] -> return_null ()
     | hd::tl ->
-      admit ();
+      aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sizes (US.sizet_to_uint32 idx) in
+      [@inline_let] let idx' = US.sizet_to_uint32 idx in
+      let size = TLA.get sizes idx' in
       if bytes `U32.lte` (size `U32.sub` 2ul) then
         let ptr = slab_malloc_one idx bytes in
         if is_null ptr then return ptr
@@ -607,9 +634,11 @@ let slab_malloc arena_id bytes =
     (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
+#restart-solver
+
 open MiscArith
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 /// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
 /// The key difference lies in the condition of the if-branch: we only
 /// attempt to allocate in this size class if it satisfies the alignment
@@ -639,9 +668,10 @@ let rec slab_aligned_alloc_i
   = match l with
     | [] -> return_null ()
     | hd::tl ->
-      admit ();
+      aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sizes (US.sizet_to_uint32 idx) in
+      [@inline_let] let idx' = US.sizet_to_uint32 idx in
+      let size = TLA.get sizes idx' in
       let b = U32.eq (U32.rem page_size size) 0ul in
       if b && bytes `U32.lte` size && alignment `U32.lte` size then (
         let r = slab_malloc_one idx bytes in
@@ -658,7 +688,9 @@ let rec slab_aligned_alloc_i
       )
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+#restart-solver
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 /// Version of `slab_aligned_alloc_i` with slab canaries
 [@@ reduce_attr]
 noextract
@@ -687,9 +719,10 @@ let rec slab_aligned_alloc_canary_i
   = match l with
     | [] -> return_null ()
     | hd::tl ->
-      admit ();
+      aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sizes (US.sizet_to_uint32 idx) in
+      [@inline_let] let idx' = US.sizet_to_uint32 idx in
+      let size = TLA.get sizes idx' in
       let b = U32.eq (U32.rem page_size size) 0ul in
       if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then
         let ptr = slab_malloc_one idx bytes in
@@ -807,8 +840,6 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
-
-
 let slab_getsize (ptr: array U8.t)
   : Steel US.t
   (A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
