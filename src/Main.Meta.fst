@@ -47,6 +47,8 @@ let total_nb_sc : n:nat{
   n == US.v nb_size_classes * nb_arenas_nat
 }
 =
+assert_norm ((US.v nb_size_classes * US.v nb_arenas) < pow2 32);
+US.fits_u32_implies_fits (US.v nb_size_classes * US.v nb_arenas);
 normalize_term (US.v nb_size_classes * US.v nb_arenas)
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
