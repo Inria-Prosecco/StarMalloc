@@ -318,8 +318,8 @@ let set_canary
     )
   )
   =
-  assume (UInt.size (U32.v size - 2) U32.n);
-  assume (UInt.size (U32.v size - 1) U32.n);
+  assert (UInt.size (U32.v size - 2) U32.n);
+  assert (UInt.size (U32.v size - 1) U32.n);
   if is_null ptr then return ()
   else (
     elim_live_null_or_varray ptr;
@@ -491,7 +491,7 @@ let slab_aligned_alloc arena_id alignment bytes =
 
 #restart-solver
 
-#push-options "--z3rlimit 50"
+#push-options "--fuel 0 --fuel 0 --z3rlimit 50"
 inline_for_extraction noextract
 let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: array U8.t) (diff: US.t)
   : Steel bool
@@ -517,6 +517,7 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
   change_equal_slprop (size_class_vprop _) (size_class_vprop _);
   L.release sc.lock;
   return res
+#pop-options
 
 /// Precondition of free, capturing that a client must return an array corresponding to the
 /// entire memory provided by the allocator:
@@ -575,31 +576,16 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
-let slab_getsize (ptr: array U8.t)
-  : Steel US.t
-  (A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
-  (fun _ ->
-   A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
-  (requires fun _ ->
-    within_size_classes_pred ptr /\
-    SAA.within_bounds
-      (A.split_l (G.reveal sc_all.slab_region) 0sz)
-      ptr
-      (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
-  )
-  (ensures fun h0 r h1 ->
-    A.asel ptr h1 == A.asel ptr h0 /\
-    (r <> 0sz ==>
-      (enable_slab_canaries_malloc ==>
-        A.length ptr == US.v r + 2
-      ) /\
-      (not enable_slab_canaries_malloc ==>
-        A.length ptr == US.v r
-      )
-    )
-  )
-  =
+let mod_lt (a b: US.t)
+  : Lemma
+  (requires US.v b > 0)
+  (ensures
+    US.v (US.rem a b) = (US.v a) % (US.v b) /\
+    US.v (US.rem a b) < US.v b)
+  = ()
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --query_stats"
+let slab_getsize ptr =
   SAA.within_bounds_elim
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
@@ -613,17 +599,28 @@ let slab_getsize (ptr: array U8.t)
     ptr
     (A.split_l sc_all.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
-  assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
-  lemma_div_le (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
-  admit ();
-  let size = TLA.get sizes (US.sizet_to_uint32 index) in
+  lemma_div_lt (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
+  assert (US.v index < US.v nb_size_classes * US.v nb_arenas);
+  let index' = US.sizet_to_uint32 index in
+  assert (total_nb_sc < pow2 32);
+  Math.Lemmas.modulo_lemma (US.v index) (pow2 32);
+  assert (US.v index == U32.v index');
+  assert (US.v index < TLA.length sizes);
+  let size = TLA.get sizes index' in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
   if US.rem rem_slot (US.uint32_to_sizet size) = 0sz then (
-    (**) let sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
-    //lemma_nlarith_aux diff_sz size;
+    (**) let sc : G.erased size_class = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
+    assert (size_class_pred sc_all.slab_region (G.reveal sc) (US.v index));
+    assert (A.offset (A.ptr_of (G.reveal sc).data.slab_region) == A.offset (A.ptr_of sc_all.slab_region) + (US.v index) * (US.v slab_size));
+    assert (US.v rem_slab == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc).data.slab_region));
+    mod_lt diff_sz slab_size;
+    assert (US.v rem_slab < US.v slab_size);
+    mod_lt diff_sz (u32_to_sz page_size);
+    assert (US.v rem_slot == (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of sc_all.slab_region)) % (U32.v page_size));
+    mod_lt rem_slot (US.uint32_to_sizet size);
     (**) elim_within_size_class_i ptr (US.v index) size;
     (**) assert (A.length ptr == U32.v size);
     if enable_slab_canaries_malloc then
@@ -651,21 +648,28 @@ let slab_free ptr =
     ptr
     (A.split_l sc_all.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
-  assert (ptr_of (A.split_l sc_all.slab_region 0sz) == ptr_of (sc_all.slab_region));
-  assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
-  lemma_div_le (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
-  (**) let g_sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
-  (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
-  admit ();
-  let size = TLA.get sizes (US.sizet_to_uint32 index) in
+  lemma_div_lt (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
+  assert (US.v index < US.v nb_size_classes * US.v nb_arenas);
+  let index' = US.sizet_to_uint32 index in
+  assert (total_nb_sc < pow2 32);
+  Math.Lemmas.modulo_lemma (US.v index) (pow2 32);
+  assert (US.v index == U32.v index');
+  assert (US.v index < TLA.length sizes);
+  let size = TLA.get sizes index' in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
-  if US.rem rem_slot (US.uint32_to_sizet size) <> 0sz then (
-    return false
-  ) else (
+  if US.rem rem_slot (US.uint32_to_sizet size) = 0sz then (
     (**) let sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
+    assert (size_class_pred sc_all.slab_region (G.reveal sc) (US.v index));
+    assert (A.offset (A.ptr_of (G.reveal sc).data.slab_region) == A.offset (A.ptr_of sc_all.slab_region) + (US.v index) * (US.v slab_size));
+    assert (US.v rem_slab == A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc).data.slab_region));
+    mod_lt diff_sz slab_size;
+    assert (US.v rem_slab < US.v slab_size);
+    mod_lt diff_sz (u32_to_sz page_size);
+    assert (US.v rem_slot == (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of sc_all.slab_region)) % (U32.v page_size));
+    mod_lt rem_slot (US.uint32_to_sizet size);
     (**) elim_within_size_class_i ptr (US.v index) size;
     (**) assert (A.length ptr == U32.v size);
     if enable_slab_canaries_free then (
@@ -680,4 +684,6 @@ let slab_free ptr =
     ) else (
       slab_free' index ptr rem_slab
     )
+  ) else (
+    return false
   )

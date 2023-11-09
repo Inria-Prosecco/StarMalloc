@@ -34,10 +34,10 @@ let lemma_mul_le (a b c c':nat)
   (ensures a * b * c <= a * b * c')
   = ()
 
-let lemma_div_le (a:pos) (b c k:nat)
+let lemma_div_lt (a:pos) (b c k:nat)
   : Lemma
-  (requires k <= a * b * c)
-  (ensures k / a <= b * c)
+  (requires k < a * b * c)
+  (ensures k / a < b * c)
   = ()
 
 #push-options "--fuel 1 --ifuel 1"

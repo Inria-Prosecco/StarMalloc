@@ -53,7 +53,7 @@ type size_class_struct' = {
 open Prelude
 
 inline_for_extraction noextract
-let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size})
+let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size /\ US.v v > 0})
   = US.mul metadata_max (US.of_u32 page_size)
 
 type size_class_struct = s:size_class_struct'{
