@@ -31,15 +31,15 @@ open Main
 /// The total number of size classes in the allocator, across all arenas.
 /// Used as an abbreviation for specification purposes
 inline_for_extraction noextract
-val total_nb_sc: x:nat{UInt.size x U32.n}
+val total_nb_sc: x:nat{US.fits x}
 
 inline_for_extraction noextract
 val arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l})
 
 let sizes_t = r:TLA.t sc{
   TLA.length r == total_nb_sc /\
-  (forall (k:U32.t{U32.v k < total_nb_sc}).
-    TLA.get r k == List.Tot.index arena_sc_list (U32.v k))
+  (forall (k:US.t{US.v k < total_nb_sc}).
+    TLA.get r k == List.Tot.index arena_sc_list (US.v k))
 }
 
 val sizes : sizes_t

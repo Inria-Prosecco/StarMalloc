@@ -537,7 +537,7 @@ val init_wrapper2
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 200 --query_stats --split_queries always"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 300 --query_stats --split_queries always"
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
   f_lemma n k;
@@ -589,10 +589,10 @@ let slab_region_size
 
 /// A logical predicate indicating that a list of sizes corresponds
 /// to the sizes of a list of size_classes
-let synced_sizes (#n:nat{UInt.size n U32.n}) (k:nat{k <= n})
+let synced_sizes (#n:nat{US.fits n}) (k:nat{k <= n})
   (sizes:TLA.t sc{TLA.length sizes >= n})
   (size_classes:Seq.lseq size_class n) : prop =
-  forall (i:nat{i < k}). TLA.get sizes (U32.uint_to_t i) == (Seq.index size_classes i).data.size
+  forall (i:nat{i < k}). TLA.get sizes (US.uint_to_t i) == (Seq.index size_classes i).data.size
 
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
@@ -660,7 +660,7 @@ val init_size_class
   )
 
 let init_size_class n k k' slab_region md_bm_region md_region size_classes sizes =
-  let size = TLA.get sizes (US.sizet_to_uint32 k) in
+  let size = TLA.get sizes k in
   (**) let g0 = gget (varray size_classes) in
   //(**) let g_sizes0 = gget (varray sizes) in
   f_lemma n k;
