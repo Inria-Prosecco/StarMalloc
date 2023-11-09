@@ -614,7 +614,6 @@ let slab_getsize (ptr: array U8.t)
   assert (US.v slab_size > 0);
   let index = US.div diff_sz slab_size in
   lemma_div_le (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
-  admit ();
   let size = TLA.get sizes index in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
