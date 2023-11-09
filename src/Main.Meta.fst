@@ -574,30 +574,7 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
-let slab_getsize (ptr: array U8.t)
-  : Steel US.t
-  (A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
-  (fun _ ->
-   A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
-  (requires fun _ ->
-    within_size_classes_pred ptr /\
-    SAA.within_bounds
-      (A.split_l (G.reveal sc_all.slab_region) 0sz)
-      ptr
-      (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
-  )
-  (ensures fun h0 r h1 ->
-    A.asel ptr h1 == A.asel ptr h0 /\
-    (r <> 0sz ==>
-      (enable_slab_canaries_malloc ==>
-        A.length ptr == US.v r + 2
-      ) /\
-      (not enable_slab_canaries_malloc ==>
-        A.length ptr == US.v r
-      )
-    )
-  )
-  =
+let slab_getsize ptr =
   SAA.within_bounds_elim
     (A.split_l sc_all.slab_region 0sz)
     (A.split_r sc_all.slab_region slab_region_size)
@@ -654,7 +631,6 @@ let slab_free ptr =
   lemma_div_le (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
   (**) let g_sc = G.hide (Seq.index (G.reveal sc_all.g_size_classes) (US.v index)) in
   (**) assert (size_class_pred sc_all.slab_region (G.reveal g_sc) (US.v index));
-  admit ();
   let size = TLA.get sizes index in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
