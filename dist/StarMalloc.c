@@ -9,6 +9,45 @@
 
 static size_t slab_region_size = (size_t)16777216U * (size_t)4096U * (size_t)27U * (size_t)4U;
 
+static void
+init_size_class(
+  size_t k,
+  uint8_t *slab_region,
+  uint64_t *md_bm_region,
+  ArrayList_cell *md_region,
+  size_class *size_classes,
+  const uint32_t *sizes
+)
+{
+  uint32_t size = sizes[(uint32_t)k];
+  static_assert(UINT32_MAX <= SIZE_MAX);
+  uint8_t *slab_region_ = slab_region + (size_t)16777216U * (size_t)4096U * k;
+  uint64_t *md_bm_region_ = md_bm_region + (size_t)16777216U * (size_t)4U * k;
+  ArrayList_cell *md_region_ = md_region + (size_t)16777216U * k;
+  size_t *ptr_partial = mmap_ptr_us_init();
+  size_t *ptr_empty = mmap_ptr_us_init();
+  size_t *ptr_full = mmap_ptr_us_init();
+  size_t *ptr_guard = mmap_ptr_us_init();
+  size_t *ptr_quarantine = mmap_ptr_us_init();
+  *ptr_partial = (size_t)16777216U + (size_t)1U;
+  *ptr_empty = (size_t)16777216U + (size_t)1U;
+  *ptr_full = (size_t)16777216U + (size_t)1U;
+  *ptr_guard = (size_t)16777216U + (size_t)1U;
+  *ptr_quarantine = (size_t)16777216U + (size_t)1U;
+  size_t *md_count = mmap_ptr_us_init();
+  *md_count = (size_t)0U;
+  SizeClass_size_class_struct_
+  scs =
+    {
+      .size = size, .empty_slabs = ptr_empty, .partial_slabs = ptr_partial, .full_slabs = ptr_full,
+      .guard_slabs = ptr_guard, .quarantine_slabs = ptr_quarantine, .md_count = md_count,
+      .slab_region = slab_region_, .md_bm_region = md_bm_region_, .md_region = md_region_
+    };
+  SizeClass_size_class_struct_ data = scs;
+  Steel_SpinLock_new_lock(&size_classes[k].lock);
+  size_classes[k].data = data;
+}
+
 static uint32_t avl_data_size = 64U;
 
 void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
@@ -1224,45 +1263,6 @@ static size_t large_getsize(uint8_t *ptr)
   return size;
 }
 
-static void
-init_size_class(
-  size_t k,
-  uint8_t *slab_region,
-  uint64_t *md_bm_region,
-  ArrayList_cell *md_region,
-  size_class *size_classes,
-  const uint32_t *sizes
-)
-{
-  uint32_t size = sizes[(uint32_t)k];
-  static_assert(UINT32_MAX <= SIZE_MAX);
-  uint8_t *slab_region_ = slab_region + (size_t)16777216U * (size_t)4096U * k;
-  uint64_t *md_bm_region_ = md_bm_region + (size_t)16777216U * (size_t)4U * k;
-  ArrayList_cell *md_region_ = md_region + (size_t)16777216U * k;
-  size_t *ptr_partial = mmap_ptr_us_init();
-  size_t *ptr_empty = mmap_ptr_us_init();
-  size_t *ptr_full = mmap_ptr_us_init();
-  size_t *ptr_guard = mmap_ptr_us_init();
-  size_t *ptr_quarantine = mmap_ptr_us_init();
-  *ptr_partial = (size_t)16777216U + (size_t)1U;
-  *ptr_empty = (size_t)16777216U + (size_t)1U;
-  *ptr_full = (size_t)16777216U + (size_t)1U;
-  *ptr_guard = (size_t)16777216U + (size_t)1U;
-  *ptr_quarantine = (size_t)16777216U + (size_t)1U;
-  size_t *md_count = mmap_ptr_us_init();
-  *md_count = (size_t)0U;
-  SizeClass_size_class_struct_
-  scs =
-    {
-      .size = size, .empty_slabs = ptr_empty, .partial_slabs = ptr_partial, .full_slabs = ptr_full,
-      .guard_slabs = ptr_guard, .quarantine_slabs = ptr_quarantine, .md_count = md_count,
-      .slab_region = slab_region_, .md_bm_region = md_bm_region_, .md_region = md_region_
-    };
-  SizeClass_size_class_struct_ data = scs;
-  Steel_SpinLock_new_lock(&size_classes[k].lock);
-  size_classes[k].data = data;
-}
-
 static const
 uint32_t
 sizes[108U] =
@@ -1411,14 +1411,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
     uint8_t *ptr = r;
     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)0U].lock);
     uint8_t *ptr0 = ptr;
-    if (ptr0 == NULL)
-      return ptr0;
-    else
+    if (!(ptr0 == NULL))
     {
       ptr0[(size_t)(size - 2U)] = 42U;
       ptr0[(size_t)(size - 1U)] = 23U;
-      return ptr0;
     }
+    return ptr0;
   }
   else
   {
@@ -1438,14 +1436,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
         * (size_t)27U
         + (size_t)1U].lock);
       uint8_t *ptr0 = ptr;
-      if (ptr0 == NULL)
-        return ptr0;
-      else
+      if (!(ptr0 == NULL))
       {
         ptr0[(size_t)(size1 - 2U)] = 42U;
         ptr0[(size_t)(size1 - 1U)] = 23U;
-        return ptr0;
       }
+      return ptr0;
     }
     else
     {
@@ -1465,14 +1461,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
           * (size_t)27U
           + (size_t)2U].lock);
         uint8_t *ptr0 = ptr;
-        if (ptr0 == NULL)
-          return ptr0;
-        else
+        if (!(ptr0 == NULL))
         {
           ptr0[(size_t)(size2 - 2U)] = 42U;
           ptr0[(size_t)(size2 - 1U)] = 23U;
-          return ptr0;
         }
+        return ptr0;
       }
       else
       {
@@ -1492,14 +1486,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
             * (size_t)27U
             + (size_t)3U].lock);
           uint8_t *ptr0 = ptr;
-          if (ptr0 == NULL)
-            return ptr0;
-          else
+          if (!(ptr0 == NULL))
           {
             ptr0[(size_t)(size3 - 2U)] = 42U;
             ptr0[(size_t)(size3 - 1U)] = 23U;
-            return ptr0;
           }
+          return ptr0;
         }
         else
         {
@@ -1519,14 +1511,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
               * (size_t)27U
               + (size_t)4U].lock);
             uint8_t *ptr0 = ptr;
-            if (ptr0 == NULL)
-              return ptr0;
-            else
+            if (!(ptr0 == NULL))
             {
               ptr0[(size_t)(size4 - 2U)] = 42U;
               ptr0[(size_t)(size4 - 1U)] = 23U;
-              return ptr0;
             }
+            return ptr0;
           }
           else
           {
@@ -1546,14 +1536,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                 * (size_t)27U
                 + (size_t)5U].lock);
               uint8_t *ptr0 = ptr;
-              if (ptr0 == NULL)
-                return ptr0;
-              else
+              if (!(ptr0 == NULL))
               {
                 ptr0[(size_t)(size5 - 2U)] = 42U;
                 ptr0[(size_t)(size5 - 1U)] = 23U;
-                return ptr0;
               }
+              return ptr0;
             }
             else
             {
@@ -1573,14 +1561,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                   * (size_t)27U
                   + (size_t)6U].lock);
                 uint8_t *ptr0 = ptr;
-                if (ptr0 == NULL)
-                  return ptr0;
-                else
+                if (!(ptr0 == NULL))
                 {
                   ptr0[(size_t)(size6 - 2U)] = 42U;
                   ptr0[(size_t)(size6 - 1U)] = 23U;
-                  return ptr0;
                 }
+                return ptr0;
               }
               else
               {
@@ -1600,14 +1586,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                     * (size_t)27U
                     + (size_t)7U].lock);
                   uint8_t *ptr0 = ptr;
-                  if (ptr0 == NULL)
-                    return ptr0;
-                  else
+                  if (!(ptr0 == NULL))
                   {
                     ptr0[(size_t)(size7 - 2U)] = 42U;
                     ptr0[(size_t)(size7 - 1U)] = 23U;
-                    return ptr0;
                   }
+                  return ptr0;
                 }
                 else
                 {
@@ -1627,14 +1611,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                       * (size_t)27U
                       + (size_t)8U].lock);
                     uint8_t *ptr0 = ptr;
-                    if (ptr0 == NULL)
-                      return ptr0;
-                    else
+                    if (!(ptr0 == NULL))
                     {
                       ptr0[(size_t)(size8 - 2U)] = 42U;
                       ptr0[(size_t)(size8 - 1U)] = 23U;
-                      return ptr0;
                     }
+                    return ptr0;
                   }
                   else
                   {
@@ -1654,14 +1636,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                         * (size_t)27U
                         + (size_t)9U].lock);
                       uint8_t *ptr0 = ptr;
-                      if (ptr0 == NULL)
-                        return ptr0;
-                      else
+                      if (!(ptr0 == NULL))
                       {
                         ptr0[(size_t)(size9 - 2U)] = 42U;
                         ptr0[(size_t)(size9 - 1U)] = 23U;
-                        return ptr0;
                       }
+                      return ptr0;
                     }
                     else
                     {
@@ -1681,14 +1661,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                           * (size_t)27U
                           + (size_t)10U].lock);
                         uint8_t *ptr0 = ptr;
-                        if (ptr0 == NULL)
-                          return ptr0;
-                        else
+                        if (!(ptr0 == NULL))
                         {
                           ptr0[(size_t)(size10 - 2U)] = 42U;
                           ptr0[(size_t)(size10 - 1U)] = 23U;
-                          return ptr0;
                         }
+                        return ptr0;
                       }
                       else
                       {
@@ -1708,14 +1686,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                             * (size_t)27U
                             + (size_t)11U].lock);
                           uint8_t *ptr0 = ptr;
-                          if (ptr0 == NULL)
-                            return ptr0;
-                          else
+                          if (!(ptr0 == NULL))
                           {
                             ptr0[(size_t)(size11 - 2U)] = 42U;
                             ptr0[(size_t)(size11 - 1U)] = 23U;
-                            return ptr0;
                           }
+                          return ptr0;
                         }
                         else
                         {
@@ -1735,14 +1711,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                               * (size_t)27U
                               + (size_t)12U].lock);
                             uint8_t *ptr0 = ptr;
-                            if (ptr0 == NULL)
-                              return ptr0;
-                            else
+                            if (!(ptr0 == NULL))
                             {
                               ptr0[(size_t)(size12 - 2U)] = 42U;
                               ptr0[(size_t)(size12 - 1U)] = 23U;
-                              return ptr0;
                             }
+                            return ptr0;
                           }
                           else
                           {
@@ -1763,14 +1737,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                 * (size_t)27U
                                 + (size_t)13U].lock);
                               uint8_t *ptr0 = ptr;
-                              if (ptr0 == NULL)
-                                return ptr0;
-                              else
+                              if (!(ptr0 == NULL))
                               {
                                 ptr0[(size_t)(size13 - 2U)] = 42U;
                                 ptr0[(size_t)(size13 - 1U)] = 23U;
-                                return ptr0;
                               }
+                              return ptr0;
                             }
                             else
                             {
@@ -1791,14 +1763,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                   * (size_t)27U
                                   + (size_t)14U].lock);
                                 uint8_t *ptr0 = ptr;
-                                if (ptr0 == NULL)
-                                  return ptr0;
-                                else
+                                if (!(ptr0 == NULL))
                                 {
                                   ptr0[(size_t)(size14 - 2U)] = 42U;
                                   ptr0[(size_t)(size14 - 1U)] = 23U;
-                                  return ptr0;
                                 }
+                                return ptr0;
                               }
                               else
                               {
@@ -1819,14 +1789,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                     * (size_t)27U
                                     + (size_t)15U].lock);
                                   uint8_t *ptr0 = ptr;
-                                  if (ptr0 == NULL)
-                                    return ptr0;
-                                  else
+                                  if (!(ptr0 == NULL))
                                   {
                                     ptr0[(size_t)(size15 - 2U)] = 42U;
                                     ptr0[(size_t)(size15 - 1U)] = 23U;
-                                    return ptr0;
                                   }
+                                  return ptr0;
                                 }
                                 else
                                 {
@@ -1847,14 +1815,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                       * (size_t)27U
                                       + (size_t)16U].lock);
                                     uint8_t *ptr0 = ptr;
-                                    if (ptr0 == NULL)
-                                      return ptr0;
-                                    else
+                                    if (!(ptr0 == NULL))
                                     {
                                       ptr0[(size_t)(size16 - 2U)] = 42U;
                                       ptr0[(size_t)(size16 - 1U)] = 23U;
-                                      return ptr0;
                                     }
+                                    return ptr0;
                                   }
                                   else
                                   {
@@ -1875,14 +1841,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                         * (size_t)27U
                                         + (size_t)17U].lock);
                                       uint8_t *ptr0 = ptr;
-                                      if (ptr0 == NULL)
-                                        return ptr0;
-                                      else
+                                      if (!(ptr0 == NULL))
                                       {
                                         ptr0[(size_t)(size17 - 2U)] = 42U;
                                         ptr0[(size_t)(size17 - 1U)] = 23U;
-                                        return ptr0;
                                       }
+                                      return ptr0;
                                     }
                                     else
                                     {
@@ -1904,14 +1868,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                           * (size_t)27U
                                           + (size_t)18U].lock);
                                         uint8_t *ptr0 = ptr;
-                                        if (ptr0 == NULL)
-                                          return ptr0;
-                                        else
+                                        if (!(ptr0 == NULL))
                                         {
                                           ptr0[(size_t)(size18 - 2U)] = 42U;
                                           ptr0[(size_t)(size18 - 1U)] = 23U;
-                                          return ptr0;
                                         }
+                                        return ptr0;
                                       }
                                       else
                                       {
@@ -1933,14 +1895,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                             * (size_t)27U
                                             + (size_t)19U].lock);
                                           uint8_t *ptr0 = ptr;
-                                          if (ptr0 == NULL)
-                                            return ptr0;
-                                          else
+                                          if (!(ptr0 == NULL))
                                           {
                                             ptr0[(size_t)(size19 - 2U)] = 42U;
                                             ptr0[(size_t)(size19 - 1U)] = 23U;
-                                            return ptr0;
                                           }
+                                          return ptr0;
                                         }
                                         else
                                         {
@@ -1962,14 +1922,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                               * (size_t)27U
                                               + (size_t)20U].lock);
                                             uint8_t *ptr0 = ptr;
-                                            if (ptr0 == NULL)
-                                              return ptr0;
-                                            else
+                                            if (!(ptr0 == NULL))
                                             {
                                               ptr0[(size_t)(size20 - 2U)] = 42U;
                                               ptr0[(size_t)(size20 - 1U)] = 23U;
-                                              return ptr0;
                                             }
+                                            return ptr0;
                                           }
                                           else
                                           {
@@ -1991,14 +1949,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                                 * (size_t)27U
                                                 + (size_t)21U].lock);
                                               uint8_t *ptr0 = ptr;
-                                              if (ptr0 == NULL)
-                                                return ptr0;
-                                              else
+                                              if (!(ptr0 == NULL))
                                               {
                                                 ptr0[(size_t)(size21 - 2U)] = 42U;
                                                 ptr0[(size_t)(size21 - 1U)] = 23U;
-                                                return ptr0;
                                               }
+                                              return ptr0;
                                             }
                                             else
                                             {
@@ -2022,14 +1978,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                                   * (size_t)27U
                                                   + (size_t)22U].lock);
                                                 uint8_t *ptr0 = ptr;
-                                                if (ptr0 == NULL)
-                                                  return ptr0;
-                                                else
+                                                if (!(ptr0 == NULL))
                                                 {
                                                   ptr0[(size_t)(size22 - 2U)] = 42U;
                                                   ptr0[(size_t)(size22 - 1U)] = 23U;
-                                                  return ptr0;
                                                 }
+                                                return ptr0;
                                               }
                                               else
                                               {
@@ -2053,14 +2007,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                                     * (size_t)27U
                                                     + (size_t)23U].lock);
                                                   uint8_t *ptr0 = ptr;
-                                                  if (ptr0 == NULL)
-                                                    return ptr0;
-                                                  else
+                                                  if (!(ptr0 == NULL))
                                                   {
                                                     ptr0[(size_t)(size23 - 2U)] = 42U;
                                                     ptr0[(size_t)(size23 - 1U)] = 23U;
-                                                    return ptr0;
                                                   }
+                                                  return ptr0;
                                                 }
                                                 else
                                                 {
@@ -2084,14 +2036,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                                       * (size_t)27U
                                                       + (size_t)24U].lock);
                                                     uint8_t *ptr0 = ptr;
-                                                    if (ptr0 == NULL)
-                                                      return ptr0;
-                                                    else
+                                                    if (!(ptr0 == NULL))
                                                     {
                                                       ptr0[(size_t)(size24 - 2U)] = 42U;
                                                       ptr0[(size_t)(size24 - 1U)] = 23U;
-                                                      return ptr0;
                                                     }
+                                                    return ptr0;
                                                   }
                                                   else
                                                   {
@@ -2115,14 +2065,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                                         * (size_t)27U
                                                         + (size_t)25U].lock);
                                                       uint8_t *ptr0 = ptr;
-                                                      if (ptr0 == NULL)
-                                                        return ptr0;
-                                                      else
+                                                      if (!(ptr0 == NULL))
                                                       {
                                                         ptr0[(size_t)(size25 - 2U)] = 42U;
                                                         ptr0[(size_t)(size25 - 1U)] = 23U;
-                                                        return ptr0;
                                                       }
+                                                      return ptr0;
                                                     }
                                                     else
                                                     {
@@ -2146,14 +2094,12 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
                                                           * (size_t)27U
                                                           + (size_t)26U].lock);
                                                         uint8_t *ptr0 = ptr;
-                                                        if (ptr0 == NULL)
-                                                          return ptr0;
-                                                        else
+                                                        if (!(ptr0 == NULL))
                                                         {
                                                           ptr0[(size_t)(size26 - 2U)] = 42U;
                                                           ptr0[(size_t)(size26 - 1U)] = 23U;
-                                                          return ptr0;
                                                         }
+                                                        return ptr0;
                                                       }
                                                       else
                                                         return NULL;
@@ -2200,14 +2146,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
     uint8_t *ptr = r;
     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)0U].lock);
     uint8_t *ptr0 = ptr;
-    if (ptr0 == NULL)
-      return ptr0;
-    else
+    if (!(ptr0 == NULL))
     {
       ptr0[(size_t)(size - 2U)] = 42U;
       ptr0[(size_t)(size - 1U)] = 23U;
-      return ptr0;
     }
+    return ptr0;
   }
   else
   {
@@ -2228,14 +2172,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
         * (size_t)27U
         + (size_t)1U].lock);
       uint8_t *ptr0 = ptr;
-      if (ptr0 == NULL)
-        return ptr0;
-      else
+      if (!(ptr0 == NULL))
       {
         ptr0[(size_t)(size1 - 2U)] = 42U;
         ptr0[(size_t)(size1 - 1U)] = 23U;
-        return ptr0;
       }
+      return ptr0;
     }
     else
     {
@@ -2256,14 +2198,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
           * (size_t)27U
           + (size_t)2U].lock);
         uint8_t *ptr0 = ptr;
-        if (ptr0 == NULL)
-          return ptr0;
-        else
+        if (!(ptr0 == NULL))
         {
           ptr0[(size_t)(size2 - 2U)] = 42U;
           ptr0[(size_t)(size2 - 1U)] = 23U;
-          return ptr0;
         }
+        return ptr0;
       }
       else
       {
@@ -2284,14 +2224,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
             * (size_t)27U
             + (size_t)3U].lock);
           uint8_t *ptr0 = ptr;
-          if (ptr0 == NULL)
-            return ptr0;
-          else
+          if (!(ptr0 == NULL))
           {
             ptr0[(size_t)(size3 - 2U)] = 42U;
             ptr0[(size_t)(size3 - 1U)] = 23U;
-            return ptr0;
           }
+          return ptr0;
         }
         else
         {
@@ -2312,14 +2250,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
               * (size_t)27U
               + (size_t)4U].lock);
             uint8_t *ptr0 = ptr;
-            if (ptr0 == NULL)
-              return ptr0;
-            else
+            if (!(ptr0 == NULL))
             {
               ptr0[(size_t)(size4 - 2U)] = 42U;
               ptr0[(size_t)(size4 - 1U)] = 23U;
-              return ptr0;
             }
+            return ptr0;
           }
           else
           {
@@ -2340,14 +2276,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                 * (size_t)27U
                 + (size_t)5U].lock);
               uint8_t *ptr0 = ptr;
-              if (ptr0 == NULL)
-                return ptr0;
-              else
+              if (!(ptr0 == NULL))
               {
                 ptr0[(size_t)(size5 - 2U)] = 42U;
                 ptr0[(size_t)(size5 - 1U)] = 23U;
-                return ptr0;
               }
+              return ptr0;
             }
             else
             {
@@ -2368,14 +2302,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                   * (size_t)27U
                   + (size_t)6U].lock);
                 uint8_t *ptr0 = ptr;
-                if (ptr0 == NULL)
-                  return ptr0;
-                else
+                if (!(ptr0 == NULL))
                 {
                   ptr0[(size_t)(size6 - 2U)] = 42U;
                   ptr0[(size_t)(size6 - 1U)] = 23U;
-                  return ptr0;
                 }
+                return ptr0;
               }
               else
               {
@@ -2396,14 +2328,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                     * (size_t)27U
                     + (size_t)7U].lock);
                   uint8_t *ptr0 = ptr;
-                  if (ptr0 == NULL)
-                    return ptr0;
-                  else
+                  if (!(ptr0 == NULL))
                   {
                     ptr0[(size_t)(size7 - 2U)] = 42U;
                     ptr0[(size_t)(size7 - 1U)] = 23U;
-                    return ptr0;
                   }
+                  return ptr0;
                 }
                 else
                 {
@@ -2424,14 +2354,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                       * (size_t)27U
                       + (size_t)8U].lock);
                     uint8_t *ptr0 = ptr;
-                    if (ptr0 == NULL)
-                      return ptr0;
-                    else
+                    if (!(ptr0 == NULL))
                     {
                       ptr0[(size_t)(size8 - 2U)] = 42U;
                       ptr0[(size_t)(size8 - 1U)] = 23U;
-                      return ptr0;
                     }
+                    return ptr0;
                   }
                   else
                   {
@@ -2452,14 +2380,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                         * (size_t)27U
                         + (size_t)9U].lock);
                       uint8_t *ptr0 = ptr;
-                      if (ptr0 == NULL)
-                        return ptr0;
-                      else
+                      if (!(ptr0 == NULL))
                       {
                         ptr0[(size_t)(size9 - 2U)] = 42U;
                         ptr0[(size_t)(size9 - 1U)] = 23U;
-                        return ptr0;
                       }
+                      return ptr0;
                     }
                     else
                     {
@@ -2480,14 +2406,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                           * (size_t)27U
                           + (size_t)10U].lock);
                         uint8_t *ptr0 = ptr;
-                        if (ptr0 == NULL)
-                          return ptr0;
-                        else
+                        if (!(ptr0 == NULL))
                         {
                           ptr0[(size_t)(size10 - 2U)] = 42U;
                           ptr0[(size_t)(size10 - 1U)] = 23U;
-                          return ptr0;
                         }
+                        return ptr0;
                       }
                       else
                       {
@@ -2508,14 +2432,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                             * (size_t)27U
                             + (size_t)11U].lock);
                           uint8_t *ptr0 = ptr;
-                          if (ptr0 == NULL)
-                            return ptr0;
-                          else
+                          if (!(ptr0 == NULL))
                           {
                             ptr0[(size_t)(size11 - 2U)] = 42U;
                             ptr0[(size_t)(size11 - 1U)] = 23U;
-                            return ptr0;
                           }
+                          return ptr0;
                         }
                         else
                         {
@@ -2536,14 +2458,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                               * (size_t)27U
                               + (size_t)12U].lock);
                             uint8_t *ptr0 = ptr;
-                            if (ptr0 == NULL)
-                              return ptr0;
-                            else
+                            if (!(ptr0 == NULL))
                             {
                               ptr0[(size_t)(size12 - 2U)] = 42U;
                               ptr0[(size_t)(size12 - 1U)] = 23U;
-                              return ptr0;
                             }
+                            return ptr0;
                           }
                           else
                           {
@@ -2565,14 +2485,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                 * (size_t)27U
                                 + (size_t)13U].lock);
                               uint8_t *ptr0 = ptr;
-                              if (ptr0 == NULL)
-                                return ptr0;
-                              else
+                              if (!(ptr0 == NULL))
                               {
                                 ptr0[(size_t)(size13 - 2U)] = 42U;
                                 ptr0[(size_t)(size13 - 1U)] = 23U;
-                                return ptr0;
                               }
+                              return ptr0;
                             }
                             else
                             {
@@ -2594,14 +2512,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                   * (size_t)27U
                                   + (size_t)14U].lock);
                                 uint8_t *ptr0 = ptr;
-                                if (ptr0 == NULL)
-                                  return ptr0;
-                                else
+                                if (!(ptr0 == NULL))
                                 {
                                   ptr0[(size_t)(size14 - 2U)] = 42U;
                                   ptr0[(size_t)(size14 - 1U)] = 23U;
-                                  return ptr0;
                                 }
+                                return ptr0;
                               }
                               else
                               {
@@ -2623,14 +2539,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                     * (size_t)27U
                                     + (size_t)15U].lock);
                                   uint8_t *ptr0 = ptr;
-                                  if (ptr0 == NULL)
-                                    return ptr0;
-                                  else
+                                  if (!(ptr0 == NULL))
                                   {
                                     ptr0[(size_t)(size15 - 2U)] = 42U;
                                     ptr0[(size_t)(size15 - 1U)] = 23U;
-                                    return ptr0;
                                   }
+                                  return ptr0;
                                 }
                                 else
                                 {
@@ -2652,14 +2566,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                       * (size_t)27U
                                       + (size_t)16U].lock);
                                     uint8_t *ptr0 = ptr;
-                                    if (ptr0 == NULL)
-                                      return ptr0;
-                                    else
+                                    if (!(ptr0 == NULL))
                                     {
                                       ptr0[(size_t)(size16 - 2U)] = 42U;
                                       ptr0[(size_t)(size16 - 1U)] = 23U;
-                                      return ptr0;
                                     }
+                                    return ptr0;
                                   }
                                   else
                                   {
@@ -2681,14 +2593,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                         * (size_t)27U
                                         + (size_t)17U].lock);
                                       uint8_t *ptr0 = ptr;
-                                      if (ptr0 == NULL)
-                                        return ptr0;
-                                      else
+                                      if (!(ptr0 == NULL))
                                       {
                                         ptr0[(size_t)(size17 - 2U)] = 42U;
                                         ptr0[(size_t)(size17 - 1U)] = 23U;
-                                        return ptr0;
                                       }
+                                      return ptr0;
                                     }
                                     else
                                     {
@@ -2711,14 +2621,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                           * (size_t)27U
                                           + (size_t)18U].lock);
                                         uint8_t *ptr0 = ptr;
-                                        if (ptr0 == NULL)
-                                          return ptr0;
-                                        else
+                                        if (!(ptr0 == NULL))
                                         {
                                           ptr0[(size_t)(size18 - 2U)] = 42U;
                                           ptr0[(size_t)(size18 - 1U)] = 23U;
-                                          return ptr0;
                                         }
+                                        return ptr0;
                                       }
                                       else
                                       {
@@ -2741,14 +2649,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                             * (size_t)27U
                                             + (size_t)19U].lock);
                                           uint8_t *ptr0 = ptr;
-                                          if (ptr0 == NULL)
-                                            return ptr0;
-                                          else
+                                          if (!(ptr0 == NULL))
                                           {
                                             ptr0[(size_t)(size19 - 2U)] = 42U;
                                             ptr0[(size_t)(size19 - 1U)] = 23U;
-                                            return ptr0;
                                           }
+                                          return ptr0;
                                         }
                                         else
                                         {
@@ -2771,14 +2677,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                               * (size_t)27U
                                               + (size_t)20U].lock);
                                             uint8_t *ptr0 = ptr;
-                                            if (ptr0 == NULL)
-                                              return ptr0;
-                                            else
+                                            if (!(ptr0 == NULL))
                                             {
                                               ptr0[(size_t)(size20 - 2U)] = 42U;
                                               ptr0[(size_t)(size20 - 1U)] = 23U;
-                                              return ptr0;
                                             }
+                                            return ptr0;
                                           }
                                           else
                                           {
@@ -2801,14 +2705,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                 * (size_t)27U
                                                 + (size_t)21U].lock);
                                               uint8_t *ptr0 = ptr;
-                                              if (ptr0 == NULL)
-                                                return ptr0;
-                                              else
+                                              if (!(ptr0 == NULL))
                                               {
                                                 ptr0[(size_t)(size21 - 2U)] = 42U;
                                                 ptr0[(size_t)(size21 - 1U)] = 23U;
-                                                return ptr0;
                                               }
+                                              return ptr0;
                                             }
                                             else
                                             {
@@ -2834,14 +2736,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                   * (size_t)27U
                                                   + (size_t)22U].lock);
                                                 uint8_t *ptr0 = ptr;
-                                                if (ptr0 == NULL)
-                                                  return ptr0;
-                                                else
+                                                if (!(ptr0 == NULL))
                                                 {
                                                   ptr0[(size_t)(size22 - 2U)] = 42U;
                                                   ptr0[(size_t)(size22 - 1U)] = 23U;
-                                                  return ptr0;
                                                 }
+                                                return ptr0;
                                               }
                                               else
                                               {
@@ -2867,14 +2767,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                     * (size_t)27U
                                                     + (size_t)23U].lock);
                                                   uint8_t *ptr0 = ptr;
-                                                  if (ptr0 == NULL)
-                                                    return ptr0;
-                                                  else
+                                                  if (!(ptr0 == NULL))
                                                   {
                                                     ptr0[(size_t)(size23 - 2U)] = 42U;
                                                     ptr0[(size_t)(size23 - 1U)] = 23U;
-                                                    return ptr0;
                                                   }
+                                                  return ptr0;
                                                 }
                                                 else
                                                 {
@@ -2904,14 +2802,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                       * (size_t)27U
                                                       + (size_t)24U].lock);
                                                     uint8_t *ptr0 = ptr;
-                                                    if (ptr0 == NULL)
-                                                      return ptr0;
-                                                    else
+                                                    if (!(ptr0 == NULL))
                                                     {
                                                       ptr0[(size_t)(size24 - 2U)] = 42U;
                                                       ptr0[(size_t)(size24 - 1U)] = 23U;
-                                                      return ptr0;
                                                     }
+                                                    return ptr0;
                                                   }
                                                   else
                                                   {
@@ -2941,14 +2837,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                         * (size_t)27U
                                                         + (size_t)25U].lock);
                                                       uint8_t *ptr0 = ptr;
-                                                      if (ptr0 == NULL)
-                                                        return ptr0;
-                                                      else
+                                                      if (!(ptr0 == NULL))
                                                       {
                                                         ptr0[(size_t)(size25 - 2U)] = 42U;
                                                         ptr0[(size_t)(size25 - 1U)] = 23U;
-                                                        return ptr0;
                                                       }
+                                                      return ptr0;
                                                     }
                                                     else
                                                     {
@@ -2978,14 +2872,12 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                           * (size_t)27U
                                                           + (size_t)26U].lock);
                                                         uint8_t *ptr0 = ptr;
-                                                        if (ptr0 == NULL)
-                                                          return ptr0;
-                                                        else
+                                                        if (!(ptr0 == NULL))
                                                         {
                                                           ptr0[(size_t)(size26 - 2U)] = 42U;
                                                           ptr0[(size_t)(size26 - 1U)] = 23U;
-                                                          return ptr0;
                                                         }
+                                                        return ptr0;
                                                       }
                                                       else
                                                         return NULL;
@@ -3024,7 +2916,8 @@ static size_t slab_getsize(uint8_t *ptr)
   ptrdiff_t diff = pt0 - pt1;
   size_t diff_sz = (size_t)diff;
   size_t index = diff_sz / ((size_t)16777216U * (size_t)4096U);
-  uint32_t size = sizes[(uint32_t)index];
+  uint32_t index_ = (uint32_t)index;
+  uint32_t size = sizes[index_];
   size_t rem_slot = diff_sz % (size_t)4096U;
   if (rem_slot % (size_t)size == (size_t)0U)
     return (size_t)(size - 2U);
@@ -3039,12 +2932,11 @@ static bool slab_free(uint8_t *ptr)
   ptrdiff_t diff = pt0 - pt1;
   size_t diff_sz = (size_t)diff;
   size_t index = diff_sz / ((size_t)16777216U * (size_t)4096U);
-  uint32_t size = sizes[(uint32_t)index];
+  uint32_t index_ = (uint32_t)index;
+  uint32_t size = sizes[index_];
   size_t rem_slab = diff_sz % ((size_t)16777216U * (size_t)4096U);
   size_t rem_slot = diff_sz % (size_t)4096U;
-  if (rem_slot % (size_t)size != (size_t)0U)
-    return false;
-  else
+  if (rem_slot % (size_t)size == (size_t)0U)
   {
     uint8_t magic1 = ptr[(size_t)(size - 2U)];
     uint8_t magic2 = ptr[(size_t)(size - 1U)];
@@ -3062,6 +2954,8 @@ static bool slab_free(uint8_t *ptr)
     else
       return false;
   }
+  else
+    return false;
 }
 
 uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
