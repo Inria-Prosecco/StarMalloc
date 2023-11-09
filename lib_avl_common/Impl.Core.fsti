@@ -105,7 +105,7 @@ let v_linked_tree
 
 val intro_linked_tree_leaf (#opened:inames) (#a: Type0) (p: hpred a) (_: unit)
     : SteelGhost unit
-      opened emp (fun _ -> linked_tree p (null_t #a))
+      opened emp (fun _ -> emp `star` linked_tree p (null_t #a))
       (requires (fun _ -> True))
       (ensures (fun _ _ h1 -> v_linked_tree #a p null_t h1 == Spec.Leaf))
 
