@@ -611,6 +611,7 @@ let slab_getsize ptr =
 
 #restart-solver
 
+#push-options "--split_queries always --z3rlimit 200"
 let slab_free ptr =
   SAA.within_bounds_elim
     (A.split_l sc_all.slab_region 0sz)
@@ -654,3 +655,4 @@ let slab_free ptr =
       slab_free' index ptr rem_slab
     )
   )
+#pop-options
