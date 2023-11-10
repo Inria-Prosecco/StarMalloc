@@ -439,7 +439,7 @@ let calloc
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
   (requires fun _ ->
-    let size = US.v size1 * US.v size2 in
+    let size:nat = US.v size1 * US.v size2 in
     (enable_slab_canaries_malloc ==> US.fits (size + 2)))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
