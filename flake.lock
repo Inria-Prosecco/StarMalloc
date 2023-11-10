@@ -25,11 +25,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1699492431,
-        "narHash": "sha256-cvvHenyduboy7s+dO0h2WR2GwgEIMLtMXgrkYv/kY8o=",
+        "lastModified": 1699558636,
+        "narHash": "sha256-N4fyP0An2JBC3PRI0/zSeAapDG4gOYH2D40eHXCOemQ=",
         "owner": "FStarLang",
         "repo": "FStar",
-        "rev": "e27ee69276e9385eb9080ac4c8f5f6a7f37e72da",
+        "rev": "9b60a5b758581edb32488a13e11039db199f89e1",
         "type": "github"
       },
       "original": {
@@ -103,16 +103,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1699536828,
-        "narHash": "sha256-OdhqH4+oHFGsQA1+9G8RT+Mdk+VWRBK9605ZRkzYKrA=",
+        "lastModified": 1699631058,
+        "narHash": "sha256-bijQu3AapIhVKo5XgBWgjIxLDP5C0oO88vSmXyMsw48=",
         "owner": "FStarLang",
         "repo": "steel",
-        "rev": "288c2dc4405d198bd3f7a204fb5568892ca329ec",
+        "rev": "fe6c48f8ad6c42c4d0bbb6005cba95f1e801ff97",
         "type": "github"
       },
       "original": {
         "owner": "FStarLang",
-        "ref": "afromher_tlarray",
         "repo": "steel",
         "type": "github"
       }
