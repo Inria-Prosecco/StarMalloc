@@ -25,11 +25,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1696031229,
-        "narHash": "sha256-bKkLtptS6Pvuyz/b/0BFUnQsM3QT2nhy+Jl8oIlsDZI=",
+        "lastModified": 1699492431,
+        "narHash": "sha256-cvvHenyduboy7s+dO0h2WR2GwgEIMLtMXgrkYv/kY8o=",
         "owner": "FStarLang",
         "repo": "FStar",
-        "rev": "bc622701c668f6b4092760879372968265d4a4e1",
+        "rev": "e27ee69276e9385eb9080ac4c8f5f6a7f37e72da",
         "type": "github"
       },
       "original": {
@@ -52,11 +52,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1696963512,
-        "narHash": "sha256-Qx8gVWtX/C36Kg66UmVqT73Kmg4q0paYM8ihV8SF69g=",
+        "lastModified": 1698968585,
+        "narHash": "sha256-x3ZaGrmuKF5+7xaWHu0yDikl4mrawkY5tQnfovgyPh8=",
         "owner": "FStarLang",
         "repo": "karamel",
-        "rev": "da83fc312e2f3833f5746dfb702a456048a7a3da",
+        "rev": "a7be2a7c43eca637ceb57fe8f3ffd16fc6627ebd",
         "type": "github"
       },
       "original": {
@@ -67,11 +67,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1696879762,
-        "narHash": "sha256-Ud6bH4DMcYHUDKavNMxAhcIpDGgHMyL/yaDEAVSImQY=",
+        "lastModified": 1699099776,
+        "narHash": "sha256-X09iKJ27mGsGambGfkKzqvw5esP1L/Rf8H3u3fCqIiU=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "f99e5f03cc0aa231ab5950a15ed02afec45ed51a",
+        "rev": "85f1ba3e51676fa8cc604a3d863d729026a6b8eb",
         "type": "github"
       },
       "original": {
@@ -103,15 +103,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1696931297,
-        "narHash": "sha256-dushbtn65piqAQZqDmM4LdvsM7BHvg6NebFw9NAJrJs=",
+        "lastModified": 1699536828,
+        "narHash": "sha256-OdhqH4+oHFGsQA1+9G8RT+Mdk+VWRBK9605ZRkzYKrA=",
         "owner": "FStarLang",
         "repo": "steel",
-        "rev": "09ec2a7653abb528ae57ce66ab5ca293f0802d07",
+        "rev": "288c2dc4405d198bd3f7a204fb5568892ca329ec",
         "type": "github"
       },
       "original": {
         "owner": "FStarLang",
+        "ref": "afromher_tlarray",
         "repo": "steel",
         "type": "github"
       }

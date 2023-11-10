@@ -883,7 +883,7 @@ let elim_slab_vprop (#opened:_)
   md_as_seq2
 #pop-options
 
-#push-options "--z3rlimit 50 --fuel 0 --ifuel 0"
+#push-options "--z3rlimit 100 --fuel 0 --ifuel 0"
 let bound2_inv
   (size_class: sc)
   (md_as_seq: Seq.lseq U64.t 4)

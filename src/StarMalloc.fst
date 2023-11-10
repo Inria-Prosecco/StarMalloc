@@ -423,6 +423,7 @@ assume val builtin_mul_overflow(x y: US.t)
     US.fits (US.v x * US.v y) /\
     US.v r == US.v x * US.v y)
 
+#push-options "--z3rlimit 200"
 //TODO: there should be defensive checks and no precondition
 let calloc
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
@@ -438,7 +439,7 @@ let calloc
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
   (requires fun _ ->
-    let size = US.v size1 * US.v size2 in
+    let size:nat = US.v size1 * US.v size2 in
     (enable_slab_canaries_malloc ==> US.fits (size + 2)))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
@@ -466,3 +467,4 @@ let calloc
       return ptr
     )
   )
+#pop-options

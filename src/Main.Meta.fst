@@ -47,6 +47,8 @@ let total_nb_sc : n:nat{
   n == US.v nb_size_classes * nb_arenas_nat
 }
 =
+assert_norm ((US.v nb_size_classes * US.v nb_arenas) < pow2 32);
+US.fits_u32_implies_fits (US.v nb_size_classes * US.v nb_arenas);
 normalize_term (US.v nb_size_classes * US.v nb_arenas)
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
@@ -289,8 +291,7 @@ let rec slab_malloc_i
     | hd::tl ->
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      [@inline_let] let idx' = US.sizet_to_uint32 idx in
-      let size = TLA.get sizes idx' in
+      let size = TLA.get sizes idx in
       if bytes `U32.lte` size then
         slab_malloc_one idx bytes
       else
@@ -357,8 +358,7 @@ let rec slab_malloc_canary_i
     | hd::tl ->
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      [@inline_let] let idx' = US.sizet_to_uint32 idx in
-      let size = TLA.get sizes idx' in
+      let size = TLA.get sizes idx in
       if bytes `U32.lte` (size `U32.sub` 2ul) then
         let ptr = slab_malloc_one idx bytes in
         set_canary ptr size;
@@ -411,8 +411,7 @@ let rec slab_aligned_alloc_i
     | hd::tl ->
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      [@inline_let] let idx' = US.sizet_to_uint32 idx in
-      let size = TLA.get sizes idx' in
+      let size = TLA.get sizes idx in
       let b = U32.eq (U32.rem page_size size) 0ul in
       if b && bytes `U32.lte` size && alignment `U32.lte` size then (
         let r = slab_malloc_one idx bytes in
@@ -462,8 +461,7 @@ let rec slab_aligned_alloc_canary_i
     | hd::tl ->
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      [@inline_let] let idx' = US.sizet_to_uint32 idx in
-      let size = TLA.get sizes idx' in
+      let size = TLA.get sizes idx in
       let b = U32.eq (U32.rem page_size size) 0ul in
       if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then (
         let ptr = slab_malloc_one idx bytes in
@@ -602,12 +600,7 @@ let slab_getsize ptr =
   let index = US.div diff_sz slab_size in
   lemma_div_lt (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
   assert (US.v index < US.v nb_size_classes * US.v nb_arenas);
-  let index' = US.sizet_to_uint32 index in
-  assert (total_nb_sc < pow2 32);
-  Math.Lemmas.modulo_lemma (US.v index) (pow2 32);
-  assert (US.v index == U32.v index');
-  assert (US.v index < TLA.length sizes);
-  let size = TLA.get sizes index' in
+  let size = TLA.get sizes index in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
@@ -651,12 +644,7 @@ let slab_free ptr =
   let index = US.div diff_sz slab_size in
   lemma_div_lt (US.v slab_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
   assert (US.v index < US.v nb_size_classes * US.v nb_arenas);
-  let index' = US.sizet_to_uint32 index in
-  assert (total_nb_sc < pow2 32);
-  Math.Lemmas.modulo_lemma (US.v index) (pow2 32);
-  assert (US.v index == U32.v index');
-  assert (US.v index < TLA.length sizes);
-  let size = TLA.get sizes index' in
+  let size = TLA.get sizes index in
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
@@ -687,3 +675,4 @@ let slab_free ptr =
   ) else (
     return false
   )
+#pop-options

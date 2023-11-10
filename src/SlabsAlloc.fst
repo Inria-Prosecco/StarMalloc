@@ -161,7 +161,7 @@ open SteelVRefineDep
 
 #restart-solver
 
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
 // Slab moves from empty to partial
 inline_for_extraction noextract
 let allocate_slab_aux_1_partial
