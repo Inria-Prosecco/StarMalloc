@@ -8,6 +8,19 @@ open Steel.Effect
 module A = Steel.Array
 module R = Steel.Reference
 
+(*
+This module is a rough implementation of a queue as a ring buffer,
+which provides:
+- constant-time enqueuing;
+- constant-time dequeuing;
+- constant-time access to the size of the queue's content;
+- a maximum_size defined as below.
+TODO: k_in and k_out names are really bad,
+actually:
+- k_out is the index where data can be enqueued;
+- k_in is the index from which data can dequeued.
+*)
+
 let max_size = 32sz
 
 let threshold (b: bool) (v: nat) : nat
@@ -303,24 +316,29 @@ let select_dequeue_lemma
     k_out1 == k_out0 /\
     len k_in0 k_out0 > 0
   )
-  (ensures
-    select s1' k_in1 k_out1
+  (ensures (
+    let v = Seq.index s1' k_in0 in
+    Seq.append
+      (Seq.create 1 v)
+      (select s1' k_in1 k_out1)
     ==
-    Seq.slice
-      (select s0' k_in0 k_out0)
-      1
-      (len k_in0 k_out0)
-  )
+    select s0' k_in0 k_out0
+  ))
   =
   let s0 = select s0' k_in0 k_out0 in
   let s1 = select s1' k_in1 k_out1 in
+  let v = Seq.index s0' k_in0 in
   if k_out0 >= k_in0
   then (
     assert (s0 == Seq.slice s0' k_in0 k_out0);
     assert (s1 == Seq.slice s0' k_in1 k_out0);
     assert (len k_in0 k_out0 == k_out0 - k_in0);
-    Seq.slice_slice s0' k_in0 k_out0 1 (k_out0 - k_in0)
+    Seq.lemma_split s0 1;
+    Seq.lemma_eq_intro
+      (Seq.slice s0 0 1)
+      (Seq.create 1 v)
   ) else (
+    admit ();
     let s01 = Seq.slice s0' k_in0 (US.v max_size) in
     let s02 = Seq.slice s0' 0 k_out0 in
     assert (s0 == Seq.append s01 s02);
@@ -345,8 +363,7 @@ let select_dequeue_lemma
 let ring_bufferdequeue_aux
   (r: A.array US.t{A.length r == US.v max_size})
   (r_in r_out r_size: R.ref US.t)
-  (v: US.t)
-  : Steel unit
+  : Steel US.t
   (A.varray r `star`
     R.vptr r_in `star` R.vptr r_out `star` R.vptr r_size)
   (fun _ -> A.varray r `star`
@@ -358,7 +375,7 @@ let ring_bufferdequeue_aux
     US.v k_size > 0 /\
     ringbuffervprop_refine ((k_in, k_out), k_size)
   )
-  (ensures fun h0 _ h1 ->
+  (ensures fun h0 v h1 ->
     let k_in0 = R.sel r_in h0 in
     let k_out0 = R.sel r_out h0 in
     let k_size0 = R.sel r_size h0 in
@@ -376,8 +393,11 @@ let ring_bufferdequeue_aux
     // no need to overwrite value
     s1' == s0' /\
     // key part of the spec
-    select s1' (US.v k_in1) (US.v k_out1)
-    == Seq.slice (select s0' (US.v k_in0) (US.v k_out0)) 1 (len (US.v k_in0) (US.v k_out0))
+    Seq.append
+      (Seq.create 1 v)
+      (select s1' (US.v k_in1) (US.v k_out1))
+    ==
+    select s0' (US.v k_in0) (US.v k_out0)
   )
   =
   let k_in = R.read r_in in
@@ -386,6 +406,7 @@ let ring_bufferdequeue_aux
   let s0 = G.hide (A.asel r h0) in
   let k_in0 = G.hide (R.sel r_in h0) in
   let k_out0 = G.hide (R.sel r_out h0) in
+  let v = A.index r k_in in
   R.write r_in (US.rem (US.add k_in 1sz) max_size);
   R.write r_size (US.sub k_size 1sz);
   let h1 = get () in
@@ -396,7 +417,7 @@ let ring_bufferdequeue_aux
     s0 s1
     (US.v k_in0) (US.v k_out0)
     (US.v k_in1) (US.v k_out1);
-  return ()
+  return v
 #pop-options
 
 #push-options "--fuel 1 --ifuel 1"
@@ -404,7 +425,7 @@ let ring_bufferdequeue
   (r: A.array US.t{A.length r == US.v max_size})
   (r_in r_out r_size: R.ref US.t)
   (v: US.t)
-  : Steel unit
+  : Steel US.t
   (ringbuffervprop r r_in r_out r_size)
   (fun _ -> ringbuffervprop r r_in r_out r_size)
   (requires fun h0 ->
@@ -412,12 +433,12 @@ let ring_bufferdequeue
     let k_size = snd (snd r) in
     US.v k_size > 0
   )
-  (ensures fun h0 _ h1 ->
+  (ensures fun h0 v h1 ->
     let r0 : result = v_rb r r_in r_out r_size h0 in
-    let k_out0 = snd (fst (snd r0)) in
+    let k_in0 = fst (fst (snd r0)) in
     let k_size0 = snd (snd r0) in
     let r1 : result = v_rb r r_in r_out r_size h1 in
-    let k_out1 = snd (fst (snd r1)) in
+    let k_in1 = fst (fst (snd r1)) in
     let k_size1 = snd (snd r1) in
     let s0' = fst (fst r0) in
     let s1' = fst (fst r1) in
@@ -427,7 +448,7 @@ let ring_bufferdequeue
     US.v k_size1 >= 0 /\
     US.v k_size1 == US.v k_size0 - 1 /\
     s1' == s0' /\
-    s1 == Seq.slice s0 1 (Seq.length s0)
+    Seq.append (Seq.create 1 v) s1 == s0
   )
   =
   change_slprop_rel
@@ -442,7 +463,7 @@ let ring_bufferdequeue
   elim_vrefine
     (R.vptr r_in `star` R.vptr r_out `star` R.vptr r_size)
     ringbuffervprop_refine;
-  ring_bufferdequeue_aux r r_in r_out r_size v;
+  let v = ring_bufferdequeue_aux r r_in r_out r_size in
   intro_vrefine
     (R.vptr r_in `star` R.vptr r_out `star` R.vptr r_size)
     ringbuffervprop_refine;
@@ -455,5 +476,5 @@ let ring_bufferdequeue
     (ringbuffervprop r r_in r_out r_size)
     (fun x y -> x == y)
     (fun _ -> admit ());
-  return ()
+  return v
 #pop-options
