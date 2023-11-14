@@ -632,13 +632,15 @@ let pack_right_and_refactor_vrefine_dep
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   (r1 r2 r3 r4 r5: ref US.t)
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   : SteelGhost unit opened
   (
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
     `star`
     right_vprop slab_region md_bm_region md_region md_count_v
   )
@@ -646,14 +648,14 @@ let pack_right_and_refactor_vrefine_dep
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
   )
   (requires fun h0 ->
     let blob0
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
     ) in
     md_count_v == dfst blob0)
   (ensures fun h0 _ h1 ->
@@ -661,13 +663,13 @@ let pack_right_and_refactor_vrefine_dep
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
     ) in
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
     ) in
     dfst blob0 == dfst blob1
   )
@@ -675,7 +677,7 @@ let pack_right_and_refactor_vrefine_dep
   let md_count_v' = elim_vrefinedep
     (vptr md_count)
     vrefinedep_prop
-    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5) in
+    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size) in
   assert (G.reveal md_count_v' == md_count_v);
   change_equal_slprop
     (right_vprop slab_region md_bm_region md_region md_count_v)
@@ -684,7 +686,7 @@ let pack_right_and_refactor_vrefine_dep
   intro_vrefinedep
     (vptr md_count)
     vrefinedep_prop
-    (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
-    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 (G.reveal md_count_v') `star`
+    (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
+    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size (G.reveal md_count_v') `star`
     right_vprop slab_region md_bm_region md_region (G.reveal md_count_v'))
 #pop-options
