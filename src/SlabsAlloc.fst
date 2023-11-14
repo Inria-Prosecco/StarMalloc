@@ -904,6 +904,8 @@ let allocate_slab_aux_2
     r_ringbuffer r_in r_out r_size;
   return r
 
+#restart-solver
+
 let alloc_metadata_sl1
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
