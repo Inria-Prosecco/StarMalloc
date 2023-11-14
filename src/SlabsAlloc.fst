@@ -2705,10 +2705,13 @@ module P = Steel.FractionalPermission
 
 #restart-solver
 
-let bounded (md_count_v: US.t)
-  = v:US.t{US.v v < US.v md_count_v}
+let bounded_pair (md_count_v: US.t)
+  = v:(US.t & US.t){
+    US.v (fst v) < US.v md_count_v /\
+    US.v (snd v) < US.v md_count_v
+  }
 
-#push-options "--z3rlimit 100"
+#push-options "--z3rlimit 100 --query_stats"
 //inline_for_extraction noextract
 assume val allocate_slab_aux_4
   (size_class: sc)
@@ -2722,7 +2725,9 @@ assume val allocate_slab_aux_4
   (idx1 idx2 idx3 idx4 idx5: US.t)
   (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
   (r_in r_out r_size: ref US.t)
-  : Steel (bounded md_count_v & bounded md_count_v)
+  //: Steel (bounded md_count_v & bounded md_count_v)
+  //: Steel (US.t & US.t)
+  : Steel (bounded_pair md_count_v)
   (
     vptr md_count `star`
     vptr r1 `star`
@@ -2742,6 +2747,8 @@ assume val allocate_slab_aux_4
     RB.ringbuffervprop r_ringbuffer r_in r_out r_size
   )
   (fun idxs ->
+    assume (US.v (fst idxs) < US.v md_count_v);
+    assume (US.v (snd idxs) < US.v md_count_v);
     vptr md_count `star`
     vptr r1 `star`
     vptr r2 `star`
@@ -2806,6 +2813,31 @@ assume val allocate_slab_aux_4
     ALG.partition #AL.status gs1 (US.v (fst idxs)) (US.v idx2) (US.v idx3) (US.v idx4) (US.v (snd idxs))
   )
 
+//let allocate_slab_aux_4
+//  (size_class: sc)
+//  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+//  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+//  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+//  (md_count: ref US.t)
+//  (r1 r2 r3 r4 r5: ref US.t)
+//  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+//  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+//  (idx1 idx2 idx3 idx4 idx5: US.t)
+//  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+//  (r_in r_out r_size: ref US.t)
+//  =
+//  let h0 = get () in
+//  //assume (US.v (snd (snd (RB.v_rb r_ringbuffer r_in r_out r_size h0))) > 0);
+//  let gs0 = G.hide (AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+//      (A.split_l md_region md_count_v)
+//      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0) in
+//  let idx = RB.ring_bufferdequeue r_ringbuffer r_in r_out r_size 0sz in
+//  assume (FS.mem (US.v idx) (ALG.ptrs_in (US.v idx5) gs0));
+//  sladmit ();
+//  assume (US.v md_count_v > 0);
+//  assume (US.v idx < US.v md_count_v);
+//  let r : bounded_pair md_count_v = (idx, 0sz) in
+//  return r
 
 #restart-solver
 
