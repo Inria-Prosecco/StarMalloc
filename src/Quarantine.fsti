@@ -29,3 +29,9 @@ val mmap_trap_quarantine
   (arr: array U8.t{A.length arr = U32.v page_size})
   (len: US.t{US.v len = U32.v page_size})
   : SteelT unit (A.varray arr) (fun _ -> quarantine_slab arr)
+
+inline_for_extraction noextract
+val mmap_untrap_quarantine
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (len: US.t{US.v len = U32.v page_size})
+  : SteelT unit (quarantine_slab arr) (fun _ -> A.varray arr)

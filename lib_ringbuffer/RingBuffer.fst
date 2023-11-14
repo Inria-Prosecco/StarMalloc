@@ -428,7 +428,6 @@ let ring_bufferdequeue_aux
 let ring_bufferdequeue
   (r: A.array US.t{A.length r == US.v max_size})
   (r_in r_out r_size: R.ref US.t)
-  (v: US.t)
   : Steel US.t
   (ringbuffervprop r r_in r_out r_size)
   (fun _ -> ringbuffervprop r r_in r_out r_size)

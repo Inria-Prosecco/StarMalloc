@@ -223,6 +223,9 @@ let p_guard_pack (#opened:_) size_class b =
 
 let p_quarantine_pack (#opened:_) size_class b =
   intro_vrewrite (quarantine_slab (snd b) `star` A.varray (fst b)) (fun _ -> empty_t size_class)
+
+let p_quarantine_unpack (#opened:_) size_class b =
+  elim_vrewrite (quarantine_slab (snd b) `star` A.varray (fst b)) (fun _ -> empty_t size_class)
 #pop-options
 
 inline_for_extraction noextract

@@ -167,6 +167,38 @@ val remove3
   )
 
 inline_for_extraction noextract
+val remove5
+  (#pred1 #pred2 #pred3 #pred4 #pred5: status -> prop)
+  (r:A.array cell)
+  (hd1 hd2 hd3 hd4:Ghost.erased nat)
+  (hd5:US.t)
+  (idx:US.t{US.v idx < A.length r})
+  : Steel US.t
+  (varraylist pred1 pred2 pred3 pred4 pred5 r
+    hd1 hd2 hd3 hd4 (US.v hd5))
+  (fun hd' -> varraylist pred1 pred2 pred3 pred4 pred5 r
+    hd1 hd2 hd3 hd4 (US.v hd'))
+  (requires fun h ->
+    AL.mem (US.v idx) (US.v hd5)
+      (h (varraylist pred1 pred2 pred3 pred4 pred5 r
+        hd1 hd2 hd3 hd4 (US.v hd5)))
+  )
+  (ensures fun h0 hd' h1 ->
+    let gs0 = h0 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 (US.v hd5)) in
+    let gs1 = h1 (varraylist pred1 pred2 pred3 pred4 pred5 r
+      hd1 hd2 hd3 hd4 (US.v hd')) in
+    AL.ptrs_in (US.v hd') gs1 ==
+    FS.remove (US.v idx) (AL.ptrs_in (US.v hd5) gs0) /\
+    AL.ptrs_in hd1 gs1 == AL.ptrs_in hd1 gs0 /\
+    AL.ptrs_in hd2 gs1 == AL.ptrs_in hd2 gs0 /\
+    AL.ptrs_in hd3 gs1 == AL.ptrs_in hd3 gs0 /\
+    AL.ptrs_in hd4 gs1 == AL.ptrs_in hd4 gs0 /\
+    (~ (AL.mem_all (US.v idx) hd1 hd2 hd3 hd4 (US.v hd') gs1)) /\
+    AL.dataify gs1 == AL.dataify gs0
+  )
+
+inline_for_extraction noextract
 val insert1
   (#pred1 #pred2 #pred3 #pred4 #pred5: status -> prop)
   (r:A.array cell)

@@ -291,13 +291,22 @@ val p_guard_pack (#opened:_)
   (size_class:sc)
   (b: blob)
   : SteelGhostT unit opened
-  (guard_slab (snd b) `star` A.varray (fst b)) (fun _ -> p_guard size_class b)
+  (guard_slab (snd b) `star` A.varray (fst b))
+  (fun _ -> p_guard size_class b)
 
 val p_quarantine_pack (#opened:_)
   (size_class:sc)
   (b: blob)
   : SteelGhostT unit opened
-  (quarantine_slab (snd b) `star` A.varray (fst b)) (fun _ -> p_quarantine size_class b)
+  (quarantine_slab (snd b) `star` A.varray (fst b))
+  (fun _ -> p_quarantine size_class b)
+
+val p_quarantine_unpack (#opened:_)
+  (size_class:sc)
+  (b: blob)
+  : SteelGhostT unit opened
+  (p_quarantine size_class b)
+  (fun _ -> quarantine_slab (snd b) `star` A.varray (fst b))
 
 /// Retrieving the slab at index [md_count] in the [slab_region]
 inline_for_extraction noextract
