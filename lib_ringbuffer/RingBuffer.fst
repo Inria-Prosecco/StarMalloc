@@ -23,9 +23,11 @@ actually:
 
 let max_size = 32sz
 
+noextract
 let threshold (b: bool) (v: nat) : nat
   = if b then v else 0
 
+noextract
 let len
   (k_in k_out: (v:nat{v < US.v max_size}))
   : v:nat{v < US.v max_size}
