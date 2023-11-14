@@ -2710,7 +2710,8 @@ module P = Steel.FractionalPermission
 //type bounded_pair' = US.t & US.t
 //let bounded_pair (up: US.t) = s:bounded_pair'{US.v (fst s) < US.v up /\ US.v (snd s) < US.v up}
 
-type bounded_pair' = {x: US.t; y: US.t}
+type bounded_pair' : Type0
+  = {x: US.t; y: US.t}
 let bounded_pair (up: US.t) = s:bounded_pair'{US.v s.x < US.v up /\ US.v s.y < US.v up}
 
 #push-options "--z3rlimit 100 --query_stats"
@@ -2812,8 +2813,6 @@ val allocate_slab_aux_4
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
     ALG.partition #AL.status gs1 (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y)
   )
-
-let a = 42
 
 let allocate_slab_aux_4
   (size_class: sc)
@@ -3036,8 +3035,8 @@ let allocate_slab'
       let r = allocate_slab_aux_1 size_class
         slab_region md_bm_region md_region
         md_count r1 r2 r3 r4 r5
-        md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v (fst idxs)) 0ul))
-        (fst idxs) idx2 idx3 idx4 (snd idxs)
+        md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+        idxs.x idx2 idx3 idx4 idxs.y
         r_ringbuffer r_in r_out r_size in
       sladmit ();
       A.varrayp_not_null r P.full_perm;
