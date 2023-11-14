@@ -19,6 +19,8 @@ open Utils2
 
 include SlabsCommon
 
+module RB = RingBuffer
+
 val allocate_slab
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -26,19 +28,21 @@ val allocate_slab
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   (r1 r2 r3 r4 r5: ref US.t)
+  (r_ringbuffer: array US.t{A.length r_ringbuffer = US.v RB.max_size})
+  (r_in r_out r_size: ref US.t)
   : Steel (array U8.t)
   (
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
   )
   (fun r ->
     (if (A.is_null r) then emp else A.varray r) `star`
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
   )
   (requires fun _ -> True)
   (ensures fun _ r _ ->

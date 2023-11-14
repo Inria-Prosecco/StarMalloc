@@ -25,42 +25,39 @@ open SlabsAlloc
 #reset-options "--fuel 1 --ifuel 1"
 #push-options "--ide_id_info_off"
 
-//TODO: remove blob, use ptrdiff style
-//TODO: improve max_sc bound, use better spec'ed ffs64
-
-open FStar.Mul
 noeq
 type size_class_struct' = {
   size: sc;
-  // empty
   empty_slabs: ref US.t;
-  // partial
   partial_slabs: ref US.t;
-  // full
   full_slabs: ref US.t;
-  // guard
   guard_slabs: ref US.t;
-  // quarantine
   quarantine_slabs: ref US.t;
   md_count: ref US.t;
   slab_region: array U8.t;
-  //TODO: due to karamel extraction issue + sl proof workaround
   md_bm_region: array U64.t;
   md_region: array AL.cell;
-  //lock: ref bool;
+  quarantine_ringbuffer: array US.t;
+  quarantine_in: ref US.t;
+  quarantine_out: ref US.t;
+  quarantine_size: ref US.t;
 }
 
 open Prelude
+open FStar.Mul
 
 inline_for_extraction noextract
 let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size /\ US.v v > 0})
   = US.mul metadata_max (US.of_u32 page_size)
 
+module RB = RingBuffer
+
 type size_class_struct = s:size_class_struct'{
   A.length s.slab_region == US.v slab_size /\
   array_u8_alignment s.slab_region page_size /\
   A.length s.md_bm_region == US.v metadata_max * 4 /\
-  A.length s.md_region == US.v metadata_max
+  A.length s.md_region == US.v metadata_max /\
+  A.length s.quarantine_ringbuffer == US.v RB.max_size
 }
 
 open SteelVRefineDep
@@ -74,7 +71,8 @@ let size_class_vprop
     vrefinedep_prop
     (size_class_vprop_aux scs.size
       scs.slab_region scs.md_bm_region scs.md_region
-      scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
+      scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+      scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size)
 
 let allocate_size_class_sl_lemma1
   (scs: size_class_struct)
@@ -90,7 +88,8 @@ let allocate_size_class_sl_lemma1
         vrefinedep_prop
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region
-          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
+          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+          scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size)
     )) m /\
     sel_of (size_class_vprop scs) m
     ==
@@ -100,7 +99,8 @@ let allocate_size_class_sl_lemma1
         vrefinedep_prop
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region
-          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
+          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+          scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size)
     ) m
   )
   = ()
@@ -116,7 +116,8 @@ let allocate_size_class_sl_lemma2
         vrefinedep_prop
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region
-          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
+          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+          scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size)
     )) m
   )
   (ensures
@@ -129,7 +130,8 @@ let allocate_size_class_sl_lemma2
         vrefinedep_prop
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region
-          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs)
+          scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+          scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size)
     ) m
   )
   = ()
@@ -236,21 +238,24 @@ let allocate_size_class
       vrefinedep_prop
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region
-        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs))
+        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+        scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   let result = allocate_slab
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region
     scs.md_count
-    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs in
+    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+    scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size in
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
       vrefinedep_prop
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region
-        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs))
+        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+        scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size))
     (size_class_vprop scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);
@@ -289,21 +294,24 @@ let deallocate_size_class
       vrefinedep_prop
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region
-        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs))
+        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+        scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   let b = deallocate_slab ptr
     scs.size
     scs.slab_region scs.md_bm_region scs.md_region
     scs.md_count
-    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs diff in
+    scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+    scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size diff in
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
       vrefinedep_prop
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region
-        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs))
+        scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
+        scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size))
     (size_class_vprop scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);

@@ -355,7 +355,7 @@ let f_lemma
 #restart-solver
 
 #push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
-let pack_3
+let pack_3_small
   (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -388,7 +388,7 @@ let pack_3
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
@@ -409,7 +409,7 @@ let pack_3
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
     ) in
     md_count_v == dfst blob1)
   =
@@ -435,19 +435,21 @@ let pack_3
       (f size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
       (f_lemma size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
       (SeqUtils.init_us_refined (US.v md_count_v)))
-    (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv));
+    (left_vprop2_aux size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv));
 
   intro_vdep
     (left_vprop1 md_region r1 r2 r3 r4 r5 md_count_v)
-    (left_vprop2 size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
-    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v);
+    (left_vprop2_aux size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
+    (left_vprop2 size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v);
 
   intro_vrefinedep
     (vptr md_count)
     vrefinedep_prop
-    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
-    (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v)
+    (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+    (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v)
 #pop-options
+
+#restart-solver
 
 let lemma_slab_aux_starseq
   (size_class: sc)

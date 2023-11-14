@@ -48,6 +48,8 @@ let ringbuffervprop_refine
   )
   == true
 
+// seq_nonrepeating
+// nat instead of US.t
 let ringbuffervprop
   (r: A.array US.t{A.length r == US.v max_size})
   (r_in r_out r_size: R.ref US.t)
@@ -478,3 +480,46 @@ let ring_bufferdequeue
     (fun _ -> admit ());
   return v
 #pop-options
+
+let ring_getsize
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: R.ref US.t)
+  : Steel US.t
+  (ringbuffervprop r_ringbuffer r_in r_out r_size)
+  (fun _ -> ringbuffervprop r_ringbuffer r_in r_out r_size)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    let s : result = v_rb r_ringbuffer r_in r_out r_size h0 in
+    h1 (ringbuffervprop r_ringbuffer r_in r_out r_size)
+    ==
+    h0 (ringbuffervprop r_ringbuffer r_in r_out r_size)
+    /\
+    r == snd (snd s)
+  )
+  =
+  change_slprop_rel
+    (ringbuffervprop r_ringbuffer r_in r_out r_size)
+    (A.varray r_ringbuffer `star` (
+      (R.vptr r_in `star` R.vptr r_out `star` R.vptr r_size)
+      `vrefine`
+      ringbuffervprop_refine
+    ))
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  elim_vrefine
+    (R.vptr r_in `star` R.vptr r_out `star` R.vptr r_size)
+    ringbuffervprop_refine;
+  let r = R.read r_size in
+  intro_vrefine
+    (R.vptr r_in `star` R.vptr r_out `star` R.vptr r_size)
+    ringbuffervprop_refine;
+  change_slprop_rel
+    (A.varray r_ringbuffer `star` (
+      (R.vptr r_in `star` R.vptr r_out `star` R.vptr r_size)
+      `vrefine`
+      ringbuffervprop_refine
+    ))
+    (ringbuffervprop r_ringbuffer r_in r_out r_size)
+    (fun x y -> x == y)
+    (fun _ -> admit ());
+  return r

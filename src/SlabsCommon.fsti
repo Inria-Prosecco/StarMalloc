@@ -422,10 +422,10 @@ val f_lemma
   == t size_class)
 
 let ind_varraylist_aux2
-  (r: A.array AL.cell)
+  (r_varraylist: A.array AL.cell)
   (idxs: (((US.t & US.t) & US.t) & US.t) & US.t)
   =
-  AL.varraylist pred1 pred2 pred3 pred4 pred5 r
+  AL.varraylist pred1 pred2 pred3 pred4 pred5 r_varraylist
     (US.v (fst (fst (fst (fst idxs)))))
     (US.v (snd (fst (fst (fst idxs)))))
     (US.v (snd (fst (fst idxs))))
@@ -465,6 +465,50 @@ let ind_varraylist
     vptr r5
   ) `vdep` ind_varraylist_aux r
 
+module FS = FStar.FiniteSet.Base
+
+#push-options "--query_stats --z3rlimit 30 --fuel 5 --ifuel 0"
+let ind_varraylist_extract_quarantine
+  (r: A.array AL.cell)
+  (r1 r2 r3 r4 r5: ref US.t)
+  (x: t_of (ind_varraylist r r1 r2 r3 r4 r5)) //quarantine_set))
+  : G.erased (FS.set nat)
+  =
+  let y = dfst x in
+  let z : t_of (ind_varraylist_aux r y) = dsnd x in
+  let z : Seq.lseq AL.cell (A.length r) = z in
+  let idxs5 = snd y in
+  ALG.ptrs_in #AL.status (US.v idxs5) z
+#pop-options
+
+let max_size = RingBuffer.max_size
+module RB = RingBuffer
+
+let ringbuffer_refinement
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
+  (quarantine_set: G.erased (FS.set nat))
+  (x: t_of (RB.ringbuffervprop r_ringbuffer r_in r_out r_size))
+  : prop
+  =
+  let s : Seq.lseq US.t (US.v max_size) = fst x in
+  let idxs : (US.t & US.t) & US.t = snd x in
+  let k_in = fst (fst idxs) in
+  let k_out = snd (fst idxs) in
+  let qs = RB.select s (US.v k_in) (US.v k_out) in
+  let qs = Seq.map_seq (fun e -> US.v e) qs in
+  assume (SetUtils.seq_nonrepeating qs);
+  (SetUtils.seq_to_set qs) == G.reveal quarantine_set
+
+let ringbuffer_refined
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
+  (quarantine_set: G.erased (FS.set nat))
+  =
+  RB.ringbuffervprop r_ringbuffer r_in r_out r_size
+  `vrefine`
+  ringbuffer_refinement r_ringbuffer r_in r_out r_size quarantine_set
+
 let left_vprop1
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (r1 r2 r3 r4 r5: ref US.t)
@@ -474,7 +518,7 @@ let left_vprop1
     (A.split_l md_region md_count_v)
     r1 r2 r3 r4 r5
 
-let left_vprop2
+let left_vprop2_aux
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -488,7 +532,7 @@ let left_vprop2
     (f_lemma size_class slab_region md_bm_region md_count_v x)
     (SeqUtils.init_us_refined (US.v md_count_v))
 
-let left_vprop_aux
+let left_vprop2
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -503,7 +547,47 @@ let left_vprop_aux
       (f_lemma size_class slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)))
       (SeqUtils.init_us_refined (US.v md_count_v))
 
-let left_vprop
+#push-options "--query_stats --z3rlimit 30 --fuel 5 --ifuel 0"
+let ind_varraylist_extract_quarantine2
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (r1 r2 r3 r4 r5: ref US.t)
+  (x: t_of (ind_varraylist (A.split_l md_region md_count_v) r1 r2 r3 r4 r5)) //quarantine_set))
+  : G.erased (FS.set nat)
+  =
+  let y = dfst x in
+  //let z : t_of (ind_varraylist_aux r y) = dsnd x in
+  let z : Seq.lseq AL.cell (US.v md_count_v) = dsnd x in
+  let idxs5 = snd y in
+  ALG.ptrs_in #AL.status (US.v idxs5) z
+#pop-options
+
+let left_vprop3
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (r1 r2 r3 r4 r5: ref US.t)
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
+  (x: t_of (ind_varraylist (A.split_l md_region md_count_v) r1 r2 r3 r4 r5)) //quarantine_set))
+  =
+  ringbuffer_refined r_ringbuffer r_in r_out r_size
+    (ind_varraylist_extract_quarantine (A.split_l md_region md_count_v) r1 r2 r3 r4 r5 x)
+
+let left_vprop23
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (r1 r2 r3 r4 r5: ref US.t)
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
+  (x: t_of (ind_varraylist (A.split_l md_region md_count_v) r1 r2 r3 r4 r5))
+  =
+  left_vprop2 size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v x `star`
+  left_vprop3 md_region md_count_v r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size x
+
+let left_vprop_small
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -513,7 +597,21 @@ let left_vprop
   =
   left_vprop1 md_region r1 r2 r3 r4 r5 md_count_v
   `vdep`
-  left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v
+  left_vprop2 size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v
+
+let left_vprop
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (r1 r2 r3 r4 r5: ref US.t)
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  =
+  left_vprop1 md_region r1 r2 r3 r4 r5 md_count_v
+  `vdep`
+  left_vprop23 size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v r_ringbuffer r_in r_out r_size
 
 unfold
 let vrefinedep_prop (x:US.t) : prop =
@@ -533,7 +631,7 @@ let right_vprop
     `vrefine` zf_u64) `star`
   A.varray (A.split_r md_region v)
 
-let size_class_vprop_aux
+let size_class_vprop_aux_small
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -542,15 +640,33 @@ let size_class_vprop_aux
   (v: US.t{US.v v <= US.v metadata_max == true})
   : vprop
   =
-  left_vprop size_class
+  left_vprop_small size_class
     slab_region md_bm_region md_region
     empty_slabs partial_slabs full_slabs guard_slabs quarantine_slabs v `star`
   right_vprop
     slab_region md_bm_region md_region v
 
+let size_class_vprop_aux
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  empty_slabs partial_slabs full_slabs guard_slabs quarantine_slabs
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
+  (v: US.t{US.v v <= US.v metadata_max == true})
+  : vprop
+  =
+  left_vprop size_class
+    slab_region md_bm_region md_region
+    empty_slabs partial_slabs full_slabs guard_slabs quarantine_slabs
+    r_ringbuffer r_in r_out r_size v `star`
+  right_vprop
+    slab_region md_bm_region md_region v
+
 open SteelVRefineDep
 
-val pack_3
+val pack_3_small
   (#opened:_)
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -583,7 +699,7 @@ val pack_3
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
@@ -605,9 +721,142 @@ val pack_3
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
     ) in
     md_count_v == dfst blob1)
+
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects --query_stats --fuel 2 --ifuel 1 --split_queries no"
+let pack_3_small_refactor
+  (#opened:_)
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
+  (r1 r2 r3 r4 r5: ref US.t)
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  //(idx1 idx2 idx3 idx4 idx5: US.t)
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
+  //(x: G.erased (t_of (ind_varraylist (A.split_l md_region md_count_v) r1 r2 r3 r4 r5)))
+  : SteelGhost unit opened
+  (
+    vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5) `star`
+    RB.ringbuffervprop r_ringbuffer r_in r_out r_size
+  )
+  (fun _ ->
+    vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
+  )
+  (requires fun h0 ->
+    let step1 = h0 (vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)) in
+    let md_count_v2 : US.t = dfst step1 in
+    md_count_v == md_count_v2 /\
+    (let step2
+      : t_of (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v)
+      = dsnd step1 in
+    let step3
+      : t_of (left_vprop1 md_region r1 r2 r3 r4 r5 md_count_v)
+      = dfst step2 in
+    let y
+      : t_of (ind_varraylist (A.split_l md_region md_count_v) r1 r2 r3 r4 r5)
+      = step3 in
+    let quarantine_set = ind_varraylist_extract_quarantine (A.split_l md_region md_count_v) r1 r2 r3 r4 r5 y in
+
+    //let idxs
+    //  : t_of (vptr r1 `star` vptr r2 `star` vptr r3 `star` vptr r4 `star` vptr r5) = dfst step4 in
+    //let step5
+    //  : t_of (ind_varraylist_aux (A.split_l md_region md_count_v) idxs)
+    //  = dsnd step4 in
+    //assert (t_of (ind_varraylist_aux (A.split_l md_region md_count_v) idxs) ==
+    //  (s:Seq.lseq AL.cell (US.v md_count_v){
+    //    ALG.partition #AL.status s
+    //      (US.v (fst (fst (fst (fst idxs)))))
+    //      (US.v (snd (fst (fst (fst idxs)))))
+    //      (US.v (snd (fst (fst idxs))))
+    //      (US.v (snd (fst idxs)))
+    //      (US.v (snd idxs))
+    //  })
+    //);
+    //:let y
+    //:  : Seq.lseq AL.cell (US.v md_count_v)
+    //:  = dsnd step4 in
+    //:let quarantine_set = ALG.ptrs_in #AL.status (US.v (snd idxs)) y in
+    //let quarantine_set =
+    //let quarantine_set = ind_varraylist_extract_quarantine
+    //  (A.split_l md_region md_count_v)
+    //  r1 r2 r3 r4 r5
+    //  y in
+    //let rb0 = RB.v_rb r_ringbuffer r_in r_out r_size h0 in
+    //let qs = snd (fst rb0) in
+    //assume (SetUtils.seq_nonrepeating (Seq.map_seq (fun e -> US.v e) qs));
+
+    let rb_blob
+      : t_of (RB.ringbuffervprop r_ringbuffer r_in r_out r_size)
+      = h0 (RB.ringbuffervprop r_ringbuffer r_in r_out r_size) in
+    dfst step1 == md_count_v /\
+    //G.reveal x == y /\
+    ringbuffer_refinement r_ringbuffer r_in r_out r_size quarantine_set rb_blob
+    //SetUtils.seq_to_set #nat (Seq.map_seq (fun e -> US.v e) qs)
+    //==
+    //G.reveal quarantine_set
+    //ALG.ptrs_in #AL.status (US.v idx5) (dsnd y)
+  ))
+  (ensures fun _ _ h1 ->
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
+    ) in
+    md_count_v == dfst blob1)
+  =
+  let md_count_v2 = elim_vrefinedep
+    (vptr md_count)
+    vrefinedep_prop
+    (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5) in
+  assert (G.reveal md_count_v == md_count_v);
+  change_equal_slprop
+    (left_vprop_small size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v2)
+    (left_vprop1 md_region r1 r2 r3 r4 r5 md_count_v
+    `vdep`
+    left_vprop2 size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v);
+  let y = elim_vdep
+    (left_vprop1 md_region r1 r2 r3 r4 r5 md_count_v)
+    (left_vprop2 size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v) in
+  //assert (x == y);
+  let quarantine_set = ind_varraylist_extract_quarantine
+    (A.split_l md_region md_count_v)
+    r1 r2 r3 r4 r5
+    y in
+  intro_vrefine
+    (RB.ringbuffervprop r_ringbuffer r_in r_out r_size)
+    (ringbuffer_refinement r_ringbuffer r_in r_out r_size quarantine_set);
+  change_equal_slprop
+    (ringbuffer_refined r_ringbuffer r_in r_out r_size quarantine_set)
+    (left_vprop3 md_region md_count_v r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size y);
+  change_equal_slprop
+    (left_vprop2 size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v y `star`
+    left_vprop3 md_region md_count_v r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size y)
+    (left_vprop23 size_class slab_region md_bm_region md_region r1  r2 r3 r4 r5 md_count_v r_ringbuffer r_in r_out r_size y);
+  intro_vdep
+    (left_vprop1 md_region r1 r2 r3 r4 r5 md_count_v)
+    (left_vprop23 size_class slab_region md_bm_region md_region r1  r2 r3 r4 r5 md_count_v r_ringbuffer r_in r_out r_size y)
+    (left_vprop23 size_class slab_region md_bm_region md_region r1  r2 r3 r4 r5 md_count_v r_ringbuffer r_in r_out r_size);
+  intro_vrefinedep
+    (vptr md_count)
+    vrefinedep_prop
+    (left_vprop size_class slab_region md_bm_region md_region r1  r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
+    (left_vprop size_class slab_region md_bm_region md_region r1  r2 r3 r4 r5 r_ringbuffer r_in r_out r_size md_count_v)
+#pop-options
 
 val pack_slab_starseq
   (#opened:_)
@@ -722,13 +971,15 @@ val pack_right_and_refactor_vrefine_dep
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   (r1 r2 r3 r4 r5: ref US.t)
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   : SteelGhost unit opened
   (
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
     `star`
     right_vprop slab_region md_bm_region md_region md_count_v
   )
@@ -736,14 +987,14 @@ val pack_right_and_refactor_vrefine_dep
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
   )
   (requires fun h0 ->
     let blob0
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
     ) in
     md_count_v == dfst blob0
   )
@@ -752,13 +1003,13 @@ val pack_right_and_refactor_vrefine_dep
       = h0 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
     ) in
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size)
     ) in
     dfst blob0 == dfst blob1
   )
