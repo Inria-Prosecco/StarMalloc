@@ -2917,8 +2917,6 @@ let allocate_slab_aux_4
 
 #restart-solver
 
-(*)
-
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
 let allocate_slab'
