@@ -2705,15 +2705,17 @@ module P = Steel.FractionalPermission
 
 #restart-solver
 
-let bounded_pair (md_count_v: US.t)
-  = v:(US.t & US.t){
-    US.v (fst v) < US.v md_count_v /\
-    US.v (snd v) < US.v md_count_v
-  }
+inline_for_extraction noextract
+let bounded_us (up:US.t) = v:US.t{US.v v < US.v up}
+
+type bounded_pair' = {x: US.t; y: US.t}
+let bounded_pair (up: US.t) = s:bounded_pair'{US.v s.x < US.v up /\ US.v s.y < US.v up}
+
+//  { x: bounded_us md_count_v; y: bounded_us md_count_v}
 
 #push-options "--z3rlimit 100 --query_stats"
 //inline_for_extraction noextract
-assume val allocate_slab_aux_4
+val allocate_slab_aux_4
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -2747,8 +2749,8 @@ assume val allocate_slab_aux_4
     RB.ringbuffervprop r_ringbuffer r_in r_out r_size
   )
   (fun idxs ->
-    assume (US.v (fst idxs) < US.v md_count_v);
-    assume (US.v (snd idxs) < US.v md_count_v);
+  // ret size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5 md_count_v md_region_lv
+  //     idx1 idx2 idx3 idx4 idx5 r_ringbuffer r_in r_out r_size idxs)
     vptr md_count `star`
     vptr r1 `star`
     vptr r2 `star`
@@ -2757,14 +2759,14 @@ assume val allocate_slab_aux_4
     vptr r5 `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v (fst idxs))
+      (US.v idxs.x)
       (US.v idx2) (US.v idx3) (US.v idx4)
-      (US.v (snd idxs))) `star`
+      (US.v idxs.y)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v (fst idxs)) 0ul))
-      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v (fst idxs)) 0ul))
+      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
       (SeqUtils.init_us_refined (US.v md_count_v)) `star`
     RB.ringbuffervprop r_ringbuffer r_in r_out r_size
   )
@@ -2790,58 +2792,63 @@ assume val allocate_slab_aux_4
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
     let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v (fst idxs))
+      (US.v idxs.x)
       (US.v idx2) (US.v idx3) (US.v idx4)
-      (US.v (snd idxs)) h1 in
+      (US.v idxs.y) h1 in
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
     sel md_count h1 == md_count_v /\
-    fst (idxs) <> AL.null_ptr /\
+    idxs.x <> AL.null_ptr /\
     sel r1 h0 == idx1 /\
     sel r2 h0 == idx2 /\
     sel r3 h0 == idx3 /\
     sel r4 h0 == idx4 /\
     sel r5 h0 == idx5 /\
-    sel r1 h1 == fst (idxs) /\
+    sel r1 h1 == idxs.x /\
     sel r2 h1 == idx2 /\
     sel r3 h1 == idx3 /\
     sel r4 h1 == idx4 /\
-    sel r5 h1 == snd (idxs) /\
+    sel r5 h1 == idxs.y /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
-    ALG.dataify gs1 `Seq.equal` (Seq.upd (G.reveal md_region_lv) (US.v (fst idxs)) 0ul) /\
+    ALG.dataify gs1 `Seq.equal` (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul) /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
-    ALG.partition #AL.status gs1 (US.v (fst idxs)) (US.v idx2) (US.v idx3) (US.v idx4) (US.v (snd idxs))
+    ALG.partition #AL.status gs1 (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y)
   )
 
-//let allocate_slab_aux_4
-//  (size_class: sc)
-//  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
-//  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
-//  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-//  (md_count: ref US.t)
-//  (r1 r2 r3 r4 r5: ref US.t)
-//  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
-//  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-//  (idx1 idx2 idx3 idx4 idx5: US.t)
-//  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
-//  (r_in r_out r_size: ref US.t)
-//  =
-//  let h0 = get () in
-//  //assume (US.v (snd (snd (RB.v_rb r_ringbuffer r_in r_out r_size h0))) > 0);
-//  let gs0 = G.hide (AL.v_arraylist pred1 pred2 pred3 pred4 pred5
-//      (A.split_l md_region md_count_v)
-//      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0) in
-//  let idx = RB.ring_bufferdequeue r_ringbuffer r_in r_out r_size 0sz in
-//  assume (FS.mem (US.v idx) (ALG.ptrs_in (US.v idx5) gs0));
-//  sladmit ();
-//  assume (US.v md_count_v > 0);
-//  assume (US.v idx < US.v md_count_v);
-//  let r : bounded_pair md_count_v = (idx, 0sz) in
-//  return r
 
-#restart-solver
+let allocate_slab_aux_4
+ (size_class: sc)
+ (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+ (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+ (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+ (md_count: ref US.t)
+ (r1 r2 r3 r4 r5: ref US.t)
+ (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+ (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+ (idx1 idx2 idx3 idx4 idx5: US.t)
+ (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+ (r_in r_out r_size: ref US.t)
+ =
+ let h0 = get() in
+ assume (US.v (snd (snd (RB.v_rb r_ringbuffer r_in r_out r_size h0))) > 0);
+ let gs0 = G.hide (AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+     (A.split_l md_region md_count_v)
+     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0) in
+ let idx = RB.ring_bufferdequeue r_ringbuffer r_in r_out r_size 0sz in
 
-#restart-solver
+ // change_equal_slprop (starseq _ _ _) (starseq _ _ _);
+ // change_equal_slprop (AL.varraylist _ _ _ _ _ _ _ _ _ _ _) (AL.varraylist _ _ _ _ _ _ _ _ _ _ _);
+ assume (FS.mem (US.v idx) (ALG.ptrs_in (US.v idx5) gs0));
+// // sladmit ();
+ assume (US.v md_count_v > 0);
+ assume (US.v idx < US.v md_count_v);
+ let r : bounded_pair md_count_v = {x = idx; y = 0sz} in
+ sladmit ();
+ return r
+ // // return (idx, 0sz)
+ // let r : bounded_pair md_count_v = {x = 0sz; y = 0sz} in
+ // return r
+
 
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
