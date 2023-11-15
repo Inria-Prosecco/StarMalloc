@@ -88,6 +88,11 @@ size_t *mmap_ptr_us_init() {
 }
 
 // slabs allocator init
+size_t *mmap_array_us_init(size_t len) {
+  return (size_t*) mmap_init(len * sizeof(size_t));
+}
+
+// slabs allocator init
 size_class* mmap_sc_init(size_t len) {
   return (size_class*) mmap_init(len * sizeof(size_class));
 }
