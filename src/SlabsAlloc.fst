@@ -2909,6 +2909,8 @@ let allocate_slab_aux_4
   //assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FS.equal`
   //        ALG.ptrs_all #AL.status (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y) gs1);
   //sladmit ();
+  R.write r1 idxs.x;
+  R.write r5 idxs.y;
   admit ();
   return idxs
 
