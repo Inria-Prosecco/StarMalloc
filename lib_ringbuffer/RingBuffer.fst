@@ -62,6 +62,7 @@ let ringbuffervprop
     ringbuffervprop_refine
   )
 
+noextract
 let select
   (s: Seq.lseq US.t (US.v max_size))
   (k_in k_out: (v:nat{v < US.v max_size}))
