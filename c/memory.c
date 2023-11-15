@@ -52,6 +52,15 @@ void mmap_strict_trap (uint8_t* ptr, size_t len) {
 }
 
 // syscall wrapper
+void mmap_untrap (uint8_t* ptr, size_t len) {
+  void* p = mmap((void*) ptr, len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
+  if (p == MAP_FAILED && errno != ENOMEM) {
+    fatal_error("non-ENOMEM mmap failure");
+  }
+  return;
+}
+
+// syscall wrapper
 void mmap_trap (uint8_t* ptr, size_t len) {
   int r = madvise((void*) ptr, len, MADV_DONTNEED);
   if (r && errno != ENOMEM) {

@@ -30,16 +30,12 @@ SlabsFree_deallocate_slab(
   size_t diff_
 )
 {
+  KRML_MAYBE_UNUSED_VAR(r1);
   KRML_MAYBE_UNUSED_VAR(r4);
-  KRML_MAYBE_UNUSED_VAR(r5);
-  KRML_MAYBE_UNUSED_VAR(r_ringbuffer);
-  KRML_MAYBE_UNUSED_VAR(r_in);
-  KRML_MAYBE_UNUSED_VAR(r_out);
-  KRML_MAYBE_UNUSED_VAR(r_size);
   size_t md_count_v_ = *md_count;
-  size_t idx1_ = *r1;
   size_t idx2_ = *r2;
   size_t idx3_ = *r3;
+  size_t idx5_ = *r5;
   size_t pos = diff_ / (size_t)4096U;
   size_t pos2 = diff_ % (size_t)4096U;
   if (pos < md_count_v_)
@@ -50,8 +46,8 @@ SlabsFree_deallocate_slab(
       uint64_t *ptr10 = md_bm_region;
       size_t shift_size_t0 = pos * (size_t)4U;
       uint8_t *ptr11 = slab_region;
-      size_t page_size_t = (size_t)4096U;
-      size_t shift_size_t1 = pos * page_size_t;
+      size_t page_size_t0 = (size_t)4096U;
+      size_t shift_size_t1 = pos * page_size_t0;
       bool
       b =
         SlotsFree_deallocate_slot(size_class,
@@ -67,11 +63,16 @@ SlabsFree_deallocate_slab(
         bool cond = r6;
         if (cond)
         {
+          uint8_t *ptr1 = slab_region;
+          size_t page_size_t = (size_t)4096U;
+          size_t shift_size_t = pos * page_size_t;
+          mmap_strict_trap(ptr1 + shift_size_t, (size_t)4096U);
+          RingBuffer_ring_bufferenqueue(r_ringbuffer, r_in, r_out, r_size, pos);
           size_t v = ArrayList_remove(md_region, idx3_, pos);
           size_t idx3_ = v;
-          ArrayList_insert(md_region, idx1_, pos, 0U);
+          ArrayList_insert(md_region, idx5_, pos, 4U);
           *r3 = idx3_;
-          *r1 = pos;
+          *r5 = pos;
           return b;
         }
         else
@@ -92,8 +93,8 @@ SlabsFree_deallocate_slab(
       uint64_t *ptr10 = md_bm_region;
       size_t shift_size_t0 = pos * (size_t)4U;
       uint8_t *ptr11 = slab_region;
-      size_t page_size_t = (size_t)4096U;
-      size_t shift_size_t1 = pos * page_size_t;
+      size_t page_size_t0 = (size_t)4096U;
+      size_t shift_size_t1 = pos * page_size_t0;
       bool
       b =
         SlotsFree_deallocate_slot(size_class,
@@ -109,11 +110,16 @@ SlabsFree_deallocate_slab(
         bool cond = r6;
         if (cond)
         {
+          uint8_t *ptr1 = slab_region;
+          size_t page_size_t = (size_t)4096U;
+          size_t shift_size_t = pos * page_size_t;
+          mmap_strict_trap(ptr1 + shift_size_t, (size_t)4096U);
+          RingBuffer_ring_bufferenqueue(r_ringbuffer, r_in, r_out, r_size, pos);
           size_t v = ArrayList_remove(md_region, idx2_, pos);
           size_t idx2_ = v;
-          ArrayList_insert(md_region, idx1_, pos, 0U);
+          ArrayList_insert(md_region, idx5_, pos, 4U);
           *r2 = idx2_;
-          *r1 = pos;
+          *r5 = pos;
           return b;
         }
         else
@@ -145,6 +151,41 @@ static void allocate_slab_aux_3_3_2(uint8_t *slab_region, size_t md_count_v)
 static void allocate_slab_aux_3_3(uint8_t *slab_region, size_t md_count_v)
 {
   allocate_slab_aux_3_3_2(slab_region, md_count_v);
+}
+
+typedef struct bounded_pair__s
+{
+  size_t x;
+  size_t y;
+}
+bounded_pair_;
+
+static bounded_pair_
+allocate_slab_aux_4(
+  uint8_t *slab_region,
+  ArrayList_cell *md_region,
+  size_t *r1,
+  size_t *r5,
+  size_t idx1,
+  size_t idx5,
+  size_t *r_ringbuffer,
+  size_t *r_in,
+  size_t *r_out,
+  size_t *r_size
+)
+{
+  size_t idx = RingBuffer_ring_bufferdequeue(r_ringbuffer, r_in, r_out, r_size);
+  uint8_t *ptr = slab_region;
+  size_t page_size_t = (size_t)4096U;
+  size_t shift_size_t = idx * page_size_t;
+  mmap_untrap(ptr + shift_size_t, (size_t)4096U);
+  size_t v = ArrayList_remove(md_region, idx5, idx);
+  size_t idx5_ = v;
+  ArrayList_insert(md_region, idx1, idx, 0U);
+  bounded_pair_ idxs = { .x = idx, .y = idx5_ };
+  *r1 = idxs.x;
+  *r5 = idxs.y;
+  return idxs;
 }
 
 uint8_t
@@ -232,68 +273,117 @@ uint8_t
   }
   else
   {
-    RingBuffer_ring_getsize(r_ringbuffer, r_in, r_out, r_size);
-    size_t md_count_v_0 = *md_count;
-    bool b1 = md_count_v_0 + (size_t)2U <= (size_t)16777216U;
-    if (b1)
+    size_t size = RingBuffer_ring_getsize(r_ringbuffer, r_in, r_out, r_size);
+    bool b = size > (size_t)0U;
+    if (b)
     {
-      ArrayList_insert(md_region, idx1_, md_count_v_, 0U);
-      ArrayList_extend_insert((size_t)2U,
-        (size_t)0U,
-        md_region,
-        idx2_,
-        idx3_,
-        idx4_,
-        idx5_,
-        md_count_v_,
-        0U);
-      ArrayList_insert(md_region, idx4_, md_count_v_ + (size_t)2U - (size_t)1U, 3U);
-      allocate_slab_aux_3_3(slab_region, md_count_v_);
-      size_t v = *md_count;
-      *md_count = v + (size_t)2U;
-      *r1 = v + (size_t)2U - (size_t)2U;
-      *r4 = v + (size_t)2U - (size_t)1U;
+      bounded_pair_
+      idxs =
+        allocate_slab_aux_4(slab_region,
+          md_region,
+          r1,
+          r5,
+          idx1_,
+          idx5_,
+          r_ringbuffer,
+          r_in,
+          r_out,
+          r_size);
       uint64_t *ptr0 = md_bm_region;
-      size_t shift_size_t0 = (md_count_v_ + (size_t)2U - (size_t)2U) * (size_t)4U;
+      size_t shift_size_t0 = idxs.x * (size_t)4U;
       uint8_t *ptr1 = slab_region;
       size_t page_size_t = (size_t)4096U;
-      size_t shift_size_t1 = (md_count_v_ + (size_t)2U - (size_t)2U) * page_size_t;
+      size_t shift_size_t1 = idxs.x * page_size_t;
       uint8_t
       *r0 = SlotsAlloc_allocate_slot(size_class, ptr0 + shift_size_t0, ptr1 + shift_size_t1);
       uint64_t *ptr = md_bm_region;
-      size_t shift_size_t = (md_count_v_ + (size_t)2U - (size_t)2U) * (size_t)4U;
+      size_t shift_size_t = idxs.x * (size_t)4U;
       bool r6 = Utils2_is_full_s(size_class, ptr + shift_size_t);
       bool cond = r6;
       uint8_t *r;
       if (cond)
       {
-        size_t
-        idx1_ =
-          ArrayList_remove(md_region,
-            md_count_v_ + (size_t)2U - (size_t)2U,
-            md_count_v_ + (size_t)2U - (size_t)2U);
-        ArrayList_insert(md_region, idx3_, md_count_v_ + (size_t)2U - (size_t)2U, 2U);
+        size_t idx1_ = ArrayList_remove(md_region, idxs.x, idxs.x);
+        ArrayList_insert(md_region, idx3_, idxs.x, 2U);
         *r1 = idx1_;
-        *r3 = md_count_v_ + (size_t)2U - (size_t)2U;
+        *r3 = idxs.x;
         r = r0;
       }
       else
       {
-        size_t
-        idx1_ =
-          ArrayList_remove(md_region,
-            md_count_v_ + (size_t)2U - (size_t)2U,
-            md_count_v_ + (size_t)2U - (size_t)2U);
-        ArrayList_insert(md_region, idx2_, md_count_v_ + (size_t)2U - (size_t)2U, 1U);
+        size_t idx1_ = ArrayList_remove(md_region, idxs.x, idxs.x);
+        ArrayList_insert(md_region, idx2_, idxs.x, 1U);
         *r1 = idx1_;
-        *r2 = md_count_v_ + (size_t)2U - (size_t)2U;
+        *r2 = idxs.x;
         r = r0;
       }
       uint8_t *r1 = r;
       return r1;
     }
     else
-      return NULL;
+    {
+      size_t md_count_v_0 = *md_count;
+      bool b1 = md_count_v_0 + (size_t)2U <= (size_t)16777216U;
+      if (b1)
+      {
+        ArrayList_insert(md_region, idx1_, md_count_v_, 0U);
+        ArrayList_extend_insert((size_t)2U,
+          (size_t)0U,
+          md_region,
+          idx2_,
+          idx3_,
+          idx4_,
+          idx5_,
+          md_count_v_,
+          0U);
+        ArrayList_insert(md_region, idx4_, md_count_v_ + (size_t)2U - (size_t)1U, 3U);
+        allocate_slab_aux_3_3(slab_region, md_count_v_);
+        size_t v = *md_count;
+        *md_count = v + (size_t)2U;
+        *r1 = v + (size_t)2U - (size_t)2U;
+        *r4 = v + (size_t)2U - (size_t)1U;
+        uint64_t *ptr0 = md_bm_region;
+        size_t shift_size_t0 = (md_count_v_ + (size_t)2U - (size_t)2U) * (size_t)4U;
+        uint8_t *ptr1 = slab_region;
+        size_t page_size_t = (size_t)4096U;
+        size_t shift_size_t1 = (md_count_v_ + (size_t)2U - (size_t)2U) * page_size_t;
+        uint8_t
+        *r0 = SlotsAlloc_allocate_slot(size_class, ptr0 + shift_size_t0, ptr1 + shift_size_t1);
+        uint64_t *ptr = md_bm_region;
+        size_t shift_size_t = (md_count_v_ + (size_t)2U - (size_t)2U) * (size_t)4U;
+        bool r6 = Utils2_is_full_s(size_class, ptr + shift_size_t);
+        bool cond = r6;
+        uint8_t *r;
+        if (cond)
+        {
+          size_t
+          idx1_ =
+            ArrayList_remove(md_region,
+              md_count_v_ + (size_t)2U - (size_t)2U,
+              md_count_v_ + (size_t)2U - (size_t)2U);
+          ArrayList_insert(md_region, idx3_, md_count_v_ + (size_t)2U - (size_t)2U, 2U);
+          *r1 = idx1_;
+          *r3 = md_count_v_ + (size_t)2U - (size_t)2U;
+          r = r0;
+        }
+        else
+        {
+          size_t
+          idx1_ =
+            ArrayList_remove(md_region,
+              md_count_v_ + (size_t)2U - (size_t)2U,
+              md_count_v_ + (size_t)2U - (size_t)2U);
+          ArrayList_insert(md_region, idx2_, md_count_v_ + (size_t)2U - (size_t)2U, 1U);
+          *r1 = idx1_;
+          *r2 = md_count_v_ + (size_t)2U - (size_t)2U;
+          r = r0;
+        }
+        uint8_t *r1 = r;
+        return r1;
+      }
+      else
+        return NULL;
+    }
   }
 }
 
