@@ -1191,7 +1191,7 @@ let deallocate_slab_aux_2_quarantine
 
 #restart-solver
 
-#push-options "--z3rlimit 150 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects --query_stats"
 // Slab initially partial
 inline_for_extraction noextract
 let deallocate_slab_aux_2
@@ -1421,7 +1421,7 @@ let deallocate_slab_fail
     (if b then emp else A.varray ptr);
   return b
 
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 100"
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 150"
 inline_for_extraction noextract
 let deallocate_slab'
   (ptr: array U8.t)
