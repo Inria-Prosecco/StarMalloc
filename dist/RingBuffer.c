@@ -5,38 +5,57 @@
   KaRaMeL version: a7be2a7c
  */
 
-#include "MiscArith.h"
+#include "RingBuffer.h"
 
-#include "internal/Prims.h"
+size_t RingBuffer_max_size = (size_t)32U;
 
-K___krml_checked_int_t_krml_checked_int_t MiscArith_decompose(krml_checked_int_t n)
+void
+RingBuffer_ring_bufferenqueue_aux(
+  size_t *r,
+  size_t *r_in,
+  size_t *r_out,
+  size_t *r_size,
+  size_t v
+)
 {
-  switch (Prims_op_Modulus(n, (krml_checked_int_t)2))
-  {
-    case 0:
-      {
-        K___krml_checked_int_t_krml_checked_int_t
-        scrut = MiscArith_decompose(Prims_op_Division(n, (krml_checked_int_t)2));
-        krml_checked_int_t k1 = scrut.fst;
-        krml_checked_int_t k2 = scrut.snd;
-        return
-          (
-            (K___krml_checked_int_t_krml_checked_int_t){
-              .fst = Prims_op_Addition(k1, (krml_checked_int_t)1),
-              .snd = k2
-            }
-          );
-      }
-    case 1:
-      {
-        return
-          ((K___krml_checked_int_t_krml_checked_int_t){ .fst = (krml_checked_int_t)0, .snd = n });
-      }
-    default:
-      {
-        KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
-        KRML_HOST_EXIT(253U);
-      }
-  }
+  KRML_MAYBE_UNUSED_VAR(r_in);
+  size_t k_out = *r_out;
+  size_t k_size = *r_size;
+  r[k_out] = v;
+  *r_out = (k_out + (size_t)1U) % RingBuffer_max_size;
+  *r_size = k_size + (size_t)1U;
+}
+
+void
+RingBuffer_ring_bufferenqueue(size_t *r, size_t *r_in, size_t *r_out, size_t *r_size, size_t v)
+{
+  RingBuffer_ring_bufferenqueue_aux(r, r_in, r_out, r_size, v);
+}
+
+size_t
+RingBuffer_ring_bufferdequeue_aux(size_t *r, size_t *r_in, size_t *r_out, size_t *r_size)
+{
+  KRML_MAYBE_UNUSED_VAR(r_out);
+  size_t k_in = *r_in;
+  size_t k_size = *r_size;
+  size_t v = r[k_in];
+  *r_in = (k_in + (size_t)1U) % RingBuffer_max_size;
+  *r_size = k_size - (size_t)1U;
+  return v;
+}
+
+size_t RingBuffer_ring_bufferdequeue(size_t *r, size_t *r_in, size_t *r_out, size_t *r_size)
+{
+  size_t v = RingBuffer_ring_bufferdequeue_aux(r, r_in, r_out, r_size);
+  return v;
+}
+
+size_t
+RingBuffer_ring_getsize(size_t *r_ringbuffer, size_t *r_in, size_t *r_out, size_t *r_size)
+{
+  KRML_MAYBE_UNUSED_VAR(r_ringbuffer);
+  KRML_MAYBE_UNUSED_VAR(r_in);
+  KRML_MAYBE_UNUSED_VAR(r_out);
+  return *r_size;
 }
 

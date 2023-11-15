@@ -5,38 +5,80 @@
   KaRaMeL version: a7be2a7c
  */
 
-#include "MiscArith.h"
+#ifndef __RingBuffer_H
+#define __RingBuffer_H
 
-#include "internal/Prims.h"
+#include "krmllib.h"
 
-K___krml_checked_int_t_krml_checked_int_t MiscArith_decompose(krml_checked_int_t n)
+extern size_t RingBuffer_max_size;
+
+typedef void *RingBuffer_ringbuffervprop_refine;
+
+typedef struct Prims_list__size_t_s Prims_list__size_t;
+
+#define Prims_Nil 0
+#define Prims_Cons 1
+
+typedef uint8_t Prims_list__size_t_tags;
+
+typedef struct Prims_list__size_t_s
 {
-  switch (Prims_op_Modulus(n, (krml_checked_int_t)2))
-  {
-    case 0:
-      {
-        K___krml_checked_int_t_krml_checked_int_t
-        scrut = MiscArith_decompose(Prims_op_Division(n, (krml_checked_int_t)2));
-        krml_checked_int_t k1 = scrut.fst;
-        krml_checked_int_t k2 = scrut.snd;
-        return
-          (
-            (K___krml_checked_int_t_krml_checked_int_t){
-              .fst = Prims_op_Addition(k1, (krml_checked_int_t)1),
-              .snd = k2
-            }
-          );
-      }
-    case 1:
-      {
-        return
-          ((K___krml_checked_int_t_krml_checked_int_t){ .fst = (krml_checked_int_t)0, .snd = n });
-      }
-    default:
-      {
-        KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
-        KRML_HOST_EXIT(253U);
-      }
-  }
+  Prims_list__size_t_tags tag;
+  size_t hd;
+  Prims_list__size_t *tl;
 }
+Prims_list__size_t;
 
+typedef struct K___FStar_Seq_Base_seq_size_t_FStar_Seq_Base_seq_size_t_s
+{
+  Prims_list__size_t *fst;
+  Prims_list__size_t *snd;
+}
+K___FStar_Seq_Base_seq_size_t_FStar_Seq_Base_seq_size_t;
+
+typedef struct K___size_t_size_t_s
+{
+  size_t fst;
+  size_t snd;
+}
+K___size_t_size_t;
+
+typedef struct K___size_t___size_t_size_t_s
+{
+  K___size_t_size_t fst;
+  size_t snd;
+}
+K___size_t___size_t_size_t;
+
+typedef struct RingBuffer_result__s
+{
+  K___FStar_Seq_Base_seq_size_t_FStar_Seq_Base_seq_size_t fst;
+  K___size_t___size_t_size_t snd;
+}
+RingBuffer_result_;
+
+typedef RingBuffer_result_ RingBuffer_result;
+
+void
+RingBuffer_ring_bufferenqueue_aux(
+  size_t *r,
+  size_t *r_in,
+  size_t *r_out,
+  size_t *r_size,
+  size_t v
+);
+
+void
+RingBuffer_ring_bufferenqueue(size_t *r, size_t *r_in, size_t *r_out, size_t *r_size, size_t v);
+
+size_t
+RingBuffer_ring_bufferdequeue_aux(size_t *r, size_t *r_in, size_t *r_out, size_t *r_size);
+
+size_t RingBuffer_ring_bufferdequeue(size_t *r, size_t *r_in, size_t *r_out, size_t *r_size);
+
+size_t
+RingBuffer_ring_getsize(size_t *r_ringbuffer, size_t *r_in, size_t *r_out, size_t *r_size);
+
+
+#define __RingBuffer_H_DEFINED
+#endif
