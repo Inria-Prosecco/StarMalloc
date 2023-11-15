@@ -1189,6 +1189,8 @@ let deallocate_slab_aux_2_quarantine
 
 #restart-solver
 
+#restart-solver
+
 #push-options "--z3rlimit 150 --compat_pre_typed_indexed_effects"
 // Slab initially partial
 inline_for_extraction noextract
@@ -1683,11 +1685,6 @@ let deallocate_slab
     (RB.ringbuffervprop r_ringbuffer r_in r_out r_size)
     (ringbuffer_refinement r_ringbuffer r_in r_out r_size
       (ind_varraylist_extract_quarantine (A.split_l md_region md_count_v_) r1 r2 r3 r4 r5 x));
-  let r = allocate_slab' size_class
-    slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-    md_count_v_ x' idx1_ idx2_ idx3_ idx4_ idx5_
-    r_ringbuffer r_in r_out r_size
-  in
 
   let b : bool = deallocate_slab' ptr size_class
     slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
