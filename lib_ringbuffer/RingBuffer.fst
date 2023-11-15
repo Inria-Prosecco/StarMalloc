@@ -21,7 +21,7 @@ actually:
 - k_in is the index from which data can dequeued.
 *)
 
-let max_size = 32sz
+let max_size = Config.quarantine_queue_length
 
 noextract
 let threshold (b: bool) (v: nat) : nat

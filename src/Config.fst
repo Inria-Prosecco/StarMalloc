@@ -89,6 +89,8 @@ let guard_pages_interval = 2sz
 let enable_quarantine = true
 let enable_quarantine_trap = true
 let enable_quarantine_strict_trap = true
+let quarantine_queue_length = 128sz
+let quarantine_queue_threshold = 127sz
 
 // zeroing
 let enable_zeroing_malloc = true

@@ -3026,7 +3026,7 @@ let allocate_slab'
     return r
   ) else (
     let size = RB.ring_getsize r_ringbuffer r_in r_out r_size in
-    let b = US.gt size 0sz in
+    let b = US.gte size quarantine_queue_threshold in
     if enable_quarantine && b then (
       let idxs = allocate_slab_aux_4 size_class
         slab_region md_bm_region md_region
