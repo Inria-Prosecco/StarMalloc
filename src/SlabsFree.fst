@@ -1408,6 +1408,10 @@ let deallocate_slab_fail
     md_count r1 r2 r3 r4 r5
     md_count_v md_region_lv
     idx1 idx2 idx3 idx4 idx5;
+  admit ();
+  (**) pack_3_small_refactor size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
+    md_count_v
+    r_ringbuffer r_in r_out r_size;
   pack_right_and_refactor_vrefine_dep
     size_class slab_region md_bm_region md_region md_count
     r1 r2 r3 r4 r5
@@ -1530,14 +1534,14 @@ let deallocate_slab'
         slab_region md_bm_region md_region
         md_count r1 r2 r3 r4 r5
         md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5
-        r_ringbuffer r_in r_out r_size md_count_v
+        r_ringbuffer r_in r_out r_size
     )
   ) else (
     deallocate_slab_fail ptr size_class
       slab_region md_bm_region md_region
       md_count r1 r2 r3 r4 r5
       md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5
-      r_ringbuffer r_in r_out r_size md_count_v
+      r_ringbuffer r_in r_out r_size
   )
 
 #restart-solver
