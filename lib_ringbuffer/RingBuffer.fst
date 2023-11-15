@@ -496,7 +496,8 @@ let ring_getsize
     ==
     h0 (ringbuffervprop r_ringbuffer r_in r_out r_size)
     /\
-    r == snd (snd s)
+    r == snd (snd s) /\
+    US.v r <= US.v max_size - 1
   )
   =
   change_slprop_rel

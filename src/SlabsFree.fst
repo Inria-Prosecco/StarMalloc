@@ -38,7 +38,7 @@ let bounded_pair (up: US.t) = s:bounded_pair'{US.v s.x < US.v up /\ US.v s.y < U
 
 #push-options "--z3rlimit 100 --query_stats"
 //inline_for_extraction noextract
-assume val ringbufferprepare
+val ringbufferprepare
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
@@ -136,105 +136,115 @@ assume val ringbufferprepare
     ALG.partition #AL.status gs1 (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y)
   )
 
-//let allocate_slab_aux_4
-//  (size_class: sc)
-//  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
-//  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
-//  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-//  (md_count: ref US.t)
-//  (r1 r2 r3 r4 r5: ref US.t)
-//  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
-//  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-//  (idx1 idx2 idx3 idx4 idx5: US.t)
-//  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
-//  (r_in r_out r_size: ref US.t)
-//  =
-//  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
-//    (A.split_l md_region md_count_v)
-//    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
-//  let idx = RB.ring_bufferdequeue r_ringbuffer r_in r_out r_size in
-//  assume (ALG.mem #AL.status (US.v idx) (US.v idx5) gs0);
-//  assume (US.v idx < US.v md_count_v);
-//  (**) starseq_unpack_s
-//    #_
-//    #(pos:US.t{US.v pos < US.v md_count_v})
-//    #(t size_class)
-//    (f size_class slab_region md_bm_region md_count_v md_region_lv)
-//    (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-//    (SeqUtils.init_us_refined (US.v md_count_v))
-//    (US.v idx);
-//  //(**) ALG.lemma_dataify_index #AL.status gs0 (US.v idx);
-//  //assume (Seq.index (ALG.dataify #AL.status gs0) (US.v idx) == 4ul);
-//  assume (Seq.index md_region_lv (US.v idx) == 4ul);
-//  (**) SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx);
-//  (**) change_equal_slprop
-//  (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx)))
-//  (p_quarantine size_class (md_bm_array md_bm_region idx, slab_array slab_region idx));
-//  p_quarantine_unpack size_class (md_bm_array md_bm_region idx, slab_array slab_region idx);
-//  Quarantine.mmap_untrap_quarantine (slab_array slab_region idx) (u32_to_sz page_size);
-//  rewrite_slprop
-//     (A.varray (md_bm_array md_bm_region idx) `star`
-//     A.varray (slab_array slab_region idx))
-//     (slab_vprop size_class
-//       (slab_array slab_region idx)
-//       (md_bm_array md_bm_region idx))
-//      (fun _ -> admit ());
-//  let md_blob
-//    : G.erased (t_of (slab_vprop size_class
-//       (slab_array slab_region idx)
-//       (md_bm_array md_bm_region idx)))
-//    = gget (slab_vprop size_class
-//       (slab_array slab_region idx)
-//       (md_bm_array md_bm_region idx)) in
-//  //let md : G.erased (Seq.lseq U64.t 4)
-//  //  = G.hide (dfst (fst))
-//  assume (is_empty size_class (dfst (fst md_blob)));
-//  pack_slab_starseq size_class
-//    slab_region md_bm_region md_region md_count
-//    md_count_v md_region_lv idx 0ul;
-//  let idx5' = AL.remove5 #pred1 #pred2 #pred3 #pred4 #pred5
-//    (A.split_l md_region md_count_v)
-//    (G.hide (US.v idx1)) (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) idx5 idx in
-//  AL.insert1 #pred1 #pred2 #pred3 #pred4 #pred5
-//    (A.split_l md_region md_count_v)
-//    idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5')) idx 0ul;
-//  assume (US.v idx5' < US.v md_count_v);
-//  let idxs : bounded_pair md_count_v = {x = idx; y = idx5'} in
-//  change_slprop_rel
-//    ((AL.varraylist pred1 pred2 pred3 pred4 pred5
-//      (A.split_l md_region md_count_v)
-//      (US.v idx)
-//      (US.v idx2) (US.v idx3) (US.v idx4)
-//      (US.v idx5')) `star`
-//    starseq
-//      #(pos:US.t{US.v pos < US.v md_count_v})
-//      #(t size_class)
-//      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul))
-//      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul))
-//      (SeqUtils.init_us_refined (US.v md_count_v)))
-//    (((AL.varraylist pred1 pred2 pred3 pred4 pred5
-//      (A.split_l md_region md_count_v)
-//      (US.v idxs.x)
-//      (US.v idx2) (US.v idx3) (US.v idx4)
-//      (US.v idxs.y))) `star`
-//    starseq
-//      #(pos:US.t{US.v pos < US.v md_count_v})
-//      #(t size_class)
-//      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
-//      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
-//      (SeqUtils.init_us_refined (US.v md_count_v)))
-//    (fun x y -> x == y)
-//    (fun _ -> admit ());
-//  //(**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
-//  //  (A.split_l md_region md_count_v)
-//  //  (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y)) in
-//  //assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FS.equal`
-//  //        ALG.ptrs_all #AL.status (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y) gs1);
-//  //sladmit ();
-//  admit ();
-//  return idxs
-
-
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 200 --compat_pre_typed_indexed_effects"
+let ringbufferprepare
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
+  (r1 r2 r3 r4 r5: ref US.t)
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  (idx1 idx2 idx3 idx4 idx5: US.t)
+  (r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  (r_in r_out r_size: ref US.t)
+  =
+  let size = RB.ring_getsize r_ringbuffer r_in r_out r_size in
+  assume (US.v idx1 < US.v md_count_v);
+  assume (US.v idx5 < US.v md_count_v);
+  if (US.lt size (US.sub max_size 1sz)) then (
+    let r = {x = idx1; y = idx5} in
+    sladmit ();
+    return r
+  ) else (
+    (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    let idx = RB.ring_bufferdequeue r_ringbuffer r_in r_out r_size in
+    assume (ALG.mem #AL.status (US.v idx) (US.v idx5) gs0);
+    assume (US.v idx < US.v md_count_v);
+    (**) starseq_unpack_s
+      #_
+      #(pos:US.t{US.v pos < US.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_us_refined (US.v md_count_v))
+      (US.v idx);
+    //(**) ALG.lemma_dataify_index #AL.status gs0 (US.v idx);
+    //assume (Seq.index (ALG.dataify #AL.status gs0) (US.v idx) == 4ul);
+    assume (Seq.index md_region_lv (US.v idx) == 4ul);
+    (**) SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx);
+    (**) change_equal_slprop
+    (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx)))
+    (p_quarantine size_class (md_bm_array md_bm_region idx, slab_array slab_region idx));
+    p_quarantine_unpack size_class (md_bm_array md_bm_region idx, slab_array slab_region idx);
+    Quarantine.mmap_untrap_quarantine (slab_array slab_region idx) (u32_to_sz page_size);
+    rewrite_slprop
+       (A.varray (md_bm_array md_bm_region idx) `star`
+       A.varray (slab_array slab_region idx))
+       (slab_vprop size_class
+         (slab_array slab_region idx)
+         (md_bm_array md_bm_region idx))
+        (fun _ -> admit ());
+    let md_blob
+      : G.erased (t_of (slab_vprop size_class
+         (slab_array slab_region idx)
+         (md_bm_array md_bm_region idx)))
+      = gget (slab_vprop size_class
+         (slab_array slab_region idx)
+         (md_bm_array md_bm_region idx)) in
+    //let md : G.erased (Seq.lseq U64.t 4)
+    //  = G.hide (dfst (fst))
+    assume (is_empty size_class (dfst (fst md_blob)));
+    pack_slab_starseq size_class
+      slab_region md_bm_region md_region md_count
+      md_count_v md_region_lv idx 0ul;
+    let idx5' = AL.remove5 #pred1 #pred2 #pred3 #pred4 #pred5
+      (A.split_l md_region md_count_v)
+      (G.hide (US.v idx1)) (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) idx5 idx in
+    AL.insert1 #pred1 #pred2 #pred3 #pred4 #pred5
+      (A.split_l md_region md_count_v)
+      idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5')) idx 0ul;
+    assume (US.v idx5' < US.v md_count_v);
+    let idxs : bounded_pair md_count_v = {x = idx; y = idx5'} in
+    change_slprop_rel
+      ((AL.varraylist pred1 pred2 pred3 pred4 pred5
+        (A.split_l md_region md_count_v)
+        (US.v idx)
+        (US.v idx2) (US.v idx3) (US.v idx4)
+        (US.v idx5')) `star`
+      starseq
+        #(pos:US.t{US.v pos < US.v md_count_v})
+        #(t size_class)
+        (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul))
+        (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul))
+        (SeqUtils.init_us_refined (US.v md_count_v)))
+      (((AL.varraylist pred1 pred2 pred3 pred4 pred5
+        (A.split_l md_region md_count_v)
+        (US.v idxs.x)
+        (US.v idx2) (US.v idx3) (US.v idx4)
+        (US.v idxs.y))) `star`
+      starseq
+        #(pos:US.t{US.v pos < US.v md_count_v})
+        #(t size_class)
+        (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+        (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+        (SeqUtils.init_us_refined (US.v md_count_v)))
+      (fun x y -> x == y)
+      (fun _ -> admit ());
+    //(**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
+    //  (A.split_l md_region md_count_v)
+    //  (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y)) in
+    //assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FS.equal`
+    //        ALG.ptrs_all #AL.status (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y) gs1);
+    //sladmit ();
+    write r1 idxs.x;
+    write r5 idxs.y;
+    admit ();
+    return idxs
+  )
 
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
 inline_for_extraction noextract
@@ -630,7 +640,7 @@ let deallocate_slab_aux_1_quarantine
     ) in
     md_count_v == dfst blob1)
   =
-  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
+ (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
   //assert (ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3));
@@ -638,21 +648,12 @@ let deallocate_slab_aux_1_quarantine
   (**) lemma_partition_and_pred_implies_mem3 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 (US.v pos);
   assert (ALG.mem #AL.status (US.v pos) (US.v idx3) gs0);
 
-  let h0 = get () in
-  let rbv : G.erased RB.result = G.hide (RB.v_rb r_ringbuffer r_in r_out r_size h0) in
-  assume (US.v (snd (snd rbv)) < US.v RB.max_size - 1);
-  RB.ring_bufferenqueue r_ringbuffer r_in r_out r_size pos;
-
   let idx3' = AL.remove3 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
     (G.hide (US.v idx1)) (G.hide (US.v idx2)) idx3 (G.hide (US.v idx4)) (G.hide (US.v idx5)) pos in
-
   AL.insert5 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
     idx5 (G.hide (US.v idx1)) (G.hide (US.v idx2)) (G.hide (US.v idx3')) (G.hide (US.v idx4)) pos 4ul;
-  write r3 idx3';
-  write r5 pos;
-
 
   (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
@@ -660,10 +661,21 @@ let deallocate_slab_aux_1_quarantine
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3') (US.v idx4) (US.v pos) gs1);
 
-  (**) pack_3_small size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-    md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v pos) 4ul))
-    idx1 idx2 idx3' idx4 pos;
+  write r3 idx3';
+  write r5 pos;
+  let idxs = ringbufferprepare size_class
+    slab_region md_bm_region md_region md_count
+    r1 r2 r3 r4 r5
+    md_count_v (Seq.upd md_region_lv (US.v pos) 4ul)
+    idx1 idx2 idx3' idx4 pos
+    r_ringbuffer r_in r_out r_size in
+  RB.ring_bufferenqueue r_ringbuffer r_in r_out r_size pos;
+
+
   sladmit ()
+  //(**) pack_3_small size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
+  //  md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v pos) 4ul))
+  //  idxs.x idx2 idx3' idx4 pos;
 
 #restart-solver
 
@@ -1159,19 +1171,12 @@ let deallocate_slab_aux_2_quarantine
   (**) lemma_partition_and_pred_implies_mem2 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 (US.v pos);
   assert (ALG.mem #AL.status (US.v pos) (US.v idx2) gs0);
 
-  let h0 = get () in
-  let rbv : G.erased RB.result = G.hide (RB.v_rb r_ringbuffer r_in r_out r_size h0) in
-  assume (US.v (snd (snd rbv)) < US.v RB.max_size - 1);
-  RB.ring_bufferenqueue r_ringbuffer r_in r_out r_size pos;
-
   let idx2' = AL.remove2 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
     (G.hide (US.v idx1)) idx2 (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) pos in
   AL.insert5 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
     idx5 (G.hide (US.v idx1)) (G.hide (US.v idx2')) (G.hide (US.v idx3)) (G.hide (US.v idx4)) pos 4ul;
-  write r2 idx2';
-  write r5 pos;
 
   (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
@@ -1179,13 +1184,25 @@ let deallocate_slab_aux_2_quarantine
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2') (US.v idx3) (US.v idx4) (US.v pos) gs1);
 
-  (**) pack_3_small size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-    md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v pos) 4ul))
-    idx1 idx2' idx3 idx4 pos;
-  admit ();
-  (**) pack_3_small_refactor size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-    md_count_v
-    r_ringbuffer r_in r_out r_size
+  write r2 idx2';
+  write r5 pos;
+  let idxs = ringbufferprepare size_class
+    slab_region md_bm_region md_region md_count
+    r1 r2 r3 r4 r5
+    md_count_v (Seq.upd md_region_lv (US.v pos) 4ul)
+    idx1 idx2' idx3 idx4 pos
+    r_ringbuffer r_in r_out r_size in
+  RB.ring_bufferenqueue r_ringbuffer r_in r_out r_size pos;
+
+  sladmit ()
+
+  //(**) pack_3_small size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
+  //  md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v pos) 4ul))
+  //  idx1 idx2' idx3 idx4 pos;
+  //admit ();
+  //(**) pack_3_small_refactor size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
+  //  md_count_v
+  //  r_ringbuffer r_in r_out r_size
 
 #restart-solver
 
