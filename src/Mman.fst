@@ -59,6 +59,16 @@ assume val mmap_ptr_us_init (_:unit)
     emp
     (fun r -> R.vptr r)
 
+assume val mmap_array_us_init (len: US.t)
+  : Steel (A.array US.t)
+    emp
+    (fun r -> A.varray r)
+    (fun _ -> US.v len > 0)
+    (ensures fun _ r _ ->
+      A.length r == US.v len /\
+      A.is_full_array r
+    )
+
 module L = Steel.SpinLock
 
 open SizeClass
