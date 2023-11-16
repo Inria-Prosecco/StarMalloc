@@ -70,7 +70,7 @@ void mmap_trap (uint8_t* ptr, size_t len) {
 }
 
 // wrapper
-inline void mmap_untrap (uint8_t* ptr, size_t len) {
+void mmap_untrap (uint8_t* ptr, size_t len) {
   return;
 }
 
