@@ -48,6 +48,16 @@ val mmap_trap
 /// Elimination function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a mmap(PROT_READ|PROT_WRITE)
+val mmap_strict_untrap
+  (arr: array U8.t)
+  (len: US.t{US.v len == A.length arr /\ US.v len > 0})
+  : SteelT unit
+  (trap_array arr)
+  (fun _ -> A.varray arr)
+
+/// Elimination function for the abstract `trap_array`
+/// predicate above. Under the hood, this function will
+/// be implemented in C as a noop.
 val mmap_untrap
   (arr: array U8.t)
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})

@@ -21,7 +21,11 @@ let mmap_trap_quarantine arr len =
 let mmap_untrap_quarantine arr len =
   if enable_quarantine_trap then (
     change_equal_slprop (quarantine_slab arr) (trap_array arr);
-    mmap_untrap arr len
+    if enable_quarantine_strict_trap then (
+      mmap_strict_untrap arr len
+    ) else (
+      mmap_untrap arr len
+    )
   ) else (
     noop ();
     change_equal_slprop (quarantine_slab arr) (A.varray arr)
