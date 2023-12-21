@@ -546,6 +546,8 @@ let allocate_slab_aux_2_full
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul))
     idx1 idx2' idx2 idx4 idx5
 
+#restart-solver
+
 // Slab moves from partial to partial
 inline_for_extraction noextract
 let allocate_slab_aux_2_partial
@@ -611,6 +613,8 @@ let allocate_slab_aux_2_partial
   (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
     md_count_v md_region_lv
     idx1 idx2 idx3 idx4 idx5
+
+#restart-solver
 
 // Slab initially partial
 inline_for_extraction noextract
