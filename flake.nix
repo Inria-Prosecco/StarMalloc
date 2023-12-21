@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
-      url = "github:mtzguido/FStar/machine_int_primops2";
+      url = "github:FStarLang/FStar";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
@@ -34,7 +34,7 @@
       # allocator derivation
       # TODO: use pkgs.llvmPackages_latest.stdenv.mkDerivation
       # currently, there is some linking issue, try to fix it/report it
-      starmalloc = pkgs.clangStdenv.mkDerivation {
+      starmalloc = pkgs.stdenv.mkDerivation {
         name = "steel-experiments";
         src = lib.sourceByRegex ./. [
           "lib_avl_common(/.*)?"

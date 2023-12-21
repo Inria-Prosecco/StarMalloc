@@ -25,16 +25,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1703170254,
-        "narHash": "sha256-9j58KnOagtBKwt0IDy3JkVQ/vUCxDVqiS/UWEqCKdhw=",
-        "owner": "mtzguido",
+        "lastModified": 1703180293,
+        "narHash": "sha256-zQPEPf1Q3Z4Wt86Bef9czyKfff8r8vr2LEsfR5qxoaU=",
+        "owner": "FStarLang",
         "repo": "FStar",
-        "rev": "30c6126bb46efd59767eb83ebb6d6451ecff06c9",
+        "rev": "0806a005a879f256ff5af6736fbea4d45ea6f6ca",
         "type": "github"
       },
       "original": {
-        "owner": "mtzguido",
-        "ref": "machine_int_primops2",
+        "owner": "FStarLang",
         "repo": "FStar",
         "type": "github"
       }
