@@ -273,6 +273,7 @@ let getsize (ptr: array U8.t)
 
 module G = FStar.Ghost
 
+noextract
 let return_status = x:nat{x < 3}
 
 // in case of failure, this vprop describes

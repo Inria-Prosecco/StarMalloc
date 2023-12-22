@@ -31,8 +31,6 @@ bool StarMalloc_free(uint8_t *ptr);
 
 size_t StarMalloc_getsize(uint8_t *ptr);
 
-typedef krml_checked_int_t StarMalloc_return_status;
-
 uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size);
 
 extern size_t StarMalloc_builtin_mul_overflow(size_t x, size_t y);

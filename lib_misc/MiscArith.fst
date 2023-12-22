@@ -42,6 +42,7 @@ let lemma_div_lt (a:pos) (b c k:nat)
 
 #push-options "--fuel 1 --ifuel 1"
 
+noextract
 let rec decompose (n: pos)
   : v:(nat & nat){(snd v) % 2 = 1}
   = match n % 2 with
