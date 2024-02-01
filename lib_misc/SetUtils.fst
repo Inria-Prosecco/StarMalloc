@@ -13,7 +13,7 @@ let rec list_to_set (#a: eqtype)
   | [] -> FS.emptyset
   | x::t -> FS.insert x (list_to_set t)
 
-let rec list_to_set_union (#a: eqtype)
+let rec list_to_set_append (#a: eqtype)
   (l1 l2: (l:list a{FS.list_nonrepeating l}))
   : Lemma
   (requires
@@ -36,9 +36,23 @@ let rec list_to_set_union (#a: eqtype)
       assert (s1 `FS.equal` FS.singleton x);
       assert (FS.union s1 s2 `FS.equal` FS.insert x s2)
   | x::t ->
-      list_to_set_union t l2;
-      list_to_set_union [x] (t@l2);
+      list_to_set_append t l2;
+      list_to_set_append [x] (t@l2);
       assert (list_to_set (l1@l2) `FS.equal` (FS.union (list_to_set l1) (list_to_set l2)))
+
+let list_to_set_cons (#a: eqtype)
+  (x: a)
+  (l:list a{FS.list_nonrepeating l})
+  : Lemma
+  (requires
+    FS.list_nonrepeating (x::l)
+  )
+  (ensures
+    list_to_set (x::l) == FS.insert x (list_to_set l)
+  )
+  =
+  list_to_set_append [x] l;
+  assert (FS.insert x (list_to_set l) `FS.equal` FS.union (list_to_set [x]) (list_to_set l))
 
 let lift_or (b1 b2 b3: bool)
   : Lemma
@@ -56,7 +70,7 @@ let rec list_to_set_equivmem (#a: eqtype)
   | [] -> ()
   | [x] -> ()
   | x::t ->
-      list_to_set_union [x] t;
+      list_to_set_append [x] t;
       lift_or
         (FS.mem e (list_to_set l))
         (FS.mem e (list_to_set [x]))
@@ -75,7 +89,7 @@ let rec list_to_set_card (#a: eqtype)
   | x::t ->
       let s1 = list_to_set [x] in
       let s2 = list_to_set t in
-      list_to_set_union [x] t;
+      list_to_set_append [x] t;
       assert (list_to_set l == FS.union s1 s2);
       assert (not (L.mem x t));
       list_to_set_equivmem t x;
@@ -93,98 +107,52 @@ let list_to_set_singleton (#a: eqtype) (x: a)
   =
   assert (FS.insert x FS.emptyset `FS.equal` FS.singleton x)
 
-(* Seq to List *)
-
-module S = FStar.Seq
-
-let _seq_to_list_append (#a: eqtype) (s1 s2: Seq.seq a)
-  : Lemma
-  (
-  Seq.seq_to_list (Seq.append s1 s2)
-  ==
-  L.append (Seq.seq_to_list s1) (Seq.seq_to_list s2)
+let rec list_remove (#a: eqtype)
+  (x: a)
+  (l: list a)
+  : Pure (list a)
+  (requires FS.list_nonrepeating l)
+  (ensures fun l' ->
+    FS.list_nonrepeating l' /\
+    not (L.mem x l') /\
+    (forall (y:a{y <> x}). L.mem y l' = L.mem y l) /\
+    l' == L.filter (fun y -> y <> x) l /\
+    (not (L.mem x l) ==> l' == l)
   )
-  = SeqUtils.lemma_seq_to_list_append s1 s2
+  = match l with
+  | [] -> []
+  | hd::tl ->
+    if hd <> x
+    then hd::(list_remove x tl)
+    else list_remove x tl
 
-let seq_to_list_append (#a: eqtype) (s: Seq.seq a) (v: a)
+let rec list_to_set_remove (#a: eqtype)
+  (x: a)
+  (l: list a{FS.list_nonrepeating l})
   : Lemma
-  (Seq.seq_to_list (Seq.append s (Seq.create 1 v))
-  ==
-  (Seq.seq_to_list s)@[v])
-  =
-  _seq_to_list_append
-    s
-    (Seq.create 1 v)
-
-let seq_to_list_remove (#a: eqtype) (s: Seq.seq a) (v: a)
-  : Lemma
-  (requires Seq.length s > 0)
-  (ensures
-    Seq.seq_to_list (Seq.append (Seq.create 1 v) s)
-    ==
-    v::(Seq.seq_to_list s)
-  )
-  =
-  _seq_to_list_append
-    (Seq.create 1 v)
-    s
-
-let seq_nonrepeating (#a: eqtype) (s: Seq.seq a) : bool
-  = FS.list_nonrepeating (Seq.seq_to_list s)
-
-(* Seq to Set *)
-
-let seq_to_set (#a: eqtype) (s: Seq.seq a{seq_nonrepeating s})
-  : FS.set a
-  =
-  list_to_set (Seq.seq_to_list s)
-
-let seq_to_set_union (#a: eqtype) (s1 s2: Seq.seq a)
-  : Lemma
-  (requires
-    seq_nonrepeating s1 /\
-    seq_nonrepeating s2 /\
-    seq_nonrepeating (Seq.append s1 s2)
-  )
-  (ensures
-    seq_to_set (Seq.append s1 s2)
-    == FS.union (seq_to_set s1) (seq_to_set s2)
-  )
-  =
-  let set0 = seq_to_set (Seq.append s1 s2) in
-  let set1 = seq_to_set s1 in
-  let set2 = seq_to_set s2 in
-  let list0 = Seq.seq_to_list (Seq.append s1 s2) in
-  let list1 = Seq.seq_to_list s1 in
-  let list2 = Seq.seq_to_list s2 in
-  _seq_to_list_append s1 s2;
-  assert (list0 == list1@list2);
-  list_to_set_union list1 list2
-
-let seq_to_set_card (#a: eqtype)
-  (s: Seq.seq a{seq_nonrepeating s})
-  : Lemma
-  (Seq.length s = FS.cardinality (seq_to_set s))
-  =
-  list_to_set_card (Seq.seq_to_list s)
-
-let seq_to_set_equivmem (#a: eqtype)
-  (s: Seq.seq a{seq_nonrepeating s})
-  (e: a)
-  : Lemma
-  (Seq.mem e s = FS.mem e (seq_to_set s))
-  =
-  admit ();
-  list_to_set_equivmem (Seq.seq_to_list s) e
-
-let seq_to_set_empty (#a: eqtype)
-  : Lemma
-  (seq_to_set Seq.empty == FS.emptyset #a)
-  =
-  list_to_set_empty #a
-
-let seq_to_set_singleton (#a: eqtype) (x: a)
-  : Lemma
-  (seq_to_set (Seq.create 1 x) == FS.singleton x)
-  =
-  list_to_set_singleton x
+  (list_to_set (list_remove x l)
+  == FS.remove x (list_to_set l))
+  = match l with
+  | [] ->
+    list_to_set_empty #a;
+    assert (FS.emptyset `FS.equal` FS.remove x FS.emptyset)
+  | hd::tl ->
+    if hd <> x
+    then (
+      assert (list_remove x l == hd::(list_remove x tl));
+      list_to_set_cons hd (list_remove x tl);
+      assert (list_to_set (hd::list_remove x tl)
+      `FS.equal` FS.insert hd (list_to_set (list_remove x tl)));
+      list_to_set_remove x tl;
+      assert (list_to_set (list_remove x tl)
+      `FS.equal` FS.remove x (list_to_set tl));
+      assert (FS.insert hd (FS.remove x (list_to_set tl))
+      `FS.equal` FS.remove x (FS.insert hd (list_to_set tl)))
+    ) else (
+      assert (list_remove x l == list_remove x tl);
+      list_to_set_remove x tl;
+      assert (list_to_set (list_remove x tl)
+      `FS.equal` FS.remove x (list_to_set tl));
+      assert (not (L.mem x tl));
+      assert (list_remove x tl == tl)
+    )

@@ -126,9 +126,14 @@ let slab_vprop_aux2
   (md_as_seq: Seq.lseq U64.t 4)
   : prop
   =
+  let nb_slots_sc = nb_slots size_class in
+  let bound = U32.div nb_slots_sc 64ul in
+  let bound2 = bound2_gen nb_slots_sc (G.hide size_class) in
   let bm = Bitmap4.array_to_bv2 md_as_seq in
-  let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
-  zf_b (Seq.slice bm 0 (64 - U32.v bound2))
+  zf_b (Seq.slice bm 0 (64 - U32.v bound2)) /\
+  (U32.lte bound 3ul ==> Seq.index md_as_seq 3 == 0UL) /\
+  (U32.lte bound 2ul ==> Seq.index md_as_seq 2 == 0UL) /\
+  (U32.lte bound 1ul ==> Seq.index md_as_seq 1 == 0UL)
 
 open SteelVRefineDep
 

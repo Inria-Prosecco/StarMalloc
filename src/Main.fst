@@ -36,111 +36,130 @@ let ind_aux r idxs : vprop =
 
 val intro_ind_varraylist_nil (#opened:_)
   (r: A.array AL.cell)
-  (r1 r2 r3 r4 r5: R.ref US.t)
+  (r_idxs: A.array US.t{A.length r_idxs = 7})
   : SteelGhost unit opened
-      (A.varray r `star` R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4 `star` R.vptr r5)
-      (fun _ -> ind_varraylist r r1 r2 r3 r4 r5)
-      (requires fun h -> A.length r == 0 /\
-        R.sel r1 h == AL.null_ptr /\
-        R.sel r2 h == AL.null_ptr /\
-        R.sel r3 h == AL.null_ptr /\
-        R.sel r4 h == AL.null_ptr /\
-        R.sel r5 h == AL.null_ptr
+      (A.varray r `star` A.varray r_idxs)
+      (fun _ -> ind_varraylist r r_idxs)
+      (requires fun h ->
+        let s : Seq.lseq US.t 7 = A.asel r_idxs h in
+        A.length r == 0 /\
+        Seq.index s 0 == AL.null_ptr /\
+        Seq.index s 1 == AL.null_ptr /\
+        Seq.index s 2 == AL.null_ptr /\
+        Seq.index s 3 == AL.null_ptr /\
+        Seq.index s 4 == AL.null_ptr /\
+        Seq.index s 5 == AL.null_ptr /\
+        Seq.index s 6 == 0sz
       )
       (ensures fun _ _ _ -> True)
 
-let intro_ind_varraylist_nil r r1 r2 r3 r4 r5 =
+module G = FStar.Ghost
+
+let intro_ind_varraylist_nil r r_idxs =
   ALG.intro_arraylist_nil
     pred1 pred2 pred3 pred4 pred5
     r
-    AL.null_ptr AL.null_ptr AL.null_ptr AL.null_ptr AL.null_ptr;
-  let idxs = gget (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4 `star` R.vptr r5) in
+    AL.null_ptr
+    AL.null_ptr
+    AL.null_ptr
+    AL.null_ptr
+    AL.null_ptr
+    AL.null_ptr
+    0sz;
+  let idxs
+    : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  ind_varraylist_aux2_lemma r idxs
+      AL.null_ptr
+      AL.null_ptr
+      AL.null_ptr
+      AL.null_ptr
+      AL.null_ptr
+      AL.null_ptr
+      0sz;
+  change_equal_slprop
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5 r
+      (US.v AL.null_ptr)
+      (US.v AL.null_ptr)
+      (US.v AL.null_ptr)
+      (US.v AL.null_ptr)
+      (US.v AL.null_ptr)
+      (US.v AL.null_ptr)
+      (US.v 0sz))
+    (ind_varraylist_aux2 r idxs);
   intro_vrefine
-    (SlabsCommon.ind_varraylist_aux2 r ((((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr), AL.null_ptr))
-    (SlabsCommon.ind_varraylist_aux_refinement r ((((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr), AL.null_ptr));
+    (SlabsCommon.ind_varraylist_aux2 r idxs)
+    (SlabsCommon.ind_varraylist_aux_refinement r idxs);
   intro_vdep
-    (R.vptr r1 `star` R.vptr r2 `star` R.vptr r3 `star` R.vptr r4 `star` R.vptr r5)
-    (SlabsCommon.ind_varraylist_aux r ((((AL.null_ptr, AL.null_ptr), AL.null_ptr), AL.null_ptr), AL.null_ptr))
+    (A.varray r_idxs)
+    (SlabsCommon.ind_varraylist_aux r idxs)
     (ind_aux r)
-
-module RB = RingBuffer
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-  (r1 r2 r3 r4 r5: R.ref US.t)
-  (r_ringbuffer: array US.t{A.length r_ringbuffer = US.v RB.max_size})
-  (r_in r_out r_size: R.ref US.t)
+  (r_idxs: A.array US.t{A.length r_idxs = 7})
   : SteelGhost unit opened
       (A.varray (split_l md_region 0sz) `star`
-      R.vptr r1 `star`
-      R.vptr r2 `star`
-      R.vptr r3 `star`
-      R.vptr r4 `star`
-      R.vptr r5 `star`
-      A.varray r_ringbuffer `star`
-      R.vptr r_in `star`
-      R.vptr r_out `star`
-      R.vptr r_size
-      )
-      (fun _ -> SlabsCommon.left_vprop sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size 0sz)
+      A.varray r_idxs)
+      (fun _ -> SlabsCommon.left_vprop sc slab_region md_bm_region md_region r_idxs 0sz)
       (requires fun h ->
-        R.sel r1 h == AL.null_ptr /\
-        R.sel r2 h == AL.null_ptr /\
-        R.sel r3 h == AL.null_ptr /\
-        R.sel r4 h == AL.null_ptr /\
-        R.sel r5 h == AL.null_ptr
+        let s : Seq.lseq US.t 7 = A.asel r_idxs h in
+        Seq.index s 0 == AL.null_ptr /\
+        Seq.index s 1 == AL.null_ptr /\
+        Seq.index s 2 == AL.null_ptr /\
+        Seq.index s 3 == AL.null_ptr /\
+        Seq.index s 4 == AL.null_ptr /\
+        Seq.index s 5 == AL.null_ptr /\
+        Seq.index s 6 == 0sz
       )
       (ensures fun _ _ _ -> True)
 
-#push-options "--z3rlimit 30"
-let intro_left_vprop_empty sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 r_ringbuffer r_in r_out r_size =
-  sladmit ()
-  //intro_ind_varraylist_nil
-  //  (A.split_l md_region 0sz)
-  //  r1 r2 r3 r4 r5;
+#push-options "--z3rlimit 50"
+let intro_left_vprop_empty sc slab_region md_bm_region md_region r_idxs
+  =
+  intro_ind_varraylist_nil
+    (A.split_l md_region 0sz)
+    r_idxs;
+  let s = gget (ind_varraylist
+      (A.split_l md_region 0sz)
+      r_idxs) in
 
-  //let s = gget (ind_varraylist
-  //    (A.split_l md_region 0sz)
-  //    r1 r2 r3 r4 r5) in
+  starseq_intro_empty #_
+      #(pos:US.t{US.v pos < US.v 0sz})
+      #(SlabsCommon.t sc)
+      (SlabsCommon.f sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
+      (SlabsCommon.f_lemma sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
+      (SeqUtils.init_us_refined (US.v 0sz));
 
-  //starseq_intro_empty #_
-  //    #(pos:US.t{US.v pos < US.v 0sz})
-  //    #(SlabsCommon.t sc)
-  //    (SlabsCommon.f sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
-  //    (SlabsCommon.f_lemma sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
-  //    (SeqUtils.init_us_refined (US.v 0sz));
+  assert (SeqUtils.init_us_refined (US.v 0sz) `Seq.equal` Seq.empty);
 
-  //assert (SeqUtils.init_us_refined (US.v 0sz) `Seq.equal` Seq.empty);
+  let open FStar.Tactics in
+  assert ((starseq
+      #(pos:US.t{US.v pos < US.v 0sz})
+      #(t sc)
+      (f sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
+      (f_lemma sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
+      (SeqUtils.init_us_refined (US.v 0sz))) ==
+    (left_vprop2 sc slab_region md_bm_region md_region r_idxs 0sz s))
+  by (norm [delta_only [`%left_vprop2]]);
 
-  //let open FStar.Tactics in
-  //assert ((starseq
-  //    #(pos:US.t{US.v pos < US.v 0sz})
-  //    #(t sc)
-  //    (f sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
-  //    (f_lemma sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
-  //    (SeqUtils.init_us_refined (US.v 0sz))) ==
-  //  (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz s))
-  //by (norm [delta_only [`%left_vprop_aux]]);
-
-
-  //change_equal_slprop
-  //  (starseq
-  //    #(pos:US.t{US.v pos < US.v 0sz})
-  //    #(t sc)
-  //    (f sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
-  //    (f_lemma sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
-  //    (SeqUtils.init_us_refined (US.v 0sz)))
-  //  (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz s);
-
-  //intro_vdep
-  //  (ind_varraylist
-  //    (A.split_l md_region 0sz)
-  //    r1 r2 r3 r4 r5)
-  //  (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz s)
-  //  (left_vprop_aux sc slab_region md_bm_region md_region r1 r2 r3 r4 r5 0sz)
+  change_equal_slprop
+    (starseq
+      #(pos:US.t{US.v pos < US.v 0sz})
+      #(t sc)
+      (f sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
+      (f_lemma sc slab_region md_bm_region 0sz (ALG.dataify (dsnd s)))
+      (SeqUtils.init_us_refined (US.v 0sz)))
+    (left_vprop2 sc slab_region md_bm_region md_region r_idxs 0sz s);
+  intro_vdep
+    (ind_varraylist
+      (A.split_l md_region 0sz)
+      r_idxs)
+    (left_vprop2 sc slab_region md_bm_region md_region r_idxs 0sz s)
+    (left_vprop2 sc slab_region md_bm_region md_region r_idxs 0sz)
 
 val intro_right_vprop_empty (#opened:_)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -193,6 +212,31 @@ let vrefinedep_ext
 
 #restart-solver
 
+let init_idxs (r_idxs: array US.t{A.length r_idxs == 7})
+  : Steel unit
+  (A.varray r_idxs) (fun _ -> A.varray r_idxs)
+  (requires fun _ -> True)
+  (ensures fun _ _ h1 ->
+    let s
+      : Seq.lseq US.t 7
+      = A.asel r_idxs h1 in
+    Seq.index s 0 == AL.null_ptr /\
+    Seq.index s 1 == AL.null_ptr /\
+    Seq.index s 2 == AL.null_ptr /\
+    Seq.index s 3 == AL.null_ptr /\
+    Seq.index s 4 == AL.null_ptr /\
+    Seq.index s 5 == AL.null_ptr /\
+    Seq.index s 6 == 0sz
+  )
+  =
+  A.upd r_idxs 0sz AL.null_ptr;
+  A.upd r_idxs 1sz AL.null_ptr;
+  A.upd r_idxs 2sz AL.null_ptr;
+  A.upd r_idxs 3sz AL.null_ptr;
+  A.upd r_idxs 4sz AL.null_ptr;
+  A.upd r_idxs 5sz AL.null_ptr;
+  A.upd r_idxs 6sz 0sz
+
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects --fuel 0 --ifuel 0"
 noextract inline_for_extraction
 let init_struct_aux
@@ -235,27 +279,13 @@ let init_struct_aux
 
   intro_right_vprop_empty slab_region md_bm_region md_region;
 
-  let ptr_partial = mmap_ptr_us_init () in
-  let ptr_empty = mmap_ptr_us_init () in
-  let ptr_full = mmap_ptr_us_init () in
-  let ptr_guard = mmap_ptr_us_init () in
-  let ptr_quarantine = mmap_ptr_us_init () in
-
-  let r_in = mmap_ptr_us_init () in
-  let r_out = mmap_ptr_us_init () in
-  let r_size = mmap_ptr_us_init () in
-  let r_ringbuffer = mmap_array_us_init RB.max_size in
-
-  R.write ptr_partial AL.null_ptr;
-  R.write ptr_empty AL.null_ptr;
-  R.write ptr_full AL.null_ptr;
-  R.write ptr_guard AL.null_ptr;
-  R.write ptr_quarantine AL.null_ptr;
-
+  let r_idxs = mmap_array_us_init 7sz in
+  init_idxs r_idxs;
+  let idxs
+    : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
   intro_left_vprop_empty sc
-    slab_region md_bm_region md_region
-    ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine
-    r_ringbuffer r_in r_out r_size;
+    slab_region md_bm_region md_region r_idxs;
 
   let md_count = mmap_ptr_us_init () in
   R.write md_count 0sz;
@@ -265,30 +295,20 @@ let init_struct_aux
     vrefinedep_prop
     (size_class_vprop_aux sc
       slab_region md_bm_region md_region
-      ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine
-      r_ringbuffer r_in r_out r_size)
+      r_idxs)
     (left_vprop sc slab_region md_bm_region md_region
-         ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine
-         r_ringbuffer r_in r_out r_size 0sz `star`
+      r_idxs 0sz `star`
      right_vprop slab_region md_bm_region md_region 0sz);
 
 
   [@inline_let]
   let scs = {
     size = sc;
-    partial_slabs = ptr_partial;
-    empty_slabs = ptr_empty;
-    full_slabs = ptr_full;
-    guard_slabs = ptr_guard;
-    quarantine_slabs = ptr_quarantine;
+    slabs_idxs = r_idxs;
     slab_region = slab_region;
     md_bm_region = md_bm_region;
     md_region = md_region;
     md_count = md_count;
-    quarantine_ringbuffer = r_ringbuffer;
-    quarantine_in = r_in;
-    quarantine_out = r_out;
-    quarantine_size = r_size;
   } in
 
   change_slprop_rel
@@ -296,10 +316,8 @@ let init_struct_aux
       (R.vptr md_count)
       vrefinedep_prop
       (size_class_vprop_aux sc
-        slab_region md_bm_region md_region
-        ptr_empty ptr_partial ptr_full ptr_guard ptr_quarantine
-        r_ringbuffer r_in r_out r_size
-      ))
+        slab_region md_bm_region md_region r_idxs)
+    )
     (size_class_vprop scs)
     (fun _ _ -> True)
     (fun _ ->
@@ -311,9 +329,7 @@ let init_struct_aux
           (R.vptr scs.md_count)
           vrefinedep_prop
           (size_class_vprop_aux scs.size
-            scs.slab_region scs.md_bm_region scs.md_region
-            scs.empty_slabs scs.partial_slabs scs.full_slabs scs.guard_slabs scs.quarantine_slabs
-            scs.quarantine_ringbuffer scs.quarantine_in scs.quarantine_out scs.quarantine_size)
+            scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
       ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
     );
   return scs

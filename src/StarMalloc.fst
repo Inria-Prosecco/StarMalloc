@@ -423,9 +423,9 @@ assume val builtin_mul_overflow(x y: US.t)
     US.fits (US.v x * US.v y) /\
     US.v r == US.v x * US.v y)
 
-#push-options "--z3rlimit 200"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 //TODO: there should be defensive checks and no precondition
-let calloc
+val calloc
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   (size1 size2: US.t)
   : Steel (array U8.t)
@@ -451,6 +451,8 @@ let calloc
       array_u8_alignment r 16ul
     )
   )
+
+let calloc arena_id size1 size2
   =
   let size = builtin_mul_overflow size1 size2 in
   let ptr = malloc arena_id size in
