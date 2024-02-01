@@ -1,5 +1,5 @@
 {
-  description = "steel-experiments";
+  description = "StarMalloc";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
