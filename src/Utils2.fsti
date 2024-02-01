@@ -637,7 +637,7 @@ let lemma_nth_nonmax64
     FU.to_vec_lemma_1 #64 (U64.v x) 0
   ) else ()
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
 let lemma_nth_nonfull
   (size_class: sc)
   (x: U64.t)

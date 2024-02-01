@@ -2,37 +2,10 @@ module Main.Meta
 
 friend Config
 
-
 [@@ reduce_attr]
 inline_for_extraction noextract
 let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
 = normalize_term sc_list
-
-//let temp_thm (sc: sc)
-//  : Lemma
-//  (requires True)
-//  (ensures U32.v sc > 0)
-//  = ()
-//let t = sc * bool
-//[@@ reduce_attr]
-//inline_for_extraction noextract
-//let sc_list_aligned: l:(list t){List.length l == List.length sc_list}
-//= admit ();
-//  normalize_term (List.map
-//  (fun s -> temp_thm s; (s, (U32.v page_size) % (U32.v s) = 0))
-//  sc_list
-//)
-//let nb_size_classes_aligned: v:US.t{US.v v ==  List.length sc_list_aligned}
-//  =
-//  assume (List.length sc_list_aligned < U32.n);
-//  [@inline_let] let l = normalize_term (List.length sc_list_aligned) in
-//  normalize_term_spec (List.length sc_list_aligned);
-//  assert (l == List.length sc_list_aligned);
-//  [@inline_let] let l_as_u32 = normalize_term (U32.uint_to_t l) in
-//  normalize_term_spec (U32.uint_to_t l);
-//  assert (U32.v l_as_u32 == List.length sc_list_aligned);
-//  US.fits_u64_implies_fits_32 ();
-//  US.of_u32 l_as_u32
 
 /// Number of arenas as a nat, for specification purposes. Not relying on US.v
 /// allows better normalization for extraction
@@ -574,6 +547,7 @@ let within_size_classes_pred (ptr:A.array U8.t) : prop =
 
 #restart-solver
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
 let mod_lt (a b: US.t)
   : Lemma
   (requires US.v b > 0)
@@ -581,6 +555,7 @@ let mod_lt (a b: US.t)
     US.v (US.rem a b) = (US.v a) % (US.v b) /\
     US.v (US.rem a b) < US.v b)
   = ()
+#pop-options
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --query_stats"
 let slab_getsize ptr =

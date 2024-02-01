@@ -161,7 +161,7 @@ open SteelVRefineDep
 
 #restart-solver
 
-#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 200 --compat_pre_typed_indexed_effects"
 // Slab moves from empty to partial
 inline_for_extraction noextract
 let allocate_slab_aux_1_partial
@@ -170,22 +170,18 @@ let allocate_slab_aux_1_partial
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1: US.t{US.v idx1 < US.v md_count_v})
-  (idx2 idx3 idx4 idx5: US.t)
+  (idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : Steel unit
   (
     vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    A.varray r_idxs `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
@@ -197,19 +193,22 @@ let allocate_slab_aux_1_partial
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let idxs0 = A.asel r_idxs h0 in
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
-    sel r1 h0 == idx1 /\
-    sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3 /\
-    sel r4 h0 == idx4 /\
-    sel r5 h0 == idx5 /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
     idx1 <> AL.null_ptr /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
@@ -219,34 +218,41 @@ let allocate_slab_aux_1_partial
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
     ) in
     md_count_v == dfst blob1)
   =
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   (**) ALG.lemma_head_not_null_mem pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    idx1 idx2 idx3 idx4 idx5;
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
   let idx1' = AL.remove1 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
-    idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) idx1 in
+    idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) (G.hide (US.v idx6)) (G.hide (US.v idx7)) idx1 in
   AL.insert2 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
-    idx2 (G.hide (US.v idx1')) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) idx1 1ul;
-  write r1 idx1';
-  write r2 idx1;
+    idx2 (G.hide (US.v idx1')) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) (G.hide (US.v idx6)) (G.hide (US.v idx7)) idx1 1ul;
+
+  let gs_idxs0 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  A.upd r_idxs 0sz idx1';
+  A.upd r_idxs 1sz idx1;
+  let gs_idxs1 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  assert (G.reveal gs_idxs1
+  == Seq.upd (Seq.upd (G.reveal gs_idxs0) 0 idx1') 1 idx1);
 
   (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1') (US.v idx1) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1') (US.v idx1) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v idx1') (US.v idx1) (US.v idx3) (US.v idx4) (US.v idx5) gs1);
 
-  (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
+  (**) pack_3 size_class slab_region md_bm_region md_region md_count r_idxs
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx1) 1ul))
-    idx1' idx1 idx3 idx4 idx5
+    idx1' idx1 idx3 idx4 idx5 idx6 idx7
 
 // Slab moves from empty to full
 inline_for_extraction noextract
@@ -256,22 +262,18 @@ let allocate_slab_aux_1_full
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1: US.t{US.v idx1 < US.v md_count_v})
-  (idx2 idx3 idx4 idx5: US.t)
+  (idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : Steel unit
   (
     vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    A.varray r_idxs `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
@@ -283,19 +285,22 @@ let allocate_slab_aux_1_full
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let idxs0 = A.asel r_idxs h0 in
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
-    sel r1 h0 == idx1 /\
-    sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3 /\
-    sel r4 h0 == idx4 /\
-    sel r5 h0 == idx5 /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
     idx1 <> AL.null_ptr /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
@@ -305,34 +310,41 @@ let allocate_slab_aux_1_full
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
     ) in
     md_count_v == dfst blob1)
   =
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   (**) ALG.lemma_head_not_null_mem pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    idx1 idx2 idx3 idx4 idx5;
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
   let idx1' = AL.remove1 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
-    idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) idx1 in
+    idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) (G.hide (US.v idx6)) (G.hide (US.v idx7)) idx1 in
   AL.insert3 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
-    idx3 (G.hide (US.v idx1')) (G.hide (US.v idx2)) (G.hide (US.v  idx4)) (G.hide (US.v idx5)) idx1 2ul;
-  write r1 idx1';
-  write r3 idx1;
+    idx3 (G.hide (US.v idx1')) (G.hide (US.v idx2)) (G.hide (US.v  idx4)) (G.hide (US.v idx5)) (G.hide (US.v idx6)) (G.hide (US.v idx7)) idx1 2ul;
+
+  let gs_idxs0 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  A.upd r_idxs 0sz idx1';
+  A.upd r_idxs 2sz idx1;
+  let gs_idxs1 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  assert (G.reveal gs_idxs1
+  == Seq.upd (Seq.upd (G.reveal gs_idxs0) 0 idx1') 2 idx1);
 
   (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1') (US.v idx2) (US.v idx1) (US.v idx4) (US.v idx5)) in
+    (US.v idx1') (US.v idx2) (US.v idx1) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v idx1') (US.v idx2) (US.v idx1) (US.v idx4) (US.v idx5) gs1);
 
-  (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
+  (**) pack_3 size_class slab_region md_bm_region md_region md_count r_idxs
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx1) 2ul))
-    idx1' idx2 idx1 idx4 idx5
+    idx1' idx2 idx1 idx4 idx5 idx6 idx7
 
 #restart-solver
 
@@ -344,21 +356,17 @@ let allocate_slab_aux_1
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-  (idx1 idx2 idx3 idx4 idx5: US.t)
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : Steel (array U8.t)
   (
     vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    A.varray r_idxs `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
@@ -371,19 +379,22 @@ let allocate_slab_aux_1
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let idxs0 = A.asel r_idxs h0 in
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
-    sel r1 h0 == idx1 /\
-    sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3 /\
-    sel r4 h0 == idx4 /\
-    sel r5 h0 == idx5 /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
     idx1 <> AL.null_ptr /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
@@ -393,7 +404,7 @@ let allocate_slab_aux_1
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
     ) in
     md_count_v == dfst blob1 /\
     A.length r == U32.v size_class /\
@@ -404,7 +415,7 @@ let allocate_slab_aux_1
   =
   (**) ALG.lemma_head1_in_bounds pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    idx1 (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5);
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7);
   (**) starseq_unpack_s
     #_
     #(pos:US.t{US.v pos < US.v md_count_v})
@@ -416,11 +427,11 @@ let allocate_slab_aux_1
 
   (**) ALG.lemma_head1_implies_pred1 pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    idx1 idx2 idx3 idx4 idx5;
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
 
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
 
   (**) ALG.lemma_dataify_index #AL.status gs0 (US.v idx1);
   (**) SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx1);
@@ -444,16 +455,18 @@ let allocate_slab_aux_1
       slab_region md_bm_region md_region md_count
       md_count_v md_region_lv idx1 2ul;
     allocate_slab_aux_1_full size_class
-      slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-      md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5;
+      slab_region md_bm_region md_region md_count r_idxs
+      md_count_v md_region_lv
+      idx1 idx2 idx3 idx4 idx5 idx6 idx7;
     return r
   ) else (
     (**) pack_slab_starseq size_class
       slab_region md_bm_region md_region md_count
       md_count_v md_region_lv idx1 1ul;
     allocate_slab_aux_1_partial size_class
-      slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-      md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5;
+      slab_region md_bm_region md_region md_count r_idxs
+      md_count_v md_region_lv
+      idx1 idx2 idx3 idx4 idx5 idx6 idx7;
     return r
   )
 
@@ -467,23 +480,19 @@ let allocate_slab_aux_2_full
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1: US.t)
   (idx2: US.t{US.v idx2 < US.v md_count_v})
-  (idx3 idx4 idx5: US.t)
+  (idx3 idx4 idx5 idx6 idx7: US.t)
   : Steel unit
   (
     vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    A.varray r_idxs `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
@@ -495,19 +504,22 @@ let allocate_slab_aux_2_full
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+   let idxs0 = A.asel r_idxs h0 in
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
-    sel r1 h0 == idx1 /\
-    sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3 /\
-    sel r4 h0 == idx4 /\
-    sel r5 h0 == idx5 /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
     idx2 <> AL.null_ptr /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
@@ -517,34 +529,43 @@ let allocate_slab_aux_2_full
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
     ) in
     md_count_v == dfst blob1)
   =
   (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   (**) ALG.lemma_head_not_null_mem pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    idx1 idx2 idx3 idx4 idx5;
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
   let idx2' = AL.remove2 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
-    (G.hide (US.v idx1)) idx2 (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) idx2 in
+    (G.hide (US.v idx1)) idx2 (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idx5)) (G.hide (US.v idx6)) (G.hide (US.v idx7)) idx2 in
   AL.insert3 #pred1 #pred2 #pred3 #pred4 #pred5
     (A.split_l md_region md_count_v)
-    idx3 (G.hide (US.v idx1)) (G.hide (US.v idx2')) (G.hide (US.v idx4)) (G.hide (US.v idx5)) idx2 2ul;
-  write r2 idx2';
-  write r3 idx2;
+    idx3 (G.hide (US.v idx1)) (G.hide (US.v idx2')) (G.hide (US.v idx4)) (G.hide (US.v idx5)) (G.hide (US.v idx6)) (G.hide (US.v idx7)) idx2 2ul;
+
+  let gs_idxs0 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  A.upd r_idxs 1sz idx2';
+  A.upd r_idxs 2sz idx2;
+  let gs_idxs1 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  assert (G.reveal gs_idxs1
+  == Seq.upd (Seq.upd (G.reveal gs_idxs0) 1 idx2') 2 idx2);
 
   (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2') (US.v idx2) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2') (US.v idx2) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2') (US.v idx2) (US.v idx4) (US.v idx5) gs1);
 
-  (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
+  (**) pack_3 size_class slab_region md_bm_region md_region md_count r_idxs
     md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx2) 2ul))
-    idx1 idx2' idx2 idx4 idx5
+    idx1 idx2' idx2 idx4 idx5 idx6 idx7
+
+#restart-solver
 
 #restart-solver
 
@@ -556,23 +577,19 @@ let allocate_slab_aux_2_partial
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1: US.t)
   (idx2: US.t{US.v idx2 < US.v md_count_v})
-  (idx3 idx4 idx5: US.t)
+  (idx3 idx4 idx5 idx6 idx7: US.t)
   : Steel unit
   (
     vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    A.varray r_idxs `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
@@ -584,19 +601,22 @@ let allocate_slab_aux_2_partial
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let idxs0 = A.asel r_idxs h0 in
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
-    sel r1 h0 == idx1 /\
-    sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3 /\
-    sel r4 h0 == idx4 /\
-    sel r5 h0 == idx5 /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
     idx2 <> AL.null_ptr /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
@@ -606,65 +626,86 @@ let allocate_slab_aux_2_partial
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
     ) in
     md_count_v == dfst blob1)
   =
-  (**) pack_3 size_class slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
+  (**) pack_3 size_class slab_region md_bm_region md_region md_count r_idxs
     md_count_v md_region_lv
-    idx1 idx2 idx3 idx4 idx5
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7
 
 #restart-solver
 
-// Slab initially partial
+#restart-solver
+
+#push-options "--fuel 1 --ifuel 1 --compat_pre_typed_indexed_effects --z3rlimit 300"
 inline_for_extraction noextract
-let allocate_slab_aux_2
+let allocate_slab_aux_2_aux
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-  (idx1 idx2 idx3 idx4 idx5: US.t)
-  : Steel (array U8.t)
+  (idx1: US.t)
+  (idx2: US.t{US.v idx2 < US.v md_count_v})
+  (idx3 idx4 idx5 idx6 idx7: US.t)
+  : Steel unit
   (
-    vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    slab_vprop size_class
+      (slab_array slab_region idx2)
+      (md_bm_array md_bm_region idx2) `star`
+    (vptr md_count `star`
+    A.varray r_idxs `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
       (f size_class slab_region md_bm_region md_count_v md_region_lv)
       (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-      (SeqUtils.init_us_refined (US.v md_count_v))
+      (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) 0 (US.v idx2)) `star`
+    starseq
+      #(pos:US.t{US.v pos < US.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx2 + 1) (Seq.length (SeqUtils.init_us_refined (US.v md_count_v)))))
   )
-  (fun r ->
-    A.varray r `star`
+  (fun _ ->
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let idxs0 = A.asel r_idxs h0 in
+    let blob0
+      : t_of (slab_vprop size_class
+        (slab_array slab_region idx2)
+        (md_bm_array md_bm_region idx2))
+      = h0 (slab_vprop size_class
+        (slab_array slab_region idx2)
+        (md_bm_array md_bm_region idx2)) in
+    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
+    not (is_empty size_class v0) /\
     US.v md_count_v <> AL.null /\
     sel md_count h0 == md_count_v /\
-    sel r1 h0 == idx1 /\
-    sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3 /\
-    sel r4 h0 == idx4 /\
-    sel r5 h0 == idx5 /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
     idx2 <> AL.null_ptr /\
+    G.reveal md_region_lv `Seq.equal` Seq.upd (G.reveal md_region_lv) (US.v idx2) 1ul /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
   )
@@ -673,48 +714,11 @@ let allocate_slab_aux_2
       = h1 (vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
     ) in
-    md_count_v == dfst blob1 /\
-    A.length r == U32.v size_class /\
-    same_base_array r slab_region /\
-    A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
-    ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
+    md_count_v == dfst blob1
   )
   =
-  (**) ALG.lemma_head2_in_bounds pred1 pred2 pred3 pred4 pred5
-    (A.split_l md_region md_count_v)
-    (US.v idx1) idx2 (US.v idx3) (US.v idx4) (US.v idx5);
-  (**) starseq_unpack_s
-    #_
-    #(pos:US.t{US.v pos < US.v md_count_v})
-    #(t size_class)
-    (f size_class slab_region md_bm_region md_count_v md_region_lv)
-    (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
-    (SeqUtils.init_us_refined (US.v md_count_v))
-    (US.v idx2);
-
-  (**) ALG.lemma_head2_implies_pred2 pred1 pred2 pred3 pred4 pred5
-    (A.split_l md_region md_count_v)
-    idx1 idx2 idx3 idx4 idx5;
-
-  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
-    (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
-
-  (**) ALG.lemma_dataify_index #AL.status gs0 (US.v idx2);
-  (**) SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx2);
-  (**) change_equal_slprop
-     (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx2)))
-     (p_partial size_class (md_bm_array md_bm_region idx2, slab_array slab_region idx2));
-  (**) p_partial_unpack size_class
-     (md_bm_array md_bm_region idx2, slab_array slab_region idx2)
-     (md_bm_array md_bm_region idx2, slab_array slab_region idx2);
-
-  let r = allocate_slot size_class
-    (md_bm_array md_bm_region idx2)
-    (slab_array slab_region idx2)
-  in
   let cond = allocate_slab_aux_cond size_class
     (md_bm_array md_bm_region idx2)
     (slab_array slab_region idx2)
@@ -724,9 +728,9 @@ let allocate_slab_aux_2
       slab_region md_bm_region md_region md_count
       md_count_v md_region_lv idx2 2ul;
     allocate_slab_aux_2_full size_class
-      slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-      md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5;
-    return r
+      slab_region md_bm_region md_region md_count r_idxs
+      md_count_v md_region_lv
+      idx1 idx2 idx3 idx4 idx5 idx6 idx7
   ) else (
     (**) pack_slab_starseq size_class
       slab_region md_bm_region md_region md_count
@@ -743,10 +747,116 @@ let allocate_slab_aux_2
       (SeqUtils.init_us_refined (US.v md_count_v))
       (SeqUtils.init_us_refined (US.v md_count_v));
     allocate_slab_aux_2_partial size_class
-      slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-      md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5;
-    return r
+      slab_region md_bm_region md_region md_count r_idxs
+      md_count_v md_region_lv
+      idx1 idx2 idx3 idx4 idx5 idx6 idx7
   )
+
+// Slab initially partial
+inline_for_extraction noextract
+let allocate_slab_aux_2
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
+  : Steel (array U8.t)
+  (
+    vptr md_count `star`
+    A.varray r_idxs `star`
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
+    starseq
+      #(pos:US.t{US.v pos < US.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_us_refined (US.v md_count_v))
+  )
+  (fun r ->
+    A.varray r `star`
+    vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
+  )
+  (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let idxs0 = A.asel r_idxs h0 in
+    US.v md_count_v <> AL.null /\
+    sel md_count h0 == md_count_v /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
+    idx2 <> AL.null_ptr /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+  )
+  (ensures fun _ r h1 ->
+    let blob1
+      = h1 (vrefinedep
+      (vptr md_count)
+      vrefinedep_prop
+      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
+    ) in
+    md_count_v == dfst blob1 /\
+    A.length r == U32.v size_class /\
+    same_base_array r slab_region /\
+    A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
+    ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
+  )
+  =
+  (**) ALG.lemma_head2_in_bounds pred1 pred2 pred3 pred4 pred5
+    (A.split_l md_region md_count_v)
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7);
+  (**) starseq_unpack_s
+    #_
+    #(pos:US.t{US.v pos < US.v md_count_v})
+    #(t size_class)
+    (f size_class slab_region md_bm_region md_count_v md_region_lv)
+    (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+    (SeqUtils.init_us_refined (US.v md_count_v))
+    (US.v idx2);
+
+  (**) ALG.lemma_head2_implies_pred2 pred1 pred2 pred3 pred4 pred5
+    (A.split_l md_region md_count_v)
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
+
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
+    (A.split_l md_region md_count_v)
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
+
+  (**) ALG.lemma_dataify_index #AL.status gs0 (US.v idx2);
+  (**) SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx2);
+  (**) change_equal_slprop
+     (f size_class slab_region md_bm_region md_count_v md_region_lv (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx2)))
+     (p_partial size_class (md_bm_array md_bm_region idx2, slab_array slab_region idx2));
+  (**) p_partial_unpack size_class
+     (md_bm_array md_bm_region idx2, slab_array slab_region idx2)
+     (md_bm_array md_bm_region idx2, slab_array slab_region idx2);
+
+  let r = allocate_slot size_class
+    (md_bm_array md_bm_region idx2)
+    (slab_array slab_region idx2)
+  in
+  allocate_slab_aux_2_aux size_class
+    slab_region md_bm_region md_region md_count r_idxs
+    md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 idx6 idx7;
+  return r
+#pop-options
+
+#restart-solver
 
 let alloc_metadata_sl1
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -892,28 +1002,28 @@ let allocate_slab_aux_3_1_varraylist
   (#opened: _)
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
-  (idx1 idx2 idx3 idx4 idx5: US.t)
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : SteelGhost unit opened
   (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) `star`
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) `star`
   A.varray (A.split_l (A.split_r md_region md_count_v) guard_pages_interval))
   (fun _ -> AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5))
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7))
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
     //US.v md_count_v <> AL.null /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5))
   (ensures fun h0 _ h1 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
     let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h1 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h1 in
     Seq.length gs1 == US.v md_count_v + US.v guard_pages_interval /\
     Seq.slice gs1 0 (US.v md_count_v) == gs0 /\
     ALG.partition #AL.status (Seq.slice gs1 0 (US.v md_count_v)) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
@@ -924,15 +1034,15 @@ let allocate_slab_aux_3_1_varraylist
   =
   let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   AL.extend_aux guard_pages_interval
     md_region
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)
     md_count_v
     0ul;
   let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (Seq.slice gs1 0 (US.v md_count_v)) `FStar.FiniteSet.Base.equal`
           ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0)
 
@@ -1130,7 +1240,7 @@ let allocate_slab_aux_3_1_right
     (fun x y -> x == y)
     (fun m -> right_vprop_sl_lemma2 slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval) m)
 
-// Extension function, should be SteelGhost
+// Extension function, is SteelGhost
 inline_for_extraction noextract
 let allocate_slab_aux_3_1
   (#opened: _)
@@ -1138,19 +1248,19 @@ let allocate_slab_aux_3_1
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
-  (idx1 idx2 idx3 idx4 idx5: US.t)
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : SteelGhost unit opened
   (
     right_vprop slab_region md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5))
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7))
   )
   (fun _ ->
     right_vprop slab_region md_bm_region md_region (md_count_v `US.add` guard_pages_interval) `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     A.varray (A.split_l
       (A.split_r slab_region
         (US.mul md_count_v (u32_to_sz page_size)))
@@ -1163,16 +1273,16 @@ let allocate_slab_aux_3_1
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
     //US.v md_count_v <> AL.null /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5))
   (ensures fun h0 _ h1 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
     let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h1 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h1 in
     Seq.length gs1 == US.v md_count_v + US.v guard_pages_interval /\
     Seq.slice gs1 0 (US.v md_count_v) == gs0 /\
     ALG.partition #AL.status (Seq.slice gs1 0 (US.v md_count_v))
@@ -1189,10 +1299,10 @@ let allocate_slab_aux_3_1
   allocate_slab_aux_3_1_right
     slab_region md_bm_region md_region md_count_v;
   allocate_slab_aux_3_1_varraylist
-    md_region md_count_v idx1 idx2 idx3 idx4 idx5;
+    md_region md_count_v idx1 idx2 idx3 idx4 idx5 idx6 idx7;
   let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   assert (forall (j:nat{0 <= j /\ j < US.v guard_pages_interval}).
       ~ (ALG.mem_all #AL.status (US.v md_count_v + j) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs1))
 
@@ -1293,7 +1403,7 @@ let fs_subset_elim
 let allocate_slab_aux_3_2_list_partition
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (s1 s2 s3 s4: Seq.lseq AL.cell (US.v md_count_v + US.v guard_pages_interval))
-  (idx1 idx2 idx3 idx4 idx5: US.t)
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : Lemma
   (requires
     ALG.is_dlist pred1 (US.v idx1) s1 /\
@@ -1362,7 +1472,7 @@ let allocate_slab_aux_3_2_list_partition
   let ps4 = ALG.ptrs_all (idx1') (US.v idx2) (US.v idx3) idx4' (US.v idx5) s4 in
   ALG.lemma_extend_dlist_subset_slice_all
     pred1 pred2 pred3 pred4 pred5
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)
     s1
     (US.v md_count_v);
   assert (FS.subset ps1' ps1);
@@ -1399,18 +1509,20 @@ let allocate_slab_aux_3_2_list_partition
   ()
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1"
+#restart-solver
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 // Insertion function
 inline_for_extraction noextract
 let allocate_slab_aux_3_2
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
-  (idx1 idx2 idx3 idx4 idx5: US.t)
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : Steel unit
   (
     AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)
   )
   (fun _ ->
     AL.varraylist pred1 pred2 pred3 pred4 pred5
@@ -1419,11 +1531,13 @@ let allocate_slab_aux_3_2
       (US.v idx2) (US.v idx3)
       (US.v md_count_v + US.v guard_pages_interval - 1)
       (US.v idx5)
+      (US.v idx6)
+      (US.v idx7)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
   //  //US.v md_count_v <> AL.null /\
     ALG.partition #AL.status (Seq.slice gs0 0 (US.v md_count_v))
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
@@ -1433,13 +1547,15 @@ let allocate_slab_aux_3_2
   (ensures fun h0 _ h1 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
     let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v guard_pages_interval - 2)
       (US.v idx2) (US.v idx3)
       (US.v md_count_v + US.v guard_pages_interval - 1)
       (US.v idx5)
+      (US.v idx6)
+      (US.v idx7)
       h1 in
     ALG.dataify gs1
     == Seq.append
@@ -1459,28 +1575,28 @@ let allocate_slab_aux_3_2
   =
   let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   assert (~ (ALG.mem_all #AL.status (US.v md_count_v + 0) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0));
   assert (~ (ALG.mem_all #AL.status (US.v md_count_v) (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0));
   AL.insert1
     (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-    idx1 (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+    idx1 (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)
     md_count_v
     0ul;
   let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-      (US.v md_count_v) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+      (US.v md_count_v) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   AL.extend_insert
     guard_pages_interval
     (US.sub guard_pages_interval 2sz)
     md_region
-    idx2 idx3 idx4 idx5
+    idx2 idx3 idx4 idx5 idx6 idx7
     md_count_v
     0ul;
   let gs2 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
-      (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+      (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   assert (ALG.ptrs_in #AL.status
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz)) gs2
     == FS.union
@@ -1516,6 +1632,8 @@ let allocate_slab_aux_3_2
     (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
     (US.v idx2) (US.v idx3)
     (US.v idx5)
+    (US.v idx6)
+    (US.v idx7)
     (US.sub (US.add md_count_v guard_pages_interval) 1sz)
     3ul;
   let gs3 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
@@ -1523,39 +1641,49 @@ let allocate_slab_aux_3_2
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3)
       (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
-      (US.v idx5)) in
+      (US.v idx5)
+      (US.v idx6)
+      (US.v idx7)) in
   allocate_slab_aux_3_2_seq_equality md_count_v
     gs0 gs1 gs2 gs3;
+  ALG.is_dlist2_implies_spec #AL.status
+    pred5 (US.v idx5) (US.v idx6) gs0;
   allocate_slab_aux_3_2_list_partition md_count_v
     gs0 gs1 gs2 gs3
-    idx1 idx2 idx3 idx4 idx5;
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
   change_slprop_rel
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3)
       (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
-      (US.v idx5))
+      (US.v idx5)
+      (US.v idx6)
+      (US.v idx7))
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v guard_pages_interval - 2)
       (US.v idx2) (US.v idx3)
       (US.v md_count_v + US.v guard_pages_interval - 1)
-      (US.v idx5))
+      (US.v idx5)
+      (US.v idx6)
+      (US.v idx7))
     (fun x y -> x == y)
     (fun m -> ALG.varraylist_to_varraylist_lemma #AL.status
       #pred1 #pred2 #pred3 #pred4 #pred5
-      guard_pages_interval
-      md_region
-      md_count_v
+      (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v (US.sub guard_pages_interval 2sz))
       (US.v idx2) (US.v idx3)
       (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
       (US.v idx5)
+      (US.v idx6)
+      (US.v idx7)
       (US.v md_count_v + US.v guard_pages_interval - 2)
       (US.v idx2) (US.v idx3)
       (US.v md_count_v + US.v guard_pages_interval - 1)
       (US.v idx5)
+      (US.v idx6)
+      (US.v idx7)
       m
     );
   ()
@@ -1595,7 +1723,6 @@ let lemma_slab_aux_3_3_1
   in Classical.forall_intro aux
 
 #restart-solver
-
 
 let allocate_slab_aux_3_3_1 (#opened:_)
   (size_class: sc)
@@ -1653,7 +1780,6 @@ let allocate_slab_aux_3_3_1 (#opened:_)
         (Seq.create 1 3ul))))
     (SeqUtils.init_us_refined (US.v md_count_v))
     (Seq.slice (SeqUtils.init_us_refined (US.v (US.add md_count_v guard_pages_interval))) 0 (US.v md_count_v))
-
 
 let split_l_l (#opened:_) (#a: Type)
   (k1: US.t)
@@ -2426,22 +2552,18 @@ let allocate_slab_aux_3
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (md_count_v: US.t{US.v md_count_v + US.v guard_pages_interval <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-  (idx1 idx2 idx3 idx4 idx5: US.t)
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : Steel unit//US.t
   (
     vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    A.varray r_idxs `star`
     right_vprop slab_region md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
@@ -2451,18 +2573,16 @@ let allocate_slab_aux_3
   )
   (fun _ ->
     vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    A.varray r_idxs `star`
     right_vprop slab_region md_bm_region md_region (US.add md_count_v guard_pages_interval) `star`
     AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v guard_pages_interval - 2)
       (US.v idx2) (US.v idx3)
       (US.v md_count_v + US.v guard_pages_interval - 1)
-      (US.v idx5) `star`
+      (US.v idx5)
+      (US.v idx6)
+      (US.v idx7) `star`
     starseq
       #(pos:US.t{US.v pos < US.v (US.add md_count_v guard_pages_interval)})
       #(t size_class)
@@ -2481,7 +2601,7 @@ let allocate_slab_aux_3
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
     US.v md_count_v <> AL.null /\
     md_count_v == sel md_count h0 /\
     US.v md_count_v < US.v metadata_max /\
@@ -2491,20 +2611,24 @@ let allocate_slab_aux_3
   (ensures fun h0 _ h1 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
     let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
       (US.v md_count_v + US.v guard_pages_interval - 2)
       (US.v idx2) (US.v idx3)
       (US.v md_count_v + US.v guard_pages_interval - 1)
-      (US.v idx5) h1 in
-    //idx1' <> AL.null_ptr /\
-    //US.v (sel md_count h1) <> AL.null /\
-    sel r1 h1 == US.sub (US.add md_count_v guard_pages_interval) 2sz /\
-    sel r2 h1 == sel r2 h0 /\
-    sel r3 h1 == sel r3 h0 /\
-    sel r4 h1 == US.sub (US.add md_count_v guard_pages_interval)  1sz /\
-    sel r5 h1 == sel r5 h0 /\
+      (US.v idx5)
+      (US.v idx6)
+      (US.v idx7) h1 in
+    let idxs0 = A.asel r_idxs h0 in
+    let idxs1 = A.asel r_idxs h1 in
+    Seq.index idxs1 0 == US.sub (US.add md_count_v guard_pages_interval) 2sz /\
+    Seq.index idxs1 1 == Seq.index idxs0 1 /\
+    Seq.index idxs1 2 == Seq.index idxs0 2 /\
+    Seq.index idxs1 3 == US.sub (US.add md_count_v guard_pages_interval) 1sz /\
+    Seq.index idxs1 4 == Seq.index idxs0 4 /\
+    Seq.index idxs1 5 == Seq.index idxs0 5 /\
+    Seq.index idxs1 6 == Seq.index idxs0 6 /\
     sel md_count h0 = md_count_v /\
     sel md_count h1 = US.add md_count_v guard_pages_interval /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
@@ -2525,23 +2649,29 @@ let allocate_slab_aux_3
   =
   let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region md_count_v)
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   allocate_slab_aux_3_1
     slab_region md_bm_region md_region md_count_v
-    idx1 idx2 idx3 idx4 idx5;
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
   let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
     (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) in
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
   ALG.lemma_dataify_slice #AL.status gs1 (US.v md_count_v);
   allocate_slab_aux_3_2
     md_region md_count_v
-    idx1 idx2 idx3 idx4 idx5;
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
   allocate_slab_aux_3_3 size_class
     slab_region md_bm_region md_region md_count_v md_region_lv;
   let v = read md_count in
   write md_count (US.add v guard_pages_interval);
-  write r1 (US.sub (US.add v guard_pages_interval) 2sz);
-  write r4 (US.sub (US.add v guard_pages_interval) 1sz);
+
+  let gs_idxs0 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  A.upd r_idxs 0sz (US.sub (US.add v guard_pages_interval) 2sz);
+  A.upd r_idxs 3sz (US.sub (US.add v guard_pages_interval) 1sz);
+  let gs_idxs1 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+
   return ()
 #pop-options
 
@@ -2549,7 +2679,334 @@ module P = Steel.FractionalPermission
 
 #restart-solver
 
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+//type bounded_pair' = US.t & US.t
+//let bounded_pair (up: US.t) = s:bounded_pair'{US.v (fst s) < US.v up /\ US.v (snd s) < US.v up}
+
+type bounded_tuple' : Type0
+  = {x: US.t; y: US.t; z: US.t; w: US.t}
+let bounded_tuple (up: US.t) = s:bounded_tuple'{
+  US.v s.x < US.v up
+  //US.v s.y < US.v up /\
+  //US.v s.z < US.v up
+  //US.v s.w < US.v up
+}
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100 --query_stats --compat_pre_typed_indexed_effects"
+let allocate_slab_aux_4_aux1
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
+  : Steel (bounded_tuple md_count_v)
+  (
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7))
+  )
+  (fun idxs ->
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idxs.x)
+      (US.v idx2) (US.v idx3) (US.v idx4)
+      (US.v idxs.y)
+      (US.v idxs.z)
+      (US.v idxs.w)
+    )
+  )
+  (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    //US.v md_count_v <> AL.null /\
+    idx7 <> 0sz /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+  )
+  (ensures fun h0 idxs h1 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idxs.x)
+      (US.v idx2) (US.v idx3) (US.v idx4)
+      (US.v idxs.y)
+      (US.v idxs.z)
+      (US.v idxs.w) h1 in
+    //US.v md_count_v <> AL.null /\
+    idxs.x <> AL.null_ptr /\
+    Seq.index md_region_lv (US.v idxs.x) = 4ul /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.dataify gs1 `Seq.equal` (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul) /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
+    ALG.partition #AL.status gs1 (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y)
+  )
+  =
+  ALG.lemma_size5_not_null_implies_bounds pred1 pred2 pred3 pred4 pred5
+    (A.split_l md_region md_count_v)
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) idx7;
+  assert (US.v idx6 < US.v md_count_v);
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
+    (A.split_l md_region md_count_v)
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
+  ALG.lemma_tail5_implies_pred5 pred1 pred2 pred3 pred4 pred5
+    (A.split_l md_region md_count_v)
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7;
+  ALG.lemma_dataify_index #AL.status gs0 (US.v idx6);
+  assert (Seq.index (ALG.dataify #AL.status gs0) (US.v idx6) = 4ul);
+  lemma_partition_and_pred_implies_mem5
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4)
+    (US.v idx5) (US.v idx6) (US.v idx7)
+    gs0 (US.v idx6);
+  assert (ALG.mem #AL.status (US.v idx6) (US.v idx5) gs0);
+
+  let idxs : ALG.tuple3
+    = AL.dequeue #pred1 #pred2 #pred3 #pred4 #pred5
+      (A.split_l md_region md_count_v)
+      idx5 idx6 idx7
+      (G.hide (US.v idx1)) (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) in
+
+  AL.insert1 #pred1 #pred2 #pred3 #pred4 #pred5
+    (A.split_l md_region md_count_v)
+    idx1 (G.hide (US.v idx2)) (G.hide (US.v idx3)) (G.hide (US.v idx4)) (G.hide (US.v idxs.x)) (G.hide (US.v idxs.y)) (G.hide (US.v idxs.z)) idx6 0ul;
+  (**) let gs1 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
+    (A.split_l md_region md_count_v)
+    (US.v idx6) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.x) (US.v idxs.y) (US.v idxs.z)) in
+  assert (ALG.dataify #AL.status gs1 `Seq.equal` Seq.upd (ALG.dataify #AL.status gs0) (US.v idx6) 0ul);
+  assert (ALG.ptrs_all #AL.status (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) gs0 `FStar.FiniteSet.Base.equal`
+          ALG.ptrs_all #AL.status (US.v idx6) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.x) gs1);
+
+  let r = {x = idx6; y = idxs.x; z = idxs.y; w = idxs.z} in
+  change_slprop_rel
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx6)
+      (US.v idx2) (US.v idx3) (US.v idx4)
+      (US.v idxs.x) (US.v idxs.y) (US.v idxs.z))
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v r.x)
+      (US.v idx2) (US.v idx3) (US.v idx4)
+      (US.v r.y) (US.v r.z) (US.v r.w))
+    (fun x y -> x == y)
+    (fun m -> ALG.varraylist_to_varraylist_lemma #AL.status
+      #pred1 #pred2 #pred3 #pred4 #pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx6)
+      (US.v idx2) (US.v idx3) (US.v idx4)
+      (US.v idxs.x) (US.v idxs.y) (US.v idxs.z)
+      (US.v r.x)
+      (US.v idx2) (US.v idx3) (US.v idx4)
+      (US.v r.y) (US.v r.z) (US.v r.w)
+      m
+    );
+  return r
+
+let allocate_slab_aux_4_aux2
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
+  (idxs: bounded_tuple md_count_v)
+  : Steel unit
+  (
+    starseq
+      #(pos:US.t{US.v pos < US.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_us_refined (US.v md_count_v))
+  )
+  (fun _ ->
+    starseq
+      #(pos:US.t{US.v pos < US.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+      (SeqUtils.init_us_refined (US.v md_count_v))
+  )
+  (requires fun h0 ->
+    US.v idxs.x < US.v md_count_v /\
+    Seq.index (G.reveal md_region_lv) (US.v idxs.x) == 4ul
+  )
+  (ensures fun _ _ _ -> True)
+  =
+  (**) starseq_unpack_s
+    #_
+    #(pos:US.t{US.v pos < US.v md_count_v})
+    #(t size_class)
+    (f size_class slab_region md_bm_region md_count_v md_region_lv)
+    (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+    (SeqUtils.init_us_refined (US.v md_count_v))
+    (US.v idxs.x);
+  SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idxs.x);
+  (**) change_equal_slprop
+    (f size_class slab_region md_bm_region md_count_v md_region_lv
+      (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idxs.x)))
+    (p_quarantine size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x));
+  p_quarantine_unpack size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x);
+  Quarantine.mmap_untrap_quarantine (slab_array slab_region idxs.x) (u32_to_sz page_size);
+  Helpers.slab_to_slots size_class (slab_array slab_region idxs.x);
+  let md = gget (A.varray (md_bm_array md_bm_region idxs.x)) in
+  empty_md_is_properly_zeroed size_class;
+  intro_slab_vprop size_class
+    (md_bm_array md_bm_region idxs.x)
+    (Seq.create 4 0UL)
+    (slab_array slab_region idxs.x);
+  pack_slab_starseq size_class
+    slab_region md_bm_region md_region md_count
+    md_count_v md_region_lv
+    idxs.x 0ul
+
+//inline_for_extraction noextract
+val allocate_slab_aux_4
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
+  //(r_ringbuffer: A.array US.t{A.length r_ringbuffer == US.v max_size})
+  //(r_in r_out r_size: ref US.t)
+  //: Steel (bounded md_count_v & bounded md_count_v)
+  //: Steel (US.t & US.t)
+  : Steel (bounded_tuple md_count_v)
+  (
+    vptr md_count `star`
+    A.varray r_idxs `star`
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
+    starseq
+      #(pos:US.t{US.v pos < US.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      (SeqUtils.init_us_refined (US.v md_count_v))
+  )
+  (fun idxs ->
+    vptr md_count `star`
+    A.varray r_idxs `star`
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idxs.x)
+      (US.v idx2) (US.v idx3) (US.v idx4)
+      (US.v idxs.y)
+      (US.v idxs.z)
+      (US.v idxs.w)
+    ) `star`
+    starseq
+      #(pos:US.t{US.v pos < US.v md_count_v})
+      #(t size_class)
+      (f size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+      (SeqUtils.init_us_refined (US.v md_count_v))
+  )
+  (requires fun h0 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let idxs0 = A.asel r_idxs h0 in
+    US.v md_count_v <> AL.null /\
+    sel md_count h0 == md_count_v /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
+    idx7 <> 0sz /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)
+  )
+  (ensures fun h0 idxs h1 ->
+    let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let gs1 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v)
+      (US.v idxs.x)
+      (US.v idx2) (US.v idx3) (US.v idx4)
+      (US.v idxs.y)
+      (US.v idxs.z)
+      (US.v idxs.w) h1 in
+    let idxs0 = A.asel r_idxs h0 in
+    let idxs1 = A.asel r_idxs h1 in
+    US.v md_count_v <> AL.null /\
+    sel md_count h0 == md_count_v /\
+    sel md_count h1 == md_count_v /\
+    idxs.x <> AL.null_ptr /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
+    Seq.index idxs1 0 == idxs.x /\
+    Seq.index idxs1 1 == idx2 /\
+    Seq.index idxs1 2 == idx3 /\
+    Seq.index idxs1 3 == idx4 /\
+    Seq.index idxs1 4 == idxs.y /\
+    Seq.index idxs1 5 == idxs.z /\
+    Seq.index idxs1 6 == idxs.w /\
+    ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
+    ALG.dataify gs1 `Seq.equal` (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul) /\
+    ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
+    ALG.partition #AL.status gs1 (US.v idxs.x) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idxs.y)
+  )
+
+#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
+let allocate_slab_aux_4
+  (size_class: sc)
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_region: array AL.cell{A.length md_region = US.v metadata_max})
+  (md_count: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
+  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
+  =
+  (**) let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
+    (A.split_l md_region md_count_v)
+    (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) in
+ let r = allocate_slab_aux_4_aux1 size_class
+    slab_region md_bm_region md_region md_count r_idxs
+    md_count_v md_region_lv
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7 in
+  allocate_slab_aux_4_aux2 size_class
+    slab_region md_bm_region md_region md_count r_idxs
+    md_count_v md_region_lv
+    idx1 idx2 idx3 idx4 idx5 idx6 idx7 r;
+
+  let gs_idxs0 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+  A.upd r_idxs 0sz r.x;
+  A.upd r_idxs 4sz r.y;
+  A.upd r_idxs 5sz r.z;
+  A.upd r_idxs 6sz r.w;
+  let gs_idxs1 : G.erased (Seq.lseq US.t 7)
+    = gget (A.varray r_idxs) in
+
+  return r
+
+#restart-solver
+
 inline_for_extraction noextract
 let allocate_slab'
   (size_class: sc)
@@ -2557,22 +3014,18 @@ let allocate_slab'
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
-  (idx1 idx2 idx3 idx4 idx5: US.t)
+  (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : Steel (array U8.t)
   (
     vptr md_count `star`
-    vptr r1 `star`
-    vptr r2 `star`
-    vptr r3 `star`
-    vptr r4 `star`
-    vptr r5 `star`
+    A.varray r_idxs `star`
     right_vprop slab_region md_bm_region md_region md_count_v `star`
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5)) `star`
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
       #(t size_class)
@@ -2585,19 +3038,22 @@ let allocate_slab'
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) h0 in
-    sel r1 h0 == idx1 /\
-    sel r2 h0 == idx2 /\
-    sel r3 h0 == idx3 /\
-    sel r4 h0 == idx4 /\
-    sel r5 h0 == idx5 /\
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7) h0 in
+    let idxs0 = A.asel r_idxs h0 in
     US.v md_count_v <> AL.null /\
-    md_count_v == sel md_count h0 /\
+    sel md_count h0 == md_count_v /\
+    Seq.index idxs0 0 == idx1 /\
+    Seq.index idxs0 1 == idx2 /\
+    Seq.index idxs0 2 == idx3 /\
+    Seq.index idxs0 3 == idx4 /\
+    Seq.index idxs0 4 == idx5 /\
+    Seq.index idxs0 5 == idx6 /\
+    Seq.index idxs0 6 == idx7 /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv
   )
@@ -2613,17 +3069,17 @@ let allocate_slab'
   if (idx2 <> AL.null_ptr) then (
     ALG.lemma_head2_in_bounds pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      (US.v idx1) idx2 (US.v idx3) (US.v idx4) (US.v idx5);
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7);
     // Lemma above used to derive
     assert (US.v md_count_v <> AL.null);
-
+    // TODO!
     let r = allocate_slab_aux_2 size_class
-      slab_region md_bm_region md_region
-      md_count r1 r2 r3 r4 r5
-      md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 in
+      slab_region md_bm_region md_region md_count r_idxs
+      md_count_v md_region_lv
+      idx1 idx2 idx3 idx4 idx5 idx6 idx7 in
     pack_right_and_refactor_vrefine_dep
       size_class slab_region md_bm_region md_region md_count
-      r1 r2 r3 r4 r5 md_count_v;
+      r_idxs md_count_v;
     A.varrayp_not_null r P.full_perm;
     change_equal_slprop
       (A.varray r)
@@ -2632,119 +3088,148 @@ let allocate_slab'
   ) else if (idx1 <> AL.null_ptr) then (
     ALG.lemma_head1_in_bounds pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
-      idx1 (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5);
+      (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7);
     // Lemma above used to derive
     assert (US.v md_count_v <> AL.null);
-
+    // TODO!
     let r = allocate_slab_aux_1 size_class
-      slab_region md_bm_region md_region
-      md_count r1 r2 r3 r4 r5
-      md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 in
+      slab_region md_bm_region md_region md_count r_idxs
+      md_count_v md_region_lv
+      idx1 idx2 idx3 idx4 idx5 idx6 idx7 in
     pack_right_and_refactor_vrefine_dep
       size_class slab_region md_bm_region md_region md_count
-      r1 r2 r3 r4 r5 md_count_v;
+      r_idxs md_count_v;
     A.varrayp_not_null r P.full_perm;
     change_equal_slprop
       (A.varray r)
       (if (A.is_null r) then emp else A.varray r);
     return r
   ) else (
-    let md_count_v' = read md_count in
-    let b = US.lte (US.add md_count_v' guard_pages_interval) metadata_max in
-    if b then (
-      allocate_slab_aux_3 size_class
-        slab_region md_bm_region md_region
-        md_count r1 r2 r3 r4 r5
+    let b = US.gte idx7 quarantine_queue_threshold in
+    if enable_quarantine && b then (
+      let idxs = allocate_slab_aux_4 size_class
+        slab_region md_bm_region md_region md_count r_idxs
         md_count_v md_region_lv
-        idx1 idx2 idx3 idx4 idx5;
-      change_slprop_rel
-        (AL.varraylist pred1 pred2 pred3 pred4 pred5
-          (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-          (US.v md_count_v + US.v guard_pages_interval - 2)
-          (US.v idx2) (US.v idx3)
-          (US.v md_count_v + US.v guard_pages_interval - 1)
-          (US.v idx5))
-        (AL.varraylist pred1 pred2 pred3 pred4 pred5
-          (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
-          (US.v (US.sub (US.add md_count_v guard_pages_interval) 2sz))
-          (US.v idx2) (US.v idx3)
-          (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
-          (US.v idx5))
-        (fun x y -> x == y)
-        (fun m -> ALG.varraylist_to_varraylist_lemma #AL.status
-          #pred1 #pred2 #pred3 #pred4 #pred5
-          guard_pages_interval
-          md_region
-          md_count_v
-          (US.v md_count_v + US.v guard_pages_interval - 2)
-          (US.v idx2) (US.v idx3)
-          (US.v md_count_v + US.v guard_pages_interval - 1)
-          (US.v idx5)
-          (US.v (US.sub (US.add md_count_v guard_pages_interval) 2sz))
-          (US.v idx2) (US.v idx3)
-          (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
-          (US.v idx5)
-          m
-        );
+        idx1 idx2 idx3 idx4 idx5 idx6 idx7 in
       let r = allocate_slab_aux_1 size_class
-        slab_region md_bm_region md_region
-        md_count r1 r2 r3 r4 r5
-        (US.add md_count_v guard_pages_interval)
-        (G.hide (Seq.append
-          (G.reveal md_region_lv)
-          (Seq.append
-            (Seq.create (US.v guard_pages_interval - 1) 0ul)
-            (Seq.create 1 3ul)
-          )))
-        (US.sub (US.add md_count_v guard_pages_interval) 2sz)
-        idx2 idx3
-        (US.sub (US.add md_count_v guard_pages_interval) 1sz)
-        idx5 in
+        slab_region md_bm_region md_region md_count r_idxs
+        md_count_v (G.hide (Seq.upd (G.reveal md_region_lv) (US.v idxs.x) 0ul))
+        idxs.x idx2 idx3 idx4 idxs.y idxs.z idxs.w in
+      A.varrayp_not_null r P.full_perm;
       pack_right_and_refactor_vrefine_dep
         size_class slab_region md_bm_region md_region md_count
-        r1 r2 r3 r4 r5 (US.add md_count_v guard_pages_interval);
-      A.varrayp_not_null r P.full_perm;
+        r_idxs md_count_v;
       change_equal_slprop
         (A.varray r)
         (if (A.is_null r) then emp else A.varray r);
       return r
     ) else (
-      pack_3 size_class
-        slab_region md_bm_region md_region
-        md_count r1 r2 r3 r4 r5
-        md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5;
-      pack_right_and_refactor_vrefine_dep
+      let md_count_v' = read md_count in
+      let b = US.lte (US.add md_count_v' guard_pages_interval) metadata_max in
+      if b then (
+        allocate_slab_aux_3 size_class
+          slab_region md_bm_region md_region md_count r_idxs
+          md_count_v md_region_lv
+          idx1 idx2 idx3 idx4 idx5 idx6 idx7;
+        change_slprop_rel
+          (AL.varraylist pred1 pred2 pred3 pred4 pred5
+            (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+            (US.v md_count_v + US.v guard_pages_interval - 2)
+            (US.v idx2) (US.v idx3)
+            (US.v md_count_v + US.v guard_pages_interval - 1)
+            (US.v idx5)
+            (US.v idx6)
+            (US.v idx7))
+          (AL.varraylist pred1 pred2 pred3 pred4 pred5
+            (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+            (US.v (US.sub (US.add md_count_v guard_pages_interval) 2sz))
+            (US.v idx2) (US.v idx3)
+            (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
+            (US.v idx5)
+            (US.v idx6)
+            (US.v idx7))
+          (fun x y -> x == y)
+          (fun m -> ALG.varraylist_to_varraylist_lemma #AL.status
+            #pred1 #pred2 #pred3 #pred4 #pred5
+            (A.split_l md_region (md_count_v `US.add` guard_pages_interval))
+            (US.v md_count_v + US.v guard_pages_interval - 2)
+            (US.v idx2) (US.v idx3)
+            (US.v md_count_v + US.v guard_pages_interval - 1)
+            (US.v idx5)
+            (US.v idx6)
+            (US.v idx7)
+            (US.v (US.sub (US.add md_count_v guard_pages_interval) 2sz))
+            (US.v idx2) (US.v idx3)
+            (US.v (US.sub (US.add md_count_v guard_pages_interval) 1sz))
+            (US.v idx5)
+            (US.v idx6)
+            (US.v idx7)
+            m
+          );
+        let r = allocate_slab_aux_1 size_class
+          slab_region md_bm_region md_region md_count r_idxs
+          (US.add md_count_v guard_pages_interval)
+          (G.hide (Seq.append
+            (G.reveal md_region_lv)
+            (Seq.append
+              (Seq.create (US.v guard_pages_interval - 1) 0ul)
+              (Seq.create 1 3ul)
+            )))
+          (US.sub (US.add md_count_v guard_pages_interval) 2sz)
+          idx2 idx3
+          (US.sub (US.add md_count_v guard_pages_interval) 1sz)
+          idx5 idx6 idx7 in
+        pack_right_and_refactor_vrefine_dep
+          size_class slab_region md_bm_region md_region md_count
+          r_idxs
+          (US.add md_count_v guard_pages_interval);
+        A.varrayp_not_null r P.full_perm;
+        change_equal_slprop
+          (A.varray r)
+          (if (A.is_null r) then emp else A.varray r);
+        return r
+      ) else (
+        pack_3 size_class
+          slab_region md_bm_region md_region
+          md_count r_idxs
+          md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 idx6 idx7;
+        pack_right_and_refactor_vrefine_dep
           size_class slab_region md_bm_region md_region
           md_count
-          r1 r2 r3 r4 r5 md_count_v;
-      change_equal_slprop
-        emp
-        (if A.is_null A.null then emp else A.varray A.null);
-      return (A.null #U8.t)
+          r_idxs md_count_v;
+        change_equal_slprop
+          emp
+          (if A.is_null A.null then emp else A.varray A.null);
+        return (A.null #U8.t)
+      )
     )
   )
 
-#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
+#restart-solver
+
+#restart-solver
+
+#push-options "--z3rlimit 300 --compat_pre_typed_indexed_effects"
 let allocate_slab
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   : Steel (array U8.t)
   (
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
   )
   (fun r ->
     (if (A.is_null r) then emp else A.varray r) `star`
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun _ -> True)
   (ensures fun _ r _ ->
@@ -2761,62 +3246,98 @@ let allocate_slab
     = elim_vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5) in
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs) in
 
   let md_count_v_ = read md_count in
 
   change_equal_slprop
-    (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 (G.reveal md_count_v))
+    (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs (G.reveal md_count_v))
     (left_vprop size_class slab_region md_bm_region md_region
-      r1 r2 r3 r4 r5 md_count_v_ `star`
+      r_idxs md_count_v_ `star`
     right_vprop slab_region md_bm_region md_region md_count_v_);
+  change_equal_slprop
+    (left_vprop size_class slab_region md_bm_region md_region
+      r_idxs md_count_v_)
+    (left_vprop1 md_region r_idxs md_count_v_
+    `vdep`
+    left_vprop2 size_class slab_region md_bm_region md_region r_idxs md_count_v_);
 
   let x
     : G.erased _
     = elim_vdep
-    (left_vprop1 md_region r1 r2 r3 r4 r5 md_count_v_)
-    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v_) in
+    (left_vprop1 md_region r_idxs md_count_v_)
+    (left_vprop2 size_class slab_region md_bm_region md_region r_idxs md_count_v_) in
 
   let idxs
     : G.erased _
     = elim_vdep
-      (vptr r1 `star` vptr r2 `star` vptr r3 `star` vptr r4 `star` vptr r5)
+      (A.varray r_idxs)
       (ind_varraylist_aux (A.split_l md_region md_count_v_))
   in
-  let idx1_ = read r1 in
-  let idx2_ = read r2 in
-  let idx3_ = read r3 in
-  let idx4_ = read r4 in
-  let idx5_ = read r5 in
+  let idx1_ = A.index r_idxs 0sz in
+  let idx2_ = A.index r_idxs 1sz in
+  let idx3_ = A.index r_idxs 2sz in
+  let idx4_ = A.index r_idxs 3sz in
+  let idx5_ = A.index r_idxs 4sz in
+  let idx6_ = A.index r_idxs 5sz in
+  let idx7_ = A.index r_idxs 6sz in
 
   elim_vrefine
     (ind_varraylist_aux2 (A.split_l md_region md_count_v_) idxs)
     (ind_varraylist_aux_refinement (A.split_l md_region md_count_v_) idxs);
-
+  // OK
+  change_slprop_rel
+    (ind_varraylist_aux2 (A.split_l md_region md_count_v_) idxs)
+    (AL.varraylist pred1 pred2 pred3 pred4 pred5
+      (A.split_l md_region md_count_v_)
+      (US.v (Seq.index idxs 0))
+      (US.v (Seq.index idxs 1))
+      (US.v (Seq.index idxs 2))
+      (US.v (Seq.index idxs 3))
+      (US.v (Seq.index idxs 4))
+      (US.v (Seq.index idxs 5))
+      (US.v (Seq.index idxs 6)))
+    (fun x y -> x == y)
+    (fun _ -> ind_varraylist_aux2_lemma
+      (A.split_l md_region md_count_v_)
+      (G.reveal idxs)
+      idx1_ idx2_ idx3_ idx4_ idx5_ idx6_ idx7_);
   change_slprop_rel
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v_)
-      (US.v (fst (fst (fst (fst (G.reveal idxs))))))
-      (US.v (snd (fst (fst (fst (G.reveal idxs))))))
-      (US.v (snd (fst (fst (G.reveal idxs)))))
-      (US.v (snd (fst (G.reveal idxs))))
-      (US.v (snd (G.reveal idxs))))
+      (US.v (Seq.index idxs 0))
+      (US.v (Seq.index idxs 1))
+      (US.v (Seq.index idxs 2))
+      (US.v (Seq.index idxs 3))
+      (US.v (Seq.index idxs 4))
+      (US.v (Seq.index idxs 5))
+      (US.v (Seq.index idxs 6)))
     (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v_)
-      (US.v idx1_) (US.v idx2_) (US.v idx3_) (US.v idx4_) (US.v idx5_))
+      (US.v idx1_) (US.v idx2_) (US.v idx3_) (US.v idx4_) (US.v idx5_) (US.v idx6_) (US.v idx7_))
     (fun x y -> x == y)
-    (fun _ ->
-      assert (idx1_ == fst (fst (fst (fst (G.reveal idxs)))));
-      assert (idx2_ == snd (fst (fst (fst (G.reveal idxs)))));
-      assert (idx3_ == snd (fst (fst (G.reveal idxs))));
-      assert (idx4_ == snd (fst (G.reveal idxs)));
-      assert (idx5_ == snd (G.reveal idxs))
+    (fun m -> ALG.varraylist_to_varraylist_lemma #AL.status
+      #pred1 #pred2 #pred3 #pred4 #pred5
+      (A.split_l md_region md_count_v_)
+      (US.v (Seq.index idxs 0))
+      (US.v (Seq.index idxs 1))
+      (US.v (Seq.index idxs 2))
+      (US.v (Seq.index idxs 3))
+      (US.v (Seq.index idxs 4))
+      (US.v (Seq.index idxs 5))
+      (US.v (Seq.index idxs 6))
+      (US.v idx1_) (US.v idx2_) (US.v idx3_) (US.v idx4_) (US.v idx5_) (US.v idx6_) (US.v idx7_)
+      m
     );
 
   let x' : Ghost.erased (Seq.lseq AL.status (US.v md_count_v_)) = ALG.dataify (dsnd x) in
+  // NOT OK
 
   change_equal_slprop
-    (left_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5 md_count_v_ x)
+    (left_vprop2 size_class slab_region md_bm_region md_region r_idxs md_count_v_ x)
+    (left_vprop2_aux size_class slab_region md_bm_region md_count_v_ x');
+  change_equal_slprop
+    (left_vprop2_aux size_class slab_region md_bm_region md_count_v_ x')
     (starseq
       #(pos:US.t{US.v pos < US.v md_count_v_})
       #(t size_class)
@@ -2825,8 +3346,8 @@ let allocate_slab
       (SeqUtils.init_us_refined (US.v md_count_v_)));
 
   let r = allocate_slab' size_class
-    slab_region md_bm_region md_region md_count r1 r2 r3 r4 r5
-    md_count_v_ x' idx1_ idx2_ idx3_ idx4_ idx5_
+    slab_region md_bm_region md_region md_count r_idxs
+    md_count_v_ x' idx1_ idx2_ idx3_ idx4_ idx5_ idx6_ idx7_
   in
 
   return r

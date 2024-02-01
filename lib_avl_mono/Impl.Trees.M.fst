@@ -33,7 +33,7 @@ let create_leaf
     return null_t
 
 //@Trees
-#push-options "--fuel 1 --ifuel 1"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 inline_for_extraction noextract
 let create_tree
   (f1: f_malloc) (f2: f_free)

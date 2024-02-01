@@ -27,7 +27,7 @@ val deallocate_slab
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (r1 r2 r3 r4 r5: ref US.t)
+  (r_idxs: array US.t{A.length r_idxs = 7})
   (diff_: US.t)
   : Steel bool
   (
@@ -35,14 +35,14 @@ val deallocate_slab
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r1 r2 r3 r4 r5)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
   )
   (requires fun _ ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in

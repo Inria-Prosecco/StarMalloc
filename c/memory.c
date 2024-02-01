@@ -52,11 +52,25 @@ void mmap_strict_trap (uint8_t* ptr, size_t len) {
 }
 
 // syscall wrapper
+void mmap_strict_untrap (uint8_t* ptr, size_t len) {
+  void* p = mmap((void*) ptr, len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
+  if (p == MAP_FAILED && errno != ENOMEM) {
+    fatal_error("non-ENOMEM mmap failure");
+  }
+  return;
+}
+
+// syscall wrapper
 void mmap_trap (uint8_t* ptr, size_t len) {
   int r = madvise((void*) ptr, len, MADV_DONTNEED);
   if (r && errno != ENOMEM) {
     fatal_error("non-ENOMEM MADV_DONTNEED madvise failure");
   }
+  return;
+}
+
+// wrapper
+void mmap_untrap (uint8_t* ptr, size_t len) {
   return;
 }
 
@@ -85,6 +99,11 @@ ArrayList_cell *mmap_cell_status_init(size_t len) {
 // slabs allocator init
 size_t *mmap_ptr_us_init() {
   return (size_t*) mmap_init(sizeof(size_t));
+}
+
+// slabs allocator init
+size_t *mmap_array_us_init(size_t len) {
+  return (size_t*) mmap_init(len * sizeof(size_t));
 }
 
 // slabs allocator init

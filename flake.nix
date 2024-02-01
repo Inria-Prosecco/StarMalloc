@@ -42,6 +42,7 @@
           "lib_bitmap(/.*)?"
           "lib_list(/.*)?"
           "lib_misc(/.*)?"
+          "lib_ringbuffer(/.*)?"
           "src(/.*)?"
           "c(/.*)?"
           "Makefile.include"

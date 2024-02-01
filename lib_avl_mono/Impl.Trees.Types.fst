@@ -71,14 +71,18 @@ type mmap_md_slabs =
     );
   }
 
-#push-options "--fuel 0 --ifuel 0"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let init_mmap_md_slabs (_:unit)
   : SteelTop mmap_md_slabs false (fun _ -> emp) (fun _ _ _ -> True)
   =
   let slab_region_size = US.mul metadata_max (US.uint32_to_sizet Config.page_size) in
   let slab_region = mmap_u8_init slab_region_size in
   A.ghost_split slab_region 0sz;
-  assume (A.split_r slab_region 0sz == slab_region);
+  A.ptr_shift_zero (A.ptr_of slab_region);
+  A.ptr_base_offset_inj
+    (A.ptr_of slab_region)
+    (A.ptr_of (A.split_r slab_region 0sz));
+  assert (A.split_r slab_region 0sz == slab_region);
   let scs = init_avl_scs (A.split_r slab_region 0sz) in
   let lock = L.new_lock (size_class_vprop scs `star` A.varray (A.split_l slab_region 0sz)) in
   return { slab_region; scs; lock; }

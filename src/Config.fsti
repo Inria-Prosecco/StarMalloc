@@ -90,6 +90,10 @@ val enable_quarantine_trap: bool
 // controls whether quarantined slabs are protected
 inline_for_extraction
 val enable_quarantine_strict_trap: bool
+inline_for_extraction
+val quarantine_queue_length: v:US.t{0 < US.v v /\ US.v v <= US.v metadata_max}
+inline_for_extraction
+val quarantine_queue_threshold: v:US.t{0 < US.v v /\ US.v v < US.v quarantine_queue_length}
 
 // zeroing mechanism (slabs)
 // controls whether zeroing is checked at allocation
