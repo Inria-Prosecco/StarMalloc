@@ -8,14 +8,30 @@ let rec lemma_seq_to_list_append (#a:Type) (s1 s2: Seq.seq a)
   (ensures
     Seq.seq_to_list (Seq.append s1 s2) == L.append (Seq.seq_to_list s1) (Seq.seq_to_list s2))
   (decreases Seq.length s1)
-  = if Seq.length s1 = 0 then (assert (Seq.append s1 s2 `Seq.equal` s2))
-    else (
-      let s1' = Seq.slice s1 1 (Seq.length s1) in
+  =
+  match Seq.length s1 with
+  | 0 -> assert (Seq.append s1 s2 `Seq.equal` s2)
+  | 1 ->
+      let x = Seq.index s1 0 in
+      assert (Seq.append s1 s2 `Seq.equal` Seq.cons x s2);
+      Seq.lemma_index_is_nth s1 0;
+      assert (Seq.seq_to_list s1 == [x]);
+      Seq.lemma_seq_to_list_cons x s2
+  | _ ->
+      let x = Seq.index s1 0 in
       let s12 = Seq.append s1 s2 in
-      let s12' = Seq.slice s12 1 (Seq.length s12) in
-      lemma_seq_to_list_append s1' s2;
-      assert (s12' `Seq.equal` Seq.append s1' s2)
-    )
+      let s1_hd, s1_tl = Seq.split s1 1 in
+      Seq.lemma_index_is_nth s1_hd 0;
+      assert (s1_hd `Seq.equal` Seq.create 1 x);
+      assert (Seq.seq_to_list s1_hd == [x]);
+      Seq.lemma_split s1 1;
+      assert (s1 == Seq.append s1_hd s1_tl);
+      assert (Seq.append s1 s2 `Seq.equal` Seq.append s1_hd (Seq.append s1_tl s2));
+      assert (Seq.append s1 s2 `Seq.equal` Seq.append (Seq.append s1_hd s1_tl) s2);
+      lemma_seq_to_list_append s1_tl s2;
+      lemma_seq_to_list_append s1_hd (Seq.append s1_tl s2);
+      lemma_seq_to_list_append s1_hd s1_tl;
+      Seq.append_assoc s1_hd s1_tl s2
 
 // remove SMTPat
 let lemma_index_slice (#a:Type) (s:Seq.seq a)

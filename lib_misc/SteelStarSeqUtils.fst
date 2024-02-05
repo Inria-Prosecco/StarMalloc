@@ -76,6 +76,8 @@ let starl_seq_singleton (s: Seq.seq vprop) (n: nat{n < Seq.length s})
   : Lemma
   (starl_seq (Seq.slice s n (n+1)) `equiv` Seq.index s n)
   =
+  assert (Seq.slice s n (n+1) `Seq.equal` Seq.create 1 (Seq.index s n));
+  Seq.lemma_index_is_nth (Seq.slice s n (n+1)) 0;
   star_commutative (Seq.index s n) emp;
   cm_identity (Seq.index s n);
   equiv_trans
