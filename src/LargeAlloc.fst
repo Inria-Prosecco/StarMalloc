@@ -91,10 +91,15 @@ let up_fits_propagation (ptr1 ptr2: array U8.t)
   )
   = ()
 
+open SizeClass
+
 open FStar.Mul
-let trees_malloc2 (x: node)
+
+#push-options "--z3rlimit 50"
+let trees_malloc2_aux (x: node)
   : Steel (ref node)
-  emp (fun r -> vptr r)
+  (size_class_vprop metadata_slabs.scs)
+  (fun r -> size_class_vprop metadata_slabs.scs `star` vptr r)
   (requires fun _ -> True)
   (ensures fun _ r h1 ->
     sel r h1 == x /\
@@ -102,11 +107,9 @@ let trees_malloc2 (x: node)
     (G.reveal p) r
   )
   =
-  L.acquire metadata_slabs.lock;
   let ptr = SizeClass.allocate_size_class metadata_slabs.scs in
   if A.is_null ptr
   then (
-    L.release metadata_slabs.lock;
     // this should trigger a fatal error
     sladmit ();
     return null
@@ -126,23 +129,62 @@ let trees_malloc2 (x: node)
     up_fits_propagation ptr metadata_slabs.scs.slab_region;
     let r' = array_u8__to__ref_node ptr in
     array_u8__to__ref_node_bijectivity ptr;
-    L.release metadata_slabs.lock;
     write r' x;
     return r'
   )
+#pop-options
+
+open WithLock
+
+let trees_malloc2 (x: node)
+  : Steel (ref node)
+  emp (fun r -> vptr r)
+  (requires fun _ -> True)
+  (ensures fun _ r h1 ->
+    sel r h1 == x /\
+    not (is_null r) /\
+    (G.reveal p) r
+  )
+  =
+  let r = with_lock
+    unit
+    unit
+    (ref node)
+    (fun v0 ->
+      size_class_vprop metadata_slabs.scs `star`
+      A.varray (A.split_l metadata_slabs.slab_region 0sz))
+    (fun v1 -> emp)
+    (fun _ r -> vptr r)
+    ()
+    ()
+    metadata_slabs.lock
+    (fun _ r (vr: t_of (vptr r)) ->
+      x == vr /\
+      not (is_null r) /\
+      (G.reveal p) r
+    )
+    (fun _ -> trees_malloc2_aux x) 
+  in
+  return r
 
 module UP = FStar.PtrdiffT
 
-let trees_free2 (r: ref node)
+let trees_free2_aux (r: ref node)
   : Steel unit
-  (vptr r) (fun _ -> emp)
+  (
+    size_class_vprop metadata_slabs.scs `star`
+    A.varray (A.split_l metadata_slabs.slab_region 0sz) `star`
+    vptr r
+  )
+  (fun _ ->
+    size_class_vprop metadata_slabs.scs `star`
+    A.varray (A.split_l metadata_slabs.slab_region 0sz)
+  )
   (requires fun _ -> (G.reveal p) r)
-  //not (is_null x) ?
   (ensures fun _ _ _-> True)
   =
   vptr_not_null r;
   let ptr = ref_node__to__array_u8 r in
-  L.acquire metadata_slabs.lock;
   let diff = A.ptrdiff ptr (A.split_l metadata_slabs.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert (US.v diff_sz = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region));
@@ -152,14 +194,35 @@ let trees_free2 (r: ref node)
     change_equal_slprop
       (if b then emp else A.varray ptr)
       emp;
-    L.release metadata_slabs.lock;
     return ()
   ) else (
-    L.release metadata_slabs.lock;
     // this should trigger a fatal error
     sladmit ();
     return ()
   )
+
+let trees_free2 (r: ref node)
+  : Steel unit
+  (vptr r) (fun _ -> emp)
+  (requires fun _ -> (G.reveal p) r)
+  (ensures fun _ _ _-> True)
+  =
+  let r = with_lock
+    unit
+    (ref node)
+    unit
+    (fun v0 ->
+      size_class_vprop metadata_slabs.scs `star`
+      A.varray (A.split_l metadata_slabs.slab_region 0sz))
+    (fun v1 -> vptr v1)
+    (fun _ _ -> emp)
+    ()
+    r
+    metadata_slabs.lock
+    (fun _ _ _ -> True)
+    (fun _ -> trees_free2_aux r)
+  in
+  return r
 
 // machine representation
 inline_for_extraction noextract
@@ -407,20 +470,40 @@ let large_malloc (size: US.t)
     )
   )
   =
-  L.acquire metadata.lock;
-  let md_size = _size metadata.data in
-  [@inline_let] let max = 18446744073709551615UL in
-  assert (U64.v max = Impl.Core.c);
-  if U64.lt md_size max then (
-    //TODO: large_malloc' can return NULL due to mmap
-    let ptr = large_malloc_aux metadata.data size in
-    L.release metadata.lock;
-    return ptr
-  ) else (
-    L.release metadata.lock;
-    let r = intro_null_null_or_varray #U8.t in
-    return r
-  )
+  let r = with_lock
+    unit
+    unit
+    (array U8.t)
+    (fun v0 -> ind_linked_wf_tree metadata.data)
+    (fun _ -> emp)
+    (fun _ r -> null_or_varray r)
+    ()
+    ()
+    metadata.lock
+    (fun _ ptr s ->
+      not (A.is_null ptr) ==> (
+        (enable_slab_canaries_malloc ==> A.length ptr == US.v size + 2) /\
+        (not enable_slab_canaries_malloc ==> A.length ptr == US.v size) /\
+        array_u8_alignment ptr page_size /\
+        A.is_full_array ptr /\
+        zf_u8 s
+      )
+    )
+    (fun _ ->
+      let md_size = _size metadata.data in
+      [@inline_let] let max = 18446744073709551615UL in
+      assert (U64.v max = Impl.Core.c);
+      if U64.lt md_size max then (
+        //TODO: large_malloc' can return NULL due to mmap
+        let ptr = large_malloc_aux metadata.data size in
+        return ptr
+      ) else (
+        let r = intro_null_null_or_varray #U8.t in
+        return r
+      )
+    )
+  in
+  return r
 
 let large_free (ptr: array U8.t)
   : Steel bool
@@ -429,9 +512,18 @@ let large_free (ptr: array U8.t)
   (requires fun _ -> True)
   (ensures fun _ _ _ -> True)
   =
-  L.acquire metadata.lock;
-  let b = large_free_aux metadata.data ptr in
-  L.release metadata.lock;
+  let b = with_lock
+    (ref t)
+    (array U8.t)
+    bool
+    (fun v0 -> ind_linked_wf_tree v0)
+    (fun v1 -> A.varray v1)
+    (fun v1 v2 -> if v2 then emp else A.varray v1)
+    metadata.data
+    ptr
+    metadata.lock
+    (fun _ _ _ -> True)
+    (fun _ -> large_free_aux metadata.data ptr) in
   return b
 
 let large_getsize_aux (metadata: ref t) (ptr: array U8.t)
@@ -440,6 +532,9 @@ let large_getsize_aux (metadata: ref t) (ptr: array U8.t)
   (fun _ -> A.varray ptr `star` ind_linked_wf_tree metadata)
   (requires fun _ -> True)
   (ensures fun h0 r h1 ->
+    h0 (A.varray ptr `star` ind_linked_wf_tree metadata)
+    ==
+    h1 (A.varray ptr `star` ind_linked_wf_tree metadata) /\
     A.asel ptr h1 == A.asel ptr h0 /\
     h1 (ind_linked_wf_tree metadata)
     ==
@@ -482,11 +577,28 @@ let large_getsize (ptr: array U8.t)
     )
   )
   =
-  L.acquire metadata.lock;
-  let size = large_getsize_aux metadata.data ptr in
-  L.release metadata.lock;
-  return size
-
+  let r = with_lock
+    (ref t)
+    (array U8.t)
+    US.t
+    (fun v0 -> ind_linked_wf_tree v0)
+    (fun v1 -> A.varray v1)
+    (fun v1 _ -> A.varray v1)
+    metadata.data
+    ptr
+    metadata.lock
+    (fun (x0: t_of (A.varray ptr))
+         (r: US.t)
+         (x1: t_of (A.varray ptr)) ->
+      x0 `Seq.equal` x1 /\
+      (US.v r > 0 ==>
+        (enable_slab_canaries_malloc ==> A.length ptr == US.v r + 2) /\
+        (not enable_slab_canaries_malloc ==> A.length ptr == US.v r)
+      )
+    )
+    (fun _ -> large_getsize_aux metadata.data ptr)
+  in
+  return r
 
 (*)
 - mmap/munmap: some improvements ahead? (better spec)
