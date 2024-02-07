@@ -215,7 +215,31 @@ let sc_all : size_classes_all = init ()
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --query_stats"
+open WithLock
+
+val allocate_size_class
+  (idx: G.erased (US.t){US.v (G.reveal idx) < A.length sc_all.size_classes})
+  (scs: size_class_struct)
+  : Steel (array U8.t)
+  (size_class_vprop scs)
+  (fun r -> null_or_varray r `star` size_class_vprop scs)
+  (requires fun h0 ->
+    scs == (Seq.index (G.reveal sc_all.g_size_classes) (US.v (G.reveal idx))).data
+  )
+  (ensures fun h0 r h1 ->
+    let scs' = (Seq.index (G.reveal sc_all.g_size_classes) (US.v (G.reveal idx))).data in
+    scs' == scs /\
+    not (is_null r) ==> (
+      A.length r == U32.v scs'.size /\
+      array_u8_alignment r 16ul /\
+      ((U32.v scs'.size > 0 /\ (U32.v page_size) % (U32.v scs.size) == 0) ==> array_u8_alignment r scs.size)
+    )
+  )
+
+let allocate_size_class _ scs =
+  Main.allocate_size_class scs
+
+#push-options "--fuel 0 --ifuel 0 --query_stats --z3rlimit 50"
 inline_for_extraction noextract
 let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
   : Steel
@@ -545,15 +569,25 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
     US.v diff = diff')
   (ensures fun h0 _ h1 -> True)
   =
-  let sc = ROArray.index sc_all.ro_perm i in
-  L.acquire sc.lock;
-  let sc = ROArray.index sc_all.ro_perm i in
-  change_equal_slprop (size_class_vprop _) (size_class_vprop _);
-  let res = deallocate_size_class sc.data ptr diff in
-  let sc = ROArray.index sc_all.ro_perm i in
-  change_equal_slprop (size_class_vprop _) (size_class_vprop _);
-  L.release sc.lock;
-  return res
+  let b = with_lock_roarray
+    size_class_struct
+    (array U8.t)
+    bool
+    size_class
+    sc_all.size_classes
+    (G.reveal sc_all.g_size_classes)
+    sc_all.ro_perm
+    (fun v0 -> size_class_vprop v0)
+    (fun s -> s.data)
+    (fun s -> s.lock)
+    (fun v1 -> A.varray v1)
+    (fun v1 r -> if r then emp else A.varray v1)
+    i
+    ptr
+    (fun _ _ _ _ -> True)
+    (fun sc_data -> deallocate_size_class sc_data ptr diff)
+  in
+  return b
 #pop-options
 
 /// Precondition of free, capturing that a client must return an array corresponding to the
