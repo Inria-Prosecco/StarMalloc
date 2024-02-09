@@ -3011,11 +3011,6 @@ size_t StarMalloc_getsize(uint8_t *ptr)
     return large_getsize(ptr);
 }
 
-static inline
-size_t f(size_t x) {
-  return (x-1+4096)>>12;
-}
-
 uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
 {
   if (ptr == NULL)
@@ -3026,11 +3021,12 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
   else
   {
     size_t old_size = StarMalloc_getsize(ptr);
-    size_t old_size2 = f(old_size);
-    size_t new_size2 = f(new_size);
-    if (old_size > 4096 && new_size > 4096 && old_size2 >= new_size2) {
-      return ptr;
+    if (old_size > 4096 && (old_size % 4096) != 0) {
+      old_size += 4096 - (old_size % 4096);
     }
+    if (old_size >= new_size)
+      return ptr;
+
     uint8_t *new_ptr = StarMalloc_malloc(arena_id, new_size);
     if (new_ptr == NULL)
       return NULL;
