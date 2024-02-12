@@ -3024,7 +3024,8 @@ val extend_insert_aux4 (#a: Type)
       (h1 (slpred #a #pred1 #pred2 #pred3 #pred4 #pred5 n1 n2 r hd2 hd3 hd4 hd5 tl5 sz5 k (US.v i + 1)))
   )
 
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 300 --fuel 2 --ifuel 2 --split_queries always"
+#restart-solver
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 400 --fuel 2 --ifuel 2 --split_queries always"
 let extend_insert_aux4 #a
   #pred1 #pred2 #pred3 #pred4 #pred5
   r n1 n2 k hd2 hd3 hd4 hd5 tl5 sz5 v1 gs0 i
