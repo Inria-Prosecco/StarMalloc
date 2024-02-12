@@ -348,6 +348,7 @@ let allocate_slab_aux_1_full
 
 #restart-solver
 
+#push-options "--split_queries always"
 // Slab initially empty
 inline_for_extraction noextract
 let allocate_slab_aux_1
@@ -469,6 +470,7 @@ let allocate_slab_aux_1
       idx1 idx2 idx3 idx4 idx5 idx6 idx7;
     return r
   )
+#pop-options
 
 #restart-solver
 
