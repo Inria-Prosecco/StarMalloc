@@ -1231,7 +1231,7 @@ let rec last_rev_hd_lemma (#a: Type)
       assert (L.last l == L.last l');
       last_rev_hd_lemma l';
       L.rev_append [x] l';
-      assert (L.rev l == (L.rev l')@[x]);
+      assert (L.rev l == L.(rev l'@[x]));
       assert (L.hd (L.rev l) == L.hd (L.rev l'))
 
 let last_mem_lemma (#a: eqtype)
