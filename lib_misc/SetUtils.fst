@@ -1,5 +1,6 @@
 module SetUtils
 
+open FStar.List.Tot
 module L = FStar.List.Tot
 module FS = FStar.FiniteSet.Base
 open FStar.FiniteSet.Ambient
@@ -17,10 +18,10 @@ let rec list_to_set_append (#a: eqtype)
   (l1 l2: (l:list a{FS.list_nonrepeating l}))
   : Lemma
   (requires
-    FS.list_nonrepeating (l1@l2)
+    FS.list_nonrepeating (l1 @ l2)
   )
   (ensures
-    list_to_set (l1@l2) == FS.union (list_to_set l1) (list_to_set l2)
+    list_to_set (l1 @ l2) == FS.union (list_to_set l1) (list_to_set l2)
   )
   (decreases %[L.length l1 ; L.length l2])
   =
@@ -28,17 +29,17 @@ let rec list_to_set_append (#a: eqtype)
   let s2 = list_to_set l2 in
   match l1 with
   | [] ->
-      assert (l1@l2 == l2);
+      assert (l1 @ l2 == l2);
       assert (s1 `FS.equal` FS.emptyset #a);
       assert (FS.union s1 s2 `FS.equal` s2)
   | [x] ->
-      assert (l1@l2 == x::l2);
+      assert (l1 @ l2 == x::l2);
       assert (s1 `FS.equal` FS.singleton x);
       assert (FS.union s1 s2 `FS.equal` FS.insert x s2)
   | x::t ->
       list_to_set_append t l2;
-      list_to_set_append [x] (t@l2);
-      assert (list_to_set (l1@l2) `FS.equal` (FS.union (list_to_set l1) (list_to_set l2)))
+      list_to_set_append [x] (t @ l2);
+      assert (list_to_set (l1 @ l2) `FS.equal` (FS.union (list_to_set l1) (list_to_set l2)))
 
 let list_to_set_cons (#a: eqtype)
   (x: a)
