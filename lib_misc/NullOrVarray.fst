@@ -54,6 +54,7 @@ let intro_null_null_or_varray (#a: Type)
   intro_vrewrite
     (if A.is_null r then emp else A.varray r)
     (null_or_varray_f r);
+  ();
   return r
 
 let elim_null_null_or_varray (#opened:_) (#a: Type) (r: array a)
