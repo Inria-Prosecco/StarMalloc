@@ -7,6 +7,8 @@ module SM = Steel.Memory
 
 module A = Steel.Array
 
+#push-options "--fuel 0 --ifuel 0"
+
 let array = Steel.ST.Array.array
 
 let null_or_varray_f (#a: Type)
@@ -34,10 +36,12 @@ let null_or_varray (#a:Type) (r:array a)
     #(Seq.lseq a (A.length r))
     (null_or_varray_f r)
 
+#push-options "--fuel 1 --ifuel 1"
 let null_or_varray_t (#a: Type) (r:array a)
   : Lemma
   (t_of (null_or_varray #a r) == Seq.lseq a (A.length r))
   = ()
+#pop-options
 
 noextract inline_for_extraction
 let intro_null_null_or_varray (#a: Type)
@@ -72,7 +76,8 @@ let elim_null_null_or_varray (#opened:_) (#a: Type) (r: array a)
 
 module P = Steel.FractionalPermission
 
-let intro_live_null_or_varray (#opened:_) (#a: Type)
+#push-options "--fuel 1 --ifuel 1"
+val intro_live_null_or_varray (#opened:_) (#a: Type)
   (r: array a)
   : SteelGhost unit opened
   (A.varray r)
@@ -84,6 +89,9 @@ let intro_live_null_or_varray (#opened:_) (#a: Type)
       = h1 (null_or_varray r) in
     v0 == v1
   )
+#pop-options
+
+let intro_live_null_or_varray r
   =
   A.varrayp_not_null r P.full_perm;
   change_equal_slprop
@@ -93,7 +101,8 @@ let intro_live_null_or_varray (#opened:_) (#a: Type)
     (if A.is_null r then emp else A.varray r)
     (null_or_varray_f r)
 
-let elim_live_null_or_varray (#opened:_) (#a: Type)
+#push-options "--fuel 1 --ifuel 1"
+val elim_live_null_or_varray (#opened:_) (#a: Type)
   (r: array a)
   : SteelGhost unit opened
   (null_or_varray r)
@@ -105,6 +114,9 @@ let elim_live_null_or_varray (#opened:_) (#a: Type)
     let v1 = A.asel r h1 in
     v0 == v1
   )
+#pop-options
+
+let elim_live_null_or_varray r
   =
   elim_vrewrite
     (if A.is_null r then emp else A.varray r)
