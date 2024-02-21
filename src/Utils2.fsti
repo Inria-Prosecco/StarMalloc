@@ -255,6 +255,7 @@ let full_n_aux (bound: U32.t)
   Classical.forall_intro (pow2_lemma (U32.v bound));
   x2
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
 let full_n (bound: U32.t)
   : Pure U64.t
   (requires
@@ -266,6 +267,7 @@ let full_n (bound: U32.t)
   if U32.eq bound 64ul
   then max64
   else full_n_aux bound
+#pop-options
 
 let full_n_decomposition1 (bound: U32.t)
   : Lemma

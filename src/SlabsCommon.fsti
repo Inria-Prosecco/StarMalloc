@@ -58,7 +58,7 @@ let pred5 (x: U32.t) : prop = U32.eq x 4ul == true
 /// Note, this is only true because pred1, pred2, and pred3
 /// are mutually exclusive, which is why we include this lemma
 /// here instead of in the ArrayListGen library.
-let lemma_partition_and_pred_implies_mem2
+val lemma_partition_and_pred_implies_mem2
   (hd1 hd2 hd3 hd4 hd5 tl5 sz5:nat)
   (s:Seq.seq AL.cell)
   (idx:nat{idx < Seq.length s})
@@ -70,27 +70,13 @@ let lemma_partition_and_pred_implies_mem2
         hd1 hd2 hd3 hd4 hd5 tl5 sz5 s /\
      pred2 (ALG.get_data (Seq.index s idx)))
     (ensures ALG.mem idx hd2 s)
-  = ALG.lemma_mem_ptrs_in hd1 s idx;
-    ALG.lemma_mem_ptrs_in hd2 s idx;
-    ALG.lemma_mem_ptrs_in hd3 s idx;
-    ALG.lemma_mem_ptrs_in hd4 s idx;
-    ALG.lemma_mem_ptrs_in hd5 s idx;
-    ALG.is_dlist2_implies_spec pred5 hd5 tl5 s;
-    let open FStar.FiniteSet.Ambient in
-    (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
-    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 hd4 hd5 s));
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
 
 /// If the sequence is partitioned into three lists, then any
 /// element satisfying pred3 belongs to the third list.
 /// Note, this is only true because pred1, pred2, and pred3
 /// are mutually exclusive, which is why we include this lemma
 /// here instead of in the ArrayListGen library.
-let lemma_partition_and_pred_implies_mem3
+val lemma_partition_and_pred_implies_mem3
   (hd1 hd2 hd3 hd4 hd5 tl5 sz5:nat)
   (s:Seq.seq AL.cell)
   (idx:nat{idx < Seq.length s})
@@ -102,27 +88,13 @@ let lemma_partition_and_pred_implies_mem3
         hd1 hd2 hd3 hd4 hd5 tl5 sz5 s /\
       pred3 (ALG.get_data (Seq.index s idx)))
     (ensures ALG.mem idx hd3 s)
-  = ALG.lemma_mem_ptrs_in hd1 s idx;
-    ALG.lemma_mem_ptrs_in hd2 s idx;
-    ALG.lemma_mem_ptrs_in hd3 s idx;
-    ALG.lemma_mem_ptrs_in hd4 s idx;
-    ALG.lemma_mem_ptrs_in hd5 s idx;
-    ALG.is_dlist2_implies_spec pred5 hd5 tl5 s;
-    let open FStar.FiniteSet.Ambient in
-    (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
-    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 hd4 hd5 s));
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
 
 /// If the sequence is partitioned into three lists, then any
 /// element satisfying pred2 belongs to the second list.
 /// Note, this is only true because pred1, pred2, and pred3
 /// are mutually exclusive, which is why we include this lemma
 /// here instead of in the ArrayListGen library.
-let lemma_partition_and_pred_implies_mem5
+val lemma_partition_and_pred_implies_mem5
   (hd1 hd2 hd3 hd4 hd5 tl5 sz5:nat)
   (s:Seq.seq AL.cell)
   (idx:nat{idx < Seq.length s})
@@ -134,20 +106,6 @@ let lemma_partition_and_pred_implies_mem5
         hd1 hd2 hd3 hd4 hd5 tl5 sz5 s /\
      pred5 (ALG.get_data (Seq.index s idx)))
     (ensures ALG.mem idx hd5 s)
-  = ALG.lemma_mem_ptrs_in hd1 s idx;
-    ALG.lemma_mem_ptrs_in hd2 s idx;
-    ALG.lemma_mem_ptrs_in hd3 s idx;
-    ALG.lemma_mem_ptrs_in hd4 s idx;
-    ALG.lemma_mem_ptrs_in hd5 s idx;
-    //ALG.is_dlist2_implies_spec pred5 hd5 tl5 s;
-    let open FStar.FiniteSet.Ambient in
-    (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
-    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 hd4 hd5 s));
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx;
-    Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
 
 open Guards
 open Quarantine

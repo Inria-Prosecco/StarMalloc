@@ -348,7 +348,7 @@ let allocate_slab_aux_1_full
 
 #restart-solver
 
-#push-options "--split_queries always"
+#push-options "--z3rlimit 300"
 // Slab initially empty
 inline_for_extraction noextract
 let allocate_slab_aux_1

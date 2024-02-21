@@ -485,7 +485,9 @@ let zero_beyond_bound
   let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
   zf_b (Seq.slice bm 0 (64 - U32.v bound2))
 
-#push-options "--z3rlimit 100"
+#restart-solver
+
+#push-options "--z3rlimit 100 --fuel 0 --ifuel 0"
 let empty_not_bitmap
   (size_class:sc)
   (s:Seq.lseq U64.t 4)

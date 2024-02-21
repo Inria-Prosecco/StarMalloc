@@ -1,12 +1,69 @@
 module SlabsCommon
 
+let lemma_partition_and_pred_implies_mem2
+  (hd1 hd2 hd3 hd4 hd5 tl5 sz5:nat)
+  (s:Seq.seq AL.cell)
+  (idx:nat{idx < Seq.length s})
+  = ALG.lemma_mem_ptrs_in hd1 s idx;
+    ALG.lemma_mem_ptrs_in hd2 s idx;
+    ALG.lemma_mem_ptrs_in hd3 s idx;
+    ALG.lemma_mem_ptrs_in hd4 s idx;
+    ALG.lemma_mem_ptrs_in hd5 s idx;
+    ALG.is_dlist2_implies_spec pred5 hd5 tl5 s;
+    let open FStar.FiniteSet.Ambient in
+    (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
+    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 hd4 hd5 s));
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
+
+let lemma_partition_and_pred_implies_mem3
+  (hd1 hd2 hd3 hd4 hd5 tl5 sz5:nat)
+  (s:Seq.seq AL.cell)
+  (idx:nat{idx < Seq.length s})
+  = ALG.lemma_mem_ptrs_in hd1 s idx;
+    ALG.lemma_mem_ptrs_in hd2 s idx;
+    ALG.lemma_mem_ptrs_in hd3 s idx;
+    ALG.lemma_mem_ptrs_in hd4 s idx;
+    ALG.lemma_mem_ptrs_in hd5 s idx;
+    ALG.is_dlist2_implies_spec pred5 hd5 tl5 s;
+    let open FStar.FiniteSet.Ambient in
+    (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
+    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 hd4 hd5 s));
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
+
+let lemma_partition_and_pred_implies_mem5
+  (hd1 hd2 hd3 hd4 hd5 tl5 sz5:nat)
+  (s:Seq.seq AL.cell)
+  (idx:nat{idx < Seq.length s})
+  = ALG.lemma_mem_ptrs_in hd1 s idx;
+    ALG.lemma_mem_ptrs_in hd2 s idx;
+    ALG.lemma_mem_ptrs_in hd3 s idx;
+    ALG.lemma_mem_ptrs_in hd4 s idx;
+    ALG.lemma_mem_ptrs_in hd5 s idx;
+    //ALG.is_dlist2_implies_spec pred5 hd5 tl5 s;
+    let open FStar.FiniteSet.Ambient in
+    (* Need this assert to trigger the right SMTPats in FiniteSet.Ambiant *)
+    assert (FStar.FiniteSet.Base.mem idx (ALG.ptrs_all hd1 hd2 hd3 hd4 hd5 s));
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred1 hd1 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred2 hd2 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx;
+    Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
+
 let t (size_class: sc) : Type0 =
   dtuple2
     (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
    (fun _ -> Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class)))) (U32.v (nb_slots size_class)))
   & Seq.lseq U8.t (U32.v page_size - US.v (rounding size_class))
 
-#push-options "--fuel 0 --ifuel 0"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
 let empty_md_is_properly_zeroed
   (size_class: sc)
   : Lemma
@@ -31,6 +88,8 @@ let empty_t size_class =
   empty_md_is_properly_zeroed size_class;
   ((| Seq.create 4 0UL, Seq.create (U32.v (nb_slots size_class)) (Ghost.hide None) |), Seq.create (U32.v page_size - US.v (rounding size_class)) U8.zero)
 
+
+
 #push-options "--z3rlimit 50 --compat_pre_typed_indexed_effects"
 let p_empty_unpack (#opened:_)
   (sc: sc)
@@ -50,21 +109,6 @@ let p_empty_unpack (#opened:_)
 let p_partial_unpack (#opened:_)
   (sc: sc)
   (b1 b2: blob)
-  : SteelGhost unit opened
-  ((p_partial sc) b1)
-  (fun _ -> slab_vprop sc (snd b2) (fst b2))
-  (requires fun _ -> b1 == b2)
-  (ensures fun h0 _ h1 ->
-    let blob1
-      : t_of (slab_vprop sc (snd b2) (fst b2))
-      = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
-    b1 == b2 /\
-    is_partial sc v1 /\
-    h0 ((p_partial sc) b1)
-    ==
-    h1 (slab_vprop sc (snd b2) (fst b2))
-  )
   =
   change_slprop_rel
     ((p_partial sc) b1)
@@ -80,21 +124,6 @@ let p_partial_unpack (#opened:_)
 let p_full_unpack (#opened:_)
   (sc: sc)
   (b1 b2: blob)
-  : SteelGhost unit opened
-  ((p_full sc) b1)
-  (fun _ -> slab_vprop sc (snd b2) (fst b2))
-  (requires fun _ -> b1 == b2)
-  (ensures fun h0 _ h1 ->
-    let blob1
-      : t_of (slab_vprop sc (snd b2) (fst b2))
-      = h1 (slab_vprop sc (snd b2) (fst b2)) in
-    let v1 : Seq.lseq U64.t 4 = dfst (fst blob1) in
-    b1 == b2 /\
-    is_full sc v1 /\
-    h0 ((p_full sc) b1)
-    ==
-    h1 (slab_vprop sc (snd b2) (fst b2))
-  )
   =
   change_slprop_rel
     ((p_full sc) b1)
@@ -110,23 +139,6 @@ let p_full_unpack (#opened:_)
 let p_empty_pack (#opened:_)
   (sc: sc)
   (b1 b2: blob)
-  : SteelGhost unit opened
-  (slab_vprop sc (snd b1) (fst b1))
-  (fun _ -> (p_empty sc) b2)
-  (requires fun h0 ->
-    let blob0
-      : t_of (slab_vprop sc (snd b1) (fst b1))
-      = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
-    is_empty sc v0 /\
-    b1 == b2
-  )
-  (ensures fun h0 _ h1 ->
-    b1 == b2 /\
-    h1 ((p_empty sc) b2)
-    ==
-    h0 (slab_vprop sc (snd b1) (fst b1))
-  )
   =
   VR2.intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
@@ -142,23 +154,6 @@ let p_empty_pack (#opened:_)
 let p_partial_pack (#opened:_)
   (sc: sc)
   (b1 b2: blob)
-  : SteelGhost unit opened
-  (slab_vprop sc (snd b1) (fst b1))
-  (fun _ -> (p_partial sc) b2)
-  (requires fun h0 ->
-    let blob0
-      : t_of (slab_vprop sc (snd b1) (fst b1))
-      = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
-    is_partial sc v0 /\
-    b1 == b2
-  )
-  (ensures fun h0 _ h1 ->
-    b1 == b2 /\
-    h1 ((p_partial sc) b2)
-    ==
-    h0 (slab_vprop sc (snd b1) (fst b1))
-  )
   =
   VR2.intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
@@ -174,23 +169,6 @@ let p_partial_pack (#opened:_)
 let p_full_pack (#opened:_)
   (sc: sc)
   (b1 b2: blob)
-  : SteelGhost unit opened
-  (slab_vprop sc (snd b1) (fst b1))
-  (fun _ -> (p_full sc) b2)
-  (requires fun h0 ->
-    let blob0
-      : t_of (slab_vprop sc (snd b1) (fst b1))
-      = h0 (slab_vprop sc (snd b1) (fst b1)) in
-    let v0 : Seq.lseq U64.t 4 = dfst (fst blob0) in
-    is_full sc v0 /\
-    b1 == b2
-  )
-  (ensures fun h0 _ h1 ->
-    b1 == b2 /\
-    h1 ((p_full sc) b2)
-    ==
-    h0 (slab_vprop sc (snd b1) (fst b1))
-  )
   =
   VR2.intro_vrefine
     (slab_vprop sc (snd b1) (fst b1))
@@ -230,6 +208,9 @@ let p_quarantine_unpack (#opened:_) size_class b
     (fun (_,s) -> s `Seq.equal` Seq.create 4 0UL)
 #pop-options
 
+#restart-solver
+
+
 inline_for_extraction noextract
 let slab_array
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
@@ -263,6 +244,7 @@ let pack_slab_array (#opened:_)
   = change_equal_slprop
     (A.varray (A.split_l (A.split_r slab_region (US.mul md_count (u32_to_sz page_size))) (u32_to_sz page_size)))
     (A.varray (slab_array slab_region md_count))
+
 
 inline_for_extraction noextract
 let md_bm_array
@@ -408,7 +390,7 @@ let ind_varraylist_aux2_lemma
     = [ idx1; idx2; idx3; idx4; idx5; idx6; idx7 ] in
   let s : Seq.seq US.t = Seq.seq_of_list l in
   let l_length = List.Tot.length l in
-  assert_norm (l_length == 7);
+  assert (l_length == 7);
   assert (Seq.length s == 7);
   Classical.forall_intro (Classical.move_requires (
     ind_varraylist_aux2_lemma_aux s l
