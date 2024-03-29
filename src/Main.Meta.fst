@@ -4,7 +4,7 @@ friend Config
 
 [@@ reduce_attr]
 inline_for_extraction noextract
-let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
+let sc_list: l:list sc_union{US.v nb_size_classes == List.length sc_list}
 = normalize_term sc_list
 
 /// Number of arenas as a nat, for specification purposes. Not relying on US.v
@@ -31,8 +31,8 @@ normalize_term (US.v nb_size_classes * US.v nb_arenas)
 inline_for_extraction noextract
 let rec arena_sc_list'
   (i:nat{i <= US.v nb_arenas})
-  (acc:list sc{List.length acc = i * US.v nb_size_classes})
-  : Tot (l:list sc{List.length l == total_nb_sc})
+  (acc:list sc_union{List.length acc = i * US.v nb_size_classes})
+  : Tot (l:list sc_union{List.length l == total_nb_sc})
   (decreases (US.v nb_arenas - i))
   =
   calc (==) {
@@ -70,7 +70,6 @@ let arena_sc_list = arena_sc_list' 0 []
 let sizes : sizes_t =
   normalize_term_spec arena_sc_list;
   TLA.create #sc (normalize_term arena_sc_list)
-
 
 #push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
 let init

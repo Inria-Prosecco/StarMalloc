@@ -126,14 +126,15 @@ let elim_live_null_or_varray r
     (A.varray r)
 
 module U8 = FStar.UInt8
-module U32 = FStar.UInt32
+module US = FStar.SizeT
+
 open Utils2
 let array_u8_alignment_lemma2
   (arr: array U8.t)
-  (v1 v2: (v:U32.t{U32.v v > 0}))
+  (v1 v2: (v:US.t{US.v v > 0}))
   : Lemma
   (requires
-    (U32.v v1) % (U32.v v2) == 0 /\
+    (US.v v1) % (US.v v2) == 0 /\
     (not (A.is_null arr) ==> array_u8_alignment arr v1)
   )
   (ensures

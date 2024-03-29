@@ -26,7 +26,7 @@ unfold let slab_metadata = r:array U64.t{A.length r = 4}
 
 // abstract property that the underlying pointer v-bytes aligned
 //assume
-val array_u8_alignment (arr: array U8.t) (v: U32.t{U32.v v > 0}): prop
+val array_u8_alignment (arr: array U8.t) (v: US.t{US.v v > 0}): prop
 
 // no model for the memory considered as the "root" array in a tree-like representation
 // thus, this *axiom* is required
@@ -37,13 +37,13 @@ val array_u8_alignment (arr: array U8.t) (v: U32.t{U32.v v > 0}): prop
 //assume
 val array_u8_alignment_lemma
   (arr1 arr2: array U8.t)
-  (v1 v2: (v:U32.t{U32.v v > 0}))
+  (v1 v2: (v:US.t{US.v v > 0}))
   : Lemma
   (requires
     same_base_array arr1 arr2 /\
     array_u8_alignment arr1 v1 /\
-    (U32.v v1) % (U32.v v2) == 0 /\
-    (A.offset (A.ptr_of arr2) - A.offset (A.ptr_of arr1)) % (U32.v v2) == 0)
+    (US.v v1) % (US.v v2) == 0 /\
+    (A.offset (A.ptr_of arr2) - A.offset (A.ptr_of arr1)) % (US.v v2) == 0)
   (ensures
     array_u8_alignment arr2 v2)
 
@@ -100,6 +100,18 @@ let zf_b_slice
   (ensures zf_b (Seq.slice arr i j))
   =
   Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) false)
+
+let zf_b_split
+  (arr: Seq.seq bool)
+  (i:nat{i <= Seq.length arr})
+  : Lemma
+  (requires zf_b arr)
+  (ensures
+    zf_b (fst (Seq.split arr i)) /\
+    zf_b (snd (Seq.split arr i)))
+  =
+  zf_b_slice arr 0 i;
+  zf_b_slice arr i (Seq.length arr)
 
 noextract
 let max64_nat : nat = FU.max_int U64.n

@@ -30,7 +30,7 @@ assume val mmap_u8_init (len: US.t)
       A.length r == US.v len /\
       A.is_full_array r /\
       A.asel r h1 == Seq.create (US.v len) U8.zero /\
-      array_u8_alignment r page_size
+      array_u8_alignment r (u32_to_sz page_size)
     )
 
 assume val mmap_u64_init (len: US.t)
@@ -124,7 +124,7 @@ assume val mmap_u8
       not (A.is_null ptr) ==> (
         A.length ptr == US.v size /\
         A.is_full_array ptr /\
-        array_u8_alignment ptr page_size /\
+        array_u8_alignment ptr (u32_to_sz page_size) /\
         zf_u8 s
       )
     )
