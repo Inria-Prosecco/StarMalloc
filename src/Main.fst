@@ -2045,8 +2045,8 @@ val synced_sizes_join
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
   (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
-  (s1: Seq.lseq size_class (US.v n1))
-  (s2: Seq.lseq size_class (US.v n2))
+  // (s1: Seq.lseq size_class (US.v n1))
+  // (s2: Seq.lseq size_class (US.v n2))
   : SteelGhost unit opened
   (
     A.varray (A.split_l size_classes n1) `star`
@@ -2057,39 +2057,37 @@ val synced_sizes_join
   )
   (requires fun h0 ->
     let sizes1, sizes2 = TLAO.split sizes (US.v n1) in
-    s1 `Seq.equal` (asel (A.split_l size_classes n1) h0) /\
+    // s1 `Seq.equal` (asel (A.split_l size_classes n1) h0) /\
     //s2 `Seq.equal` (asel (A.split_r size_classes n1) h0) /\
-    synced_sizes2 s1 (US.v n1) sizes1 /\
-    synced_sizes2 s2 (US.v n2) sizes2
+    synced_sizes2 (asel (A.split_l size_classes n1) h0) (US.v n1) sizes1 /\
+    synced_sizes2 (asel (A.split_r size_classes n1) h0) (US.v n2) sizes2
   )
-  (ensures fun _ _ h1 ->
-    asel size_classes h1 `Seq.equal` Seq.append s1 s2 /\
+  (ensures fun h0 _ h1 ->
+    asel size_classes h1 `Seq.equal` Seq.append (asel (A.split_l size_classes n1) h0) (asel (A.split_r size_classes n1) h0) /\
     synced_sizes2 (asel size_classes h1) (US.v n) sizes
   )
-  
+
 #push-options "--fuel 1 --ifuel 1"
-let synced_sizes_join n1 n2 n size_classes sizes s1 s2
+let synced_sizes_join n1 n2 n size_classes sizes
   =
-  sladmit ()
-  //A.ghost_join
-  //  (A.split_l size_classes n1)
-  //  (A.split_r size_classes n1)
-  //  ();
-  //change_equal_slprop
-  //  (A.varray (A.merge
-  //    (A.split_l size_classes n1)
-  //    (A.split_r size_classes n1)))
-  //  (A.varray size_classes);
-  //let s = gget (A.varray size_classes) in
-  //assert (G.reveal s == Seq.append s1 s2);
-  //reveal_opaque (`%synced_sizes2) synced_sizes2;
-  //Classical.forall_intro (Classical.move_requires (
-  //  synced_sizes_join_lemma n s sizes n1 n2 ()
-  //));
-  //assert (forall (i:nat{i < US.v n}).
-  //  US.fits i /\
-  //  TLA.get sizes (US.uint_to_t i) == (Seq.index s i).data.size
-  //)
+  A.ghost_join
+   (A.split_l size_classes n1)
+   (A.split_r size_classes n1)
+   ();
+  change_equal_slprop
+   (A.varray (A.merge
+     (A.split_l size_classes n1)
+     (A.split_r size_classes n1)))
+   (A.varray size_classes);
+  let s = gget (A.varray size_classes) in
+  reveal_opaque (`%synced_sizes2) synced_sizes2;
+  Classical.forall_intro (Classical.move_requires (
+   synced_sizes_join_lemma n s sizes n1 n2 ()
+  ));
+  assert (forall (i:nat{i < US.v n}).
+   US.fits i /\
+   TLA.get sizes (US.uint_to_t i) == (Seq.index s i).data.size
+  )
 #pop-options
 
 #restart-solver
@@ -2285,16 +2283,17 @@ val init_all_size_classes'
 
 #restart-solver
 
-#restart-solver
+[@@ handle_smt_goals]
+let tac () : FStar.Tactics.Tac unit = FStar.Tactics.norm [zeta_full; delta_only [`%focus_rmem; `%focus_rmem'; `%unrestricted_focus_rmem]]
 
-#push-options "--fuel 2 --ifuel 2 --z3rlimit 400 --query_stats"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --query_stats"
 let init_all_size_classes'
   n1 n2 n
   slab_region
   size_classes
   sizes
   =
-  let sizes1, sizes2 = TLAO.split sizes (US.v n1) in
+  // let sizes1, sizes2 = TLAO.split sizes (US.v n1) in
   //assert (TLA.length sizes1 == US.v n1);
   //assert (TLA.length sizes2 == US.v n2);
   //assert (UInt.size (US.v n1) U32.n);
@@ -2312,12 +2311,14 @@ let init_all_size_classes'
   //assume (synced_sizes2 s2 (US.v n2) sizes2);
   //assume (Seq.length (asel (A.split_l size_classes n1) h0) == US.v n1);
   //  by (let open FStar.Tactics in set_fuel 1; set_ifuel 1; ());
-  let h0 = get () in
-  let al : Seq.lseq size_class (US.v n1)
-    = asel (A.split_l size_classes n1) h0 in
-  let ar : Seq.lseq size_class (US.v n2)
-    = asel (A.split_r size_classes n1) h0 in
-  synced_sizes_join n1 n2 n size_classes sizes al ar;
+  // let h0 = get () in
+  // let al : Seq.lseq size_class (US.v n1)
+  //   = asel (A.split_l size_classes n1) h0 in
+  // let ar : Seq.lseq size_class (US.v n2)
+  //   = asel (A.split_r size_classes n1) h0 in
+  // assert (synced_sizes2 al (US.v n1) sizes1);
+  // sladmit();
+  synced_sizes_join n1 n2 n size_classes sizes; // al ar;
   //assert (synced_sizes s2 (US.v n2) sizes2);
   sladmit ()
 
@@ -3196,5 +3197,3 @@ let allocate_size_class scs =
     (if A.is_null r then emp else A.varray r)
     (null_or_varray_f r);
   return r
-
-
