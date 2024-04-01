@@ -1115,18 +1115,28 @@ let slab_region_size
 #pop-options
 
 //[@"opaque_to_smt"]
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 /// A logical predicate indicating that a list of sizes corresponds
 /// to the sizes of a list of size_classes
 let synced_sizes
-  (size_classes:Seq.seq size_class)
-  (k:nat{k <= Seq.length size_classes /\ UInt.size k U32.n})
-  (sizes:TLA.t sc_union{TLA.length sizes >= Seq.length size_classes})
+  //(nb_arenas: US.t)
+  //(n: US.t)
+  (offset: US.t)
+  (size_classes: Seq.seq size_class)
+  (sizes:TLA.t sc_union)
+  (k:nat{
+    k <= Seq.length size_classes /\
+    k + US.v offset <= TLA.length sizes
+  })
   : prop
   =
-  forall (i:nat{i < k}). (
-    US.fits i /\
-    TLA.get sizes (US.uint_to_t i) == (Seq.index size_classes i).data.size
+  forall (i:US.t{US.v i < k}). (
+    US.fits (US.v offset + US.v i) /\
+    TLA.get sizes (US.add offset i)
+    == (Seq.index size_classes (US.v i)).data.size
   )
+
+#restart-solver
 
 #restart-solver
 
@@ -1134,6 +1144,7 @@ let synced_sizes
 /// Performs the initialization of one size class of length [size_c], and stores it in the
 /// size_classes array at index [k]
 val init_size_class
+  (offset: US.t)
   //(size_c: sc)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
@@ -1159,7 +1170,7 @@ val init_size_class
     A.length md_region >= US.v metadata_max * US.v k'
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   : Steel unit
   (
     A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) `star`
@@ -1182,26 +1193,35 @@ val init_size_class
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
-    synced_sizes (asel size_classes h0) (US.v k) sizes /\
-    (forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
-    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
+    TLA.length sizes > US.v offset + US.v k /\
+    synced_sizes offset (asel size_classes h0) sizes (US.v k) /\
+
+    //(forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
+    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i) /\
+    True
   )
   (ensures fun _ r h1 ->
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
-    synced_sizes (asel size_classes h1) (US.v k') sizes /\
-    (forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h1) i).data.size) /\
-    (forall (i:nat{i <= US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
+    TLA.length sizes >= US.v offset + US.v k' /\
+    synced_sizes offset (asel size_classes h1) sizes (US.v k') /\
+    //(forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h1) i).data.size) /\
+    (forall (i:nat{i <= US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i) /\
+    True
   )
 
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
-let init_size_class n k k' slab_region md_bm_region md_region size_classes sizes =
-  let size = TLA.get sizes k in
+let init_size_class
+  offset n k k' slab_region md_bm_region md_region size_classes sizes
+  =
+  assume (US.fits (US.v offset + US.v k));
+  let idx = US.add offset k in
+  let size = TLA.get sizes idx in
   (**) let g0 = gget (varray size_classes) in
-  assume (size == (Seq.index g0 (US.v k)).data.size);
+  //assume (size == (Seq.index g0 (US.v k)).data.size);
   assume (Sc? size);
   //by (let open FStar.Tactics in
   //    set_fuel 1; set_ifuel 1; set_rlimit 100;
@@ -1222,7 +1242,7 @@ let init_size_class n k k' slab_region md_bm_region md_region size_classes sizes
 /// Performs the initialization of one size class of length [size_c], and stores it in the
 /// size_classes array at index [k]
 val init_size_class2
-  //(offset: US.t)
+  (offset: US.t)
   //(size_c: sc)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
@@ -1247,7 +1267,7 @@ val init_size_class2
     A.length md_region >= US.v metadata_max_ex * US.v k'
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   : Steel unit
   (
     A.varray (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k)) `star`
@@ -1270,24 +1290,30 @@ val init_size_class2
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k)) h0) /\
     zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex k)) h0) /\
-    synced_sizes (asel size_classes h0) (US.v k) sizes /\
-    (forall (i:nat{i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
-    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
+    TLA.length sizes > US.v offset + US.v k /\
+    synced_sizes offset (asel size_classes h0) sizes (US.v k) /\
+    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i) /\
+    True
   )
   (ensures fun _ r h1 ->
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k')) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k')) h1) /\
     zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex k')) h1) /\
-    synced_sizes (asel size_classes h1) (US.v k') sizes /\
-    (forall (i:nat{i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h1) i).data.size) /\
-    (forall (i:nat{i <= US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
+    TLA.length sizes >= US.v offset + US.v k' /\
+    synced_sizes offset (asel size_classes h1) sizes (US.v k') /\
+    (forall (i:nat{i <= US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i) /\
+    True
   )
 
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
-let init_size_class2 n k k' slab_region md_bm_region md_region size_classes sizes =
-  let size = TLA.get sizes k in
+let init_size_class2
+  offset n k k' slab_region md_bm_region md_region size_classes sizes
+  =
+  assume (US.fits (US.v offset + US.v k));
+  let idx = US.add offset k in
+  let size = TLA.get sizes idx in
   assume (Sc_ex? size);
   let Sc_ex size = size in
   (**) let g0 = gget (varray size_classes) in
@@ -1310,6 +1336,7 @@ irreducible let reduce_attr : unit = ()
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 val init_size_classes_aux (l:list sc)
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -1335,7 +1362,7 @@ val init_size_classes_aux (l:list sc)
     A.length md_region >= US.v metadata_max * US.v k'
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
   (
@@ -1364,17 +1391,19 @@ val init_size_classes_aux (l:list sc)
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
-    synced_sizes (asel size_classes h0) (US.v k) sizes /\
-    (forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
-    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h0) sizes (US.v k) /\
+    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i) /\
+    True
   )
   (ensures fun _ r h1 ->
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
-    synced_sizes (asel size_classes h1) (US.v n) sizes /\
-    //synced_sizes (US.v n) (asel sizes h1) (asel size_classes h1) /\
-    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h1) sizes (US.v n) /\
+    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i) /\
+    True
   )
 #pop-options
 
@@ -1386,29 +1415,29 @@ open MiscArith
 
 // We need to bump the fuel to reason about the length of the lists
 #push-options "--z3rlimit 300 --fuel 2 --ifuel 1 --query_stats"
-let rec init_size_classes_aux l n k k' slab_region md_bm_region md_region size_classes sizes
+let rec init_size_classes_aux l offset n k k' slab_region md_bm_region md_region size_classes sizes
   = match l with
   | [hd] ->
       assert (US.v k' == US.v n);
-      init_size_class n k k' slab_region md_bm_region md_region size_classes sizes;
+      init_size_class offset n k k' slab_region md_bm_region md_region size_classes sizes;
       // Need to rewrite the k' into n to satisfy the postcondition
       change_equal_slprop (A.varray (split_r md_bm_region _)) (A.varray (split_r md_bm_region _));
       change_equal_slprop (A.varray (split_r md_region _)) (A.varray (split_r md_region _));
       change_equal_slprop (A.varray (split_r slab_region _)) (A.varray (split_r slab_region _))
   | hd::tl ->
-      init_size_class n k k' slab_region md_bm_region md_region size_classes sizes;
+      init_size_class offset n k k' slab_region md_bm_region md_region size_classes sizes;
       // This proof obligation in the recursive call seems especially problematic.
       // The call to the lemma alleviates the issue, we might need something similar for
       // the md_region and md_bm_region in the future
       assert (US.v (k' `US.add` 1sz) <= US.v n);
       f_lemma n (k' `US.add` 1sz);
 
-      init_size_classes_aux tl n k' (k' `US.add` 1sz) slab_region md_bm_region md_region size_classes sizes
+      init_size_classes_aux tl offset n k' (k' `US.add` 1sz) slab_region md_bm_region md_region size_classes sizes
 #pop-options
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 val init_size_classes_aux2 (l:list sc_ex)
-  //(offset: US.t)
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -1433,7 +1462,7 @@ val init_size_classes_aux2 (l:list sc_ex)
     A.length md_region >= US.v metadata_max_ex * US.v k'
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
   (
@@ -1462,38 +1491,40 @@ val init_size_classes_aux2 (l:list sc_ex)
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k)) h0) /\
     zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex k)) h0) /\
-    synced_sizes (asel size_classes h0) (US.v k) sizes /\
-    (forall (i:nat{i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
-    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h0) sizes (US.v k) /\
+    (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i) /\
+    True
   )
   (ensures fun _ r h1 ->
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)) h1) /\
     zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex n)) h1) /\
-    synced_sizes (asel size_classes h1) (US.v n) sizes /\
-    //synced_sizes (US.v n) (asel sizes h1) (asel size_classes h1) /\
-    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h1) sizes (US.v n) /\
+    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i) /\
+    True
   )
 
 #push-options "--z3rlimit 300 --fuel 2 --ifuel 1 --query_stats"
-let rec init_size_classes_aux2 l n k k' slab_region md_bm_region md_region size_classes sizes
+let rec init_size_classes_aux2 l offset n k k' slab_region md_bm_region md_region size_classes sizes
   = match l with
   | [hd] ->
       assert (US.v k' == US.v n);
-      init_size_class2 n k k' slab_region md_bm_region md_region size_classes sizes;
+      init_size_class2 offset n k k' slab_region md_bm_region md_region size_classes sizes;
       // Need to rewrite the k' into n to satisfy the postcondition
       change_equal_slprop (A.varray (split_r md_bm_region _)) (A.varray (split_r md_bm_region _));
       change_equal_slprop (A.varray (split_r md_region _)) (A.varray (split_r md_region _));
       change_equal_slprop (A.varray (split_r slab_region _)) (A.varray (split_r slab_region _))
   | hd::tl ->
-      init_size_class2 n k k' slab_region md_bm_region md_region size_classes sizes;
+      init_size_class2 offset n k k' slab_region md_bm_region md_region size_classes sizes;
       // This proof obligation in the recursive call seems especially problematic.
       // The call to the lemma alleviates the issue, we might need something similar for
       // the md_region and md_bm_region in the future
       assert (US.v (k' `US.add` 1sz) <= US.v n);
       f_lemma2 n (k' `US.add` 1sz);
 
-      init_size_classes_aux2 tl n k' (k' `US.add` 1sz) slab_region md_bm_region md_region size_classes sizes
+      init_size_classes_aux2 tl offset n k' (k' `US.add` 1sz) slab_region md_bm_region md_region size_classes sizes
 #pop-options
 
 /// The normalization steps for reduction at compile-time
@@ -1511,6 +1542,7 @@ let normal (#a:Type) (x:a) =
 /// Entrypoint, allocating all size classes according to the list of sizes [l]
 inline_for_extraction noextract
 val init_size_classes (l:list sc)
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -1534,7 +1566,7 @@ val init_size_classes (l:list sc)
     A.length md_region >= US.v metadata_max * 1
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
   (
@@ -1562,21 +1594,24 @@ val init_size_classes (l:list sc)
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) h0) /\
-    synced_sizes (asel size_classes h0) 0 sizes /\
-    (forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
-    (forall (i:nat{i < 0}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    //(forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i) /\
+    //synced_sizes offset (asel size_classes h0) sizes 0 /\
+    True
   )
   (ensures fun _ r h1 ->
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
-    synced_sizes (asel size_classes h1) (US.v n) sizes /\
-    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h1) sizes (US.v n) /\
+    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i) /\
+    True
   )
 
 #push-options "--fuel 1 --ifuel 1"
-let init_size_classes l n slab_region md_bm_region md_region size_classes sizes =
-  (normal (init_size_classes_aux l n 0sz 1sz)) slab_region md_bm_region md_region size_classes sizes
+let init_size_classes l offset n slab_region md_bm_region md_region size_classes sizes =
+  (normal (init_size_classes_aux l offset n 0sz 1sz)) slab_region md_bm_region md_region size_classes sizes
 #pop-options
 
 #restart-solver
@@ -1585,6 +1620,7 @@ let init_size_classes l n slab_region md_bm_region md_region size_classes sizes 
 /// Entrypoint, allocating all size classes according to the list of sizes [l]
 inline_for_extraction noextract
 val init_size_classes2 (l:list sc_ex)
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -1607,7 +1643,7 @@ val init_size_classes2 (l:list sc_ex)
     A.length md_region >= US.v metadata_max_ex * 1
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == A.length size_classes})
+  (sizes: TLA.t sc_union)
   ///\ TLA.length sizes >= US.v offset /\ TLA.length sizes >= A.length size_classes})
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
@@ -1636,26 +1672,30 @@ val init_size_classes2 (l:list sc_ex)
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) 0sz)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) 0sz)) h0) /\
     zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex 0sz)) h0) /\
-    synced_sizes (asel size_classes h0) 0 sizes /\
-    (forall (i:nat{i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size)
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h0) sizes 0 /\
+    True
     //(forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)) h1) /\
     zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex n)) h1) /\
-    synced_sizes (asel size_classes h1) (US.v n) sizes /\
-    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h1) sizes (US.v n) /\
+    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i) /\
+    True
   )
 
 #restart-solver
 
 #push-options "--fuel 1 --ifuel 1"
-let init_size_classes2 l n slab_region md_bm_region md_region size_classes sizes =
-  (normal (init_size_classes_aux2 l n 0sz 1sz)) slab_region md_bm_region md_region size_classes sizes
+let init_size_classes2 l offset n slab_region md_bm_region md_region size_classes sizes =
+  (normal (init_size_classes_aux2 l offset n 0sz 1sz)) slab_region md_bm_region md_region size_classes sizes
 #pop-options
 
 val init_all_size_classes1 (l:list sc)
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -1673,7 +1713,7 @@ val init_all_size_classes1 (l:list sc)
     A.length md_region == US.v metadata_max * US.v n
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == A.length size_classes})
+  (sizes: TLA.t sc_union)
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
   (
@@ -1698,31 +1738,34 @@ val init_all_size_classes1 (l:list sc)
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) h0) /\
-    synced_sizes (asel size_classes h0) 0 sizes /\
-    (forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
-    (forall (i:nat{i < 0}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    //synced_sizes offset (asel size_classes h0) sizes 0 /\
+    True
   )
   (ensures fun _ r h1 ->
     //array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) (u32_to_sz page_size) /\
     //zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
     //zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
-    synced_sizes (asel size_classes h1) (US.v n) sizes /\
-    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h1) sizes (US.v n) /\
+    (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i) /\
+    True
   )
 
 #push-options "--fuel 1 --ifuel 1"
 let init_all_size_classes1
-  l n slab_region md_bm_region md_region size_classes sizes
+  l offset n slab_region md_bm_region md_region size_classes sizes
   =
   f_lemma n 0sz;
   f_lemma n 1sz;
-  init_size_classes l n slab_region md_bm_region md_region size_classes sizes;
+  init_size_classes l offset n slab_region md_bm_region md_region size_classes sizes;
   drop (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)));
   drop (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)));
   drop (A.varray (A.split_r md_region (US.mul metadata_max n)))
 #pop-options
 
 val init_all_size_classes2 (l:list sc_ex)
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -1739,7 +1782,7 @@ val init_all_size_classes2 (l:list sc_ex)
     A.length md_region == US.v metadata_max_ex * US.v n
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   ///\ TLA.length sizes >= US.v offset /\ TLA.length sizes >= A.length size_classes})
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
@@ -1765,25 +1808,26 @@ val init_all_size_classes2 (l:list sc_ex)
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) 0sz)) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) 0sz)) h0) /\
     zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex 0sz)) h0) /\
-    synced_sizes (asel size_classes h0) 0 sizes /\
-    (forall (i:nat{i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size)
+    TLA.length sizes >= US.v offset + US.v n /\
+    True
     //(forall (i:nat{i < US.v offset}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
     //array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)) (u32_to_sz page_size) /\
     //zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)) h1) /\
     //zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex n)) h1) /\
-    synced_sizes (asel size_classes h1) (US.v n) sizes /\
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes offset (asel size_classes h1) sizes (US.v n) /\
     (forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
   )
 
 #push-options "--fuel 1 --ifuel 1"
 let init_all_size_classes2
-  l n slab_region md_bm_region md_region size_classes sizes
+  l offset n slab_region md_bm_region md_region size_classes sizes
   =
   f_lemma2 n 0sz;
   f_lemma2 n 1sz;
-  init_size_classes2 l n slab_region md_bm_region md_region size_classes sizes;
+  init_size_classes2 l offset n slab_region md_bm_region md_region size_classes sizes;
   drop (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)));
   drop (A.varray (A.split_r md_bm_region (US.mul metadata_max_ex n)));
   drop (A.varray (A.split_r md_region (US.mul metadata_max_ex n)))
@@ -1791,12 +1835,16 @@ let init_all_size_classes2
 
 [@"opaque_to_smt"]
 let synced_sizes2
+  (offset: US.t)
   (size_classes:Seq.seq size_class)
-  (k:nat{k <= Seq.length size_classes /\ UInt.size k U32.n})
-  (sizes:TLA.t sc_union{TLA.length sizes >= Seq.length size_classes})
+  (sizes:TLA.t sc_union)
+  (k:nat{
+    k <= Seq.length size_classes /\
+    k + US.v offset <= TLA.length sizes
+  })
   : prop
   =
-  synced_sizes size_classes k sizes
+  synced_sizes offset size_classes sizes k
 
 [@"opaque_to_smt"]
 let size_class_preds
@@ -1810,6 +1858,7 @@ let size_class_preds
   )
 
 val init_all_size_classes_wrapper1 (l:list sc)
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -1827,7 +1876,7 @@ val init_all_size_classes_wrapper1 (l:list sc)
     A.length md_region == US.v metadata_max * US.v n
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == A.length size_classes})
+  (sizes: TLA.t sc_union)
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
   (
@@ -1852,8 +1901,9 @@ val init_all_size_classes_wrapper1 (l:list sc)
     array_u8_alignment slab_region (u32_to_sz page_size) /\
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0) /\
+    TLA.length sizes >= US.v offset + US.v n /\
     //synced_sizes (asel size_classes h0) 0 sizes /\
-    (forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
+    //(forall (i:nat{i < US.v n}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
     True
     //(forall (i:nat{i < 0}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
@@ -1861,13 +1911,14 @@ val init_all_size_classes_wrapper1 (l:list sc)
     //array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) (u32_to_sz page_size) /\
     //zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
     //zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
-    synced_sizes2 (asel size_classes h1) (US.v n) sizes /\
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes2 offset (asel size_classes h1) sizes (US.v n) /\
     size_class_preds (asel size_classes h1) (US.v n) slab_region
   )
 
 #push-options "--fuel 1 --ifuel 1"
 let init_all_size_classes_wrapper1
-  l n slab_region md_bm_region md_region size_classes sizes
+  l offset n slab_region md_bm_region md_region size_classes sizes
   =
   Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max (u32_to_sz page_size)));
   Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max 4sz));
@@ -1885,12 +1936,13 @@ let init_all_size_classes_wrapper1
   change_equal_slprop
     (A.varray md_region)
     (A.varray (A.split_r md_region (US.mul metadata_max 0sz)));
-  init_all_size_classes1 l n slab_region md_bm_region md_region size_classes sizes;
+  init_all_size_classes1 l offset n slab_region md_bm_region md_region size_classes sizes;
   reveal_opaque (`%synced_sizes2) synced_sizes2;
   reveal_opaque (`%size_class_preds) size_class_preds
 #pop-options
 
 val init_all_size_classes_wrapper2 (l:list sc_ex)
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -1907,7 +1959,7 @@ val init_all_size_classes_wrapper2 (l:list sc_ex)
     A.length md_region == US.v metadata_max_ex * US.v n
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   ///\ TLA.length sizes >= US.v offset /\ TLA.length sizes >= A.length size_classes})
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
@@ -1933,21 +1985,22 @@ val init_all_size_classes_wrapper2 (l:list sc_ex)
     array_u8_alignment slab_region (u32_to_sz page_size) /\
     zf_u8 (A.asel slab_region h0) /\
     zf_b (A.asel md_bm_region h0) /\
-    synced_sizes (asel size_classes h0) 0 sizes /\
-    (forall (i:nat{i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size)
+    TLA.length sizes >= US.v offset + US.v n /\
+    True
     //(forall (i:nat{i < US.v offset}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
     //array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)) (u32_to_sz page_size) /\
     //zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) n)) h1) /\
     //zf_b (A.asel (A.split_r md_bm_region (US.mul metadata_max_ex n)) h1) /\
-    synced_sizes2 (asel size_classes h1) (US.v n) sizes /\
+    TLA.length sizes >= US.v offset + US.v n /\
+    synced_sizes2 offset (asel size_classes h1) sizes (US.v n) /\
     size_class_preds (asel size_classes h1) (US.v n) slab_region
   )
 
 #push-options "--fuel 1 --ifuel 1"
 let init_all_size_classes_wrapper2
-  l n slab_region md_bm_region md_region size_classes sizes
+  l offset n slab_region md_bm_region md_region size_classes sizes
   =
   Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max_ex slab_size));
   Math.Lemmas.mul_zero_right_is_zero (US.v metadata_max_ex);
@@ -1964,102 +2017,137 @@ let init_all_size_classes_wrapper2
   change_equal_slprop
     (A.varray md_region)
     (A.varray (A.split_r md_region (US.mul metadata_max_ex 0sz)));
-  init_all_size_classes2 l n slab_region md_bm_region md_region size_classes sizes;
+  init_all_size_classes2 l offset n slab_region md_bm_region md_region size_classes sizes;
   reveal_opaque (`%synced_sizes2) synced_sizes2;
   reveal_opaque (`%size_class_preds) size_class_preds
 #pop-options
 
-module TLAO = TLAOverlay
+//module TLAO = TLAOverlay
 
 #restart-solver
 
-val synced_sizes_join_lemma'
+val synced_sizes_join_lemma''
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
-    US.fits (US.v n)
+    US.fits (US.v offset + US.v n)
   })
   (size_classes: Seq.lseq size_class (US.v n))
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   (n1 n2: US.t)
-  (_:unit{
-    US.v n1 + US.v n2 == US.v n /\
-    US.v n1 > 0 /\
-    US.v n2 > 0
-  })
   (i:US.t{US.v i < US.v n})
   : Lemma
   (requires (
-    let scs1, scs2 = Seq.split size_classes (US.v n1) in
-    let sizes1, sizes2 = TLAO.split sizes (US.v n1) in
-    synced_sizes2 scs1 (US.v n1) sizes1 /\
-    synced_sizes2 scs2 (US.v n2) sizes2 /\
-    True))
+    US.v n1 + US.v n2 == US.v n /\
+    US.v n1 > 0 /\
+    US.v n2 > 0 /\
+    (let scs1, scs2 = Seq.split size_classes (US.v n1) in
+    TLA.length sizes >= US.v n + US.v offset /\
+    synced_sizes2 offset scs1 sizes (US.v n1) /\
+    synced_sizes2 (US.add offset n1) scs2 sizes (US.v n2) /\
+    True
+  )))
   (ensures (
-    TLA.get sizes i == (Seq.index size_classes (US.v i)).data.size
+    TLA.get sizes (US.add offset i)
+    == (Seq.index size_classes (US.v i)).data.size
   ))
 
 #restart-solver
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100 --query_stats"
-let synced_sizes_join_lemma'
-  n size_classes sizes  n1 n2 _ i
+let synced_sizes_join_lemma''
+  offset n size_classes sizes n1 n2 i
   =
   let scs1, scs2 = Seq.split size_classes (US.v n1) in
-  let sizes1, sizes2 = TLAO.split sizes (US.v n1) in
   reveal_opaque (`%synced_sizes2) synced_sizes2;
   if US.v i < US.v n1
   then (
-    TLAO.split_lemma1 sizes n1 i;
-    assert (TLA.get sizes1 i
-    == TLA.get sizes i);
     ()
   ) else (
-    TLAO.split_lemma2 sizes n1 i;
-    assert (TLA.get sizes2 (US.sub i n1)
-    == TLA.get sizes i);
+    assert (US.v i - US.v n1 < US.v n2);
+    assert (TLA.get sizes (US.add (US.add offset n1) (US.sub i n1))
+    ==
+    (Seq.index scs2 (US.v (US.sub i n1))).data.size);
+    assert (TLA.get sizes (US.add (US.add offset n1) (US.sub i n1))
+    == TLA.get sizes (US.add offset i));
     Seq.lemma_index_slice size_classes (US.v n1) (US.v n) (US.v i - US.v n1);
+    assert (Seq.index scs2 (US.v (US.sub i n1))
+    ==
+    Seq.index size_classes (US.v i));
     ()
   )
 #pop-options
 
-let synced_sizes_join_lemma
+let synced_sizes_join_lemma'
+  (offset: US.t)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
-    US.fits (US.v n)
+    US.fits (US.v offset + US.v n)
   })
   (size_classes: Seq.lseq size_class (US.v n))
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   (n1 n2: US.t)
-  (_:unit{
+  (i:nat{i < US.v n})
+  : Lemma
+  (requires (
     US.v n1 + US.v n2 == US.v n /\
     US.v n1 > 0 /\
     US.v n2 > 0 /\
     (let scs1, scs2 = Seq.split size_classes (US.v n1) in
-    let sizes1, sizes2 = TLAO.split sizes (US.v n1) in
-    synced_sizes2 scs1 (US.v n1) sizes1 /\
-    synced_sizes2 scs2 (US.v n2) sizes2)
-  })
-  (i:nat{i < US.v n})
-  : Lemma
-  (
+    TLA.length sizes >= US.v n + US.v offset /\
+    synced_sizes2 offset scs1 sizes (US.v n1) /\
+    synced_sizes2 (US.add offset n1) scs2 sizes (US.v n2) /\
+    True
+  )))
+  (ensures
     US.fits i /\
-    TLA.get sizes (US.uint_to_t i)
+    TLA.get sizes (US.add offset (US.uint_to_t i))
     == (Seq.index size_classes i).data.size
   )
   =
-  synced_sizes_join_lemma' n size_classes sizes n1 n2 () (US.uint_to_t i)
+  synced_sizes_join_lemma'' offset n size_classes sizes n1 n2 (US.uint_to_t i)
+
+let synced_sizes_join_lemma
+  (offset: US.t)
+  (n: US.t{
+    UInt.size (US.v n) U32.n /\
+    US.fits (US.v offset + US.v n)
+  })
+  (size_classes: Seq.lseq size_class (US.v n))
+  (sizes: TLA.t sc_union)
+  (n1 n2: US.t)
+  : Lemma
+  (requires
+    US.v n1 + US.v n2 == US.v n /\
+    US.v n1 > 0 /\
+    US.v n2 > 0 /\
+    (let scs1, scs2 = Seq.split size_classes (US.v n1) in
+    TLA.length sizes >= US.v n + US.v offset /\
+    synced_sizes2 offset scs1 sizes (US.v n1) /\
+    synced_sizes2 (US.add offset n1) scs2 sizes (US.v n2) /\
+    True)
+  )
+  (ensures
+    synced_sizes2 offset size_classes sizes (US.v n)
+  )
+  =
+  reveal_opaque (`%synced_sizes2) synced_sizes2;
+  Classical.forall_intro (Classical.move_requires (
+    synced_sizes_join_lemma' offset n size_classes sizes n1 n2 
+  ))
 
 val synced_sizes_join
   (#opened: _)
+  (offset: US.t)
   (n1: US.t{US.v n1 > 0})
   (n2: US.t{US.v n2 > 0})
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.v n == US.v n1 + US.v n2 /\
-    US.fits (US.v n)
+    US.fits (US.v offset + US.v n)
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   // (s1: Seq.lseq size_class (US.v n1))
   // (s2: Seq.lseq size_class (US.v n2))
   : SteelGhost unit opened
@@ -2071,20 +2159,24 @@ val synced_sizes_join
     A.varray size_classes
   )
   (requires fun h0 ->
-    let sizes1, sizes2 = TLAO.split sizes (US.v n1) in
+    TLA.length sizes >= US.v n + US.v offset /\
     // s1 `Seq.equal` (asel (A.split_l size_classes n1) h0) /\
     //s2 `Seq.equal` (asel (A.split_r size_classes n1) h0) /\
-    synced_sizes2 (asel (A.split_l size_classes n1) h0) (US.v n1) sizes1 /\
-    synced_sizes2 (asel (A.split_r size_classes n1) h0) (US.v n2) sizes2
+    synced_sizes2 offset (asel (A.split_l size_classes n1) h0) sizes (US.v n1) /\
+    synced_sizes2 (US.add offset n1) (asel (A.split_r size_classes n1) h0) sizes
+(US.v n2)
   )
   (ensures fun h0 _ h1 ->
+    TLA.length sizes >= US.v n + US.v offset /\
     asel size_classes h1 `Seq.equal` Seq.append (asel (A.split_l size_classes n1) h0) (asel (A.split_r size_classes n1) h0) /\
-    synced_sizes2 (asel size_classes h1) (US.v n) sizes
+    synced_sizes2 offset (asel size_classes h1) sizes (US.v n)
   )
 
 #push-options "--fuel 1 --ifuel 1"
-let synced_sizes_join n1 n2 n size_classes sizes
+let synced_sizes_join offset n1 n2 n size_classes sizes
   =
+  let s1 = gget (A.varray (A.split_l size_classes n1)) in
+  let s2 = gget (A.varray (A.split_r size_classes n1)) in
   A.ghost_join
    (A.split_l size_classes n1)
    (A.split_r size_classes n1)
@@ -2095,14 +2187,9 @@ let synced_sizes_join n1 n2 n size_classes sizes
      (A.split_r size_classes n1)))
    (A.varray size_classes);
   let s = gget (A.varray size_classes) in
-  reveal_opaque (`%synced_sizes2) synced_sizes2;
-  Classical.forall_intro (Classical.move_requires (
-   synced_sizes_join_lemma n s sizes n1 n2 ()
-  ));
-  assert (forall (i:nat{i < US.v n}).
-   US.fits i /\
-   TLA.get sizes (US.uint_to_t i) == (Seq.index s i).data.size
-  )
+  let s1', s2' = Seq.split s (US.v n1) in
+  Seq.lemma_append_inj s1 s2 s1' s2';
+  synced_sizes_join_lemma offset n s sizes n1 n2
 #pop-options
 
 #restart-solver
@@ -2232,9 +2319,15 @@ let slab_region_pred_join_lemma n1 n2 n slab_region size_classes
 
 #restart-solver
 
+(*
+so far, so good, with the exception of:
+- sc? and sc_ex? pattern: use a opaque predicate
+*)
+
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 val init_all_size_classes'
   (#opened:_)
+  (offset: US.t)
   (n1: US.t{US.v n1 > 0})
   (n2: US.t{US.v n2 > 0})
   (n: US.t{
@@ -2243,7 +2336,7 @@ val init_all_size_classes'
     US.fits (US.v sc_slab_region_size * US.v n) /\
     //US.fits (US.v sc_slab_region_size * US.v n1) /\
     //US.fits (US.v sc_slab_region_size * US.v n2) /\
-    US.fits (US.v n)
+    US.fits (US.v n + US.v offset)
   })
   (slab_region: array U8.t{
     A.length slab_region == US.v sc_slab_region_size * US.v n /\
@@ -2252,7 +2345,7 @@ val init_all_size_classes'
     True
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   : SteelGhost unit opened
   (
     A.varray (A.split_l size_classes n1) `star`
@@ -2262,11 +2355,13 @@ val init_all_size_classes'
     A.varray size_classes
   )
   (requires fun h0 ->
-    let sizes' = TLAO.split sizes (US.v n1) in
     A.length (A.split_l slab_region (US.mul sc_slab_region_size n1)) == US.v sc_slab_region_size * US.v n1 /\
     A.length (A.split_r slab_region (US.mul sc_slab_region_size n1)) == US.v sc_slab_region_size * US.v n2 /\
-    synced_sizes2 (asel (A.split_l size_classes n1) h0) (US.v n1) (fst sizes') /\
-    synced_sizes2 (asel (A.split_r size_classes n1) h0) (US.v n2) (snd sizes') /\
+    TLA.length sizes >= US.v n + US.v offset /\
+    synced_sizes2 offset
+      (asel (A.split_l size_classes n1) h0) sizes (US.v n1) /\
+    synced_sizes2 (US.add offset n1)
+      (asel (A.split_r size_classes n1) h0) sizes (US.v n2) /\
     size_class_preds (asel (A.split_l size_classes n1) h0) (US.v n1) (A.split_l slab_region (US.mul sc_slab_region_size n1)) /\
     size_class_preds (asel (A.split_r size_classes n1) h0) (US.v n2) (A.split_r slab_region (US.mul sc_slab_region_size n1)) /\
     True
@@ -2279,18 +2374,20 @@ val init_all_size_classes'
     //)
   )
   (ensures fun _ _ h1 ->
-    synced_sizes2 (asel size_classes h1) (US.v n) sizes /\
+    TLA.length sizes >= US.v n + US.v offset /\
+    synced_sizes2 offset (asel size_classes h1) sizes (US.v n) /\
     size_class_preds (asel size_classes h1) (US.v n) slab_region
   )
 #pop-options
 
 #restart-solver
 
-[@@ handle_smt_goals]
-let tac () : FStar.Tactics.Tac unit = FStar.Tactics.norm [zeta_full; delta_only [`%focus_rmem; `%focus_rmem'; `%unrestricted_focus_rmem]]
+//[@@ handle_smt_goals]
+//let tac () : FStar.Tactics.Tac unit = FStar.Tactics.norm [zeta_full; delta_only [`%focus_rmem; `%focus_rmem'; `%unrestricted_focus_rmem]]
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 300 --query_stats"
 let init_all_size_classes'
+  offset
   n1 n2 n
   slab_region
   size_classes
@@ -2298,7 +2395,7 @@ let init_all_size_classes'
   =
   let size_classes1_s0 = gget (A.varray (A.split_l size_classes n1)) in
   let size_classes2_s0 = gget (A.varray (A.split_r size_classes n1)) in
-  synced_sizes_join n1 n2 n size_classes sizes;
+  synced_sizes_join offset n1 n2 n size_classes sizes;
   let size_classes_s1 = gget (A.varray size_classes) in
   assert (G.reveal size_classes_s1 == Seq.append size_classes1_s0 size_classes2_s0);
   Seq.lemma_split size_classes_s1 (US.v n1);
@@ -2318,10 +2415,11 @@ let init_all_size_classes'
 val init_all_size_classes
   (l1:list sc)
   (l2:list sc_ex)
+  (offset: US.t)
   (n: US.t{
     US.v n == List.length l1 + List.length l2 /\
     UInt.size (US.v n) U32.n /\
-    US.fits (US.v n) /\
+    US.fits (US.v n + US.v offset) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
     US.fits (US.v metadata_max * US.v n)
@@ -2341,7 +2439,7 @@ val init_all_size_classes
     A.length md_region == US.v metadata_max * US.v n1 + US.v metadata_max_ex * US.v n2
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   : Steel unit
   (
     A.varray (A.split_l slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) `star`
@@ -2367,12 +2465,14 @@ val init_all_size_classes
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) h0) /\
     zf_u64 (A.asel md_bm_region h0) /\
     zf_b (A.asel md_bm_region_b h0) /\
-    (forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel (A.split_l size_classes n1) h0) i).data.size) /\
-    (forall (i:nat{i < US.v n2}) . Sc_ex? (Seq.index (asel (A.split_r size_classes n1) h0) i).data.size) /\
+    TLA.length sizes >= US.v n + US.v offset /\
+    //(forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel (A.split_l size_classes n1) h0) i).data.size) /\
+    //(forall (i:nat{i < US.v n2}) . Sc_ex? (Seq.index (asel (A.split_r size_classes n1) h0) i).data.size) /\
     True
   )
   (ensures fun _ _ h1 ->
-    synced_sizes2 (asel size_classes h1) (US.v n) sizes /\
+    TLA.length sizes >= US.v n + US.v offset /\
+    synced_sizes2 offset (asel size_classes h1) sizes (US.v n) /\
     size_class_preds (asel size_classes h1) (US.v n) slab_region
     //(forall (i:nat{i < US.v n}) . size_class_pred slab_region (Seq.index (asel size_classes h1) i) i)
   )
@@ -2381,7 +2481,9 @@ val init_all_size_classes
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 300"
 let init_all_size_classes
-  l1 l2 n n1 n2
+  l1 l2
+  offset
+  n n1 n2
   slab_region
   md_bm_region
   md_bm_region_b
@@ -2389,13 +2491,12 @@ let init_all_size_classes
   size_classes
   sizes
   =
-  let sizes1, sizes2 = TLAO.split sizes (US.v n1) in
-  init_all_size_classes_wrapper1 l1 n1
+  init_all_size_classes_wrapper1 l1 offset n1
     (A.split_l slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1))
     md_bm_region
     (A.split_l md_region (US.mul metadata_max n1))
     (A.split_l size_classes n1)
-    sizes1;
+    sizes;
   assume (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1))
   ==
   US.v metadata_max_ex * US.v slab_size * US.v n2);
@@ -2403,13 +2504,14 @@ let init_all_size_classes
   ==
   US.v metadata_max_ex * US.v n2);
   assume (A.length (A.split_r size_classes n1) == US.v n2);
-  init_all_size_classes_wrapper2 l2 n2
+  init_all_size_classes_wrapper2 l2 (US.add offset n1) n2
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1))
     md_bm_region_b
     (A.split_r md_region (US.mul metadata_max n1))
     (A.split_r size_classes n1)
-    sizes2;
+    sizes;
   init_all_size_classes'
+    offset
     n1 n2 n
     slab_region
     size_classes
@@ -2419,10 +2521,11 @@ let init_all_size_classes
 val init_all_size_classes_wrapper
   (l1:list sc)
   (l2:list sc_ex)
+  (offset: US.t)
   (n: US.t{
     US.v n == List.length l1 + List.length l2 /\
     UInt.size (US.v n) U32.n /\
-    US.fits (US.v n) /\
+    US.fits (US.v n + US.v offset) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
     US.fits (US.v metadata_max * US.v n)
@@ -2442,7 +2545,7 @@ val init_all_size_classes_wrapper
     A.length md_region == US.v metadata_max * US.v n1 + US.v metadata_max_ex * US.v n2
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   : Steel unit
   (
     A.varray slab_region `star`
@@ -2463,12 +2566,14 @@ val init_all_size_classes_wrapper
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0) /\
     zf_b (A.asel md_bm_region_b h0) /\
-    (forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
-    (forall (i:nat{i >= US.v n1 /\ i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
+    TLA.length sizes >= US.v n + US.v offset /\
+    //(forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
+    //(forall (i:nat{i >= US.v n1 /\ i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
     True
   )
   (ensures fun _ _ h1 ->
-    synced_sizes2 (asel size_classes h1) (US.v n) sizes /\
+    TLA.length sizes >= US.v n + US.v offset /\
+    synced_sizes2 offset (asel size_classes h1) sizes (US.v n) /\
     size_class_preds (asel size_classes h1) (US.v n) slab_region
   )
 
@@ -2477,7 +2582,9 @@ val init_all_size_classes_wrapper
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 let init_all_size_classes_wrapper
-  l1 l2 n n1 n2
+  l1 l2
+  offset
+  n n1 n2
   slab_region
   md_bm_region
   md_bm_region_b
@@ -2500,7 +2607,9 @@ let init_all_size_classes_wrapper
   let size_classes1_s0 = gget (A.varray (A.split_l size_classes n1)) in
   let size_classes2_s0 = gget (A.varray (A.split_r size_classes n1)) in
   init_all_size_classes
-    l1 l2 n n1 n2
+    l1 l2
+    offset
+    n n1 n2
     slab_region
     md_bm_region
     md_bm_region_b
@@ -2513,6 +2622,12 @@ let init_all_size_classes_wrapper
 // now, initialization of several arenas
 
 #restart-solver
+
+
+(*
+so far, so good, with the exception of:
+- sc? and sc_ex? pattern: use a opaque predicate
+*)
 
 /// A logical predicate indicating that a list of sizes corresponds
 /// to the sizes of a list of size_classes
@@ -2541,14 +2656,14 @@ let hidden_pred
   US.v s3 == US.v metadata_max * US.v n1 + US.v metadata_max_ex * US.v n2
 
 val init_one_arena'
+  (offset: US.t)
   (l1:list sc)
   (l2:list sc_ex)
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
     UInt.size (US.v n) U32.n /\
-    True
-    //US.fits (US.v n)
+    US.fits (US.v n + US.v offset)
   })
   (arena_slab_region_size
    arena_md_region_size
@@ -2567,7 +2682,7 @@ val init_one_arena'
     A.length md_region == US.v arena_md_region_size
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+  (sizes: TLA.t sc_union)
   : Steel unit
   (
     A.varray slab_region `star`
@@ -2581,12 +2696,13 @@ val init_one_arena'
   )
   (requires fun h0 ->
     US.v n == US.v n1 + US.v n2 /\
-    (forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
-    (forall (i:nat{i >= US.v n1 /\ i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
+    //(forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
+    //(forall (i:nat{i >= US.v n1 /\ i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
     array_u8_alignment slab_region (u32_to_sz page_size) /\
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0) /\
     zf_b (A.asel md_bm_region_b h0) /\
+    TLA.length sizes >= US.v n + US.v offset /\
     US.v arena_slab_region_size == US.v sc_slab_region_size * US.v n /\
     hidden_pred l1 l2 n n1 n2
       arena_md_bm_region_size
@@ -2594,13 +2710,15 @@ val init_one_arena'
       arena_md_region_size
   )
   (ensures fun _ _ h1 ->
+    TLA.length sizes >= US.v n + US.v offset /\
     A.length slab_region >= US.v sc_slab_region_size * US.v n /\
-    synced_sizes2 (asel size_classes h1) (US.v n) sizes /\
+    synced_sizes2 offset (asel size_classes h1) sizes (US.v n) /\
     size_class_preds (asel size_classes h1) (US.v n) slab_region
   )
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400"
 let init_one_arena'
+  offset
   l1 l2 n1 n2 n
   (arena_slab_region_size
    arena_md_region_size
@@ -2615,7 +2733,9 @@ let init_one_arena'
   =
   reveal_opaque (`%hidden_pred) hidden_pred;
   init_all_size_classes_wrapper
-    l1 l2 n n1 n2
+    l1 l2
+    offset
+    n n1 n2
     slab_region
     md_bm_region
     md_bm_region_b
@@ -2624,16 +2744,72 @@ let init_one_arena'
     sizes
 #pop-options
 
+#restart-solver
+
+//[@"opaque_to_smt"]
+//let sc_list_layout1
+//  (n1 n2: (v:US.t{US.v v > 0}))
+//  (n: US.t{US.v n == US.v n1 + US.v n2})
+//  (sizes: TLA.t sc_union{TLA.length sizes == US.v n})
+//  : prop
+//  =
+//  (forall (i:US.t{US.v i < US.v n1}).
+//    Sc? (TLA.get sizes i)) /\
+//  (forall (i:US.t{US.v i >= US.v n1 /\ US.v i < US.v n}).
+//    Sc_ex? (TLA.get sizes i))
+//
+//#push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
+//[@"opaque_to_smt"]
+//let sc_list_layout2
+//  (nb_arenas: US.t{US.v nb_arenas > 0})
+//  (n1 n2: (v:US.t{US.v v > 0}))
+//  (n: US.t{US.v n == US.v n1 + US.v n2})
+//  (sizes: TLA.t sc_union{
+//    US.fits (US.v nb_arenas * US.v n) /\
+//    TLA.length sizes == US.v nb_arenas * US.v n
+//  })
+//  : prop
+//  =
+//  (forall (k:US.t{US.v k < US.v nb_arenas}).
+//    US.fits (US.v nb_arenas * US.v k) /\
+//    (forall (i: US.t{US.v i < US.v n1}).
+//      US.fits (US.v nb_arenas * US.v k + US.v i) /\
+//      US.v nb_arenas * US.v k + US.v i < TLA.length sizes /\
+//      Sc? (TLA.get sizes (US.add (US.mul nb_arenas k) i))
+//    ) /\
+//    (forall (i: US.t{US.v i >= US.v n1 /\ US.v i < US.v n}).
+//      US.fits (US.v nb_arenas * US.v k + US.v i) /\
+//      US.v nb_arenas * US.v k + US.v i < TLA.length sizes /\
+//      Sc_ex? (TLA.get sizes (US.add (US.mul nb_arenas k) i))
+//    )
+//  )
+//#pop-options
+//
+//let sc_list_layout_lemma
+//  (nb_arenas: US.t{US.v nb_arenas > 1})
+//  (n1 n2: (v:US.t{US.v v > 0}))
+//  (n: US.t{US.v n == US.v n1 + US.v n2})
+//  (sizes: TLA.t sc_union{
+//    US.fits (US.v nb_arenas * US.v n) /\
+//    TLA.length sizes == US.v nb_arenas * US.v n
+//  })
+//  : Lemma
+//  (requires sc_list_layout2 nb_arenas n1 n2 n sizes)
+//  (ensures (
+//    let sizes1, sizes2 = TLAO.split sizes (US.v n) in
+//    sc_list_layout1 n1 n2 n sizes1))
+//  = admit ()
+
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 val init_one_arena
+  (offset: US.t)
   (l1:list sc)
   (l2:list sc_ex)
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
     UInt.size (US.v n) U32.n /\
-    True
-    //US.fits (US.v n)
+    US.fits (US.v n + US.v offset)
   })
   (nb_arenas: US.t{US.v nb_arenas > 0})
   (arena_slab_region_size
@@ -2678,15 +2854,28 @@ val init_one_arena
     hidden_pred l1 l2 n n1 n2
       arena_md_bm_region_size
       arena_md_bm_region_b_size
-      arena_md_region_size
+      arena_md_region_size /\
+    US.v n1 + US.v n2 == US.v n /\
+    TLA.length sizes >= US.v n + US.v offset /\
+    //sc_list_layout1 n1 n2 n
+    //(forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
+    //(forall (i:nat{i >= US.v n1 /\ i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
+    True
+    //(forall (k:nat{k < US.v nb_arenas}).
+    //  (forall (i:nat{i < US.v n1}) .
+    //    Sc? (Seq.index (asel size_classes h0) (k * US.v nb_arenas + i)).data.size) /\
+    //  (forall (i:nat{i >= US.v n1 /\ i < US.v n}) .
+    //    Sc_ex? (Seq.index (asel size_classes h0) (k * US.v nb_arenas + i)).data.size)
+    //)
   )
   (ensures fun _ _ h1 ->
+    TLA.length sizes >= US.v n + US.v offset /\
     array_u8_alignment (A.split_r slab_region arena_slab_region_size) (u32_to_sz page_size) /\
     zf_u8 (A.asel (A.split_r slab_region arena_slab_region_size) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region arena_md_bm_region_size) h1) /\
     zf_b (A.asel (A.split_r md_bm_region_b arena_md_bm_region_b_size) h1) /\
     A.length slab_region >= US.v sc_slab_region_size * US.v n /\
-    synced_sizes2 (asel size_classes h1) (US.v n) sizes /\
+    synced_sizes2 offset (asel size_classes h1) sizes (US.v n) /\
     size_class_preds (asel size_classes h1) (US.v n) slab_region
   )
 #pop-options
@@ -2697,6 +2886,7 @@ val init_one_arena
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 let init_one_arena
+  offset
   l1 l2 n1 n2 n
   nb_arenas
   (arena_slab_region_size
@@ -2721,7 +2911,12 @@ let init_one_arena
   A.ghost_split md_bm_region_b arena_md_bm_region_b_size;
   A.ghost_split md_region arena_md_region_size;
   A.ghost_split size_classes n;
+  //assume (US.v nb_arenas > 1);
+  //let sizes1, sizes2 = TLAO.split sizes (US.v n) in
+  assume (array_u8_alignment (A.split_l slab_region arena_slab_region_size) (u32_to_sz page_size));
+  assume (array_u8_alignment (A.split_r slab_region arena_slab_region_size) (u32_to_sz page_size));
   init_one_arena'
+    offset
     l1 l2 n1 n2 n
     arena_slab_region_size
     arena_md_region_size
@@ -2731,8 +2926,22 @@ let init_one_arena
     (A.split_l md_bm_region arena_md_bm_region_size)
     (A.split_l md_bm_region_b arena_md_bm_region_b_size)
     (A.split_l md_region arena_md_region_size)
-    size_classes
+    (A.split_l size_classes n)
     sizes;
+  //let s1 = gget (A.varray (A.split_l size_classes n)) in
+  //let s2 = gget (A.varray (A.split_r size_classes n)) in
+  A.ghost_join
+   (A.split_l size_classes n)
+   (A.split_r size_classes n)
+   ();
+  change_equal_slprop
+   (A.varray (A.merge
+     (A.split_l size_classes n)
+     (A.split_r size_classes n)))
+   (A.varray size_classes);
+  //let s = gget (A.varray (A.split_))
+  //synced_sizes2 abstract: issue to relate s1 and Seq.slice s 0 (US.v n1)
+  admit ();
   ()
 
 
@@ -2749,8 +2958,6 @@ let init_one_arena
 //  forall (i:nat{i < k}). (
 //    size_class_pred slab_region (Seq.index size_classes i) i
 //  )
-
-
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
 val init_nth_arena
