@@ -955,8 +955,6 @@ let init_wrapper sc n k k' slab_region md_bm_region md_region
   =
   f_lemma n k;
   f_lemma n k';
-  //f_lemma n (US.sub n k);
-  //admit ();
   let data = init_struct sc
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k))
     (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k))
@@ -977,6 +975,7 @@ let init_wrapper sc n k k' slab_region md_bm_region md_region
     k
     k'
     md_region;
+  // TODO: dedicated lemma
   assume (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
   change_slprop_rel
     (size_class_vprop_sc data)
@@ -1065,8 +1064,6 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
   f_lemma2 n k;
   f_lemma2 n k';
-  //f_lemma n (US.sub n k);
-  //admit ();
   let data = init_struct2 sc
     (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k))
     (A.split_r md_bm_region (US.mul metadata_max_ex k))
@@ -1087,9 +1084,10 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
     k
     k'
     md_region;
+  // TODO: dedicated lemma
   assume (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
+  // TODO: dedicated lemma
   assume (array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k')) (u32_to_sz page_size));
-  //assert (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
   change_slprop_rel
     (size_class_vprop_sc_ex data)
     (size_class_vprop data)
@@ -1217,15 +1215,13 @@ val init_size_class
 let init_size_class
   offset n k k' slab_region md_bm_region md_region size_classes sizes
   =
+  //TODO: missing hypothesis
   assume (US.fits (US.v offset + US.v k));
   let idx = US.add offset k in
   let size = TLA.get sizes idx in
   (**) let g0 = gget (varray size_classes) in
-  //assume (size == (Seq.index g0 (US.v k)).data.size);
+  //TODO: missing hypothesis
   assume (Sc? size);
-  //by (let open FStar.Tactics in
-  //    set_fuel 1; set_ifuel 1; set_rlimit 100;
-  //    ());
   let Sc size = size in
   //(**) let g_sizes0 = gget (varray sizes) in
   f_lemma n k;
@@ -1311,21 +1307,19 @@ val init_size_class2
 let init_size_class2
   offset n k k' slab_region md_bm_region md_region size_classes sizes
   =
+  //TODO: missing hypothesis
   assume (US.fits (US.v offset + US.v k));
   let idx = US.add offset k in
   let size = TLA.get sizes idx in
+  //TODO: missing hypothesis
   assume (Sc_ex? size);
   let Sc_ex size = size in
   (**) let g0 = gget (varray size_classes) in
-  //(**) let g_sizes0 = gget (varray sizes) in
   f_lemma2 n k;
-  //upd sizes k size;
   let sc = init_wrapper2 size n k k' slab_region md_bm_region md_region in
   upd size_classes k sc;
 
   (**) let g1 = gget (varray size_classes) in
-  //(**) let g_sizes1 = gget (varray sizes) in
-  //(**) assert (Ghost.reveal g_sizes1 == Seq.upd (Ghost.reveal g_sizes0) (US.v k) size);
   (**) assert (Ghost.reveal g1 == Seq.upd (Ghost.reveal g0) (US.v k) sc)
 #pop-options
 
@@ -2022,8 +2016,6 @@ let init_all_size_classes_wrapper2
   reveal_opaque (`%size_class_preds) size_class_preds
 #pop-options
 
-//module TLAO = TLAOverlay
-
 #restart-solver
 
 val synced_sizes_join_lemma''
@@ -2230,6 +2222,7 @@ val slab_region_pred_join_lemma_aux'
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 let slab_region_pred_join_lemma_aux' n slab_region size_classes n1 n2 _ i
   =
+  //TODO: low-level proof work
   admit ();
   let scs1, scs2 = Seq.split size_classes (US.v n1) in
   if i < US.v n1
@@ -2281,6 +2274,7 @@ val slab_region_pred_join_lemma'
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let slab_region_pred_join_lemma' n slab_region size_classes n1 n2
   =
+  //TODO: low-level proof work
   admit ();
   Classical.forall_intro (Classical.move_requires (
     slab_region_pred_join_lemma_aux' n slab_region size_classes n1 n2 ()
@@ -2405,10 +2399,6 @@ let init_all_size_classes'
     size_classes1_s1 size_classes2_s1;
   assert (G.reveal size_classes1_s0 == size_classes1_s1);
   assert (G.reveal size_classes2_s0 == size_classes2_s1);
-  //assume (
-  //  US.fits (US.v sc_slab_region_size * US.v n1) /\
-  //  US.fits (US.v sc_slab_region_size * US.v n2)
-  //);
   slab_region_pred_join_lemma n1 n2 n slab_region size_classes_s1
 #pop-options
 
@@ -2497,12 +2487,15 @@ let init_all_size_classes
     (A.split_l md_region (US.mul metadata_max n1))
     (A.split_l size_classes n1)
     sizes;
+  //TODO: dedicated lemma
   assume (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1))
   ==
   US.v metadata_max_ex * US.v slab_size * US.v n2);
+  //TODO: dedicated lemma
   assume (A.length (A.split_r md_region (US.mul metadata_max n1))
   ==
   US.v metadata_max_ex * US.v n2);
+  //TODO: dedicated lemma
   assume (A.length (A.split_r size_classes n1) == US.v n2);
   init_all_size_classes_wrapper2 l2 (US.add offset n1) n2
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1))
@@ -2602,7 +2595,9 @@ let init_all_size_classes_wrapper
   A.ghost_split md_region
     (US.mul metadata_max n1);
   A.ghost_split size_classes n1;
+  //TODO: dedicated lemma
   assume (array_u8_alignment (A.split_l slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) (u32_to_sz page_size));
+  //TODO: dedicated lemma
   assume (array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) (u32_to_sz page_size));
   let size_classes1_s0 = gget (A.varray (A.split_l size_classes n1)) in
   let size_classes2_s0 = gget (A.varray (A.split_r size_classes n1)) in
@@ -2914,6 +2909,7 @@ let synced_sizes2_extend_lemma
   =
   Classical.forall_intro (SeqUtils.lemma_index_slice size_classes1 0 k);
   Classical.forall_intro (SeqUtils.lemma_index_slice size_classes2 0 k);
+  //TODO: low-level proof work
   assume (forall (i:nat{i < k}).
     Seq.index size_classes1 i
     ==
@@ -2943,6 +2939,7 @@ let size_class_preds_extend_lemma
     size_class_preds size_classes2 k slab_region2
   )
   =
+  //TODO: low-level proof work
   assume (forall (i:nat{i < k}).
     Seq.index size_classes1 i
     ==
@@ -2977,9 +2974,9 @@ let init_one_arena
   A.ghost_split md_bm_region_b arena_md_bm_region_b_size;
   A.ghost_split md_region arena_md_region_size;
   A.ghost_split size_classes n;
-  //assume (US.v nb_arenas > 1);
-  //let sizes1, sizes2 = TLAO.split sizes (US.v n) in
+  //TODO: dedicated lemma
   assume (array_u8_alignment (A.split_l slab_region arena_slab_region_size) (u32_to_sz page_size));
+  //TODO: dedicated lemma
   assume (array_u8_alignment (A.split_r slab_region arena_slab_region_size) (u32_to_sz page_size));
   init_one_arena'
     offset
@@ -3186,6 +3183,7 @@ let synced_sizes_arena_lemma
     synced_sizes_arena n offset size_classes sizes k
   )
   =
+  //TODO: low-level proof work
   admit ();
   assert (US.v n * k + US.v (US.mul n offset) <= TLA.length sizes);
   reveal_opaque (`%synced_sizes_arena) synced_sizes_arena
@@ -3224,9 +3222,12 @@ let init_one_arena2
   size_classes
   sizes
   =
+  //TODO: low-level proof work
   assume (US.fits (US.v n * US.v offset));
   let offset' = US.mul n offset in
+  //TODO: low-level proof work
   assume (US.fits (US.v n + US.v offset'));
+  //TODO: low-level proof work
   assume (TLA.length sizes >= US.v n + US.v offset');
   reveal_opaque (`%hidden_pred2) hidden_pred2;
   init_one_arena
@@ -3563,6 +3564,7 @@ let init_nth_arena_aux_split_split
   md_bm_region_b
   md_region
   =
+  //TODO: SMT fix
   sladmit ()
 
   //split_r_r_mul
@@ -3603,45 +3605,10 @@ let init_nth_arena_aux
   size_classes
   sizes
   =
-  //admit ();
-  //assume (TLA.length sizes >= US.v n + (US.v n * US.v k));
-  //assume (
-  //  US.v n > 0 /\
-  //  UInt.size (US.v n) U32.n
-  //);
-  //assume (US.v n * US.v k >= 0);
-  ////assume (US.v n + US.v (US.mul n k) >= 0);
-  ////assume (US.fits (US.v n + US.v (US.mul n k)));
-  ////assume (
-  ////  US.v arena_slab_region_size * US.v k >= 0 /\
-  ////  US.v arena_md_bm_region_size * US.v k >= 0 /\
-  ////  US.v arena_md_bm_region_b_size * US.v k >= 0 /\
-  ////  US.v arena_md_region_size * US.v k >= 0
-  ////);
-  //assume (
-  //  US.fits (US.v arena_slab_region_size * US.v k) /\
-  //  US.fits (US.v arena_md_bm_region_size * US.v k) /\
-  //  US.fits (US.v arena_md_bm_region_b_size * US.v k) /\
-  //  US.fits (US.v arena_md_region_size * US.v k)
-  //);
-  //assume (A.length (A.split_r slab_region (US.mul arena_slab_region_size k)) >= US.v arena_slab_region_size);
-  //assume (A.length (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)) >= US.v arena_md_bm_region_size);
-  //assume (A.length (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)) >= US.v arena_md_bm_region_b_size);
-  //assume (A.length (A.split_r md_region (US.mul arena_md_region_size k)) >= US.v arena_md_region_size);
-  //assume (A.length size_classes >= US.v n);
-  //assume (US.fits (US.v n * US.v k));
-  //assume (US.fits (US.v n + US.v (US.mul n k)));
-  //assume (TLA.length sizes >= US.v n + US.v (US.mul n k));
-  assume (US.fits (US.v n * (US.v k + 1)));
-  assume (TLA.length sizes >= US.v n * (US.v k + 1));
-  //let n' : n:US.t{
-  //  US.v n > 0 /\
-  //  UInt.size (US.v n) 32 /\
-  //  US.fits (US.v n * (US.v k + 1))
-  //} = n in
-  //change_equal_slprop
-  //  (A.varray (A.split_r size_classes (US.mul n k)))
-  //  (A.varray (A.split_r size_classes (US.mul n' k)));
+  // TODO: to be removed
+  //assume (US.fits (US.v n * (US.v k + 1)));
+  // TODO: to be removed
+  //assume (TLA.length sizes >= US.v n * (US.v k + 1));
   init_one_arena2
     k
     l1 l2 n1 n2 n
@@ -3986,6 +3953,7 @@ let init_nth_arena
   size_classes
   sizes
   =
+  //TODO: dedicated lemma
   assume (array_u8_alignment (A.split_r slab_region (US.mul arena_slab_region_size k')) (u32_to_sz page_size));
   init_nth_arena'
     l1 l2 n1 n2 n
@@ -4159,7 +4127,9 @@ let synced_sizes_arena_join_lemma
     Seq.length size_classes >= US.v n * US.v k' /\
     synced_sizes_arena n 0sz size_classes sizes (US.v k')
   )
-  = admit ()
+  =
+  //TODO: remaining proof work
+  admit ()
 
 val synced_sizes_arena_join
   (#opened:_)
@@ -4238,7 +4208,6 @@ let init_nth_arena_inv
   size_classes
   sizes
   =
-  //assume (TLA.length sizes >= US.v n * (US.v k + 1));
   A.ghost_split size_classes (US.mul n k);
   init_nth_arena
     l1 l2 n1 n2 n
@@ -4254,10 +4223,10 @@ let init_nth_arena_inv
     md_region
     size_classes
     sizes;
+  //TODO: remaining proof work
   sladmit ()
   //synced_sizes_arena_join
   //  n nb_arenas k k' size_classes sizes ();
-  //admit ()
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
 val init_n_first_arenas
@@ -4385,6 +4354,7 @@ let rec init_n_first_arenas
   sizes
   = match k with
   | 0sz ->
+      //TODO: remaining proof work, dedicated lemma
       sladmit ()
       //change_equal_slprop
       //  (A.varray (A.split_r slab_region (US.mul arena_slab_region_size 0sz)))
@@ -4399,6 +4369,7 @@ let rec init_n_first_arenas
       //  (A.varray (A.split_r md_region (US.mul arena_md_region_size 0sz)))
       //  (A.varray (A.split_r md_region (US.mul arena_md_region_size k)))
   | 1sz ->
+      //TODO: remaining proof work, dedicated lemma
       admit ();
       init_nth_arena_inv
         l1 l2 n1 n2 n
@@ -4415,8 +4386,10 @@ let rec init_n_first_arenas
         md_region
         size_classes
         sizes;
+      //TODO: remaining proof work, dedicated lemma
       sladmit ()
   | _ ->
+      //TODO: remaining proof work, dedicated lemma
       admit ();
       init_n_first_arenas
         l1 l2 n1 n2 n
@@ -4447,6 +4420,7 @@ let rec init_n_first_arenas
         md_region
         size_classes
         sizes;
+      //TODO: remaining proof work, dedicated lemma
       sladmit ()
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
@@ -4464,12 +4438,12 @@ val init_all_arenas'
    arena_md_region_size
    arena_md_bm_region_size
    arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
-  (nb_arenas: US.t{US.v nb_arenas > 0})
-  //  US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_region_size * US.v nb_arenas)
-  //})
+  (nb_arenas: US.t{US.v nb_arenas > 0 /\
+    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_region_size * US.v nb_arenas)
+  })
   (slab_region: array U8.t{
     A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas
   })
@@ -4546,12 +4520,13 @@ let init_all_arenas'
   size_classes
   sizes
   =
-  assume (
-    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
-    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
-    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
-    US.fits (US.v arena_md_region_size * US.v nb_arenas)
-  );
+  //TODO: to be removed
+  //assume (
+  //  US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
+  //  US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
+  //  US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
+  //  US.fits (US.v arena_md_region_size * US.v nb_arenas)
+  //);
   //TODO: add normalization here
   init_n_first_arenas
     l1 l2 n1 n2 n
@@ -4586,12 +4561,12 @@ val init_all_arenas
    arena_md_region_size
    arena_md_bm_region_size
    arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
-  (nb_arenas: US.t{US.v nb_arenas > 0})
-  //  US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_region_size * US.v nb_arenas)
-  //})
+  (nb_arenas: US.t{US.v nb_arenas > 0 /\
+    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_region_size * US.v nb_arenas)
+  })
   (slab_region: array U8.t{
     A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas
   })
@@ -4667,6 +4642,7 @@ let init_all_arenas
   size_classes
   sizes
   =
+  //TODO: remaining proof work, dedicated lemma
   sladmit ();
   init_all_arenas'
     l1 l2 n1 n2 n
@@ -4712,7 +4688,7 @@ val allocate_size_class
   )
 
 let allocate_size_class scs =
-  //TODO
+  //TODO: fix proof
   admit ();
   let r = SizeClass.allocate_size_class scs in
   intro_vrewrite
