@@ -17,10 +17,10 @@ open Utils2
 open Config
 open NullOrVarray
 
-// slab allocator
+// small allocations: slab allocator
 open Main
 open Main.Meta
-// AVL+mmap allocator
+// large allocations: AVL+mmap allocator
 open LargeAlloc
 
 #push-options "--fuel 0 --ifuel 0"
