@@ -18,6 +18,7 @@ let _ : squash (UP.fits (FStar.Int.max_int 64))
 
 //let max_sc_coef = 32ul
 
+inline_for_extraction noextract
 let sc_list_sc : list sc = [
   16ul; 32ul; 64ul;
   80ul; 96ul; 112ul; 128ul;
@@ -34,6 +35,7 @@ let sc_list_sc : list sc = [
 //    1024ul; 2048ul; 4096ul
 //  ]
 
+inline_for_extraction noextract
 let sc_list_ex : list sc_ex = [
   //5120ul; 6144ul; 7168ul;
   8192ul;
