@@ -127,12 +127,14 @@ let with_lock_roarray
   =
   let x = ROArray.index ro_arr v0 in
   L.acquire (proj2 x);
-  //change_equal_slprop
-  //  (p_lock (proj1 x))
+  let x' = ROArray.index ro_arr v0 in
+  change_equal_slprop
+    (p_lock (proj1 x))
+    (p_lock (proj1 x'));
   //  (p_lock (proj1 (Seq.index s (US.v v0))));
-  let r = f (proj1 x) in
+  let r = f (proj1 x') in
   //change_equal_slprop
   //  (p_lock (proj1 (Seq.index s (US.v v0))))
   //  (p_lock (proj1 x));
-  L.release (proj2 x);
+  L.release (proj2 x');
   return r
