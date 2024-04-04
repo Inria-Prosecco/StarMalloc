@@ -34,9 +34,9 @@ inline_for_extraction noextract
 val total_nb_sc: x:nat{US.fits x}
 
 inline_for_extraction noextract
-val arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l})
+val arena_sc_list : (l:list sc_union{List.length l == total_nb_sc /\ Cons? l})
 
-let sizes_t = r:TLA.t sc{
+let sizes_t = r:TLA.t sc_union{
   TLA.length r == total_nb_sc /\
   (forall (k:US.t{US.v k < total_nb_sc}).
     TLA.get r k == List.Tot.index arena_sc_list (US.v k))
@@ -56,7 +56,7 @@ type size_classes_all =
     ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
     //ro_sizes: ro_array sizes g_sizes;
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
-      synced_sizes total_nb_sc sizes g_size_classes /\
+      synced_sizes 0sz g_size_classes sizes total_nb_sc /\
       A.length arr == US.v slab_region_size /\
       (forall (i:nat{i < Seq.length g_size_classes}).
         size_class_pred arr (Seq.index g_size_classes i) i)
@@ -88,7 +88,7 @@ val slab_malloc
       = h1 (null_or_varray r) in
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
-      array_u8_alignment r 16ul /\
+      array_u8_alignment r 16sz /\
       Seq.length s >= 2 /\
       (enable_slab_canaries_malloc ==>
         Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
@@ -113,8 +113,8 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
     (U32.v page_size) % (U32.v alignment) = 0 /\
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
-      array_u8_alignment r 16ul /\
-      array_u8_alignment r alignment /\
+      array_u8_alignment r 16sz /\
+      array_u8_alignment r (u32_to_sz alignment) /\
       Seq.length s >= 2 /\
       (enable_slab_canaries_malloc ==>
         Seq.index s (A.length r - 2) == slab_canaries_magic1 /\

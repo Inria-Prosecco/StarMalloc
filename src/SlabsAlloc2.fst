@@ -30,23 +30,6 @@ open SteelStarSeqUtils
 open FStar.Mul
 open SlabsCommon2
 
-let test (x y z: nat)
-  : Lemma
-  (requires
-    y > 0 /\
-    z > 0 /\
-    x % y = 0 /\
-    y >= z /\
-    y % z = 0)
-  (ensures
-    x % z = 0
-  )
-  =
-  mod_
-  Math.Lemmas.modulo_scale_lemma
-
-  ()
-
 #restart-solver
 
 #push-options "--z3rlimit 75"

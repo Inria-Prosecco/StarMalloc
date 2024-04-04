@@ -1,31 +1,14 @@
 module Main
 
-module U8 = FStar.UInt8
-module U32 = FStar.UInt32
-module U64 = FStar.UInt64
-module US = FStar.SizeT
-
-module TLA = Steel.TLArray
-
-open FStar.Mul
-open Steel.Effect.Atomic
-open Steel.Effect
 open Steel.Array
-module A = Steel.Array
-module R = Steel.Reference
-module L = Steel.SpinLock
-module AL = ArrayList
+
 module ALG = ArrayListGen
-module SAA = Steel.ArrayArith
+
 
 open Prelude
 open SizeClass
 open SteelVRefineDep
 open SteelStarSeqUtils
-
-open Config
-open Utils2
-open Mman
 
 module G = FStar.Ghost
 
@@ -419,8 +402,10 @@ let init_idxs (r_idxs: array US.t{A.length r_idxs == 7})
   A.upd r_idxs 5sz AL.null_ptr;
   A.upd r_idxs 6sz 0sz
 
+open Mman
+module R = Steel.Reference
+
 #push-options "--z3rlimit 300 --compat_pre_typed_indexed_effects --fuel 0 --ifuel 0"
-noextract inline_for_extraction
 let init_struct_aux
   (sc:sc)
   (slab_region: array U8.t{A.length slab_region == U32.v page_size * US.v metadata_max})
@@ -891,7 +876,6 @@ let f_lemma
 
 #restart-solver
 
-unfold
 let size_class_pred (slab_region:array U8.t) (sc:size_class) (i:nat) : prop =
   same_base_array slab_region sc.data.slab_region /\
   A.offset (A.ptr_of sc.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v sc_slab_region_size * i
@@ -949,6 +933,8 @@ val init_wrapper
     //same_base_array slab_region r.data.slab_region /\
     //A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
   )
+
+module L = Steel.SpinLock
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 let init_wrapper sc n k k' slab_region md_bm_region md_region
@@ -1323,12 +1309,11 @@ let init_size_class2
   (**) assert (Ghost.reveal g1 == Seq.upd (Ghost.reveal g0) (US.v k) sc)
 #pop-options
 
-/// An attribute, that will indicate that the annotated functions should be unfolded at compile-time
-irreducible let reduce_attr : unit = ()
 
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
+noextract inline_for_extraction
 val init_size_classes_aux (l:list sc)
   (offset: US.t)
   (n: US.t{
@@ -1430,6 +1415,7 @@ let rec init_size_classes_aux l offset n k k' slab_region md_bm_region md_region
 #pop-options
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
+noextract inline_for_extraction
 val init_size_classes_aux2 (l:list sc_ex)
   (offset: US.t)
   (n: US.t{
@@ -1688,6 +1674,7 @@ let init_size_classes2 l offset n slab_region md_bm_region md_region size_classe
   (normal (init_size_classes_aux2 l offset n 0sz 1sz)) slab_region md_bm_region md_region size_classes sizes
 #pop-options
 
+noextract inline_for_extraction
 val init_all_size_classes1 (l:list sc)
   (offset: US.t)
   (n: US.t{
@@ -1758,6 +1745,7 @@ let init_all_size_classes1
   drop (A.varray (A.split_r md_region (US.mul metadata_max n)))
 #pop-options
 
+noextract inline_for_extraction
 val init_all_size_classes2 (l:list sc_ex)
   (offset: US.t)
   (n: US.t{
@@ -1851,6 +1839,7 @@ let size_class_preds
     size_class_pred slab_region (Seq.index size_classes i) i
   )
 
+noextract inline_for_extraction
 val init_all_size_classes_wrapper1 (l:list sc)
   (offset: US.t)
   (n: US.t{
@@ -1935,6 +1924,7 @@ let init_all_size_classes_wrapper1
   reveal_opaque (`%size_class_preds) size_class_preds
 #pop-options
 
+noextract inline_for_extraction
 val init_all_size_classes_wrapper2 (l:list sc_ex)
   (offset: US.t)
   (n: US.t{
@@ -2402,6 +2392,7 @@ let init_all_size_classes'
   slab_region_pred_join_lemma n1 n2 n slab_region size_classes_s1
 #pop-options
 
+noextract inline_for_extraction
 val init_all_size_classes
   (l1:list sc)
   (l2:list sc_ex)
@@ -2511,6 +2502,7 @@ let init_all_size_classes
     sizes
 #pop-options
 
+noextract inline_for_extraction
 val init_all_size_classes_wrapper
   (l1:list sc)
   (l2:list sc_ex)
@@ -2627,7 +2619,6 @@ so far, so good, with the exception of:
 /// A logical predicate indicating that a list of sizes corresponds
 /// to the sizes of a list of size_classes
 [@"opaque_to_smt"]
-unfold
 let hidden_pred
   (l1: list sc)
   (l2: list sc_ex)
@@ -2652,6 +2643,7 @@ let hidden_pred
   // arena md_region size
   US.v s3 == US.v metadata_max * US.v n1 + US.v metadata_max_ex * US.v n2
 
+noextract inline_for_extraction
 val init_one_arena'
   (offset: US.t)
   (l1:list sc)
@@ -2692,7 +2684,6 @@ val init_one_arena'
     A.varray size_classes
   )
   (requires fun h0 ->
-    US.v n == US.v n1 + US.v n2 /\
     //(forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
     //(forall (i:nat{i >= US.v n1 /\ i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
     array_u8_alignment slab_region (u32_to_sz page_size) /\
@@ -2798,6 +2789,7 @@ let init_one_arena'
 //  = admit ()
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
+noextract inline_for_extraction
 val init_one_arena
   (offset: US.t)
   (l1:list sc)
@@ -2856,7 +2848,7 @@ val init_one_arena
       arena_md_bm_region_size
       arena_md_bm_region_b_size
       arena_md_region_size /\
-    US.v n1 + US.v n2 == US.v n /\
+    //US.v n1 + US.v n2 == US.v n /\
     TLA.length sizes >= US.v n + US.v offset /\
     A.length size_classes >= US.v n /\
     //sc_list_layout1 n1 n2 n
@@ -3019,7 +3011,6 @@ let init_one_arena
   ()
 
 [@"opaque_to_smt"]
-unfold
 let hidden_pred2
   (n s1: US.t)
   : prop
@@ -3071,6 +3062,7 @@ let size_class_preds_arena
   == US.v arena_slab_region_size * k);
   size_class_preds size_classes (US.v n * k) slab_region
 
+noextract inline_for_extraction
 val init_one_arena2
   (offset: US.t)
   (l1:list sc)
@@ -3284,6 +3276,7 @@ let init_one_arena2
 
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 500 --split_queries no --query_stats"
+noextract inline_for_extraction
 val init_nth_arena_aux
   (l1:list sc)
   (l2:list sc_ex)
@@ -3605,10 +3598,6 @@ let init_nth_arena_aux
   size_classes
   sizes
   =
-  // TODO: to be removed
-  //assume (US.fits (US.v n * (US.v k + 1)));
-  // TODO: to be removed
-  //assume (TLA.length sizes >= US.v n * (US.v k + 1));
   init_one_arena2
     k
     l1 l2 n1 n2 n
@@ -3626,6 +3615,8 @@ let init_nth_arena_aux
 
 #restart-solver
 
+#push-options "--z3rlimit 1000"
+noextract inline_for_extraction
 val init_nth_arena'
   (l1:list sc)
   (l2:list sc_ex)
@@ -3803,6 +3794,7 @@ let init_nth_arena'
     md_bm_region_b
     md_region
 
+noextract inline_for_extraction
 val init_nth_arena
   (l1:list sc)
   (l2:list sc_ex)
@@ -3914,7 +3906,6 @@ val init_nth_arena
     US.fits (US.v n * (US.v k + 1)) /\
     A.length size_classes >= US.v n * US.v k /\
     TLA.length sizes >= US.v n * (US.v k + 1) /\
-    A.length size_classes >= US.v n * 1 /\
     //A.length size_classes >= US.v n * US.v k /\
     //synced_sizes_arena n arena_slab_region_size
     //  k (asel (A.split_r size_classes (US.mul n k)) h0) sizes 1 /\
@@ -3929,6 +3920,7 @@ val init_nth_arena
     zf_b (A.asel (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k')) h1) /\
     TLA.length sizes >= US.v n * (US.v k + 1) /\
     A.length (A.split_r size_classes (US.mul n k)) >= US.v n * 1 /\
+    US.fits (US.v n * (US.v k + 1)) /\
     hidden_pred2 n arena_slab_region_size /\
     synced_sizes_arena n
       k (asel (A.split_r size_classes (US.mul n k)) h1) sizes 1 /\
@@ -3970,6 +3962,7 @@ let init_nth_arena
     size_classes
     sizes
 
+noextract inline_for_extraction
 val init_nth_arena_inv
   (l1:list sc)
   (l2:list sc_ex)
@@ -4229,6 +4222,7 @@ let init_nth_arena_inv
   //  n nb_arenas k k' size_classes sizes ();
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
+noextract inline_for_extraction
 val init_n_first_arenas
   (l1:list sc)
   (l2:list sc_ex)
@@ -4330,6 +4324,7 @@ val init_n_first_arenas
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 600 --split_queries no --query_stats"
+noextract inline_for_extraction
 let rec init_n_first_arenas
   (l1:list sc)
   (l2:list sc_ex)
@@ -4424,6 +4419,7 @@ let rec init_n_first_arenas
       sladmit ()
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
+noextract inline_for_extraction
 val init_all_arenas'
   (l1:list sc)
   (l2:list sc_ex)
@@ -4439,6 +4435,7 @@ val init_all_arenas'
    arena_md_bm_region_size
    arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
   (nb_arenas: US.t{US.v nb_arenas > 0 /\
+    US.fits (US.v n * US.v nb_arenas) /\
     US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
     US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
     US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
@@ -4484,12 +4481,10 @@ val init_all_arenas'
       arena_md_bm_region_b_size
       arena_md_region_size /\
     hidden_pred2 n arena_slab_region_size /\
-    US.fits (US.v n * US.v nb_arenas) /\
     True
   )
   (ensures fun _ _ h1 ->
     hidden_pred2 n arena_slab_region_size /\
-    US.fits (US.v n * US.v nb_arenas) /\
     synced_sizes_arena n
       0sz (asel size_classes h1) sizes (US.v nb_arenas) /\
     size_class_preds_arena n arena_slab_region_size
@@ -4497,6 +4492,8 @@ val init_all_arenas'
       slab_region /\
     True
   )
+
+#restart-solver
 
 let init_all_arenas'
   (l1:list sc)
@@ -4528,6 +4525,7 @@ let init_all_arenas'
   //  US.fits (US.v arena_md_region_size * US.v nb_arenas)
   //);
   //TODO: add normalization here
+  admit ();
   init_n_first_arenas
     l1 l2 n1 n2 n
     arena_slab_region_size
@@ -4547,78 +4545,79 @@ let init_all_arenas'
   drop (A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size nb_arenas)));
   drop (A.varray (A.split_r md_region (US.mul arena_md_region_size nb_arenas)))
 
-val init_all_arenas
-  (l1:list sc)
-  (l2:list sc_ex)
-  (n1 n2: US.t)
-  (n: US.t{
-    US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
-    True
-    //US.fits (US.v n)
-  })
-  (arena_slab_region_size
-   arena_md_region_size
-   arena_md_bm_region_size
-   arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
-  (nb_arenas: US.t{US.v nb_arenas > 0 /\
-    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
-    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
-    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
-    US.fits (US.v arena_md_region_size * US.v nb_arenas)
-  })
-  (slab_region: array U8.t{
-    A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas
-  })
-  (md_bm_region: array U64.t{
-    A.length md_bm_region == US.v arena_md_bm_region_size * US.v nb_arenas
-  })
-  (md_bm_region_b: array bool{
-    A.length md_bm_region_b == US.v arena_md_bm_region_b_size * US.v nb_arenas
-  })
-  (md_region: array AL.cell{
-    A.length md_region == US.v arena_md_region_size * US.v nb_arenas
-  })
-  (size_classes: array size_class{
-    A.length size_classes == US.v n * US.v nb_arenas
-  })
-  (sizes: TLA.t sc_union{
-    TLA.length sizes == US.v n * US.v nb_arenas
-  })
-  : Steel unit
-  (
-    A.varray slab_region `star`
-    A.varray md_bm_region `star`
-    A.varray md_bm_region_b `star`
-    A.varray md_region `star`
-    A.varray size_classes
-  )
-  (fun _ ->
-    A.varray size_classes
-  )
-  (requires fun h0 ->
-    array_u8_alignment (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) (u32_to_sz page_size) /\
-    zf_u8 (asel slab_region h0) /\
-    zf_u64 (asel md_bm_region h0) /\
-    zf_b (asel md_bm_region_b h0) /\
-    hidden_pred l1 l2 n n1 n2
-      arena_md_bm_region_size
-      arena_md_bm_region_b_size
-      arena_md_region_size /\
-    hidden_pred2 n arena_slab_region_size /\
-    US.fits (US.v n * US.v nb_arenas) /\
-    True
-  )
-  (ensures fun _ _ h1 ->
-    hidden_pred2 n arena_slab_region_size /\
-    US.fits (US.v n * US.v nb_arenas) /\
-    synced_sizes_arena n
-      0sz (asel size_classes h1) sizes (US.v nb_arenas) /\
-    size_class_preds_arena n arena_slab_region_size
-      (asel size_classes h1) (US.v nb_arenas)
-      slab_region /\
-    True
-  )
+//val init_all_arenas
+//  (l1:list sc)
+//  (l2:list sc_ex)
+//  (n1 n2: US.t)
+//  (n: US.t{
+//    US.v n > 0 /\
+//    UInt.size (US.v n) U32.n /\
+//    True
+//    //US.fits (US.v n)
+//  })
+//  (arena_slab_region_size
+//   arena_md_region_size
+//   arena_md_bm_region_size
+//   arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
+//  (nb_arenas: US.t{US.v nb_arenas > 0 /\
+//    US.fits (US.v n * US.v nb_arenas) /\
+//    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
+//    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
+//    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
+//    US.fits (US.v arena_md_region_size * US.v nb_arenas)
+//  })
+//  (slab_region: array U8.t{
+//    A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas
+//  })
+//  (md_bm_region: array U64.t{
+//    A.length md_bm_region == US.v arena_md_bm_region_size * US.v nb_arenas
+//  })
+//  (md_bm_region_b: array bool{
+//    A.length md_bm_region_b == US.v arena_md_bm_region_b_size * US.v nb_arenas
+//  })
+//  (md_region: array AL.cell{
+//    A.length md_region == US.v arena_md_region_size * US.v nb_arenas
+//  })
+//  (size_classes: array size_class{
+//    A.length size_classes == US.v n * US.v nb_arenas
+//  })
+//  (sizes: TLA.t sc_union{
+//    TLA.length sizes == US.v n * US.v nb_arenas
+//  })
+//  : Steel unit
+//  (
+//    A.varray slab_region `star`
+//    A.varray md_bm_region `star`
+//    A.varray md_bm_region_b `star`
+//    A.varray md_region `star`
+//    A.varray size_classes
+//  )
+//  (fun _ ->
+//    A.varray size_classes
+//  )
+//  (requires fun h0 ->
+//    array_u8_alignment (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) (u32_to_sz page_size) /\
+//    zf_u8 (asel slab_region h0) /\
+//    zf_u64 (asel md_bm_region h0) /\
+//    zf_b (asel md_bm_region_b h0) /\
+//    hidden_pred l1 l2 n n1 n2
+//      arena_md_bm_region_size
+//      arena_md_bm_region_b_size
+//      arena_md_region_size /\
+//    hidden_pred2 n arena_slab_region_size /\
+//    US.fits (US.v n * US.v nb_arenas) /\
+//    True
+//  )
+//  (ensures fun _ _ h1 ->
+//    hidden_pred2 n arena_slab_region_size /\
+//    US.fits (US.v n * US.v nb_arenas) /\
+//    synced_sizes_arena n
+//      0sz (asel size_classes h1) sizes (US.v nb_arenas) /\
+//    size_class_preds_arena n arena_slab_region_size
+//      (asel size_classes h1) (US.v nb_arenas)
+//      slab_region /\
+//    True
+//  )
 
 let init_all_arenas
   (l1:list sc)
@@ -4670,23 +4669,6 @@ let return_null ()
   =
   intro_null_null_or_varray #U8.t
 
-/// Wrapper around allocate_size_class, that does not return a pair, and instead
-/// always returns a valid permission on the new pointer if it is not null
-inline_for_extraction noextract
-val allocate_size_class
-  (scs: size_class_struct)
-  : Steel (array U8.t)
-  (size_class_vprop scs)
-  (fun r -> null_or_varray r `star` size_class_vprop scs)
-  (requires fun h0 -> True)
-  (ensures fun h0 r h1 ->
-    not (is_null r) ==> (
-      A.length r == U32.v (get_u32 scs.size) /\
-      array_u8_alignment r 16sz /\
-      ((U32.v (get_u32 scs.size) > 0 /\ (U32.v page_size) % (U32.v (get_u32 scs.size)) == 0) ==> array_u8_alignment r (u32_to_sz (get_u32 scs.size)))
-    )
-  )
-
 let allocate_size_class scs =
   //TODO: fix proof
   admit ();
@@ -4695,3 +4677,60 @@ let allocate_size_class scs =
     (if A.is_null r then emp else A.varray r)
     (null_or_varray_f r);
   return r
+
+(*)
+
+
+  let slab_region = mmap_u8_init (US.mul (US.mul metadata_max (u32_to_sz page_size)) n) in
+  let md_bm_region = mmap_u64_init (US.mul (US.mul metadata_max 4sz) n) in
+  let md_region = mmap_cell_status_init (US.mul metadata_max n) in
+
+  Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max (u32_to_sz page_size)));
+  Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max 4sz));
+  Math.Lemmas.mul_zero_right_is_zero (US.v metadata_max);
+  A.ptr_shift_zero (A.ptr_of slab_region);
+  A.ptr_shift_zero (A.ptr_of md_bm_region);
+  A.ptr_shift_zero (A.ptr_of md_region);
+
+  change_equal_slprop
+    (A.varray slab_region)
+    (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)));
+  change_equal_slprop
+    (A.varray md_bm_region)
+    (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)));
+  change_equal_slprop
+    (A.varray md_region)
+    (A.varray (A.split_r md_region (US.mul metadata_max 0sz)));
+
+  assert (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n);
+  assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
+  assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
+
+  let size_classes = mmap_sc_init n in
+  //let sizes = mmap_sizes_init n in
+
+  init_size_classes arena_sc_list n slab_region md_bm_region md_region size_classes sizes;
+
+  let g_size_classes = gget (varray size_classes) in
+  //let g_sizes = gget (varray sizes) in
+
+  let ro_perm = create_ro_array size_classes g_size_classes in
+  //let ro_sizes = create_ro_array sizes g_sizes in
+
+  drop (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size))
+    n)));
+  drop (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz)
+    n)));
+  drop (A.varray (A.split_r md_region (US.mul metadata_max
+   n)));
+
+  [@inline_let]
+  let s : size_classes_all = {
+    size_classes;
+    g_size_classes;
+    //g_sizes;
+    ro_perm;
+    //ro_sizes;
+    slab_region;
+  } in
+  return s

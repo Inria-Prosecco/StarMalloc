@@ -35,11 +35,12 @@ val init_avl_scs (slab_region: array U8.t)
   (requires fun h0 ->
     A.is_full_array slab_region /\
     A.length slab_region = US.v metadata_max `FStar.Mul.op_Star` U32.v Config.page_size /\
-    array_u8_alignment slab_region page_size /\
+    array_u8_alignment slab_region (u32_to_sz page_size) /\
     zf_u8 (A.asel slab_region h0)
   )
   (ensures fun _ r _ ->
-    r.size = avl_data_size /\
+    Sc? r.size /\
+    get_sc r.size = avl_data_size /\
     r.slab_region == slab_region /\
     A.is_full_array r.slab_region
   )
@@ -52,6 +53,9 @@ let init_avl_scs (slab_region: array U8.t)
   let md_bm_region = mmap_u64_init md_bm_region_size in
   let md_region = mmap_cell_status_init md_region_size in
   let scs = init_struct_aux avl_data_size slab_region md_bm_region md_region in
+  change_equal_slprop
+    (size_class_vprop_sc scs)
+    (size_class_vprop scs);
   return scs
 
 module L = Steel.SpinLock
@@ -61,7 +65,8 @@ type mmap_md_slabs =
   {
     slab_region: array U8.t;
     scs: v:size_class_struct{
-      v.size = avl_data_size /\
+      Sc? v.size /\
+      get_u32 v.size = avl_data_size /\
       v.slab_region == A.split_r slab_region 0sz /\
       A.is_full_array v.slab_region
     };
@@ -176,7 +181,7 @@ let p : hpred data
     (same_base_array ptr metadata_slabs.scs.slab_region /\
     UP.fits (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) /\
     A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region) >= 0 /\
-    ((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) % U32.v page_size) % U32.v metadata_slabs.scs.size = 0)
+    ((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) % U32.v page_size) % U32.v (get_u32 metadata_slabs.scs.size) = 0)
   )
 #pop-options
 

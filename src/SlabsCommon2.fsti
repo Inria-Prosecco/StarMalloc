@@ -419,67 +419,55 @@ let allocate_slot (size_class: sc_ex)
     (A.varray ptr);
   return ptr
 
-//let deallocate_slot (size_class: sc_ex)
-//  (arr: array U8.t{A.length arr = US.v slab_size})
-//  (md: slab_metadata)
-//  : Steel (array U8.t)
-//  (slab_vprop size_class arr md)
-//  (fun ptr ->
-//    slab_vprop size_class arr md `star`
-//    A.varray ptr
-//  )
-//  (requires fun h0 ->
-//     let blob0
-//     : t_of (slab_vprop size_class arr md)
-//     = h0 (slab_vprop size_class arr md) in
-//     let v0 : Seq.lseq bool 1 = dfst (fst blob0) in
-//     is_empty (Seq.index v0 0)
-//  )
-//  (ensures fun h0 r h1 ->
-//     let blob1
-//     : t_of (slab_vprop size_class arr md)
-//     = h1 (slab_vprop size_class arr md) in
-//     let v1 : Seq.lseq bool 1 = dfst (fst blob1) in
-//     is_full (Seq.index v1 0) /\
-//     A.length r = U32.v size_class
-//  )
-//  =
-//  assert (t_of (A.varray md) == Seq.lseq bool 1);
-//  let md_as_seq : G.erased (Seq.lseq bool 1)
-//    = elim_slab_vprop size_class arr md in
-//  let b = A.index md 0sz in
-//  assert (b);
-//  A.upd md 0sz false;
-//  let md_as_seq' : G.erased (Seq.lseq bool 1)
-//    = G.hide (Seq.upd (G.reveal md_as_seq) 0 false) in
-//  rewrite_slprop
-//    (slab_vprop_aux size_class
-//      (A.split_l arr (u32_to_sz size_class))
-//      (Seq.index md_as_seq 0))
-//    (slab_vprop_aux size_class
-//      (A.split_l arr (u32_to_sz size_class))
-//      (Seq.index md_as_seq' 0) `star`
-//    A.varray (A.split_l arr (u32_to_sz size_class))
-//    )
-//    (fun _ -> admit ());
-//  intro_slab_vprop size_class arr md md_as_seq';
-//  let ptr = A.split_l arr (u32_to_sz size_class) in
-//  change_equal_slprop
-//    (A.varray (A.split_l arr (u32_to_sz size_class)))
-//    (A.varray ptr);
-//  return ptr
-
-
-//val empty_md_is_properly_zeroed
-//  (size_class: sc)
-//  : Lemma
-//  (slab_vprop_aux2 size_class (Seq.create 4 0UL))
-
-
-
-
-
-
+let deallocate_slot (size_class: sc_ex)
+  (arr: array U8.t{A.length arr = US.v slab_size})
+  (md: slab_metadata)
+  : Steel (array U8.t)
+  (slab_vprop size_class arr md)
+  (fun ptr ->
+    slab_vprop size_class arr md `star`
+    A.varray ptr
+  )
+  (requires fun h0 ->
+     let blob0
+     : t_of (slab_vprop size_class arr md)
+     = h0 (slab_vprop size_class arr md) in
+     let v0 : Seq.lseq bool 1 = dfst (fst blob0) in
+     is_full (Seq.index v0 0)
+  )
+  (ensures fun h0 r h1 ->
+     let blob1
+     : t_of (slab_vprop size_class arr md)
+     = h1 (slab_vprop size_class arr md) in
+     let v1 : Seq.lseq bool 1 = dfst (fst blob1) in
+     is_empty (Seq.index v1 0) /\
+     A.length r = U32.v size_class
+  )
+  =
+  assert (t_of (A.varray md) == Seq.lseq bool 1);
+  let md_as_seq : G.erased (Seq.lseq bool 1)
+    = elim_slab_vprop size_class arr md in
+  let b = A.index md 0sz in
+  assert (b);
+  A.upd md 0sz false;
+  let md_as_seq' : G.erased (Seq.lseq bool 1)
+    = G.hide (Seq.upd (G.reveal md_as_seq) 0 false) in
+  rewrite_slprop
+    (slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index md_as_seq 0))
+    (slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index md_as_seq' 0) `star`
+    A.varray (A.split_l arr (u32_to_sz size_class))
+    )
+    (fun _ -> admit ());
+  intro_slab_vprop size_class arr md md_as_seq';
+  let ptr = A.split_l arr (u32_to_sz size_class) in
+  change_equal_slprop
+    (A.varray (A.split_l arr (u32_to_sz size_class)))
+    (A.varray ptr);
+  return ptr
 
 #push-options "--z3rlimit 30"
 /// Predicates capturing that a slab is empty, partially full, or full respectively

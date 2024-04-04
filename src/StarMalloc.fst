@@ -80,7 +80,7 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       A.length r >= US.v size /\
-      array_u8_alignment r 16ul /\
+      array_u8_alignment r 16sz /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
@@ -123,8 +123,8 @@ let malloc arena_id size =
       array_u8_alignment_lemma
         r
         r
-        page_size
-        16ul
+        (u32_to_sz page_size)
+        (u32_to_sz 16ul)
     ) else ();
     return r
   )
@@ -144,8 +144,8 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
       0 < US.v alignment /\
       US.v alignment <= U32.v page_size /\
       A.length r >= US.v size /\
-      array_u8_alignment r 16ul /\
-      array_u8_alignment r (US.sizet_to_uint32 alignment) /\
+      array_u8_alignment r 16sz /\
+      array_u8_alignment r alignment /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
     )
   )
@@ -180,7 +180,7 @@ let aligned_alloc arena_id alignment size
       let ptr = large_malloc size in
       assert_norm (pow2 12 == U32.v page_size);
       MiscArith.alignment_lemma (U32.v page_size) 12 (US.v alignment) (U32.v page_size);
-      array_u8_alignment_lemma2 ptr page_size (US.sizet_to_uint32 alignment);
+      array_u8_alignment_lemma2 ptr (u32_to_sz page_size) alignment;
       let s : G.erased (t_of (null_or_varray ptr))
         = gget (null_or_varray ptr) in
       if not (A.is_null ptr)
@@ -189,8 +189,8 @@ let aligned_alloc arena_id alignment size
         array_u8_alignment_lemma
           ptr
           ptr
-          page_size
-          16ul
+          (u32_to_sz page_size)
+          16sz
       ) else ();
       return ptr
     )
@@ -449,7 +449,7 @@ val calloc
     not (A.is_null r) ==> (
       A.length r >= size /\
       zf_u8 (Seq.slice s 0 size) /\
-      array_u8_alignment r 16ul
+      array_u8_alignment r 16sz
     )
   )
 

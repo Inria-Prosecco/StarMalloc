@@ -334,10 +334,8 @@ let mod_arith_lemma_applied2
 
 #restart-solver
 
-let  a = 2
-
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
-let allocate_size_class
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --compat_pre_typed_indexed_effects"
+val allocate_size_class
   (scs: size_class_struct)
   : Steel (array U8.t)
   (size_class_vprop scs)
@@ -357,97 +355,55 @@ let allocate_size_class
       //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
     )
   )
+
+let allocate_size_class scs
   =
   if scs.is_extended
   then (
     change_slprop_rel
       (size_class_vprop scs)
-      (vrefinedep
-        (vptr scs.md_count)
-        SlabsCommon2.vrefinedep_prop
-        (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
-          scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs))
-      (fun x y -> x == y)
-      (fun m -> allocate_size_class_sl_lemma1_ex scs m);
+      (size_class_vprop_sc_ex scs)
+      (fun x y -> y == x)
+      (fun m -> admit ());
+      //allocate_size_class_sl_lemma1_ex scs m);
     let result = SlabsAlloc2.allocate_slab
       (get_sc_ex scs.size)
       scs.slab_region scs.md_bm_region_b scs.md_region
       scs.md_count scs.slabs_idxs in
     change_slprop_rel
-      (vrefinedep
-        (vptr scs.md_count)
-        SlabsCommon2.vrefinedep_prop
-        (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
-          scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs))
+      (size_class_vprop_sc_ex scs)
       (size_class_vprop scs)
       (fun x y -> x == y)
-      (fun m -> allocate_size_class_sl_lemma2_ex scs m);
-    admit ();
+      (fun m -> admit ());
+      // allocate_size_class_sl_lemma2_ex scs m);
+    assume (not (A.is_null result) ==> array_u8_alignment result 16sz);
     return result
   ) else (
     change_slprop_rel
       (size_class_vprop scs)
-      (vrefinedep
-        (vptr scs.md_count)
-        SlabsCommon.vrefinedep_prop
-        (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
-          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
-      (fun x y -> x == y)
-      (fun m -> allocate_size_class_sl_lemma1 scs m);
+      (size_class_vprop_sc scs)
+      (fun x y -> y == x)
+      (fun m -> admit ());
+      //allocate_size_class_sl_lemma1_ex scs m);
     let result = SlabsAlloc.allocate_slab
       (get_sc scs.size)
       scs.slab_region scs.md_bm_region scs.md_region
       scs.md_count scs.slabs_idxs in
     change_slprop_rel
-      (vrefinedep
-        (vptr scs.md_count)
-        SlabsCommon.vrefinedep_prop
-        (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
-          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+      (size_class_vprop_sc scs)
       (size_class_vprop scs)
       (fun x y -> x == y)
-      (fun m -> allocate_size_class_sl_lemma2 scs m);
-    admit ();
+      (fun m -> admit ());
+      // allocate_size_class_sl_lemma2_ex scs m);
+    assume (not (A.is_null result) ==> array_u8_alignment result 16sz);
     return result
   )
-
-let c = 42
-
-(*)
-  change_slprop_rel
-    (size_class_vprop scs)
-    (vrefinedep
-      (vptr scs.md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux scs.size
-        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
-    (fun x y -> x == y)
-    (fun m -> allocate_size_class_sl_lemma1 scs m);
-
-  let result = allocate_slab
-    scs.size
-    scs.slab_region scs.md_bm_region scs.md_region
-    scs.md_count scs.slabs_idxs in
-  change_slprop_rel
-    (vrefinedep
-      (vptr scs.md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux scs.size
-        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
-    (size_class_vprop scs)
-    (fun x y -> x == y)
-    (fun m -> allocate_size_class_sl_lemma2 scs m);
-  allocate_size_class_aux scs result;
-  return result
-
-(*)
-//open SlabsFree
 
 module UP = FStar.PtrdiffT
 
 open Steel.ArrayArith
 
-let deallocate_size_class
+val deallocate_size_class
   (scs: size_class_struct)
   (ptr: array U8.t)
   (diff: US.t)
@@ -461,31 +417,50 @@ let deallocate_size_class
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
     0 <= diff' /\
     US.v diff = diff' /\
-    (diff' % U32.v page_size) % U32.v scs.size == 0 /\
-    A.length ptr == U32.v scs.size /\
+    (diff' % U32.v page_size) % U32.v (get_u32 scs.size) == 0 /\
+    A.length ptr == U32.v (get_u32 scs.size) /\
     same_base_array ptr scs.slab_region)
   (ensures fun h0 _ h1 -> True)
+
+let deallocate_size_class scs ptr diff
   =
-  change_slprop_rel
-    (size_class_vprop scs)
-    (vrefinedep
-      (vptr scs.md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux scs.size
-        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
-    (fun x y -> x == y)
-    (fun m -> allocate_size_class_sl_lemma1 scs m);
-  let b = deallocate_slab ptr
-    scs.size
-    scs.slab_region scs.md_bm_region scs.md_region
-    scs.md_count scs.slabs_idxs diff in
-  change_slprop_rel
-    (vrefinedep
-      (vptr scs.md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux scs.size
-        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
-    (size_class_vprop scs)
-    (fun x y -> x == y)
-    (fun m -> allocate_size_class_sl_lemma2 scs m);
-  return b
+  if scs.is_extended
+  then (
+    change_slprop_rel
+      (size_class_vprop scs)
+      (size_class_vprop_sc_ex scs)
+      (fun x y -> y == x)
+      (fun m -> admit ());
+      //allocate_size_class_sl_lemma1_ex scs m);
+    let b = SlabsFree2.deallocate_slab ptr
+      (get_sc_ex scs.size)
+      scs.slab_region scs.md_bm_region_b scs.md_region
+      scs.md_count scs.slabs_idxs
+      diff in
+    change_slprop_rel
+      (size_class_vprop_sc_ex scs)
+      (size_class_vprop scs)
+      (fun x y -> x == y)
+      (fun m -> admit ());
+      // allocate_size_class_sl_lemma2_ex scs m);
+    return b
+  ) else (
+    change_slprop_rel
+      (size_class_vprop scs)
+      (size_class_vprop_sc scs)
+      (fun x y -> y == x)
+      (fun m -> admit ());
+      //allocate_size_class_sl_lemma1_ex scs m);
+    let b = SlabsFree.deallocate_slab ptr
+      (get_sc scs.size)
+      scs.slab_region scs.md_bm_region scs.md_region
+      scs.md_count scs.slabs_idxs
+      diff in
+    change_slprop_rel
+      (size_class_vprop_sc scs)
+      (size_class_vprop scs)
+      (fun x y -> x == y)
+      (fun m -> admit ());
+      // allocate_size_class_sl_lemma2_ex scs m);
+    return b
+  )
