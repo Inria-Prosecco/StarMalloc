@@ -2115,7 +2115,7 @@ let synced_sizes_join_lemma
   =
   reveal_opaque (`%synced_sizes2) synced_sizes2;
   Classical.forall_intro (Classical.move_requires (
-    synced_sizes_join_lemma' offset n size_classes sizes n1 n2 
+    synced_sizes_join_lemma' offset n size_classes sizes n1 n2
   ))
 
 val synced_sizes_join
@@ -3165,7 +3165,7 @@ let synced_sizes_arena_lemma
     US.fits (US.v n * (US.v offset + k)) /\
     //US.fits (US.v n * US.v offset)
     True
- 
+
   })
   : Lemma
   (requires
@@ -4222,6 +4222,7 @@ let init_nth_arena_inv
   //  n nb_arenas k k' size_classes sizes ();
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
+[@@ reduce_attr]
 noextract inline_for_extraction
 val init_n_first_arenas
   (l1:list sc)
@@ -4324,6 +4325,7 @@ val init_n_first_arenas
 #restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 600 --split_queries no --query_stats"
+[@@ reduce_attr]
 noextract inline_for_extraction
 let rec init_n_first_arenas
   (l1:list sc)
@@ -4526,14 +4528,14 @@ let init_all_arenas'
   //);
   //TODO: add normalization here
   admit ();
-  init_n_first_arenas
+  normal (init_n_first_arenas
     l1 l2 n1 n2 n
     arena_slab_region_size
     arena_md_region_size
     arena_md_bm_region_size
     arena_md_bm_region_b_size
     nb_arenas
-    nb_arenas
+    nb_arenas)
     slab_region
     md_bm_region
     md_bm_region_b
