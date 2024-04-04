@@ -3962,6 +3962,7 @@ let init_nth_arena
     size_classes
     sizes
 
+[@@ reduce_attr]
 noextract inline_for_extraction
 val init_nth_arena_inv
   (l1:list sc)
@@ -4223,7 +4224,7 @@ let init_nth_arena_inv
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
 [@@ reduce_attr]
-noextract inline_for_extraction
+noextract
 val init_n_first_arenas
   (l1:list sc)
   (l2:list sc_ex)
@@ -4253,6 +4254,7 @@ val init_n_first_arenas
     US.fits (US.v arena_md_bm_region_b_size * US.v k) /\
     US.fits (US.v arena_md_region_size * US.v k)
   })
+  (ctr: nat{US.v k == ctr}) // Cannot reduce pattern-matching on USize, use a nat just for this purpose
   (slab_region: array U8.t{
     A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas /\
     A.length slab_region >= US.v arena_slab_region_size * US.v k
@@ -4326,7 +4328,7 @@ val init_n_first_arenas
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 600 --split_queries no --query_stats"
 [@@ reduce_attr]
-noextract inline_for_extraction
+noextract
 let rec init_n_first_arenas
   (l1:list sc)
   (l2:list sc_ex)
@@ -4343,14 +4345,15 @@ let rec init_n_first_arenas
    arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
   (nb_arenas: US.t{US.v nb_arenas > 0})
   k
+  ctr
   slab_region
   md_bm_region
   md_bm_region_b
   md_region
   size_classes
   sizes
-  = match k with
-  | 0sz ->
+  = match ctr with
+  | 0 ->
       //TODO: remaining proof work, dedicated lemma
       sladmit ()
       //change_equal_slprop
@@ -4365,7 +4368,7 @@ let rec init_n_first_arenas
       //change_equal_slprop
       //  (A.varray (A.split_r md_region (US.mul arena_md_region_size 0sz)))
       //  (A.varray (A.split_r md_region (US.mul arena_md_region_size k)))
-  | 1sz ->
+  | 1 ->
       //TODO: remaining proof work, dedicated lemma
       admit ();
       init_nth_arena_inv
@@ -4396,6 +4399,7 @@ let rec init_n_first_arenas
         arena_md_bm_region_b_size
         nb_arenas
         (US.sub k 1sz)
+        (ctr - 1)
         slab_region
         md_bm_region
         md_bm_region_b
@@ -4535,7 +4539,8 @@ let init_all_arenas'
     arena_md_bm_region_size
     arena_md_bm_region_b_size
     nb_arenas
-    nb_arenas)
+    nb_arenas
+    (US.v nb_arenas))
     slab_region
     md_bm_region
     md_bm_region_b
