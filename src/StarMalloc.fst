@@ -303,7 +303,7 @@ let realloc_vp (status: return_status)
 
 #push-options "--fuel 1 --ifuel 1"
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
-let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+val realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   (ptr: array U8.t) (new_size: US.t)
   : Steel (array U8.t & G.erased (return_status & array U8.t))
   (
@@ -343,79 +343,122 @@ let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
     // The original pointer ptr remains valid and may need to be deallocated with free or realloc.
     //TODO: add corresponding postcond
   )
+
+#push-options "--fuel 0 --ifuel 0"
+let realloc arena_id ptr new_size
   =
   if A.is_null ptr then (
+    // 1) realloc(null, new_size)
     // In case that ptr is a null pointer, the function behaves
     // like malloc, assigning a new block of size bytes and
     // returning a pointer to its beginning.
-    elim_null_null_or_varray ptr;
+    (**) elim_null_null_or_varray ptr;
     let new_ptr = malloc arena_id new_size in
-    change_equal_slprop
+    (**) change_equal_slprop
       emp
       (realloc_vp 0 (A.null #U8.t) (A.null #U8.t));
     return (new_ptr, G.hide (0, A.null #U8.t))
-  ) else (
-    elim_live_null_or_varray ptr;
-    let new_ptr = malloc arena_id new_size in
-    if (A.is_null new_ptr) then (
-      // If the function fails to allocate the requested block
-      // of memory, a null pointer is returned, and the memory
-      // block pointed to by argument ptr is not deallocated
-      // (it is still valid, and with its contents unchanged).
-      elim_null_null_or_varray new_ptr;
-      intro_live_null_or_varray ptr;
-      change_equal_slprop
-        (null_or_varray ptr)
-        (realloc_vp 1 ptr (A.null #U8.t));
+  ) else (if (new_size = 0sz) then (
+    // 2) realloc(ptr, 0sz)
+    // freeing
+    let b = free ptr in
+    if b then (
+      (**) change_equal_slprop
+        (if b then emp else A.varray ptr) emp;
+      (**) change_equal_slprop
+        emp
+        (realloc_vp 0 ptr (A.null #U8.t));
       let r = intro_null_null_or_varray #U8.t in
-      return (r, G.hide (1, A.null #U8.t))
+      return (r, G.hide (0, A.null #U8.t))
     ) else (
-      // The content of the memory block is preserved up to the
-      // lesser of the new and old sizes, even if the block is
-      // moved to a new location. If the new size is larger, the
-      // value of the newly allocated portion is indeterminate.
-      elim_live_null_or_varray new_ptr;
-      let old_size = getsize ptr in
-      if (old_size = 0sz) then (
-        intro_live_null_or_varray new_ptr;
-        intro_live_null_or_varray ptr;
-        change_equal_slprop
-          (null_or_varray ptr `star` null_or_varray new_ptr)
-          (realloc_vp 2 ptr new_ptr);
-        let r = intro_null_null_or_varray #U8.t in
-        return (r, G.hide (2, new_ptr))
+      //TODO: add a die(), internal error
+      //change_equal_slprop
+      //  (if b then emp else A.varray ptr)
+      //  (A.varray ptr);
+      //intro_live_null_or_varray ptr;
+      //change_equal_slprop
+      //  (null_or_varray ptr)
+      //  (realloc_vp 1 ptr A.null #U8.t);
+      let r = intro_null_null_or_varray #U8.t in
+      sladmit ();
+      return (r, G.hide (1, A.null #U8.t))
+    )
+  ) else (
+    (**) elim_live_null_or_varray ptr;
+    let old_size = getsize ptr in
+    // not a valid pointer from the allocator point of view, fail
+    if (old_size = 0sz) then (
+      // 3) invalid pointer, fail
+      sladmit ();
+      //change_equal_slprop
+      //  (null_or_varray ptr `star` null_or_varray new_ptr)
+      //  (realloc_vp 2 ptr new_ptr);
+      //let r = intro_null_null_or_varray #U8.t in
+      //return (r, G.hide (2, new_ptr))
+      return (A.null #U8.t, G.hide (0, A.null #U8.t))
+    ) else (
+      // most common case
+      if (US.lte new_size old_size) then (
+        // optimization
+        (**) intro_live_null_or_varray ptr;
+        (**) change_equal_slprop
+          emp
+          (realloc_vp 0 (A.null #U8.t) (A.null #U8.t));
+        return (ptr, G.hide (0, A.null #U8.t))
       ) else (
-        assert (A.length new_ptr >= US.v new_size);
-        let min_of_sizes =
-          if US.lte new_size old_size
-          then new_size
-          else old_size in
-        let _ = memcpy_u8 new_ptr ptr min_of_sizes in
-        intro_live_null_or_varray new_ptr;
-        intro_live_null_or_varray ptr;
-        let b = free ptr in
-        if b then (
+        // reallocation classical malloc/memcpy/free sequence of operations
+        let new_ptr = malloc arena_id new_size in
+        if (A.is_null new_ptr) then (
+          // If the function fails to allocate the requested block
+          // of memory, a null pointer is returned, and the memory
+          // block pointed to by argument ptr is not deallocated
+          // (it is still valid, and with its contents unchanged).
+          (**) elim_null_null_or_varray new_ptr;
+          (**) intro_live_null_or_varray ptr;
           change_equal_slprop
-            (if b then emp else A.varray ptr) emp;
-          change_equal_slprop
-            emp
-            (realloc_vp 0 ptr (A.null #U8.t));
-          return (new_ptr, G.hide (0, A.null #U8.t))
-        ) else (
-          //TODO: add a die(), internal error
-          change_equal_slprop
-            (if b then emp else A.varray ptr)
-            (A.varray ptr);
-          intro_live_null_or_varray ptr;
-          change_equal_slprop
-            (null_or_varray ptr `star` null_or_varray new_ptr)
-            (realloc_vp 2 ptr new_ptr);
+            (null_or_varray ptr)
+            (realloc_vp 1 ptr (A.null #U8.t));
           let r = intro_null_null_or_varray #U8.t in
-          return (r, G.hide (2, new_ptr))
+          return (r, G.hide (1, A.null #U8.t))
+        ) else (
+          // The content of the memory block is preserved up to the
+          // lesser of the new and old sizes, even if the block is
+          // moved to a new location. If the new size is larger, the
+          // value of the newly allocated portion is indeterminate.
+          (**) elim_live_null_or_varray new_ptr;
+          assert (A.length new_ptr >= US.v new_size);
+          let min_of_sizes =
+            if US.lte new_size old_size
+            then new_size
+            else old_size in
+          let _ = memcpy_u8 new_ptr ptr min_of_sizes in
+          (**) intro_live_null_or_varray new_ptr;
+          (**) intro_live_null_or_varray ptr;
+          let b = free ptr in
+          if b then (
+            change_equal_slprop
+              (if b then emp else A.varray ptr) emp;
+            change_equal_slprop
+              emp
+              (realloc_vp 0 ptr (A.null #U8.t));
+            return (new_ptr, G.hide (0, A.null #U8.t))
+          ) else (
+            //TODO: add a die(), internal error
+            change_equal_slprop
+              (if b then emp else A.varray ptr)
+              (A.varray ptr);
+            intro_live_null_or_varray ptr;
+            change_equal_slprop
+              (null_or_varray ptr `star` null_or_varray new_ptr)
+              (realloc_vp 2 ptr new_ptr);
+            let r = intro_null_null_or_varray #U8.t in
+            return (r, G.hide (2, new_ptr))
+          )
         )
       )
     )
-  )
+  ))
+#pop-options
 
 assume val builtin_mul_overflow(x y: US.t)
   : Pure US.t
