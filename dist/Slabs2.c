@@ -5,39 +5,238 @@
   KaRaMeL version: <unknown>
  */
 
-#ifndef __StarMalloc_H
-#define __StarMalloc_H
+#include "internal/Slabs2.h"
 
-#include "krmllib.h"
+#include "internal/ArrayList.h"
 
-#include "Steel_SpinLock.h"
-#include "SizeClass.h"
-#include "Mman.h"
-#include "Config.h"
-#include "ArrayList.h"
+size_t SlabsCommon2_slab_region_size = (size_t)68719476736U;
 
-extern bool StarMalloc_memcheck_u8(uint8_t *ptr, size_t n);
+size_t SlabsCommon2_slab_size = (size_t)4096U * (size_t)64U;
 
-extern uint8_t *StarMalloc_memset_u8(uint8_t *dest, uint8_t c, size_t n);
+size_t SlabsCommon2_metadata_max_ex = (size_t)262144U;
 
-extern uint8_t *StarMalloc_memcpy_u8(uint8_t *dest, uint8_t *src, size_t n);
+typedef bool *slab_metadata;
 
-extern void StarMalloc_malloc_zeroing_die(uint8_t *ptr);
+static uint8_t *allocate_slot(uint8_t *arr, bool *md)
+{
+  bool b = md[0U];
+  md[0U] = !b;
+  return arr;
+}
 
-uint8_t *StarMalloc_malloc(size_t arena_id, size_t size);
+bool
+SlabsFree2_deallocate_slab(
+  uint8_t *ptr,
+  uint32_t size_class,
+  uint8_t *slab_region,
+  bool *md_bm_region,
+  ArrayList_cell *md_region,
+  size_t *md_count,
+  size_t *r_idxs,
+  size_t diff_
+)
+{
+  KRML_MAYBE_UNUSED_VAR(ptr);
+  KRML_MAYBE_UNUSED_VAR(size_class);
+  KRML_MAYBE_UNUSED_VAR(slab_region);
+  KRML_MAYBE_UNUSED_VAR(md_bm_region);
+  size_t md_count_v_ = *md_count;
+  size_t idx1_ = r_idxs[0U];
+  size_t idx3_ = r_idxs[2U];
+  size_t pos = diff_ / (size_t)4096U;
+  if (pos < md_count_v_)
+  {
+    uint32_t status1 = ArrayList_read_in_place(md_region, pos);
+    if (status1 == 2U)
+    {
+      bool b = true;
+      if (b)
+      {
+        size_t v = ArrayList_remove(md_region, idx3_, pos);
+        size_t idx3_ = v;
+        ArrayList_insert(md_region, idx1_, pos, 0U);
+        r_idxs[2U] = idx3_;
+        r_idxs[0U] = pos;
+        return b;
+      }
+      else
+        return b;
+    }
+    else if (status1 == 1U)
+      return false;
+    else
+      return false;
+  }
+  else
+    return false;
+}
 
-uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size);
+static void allocate_slab_aux_3_3_2(uint32_t size_class)
+{
+  KRML_MAYBE_UNUSED_VAR(size_class);
+}
 
-bool StarMalloc_free(uint8_t *ptr);
+static void allocate_slab_aux_3_3(uint32_t size_class)
+{
+  allocate_slab_aux_3_3_2(size_class);
+}
 
-size_t StarMalloc_getsize(uint8_t *ptr);
+static void
+allocate_slab_aux_3(
+  uint32_t size_class,
+  ArrayList_cell *md_region,
+  size_t *md_count,
+  size_t *r_idxs,
+  size_t md_count_v,
+  size_t idx1
+)
+{
+  ArrayList_insert(md_region, idx1, md_count_v, 0U);
+  allocate_slab_aux_3_3(size_class);
+  size_t v = *md_count;
+  *md_count = v + (size_t)1U;
+  r_idxs[0U] = md_count_v;
+}
 
-uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size);
+typedef struct bounded_tuple__s
+{
+  size_t x;
+  size_t y;
+  size_t z;
+  size_t w;
+}
+bounded_tuple_;
 
-extern size_t StarMalloc_builtin_mul_overflow(size_t x, size_t y);
+static bounded_tuple_
+allocate_slab_aux_4_aux1(
+  ArrayList_cell *md_region,
+  size_t idx1,
+  size_t idx5,
+  size_t idx6,
+  size_t idx7
+)
+{
+  ArrayList_cell cell = md_region[idx6];
+  if (cell.next != (size_t)16777217U)
+  {
+    ArrayList_cell next = md_region[cell.next];
+    ArrayList_cell next1 = { .prev = cell.prev, .next = next.next, .data = next.data };
+    md_region[cell.next] = next1;
+  }
+  size_t tl_ = cell.prev;
+  if (cell.prev != (size_t)16777217U)
+  {
+    ArrayList_cell prev = md_region[cell.prev];
+    ArrayList_cell prev1 = { .prev = prev.prev, .next = cell.next, .data = prev.data };
+    md_region[cell.prev] = prev1;
+  }
+  size_t hd_;
+  if (idx5 == idx6)
+    hd_ = cell.next;
+  else
+    hd_ = idx5;
+  size_t sz_ = idx7 - (size_t)1U;
+  ArrayListGen_tuple3 idxs = { .x = hd_, .y = tl_, .z = sz_ };
+  ArrayList_insert(md_region, idx1, idx6, 0U);
+  return ((bounded_tuple_){ .x = idx6, .y = idxs.x, .z = idxs.y, .w = idxs.z });
+}
 
-uint8_t *StarMalloc_calloc(size_t arena_id, size_t size1, size_t size2);
+static void allocate_slab_aux_4_aux2(uint32_t size_class)
+{
+  KRML_MAYBE_UNUSED_VAR(size_class);
+}
 
+static bounded_tuple_
+allocate_slab_aux_4(
+  uint32_t size_class,
+  ArrayList_cell *md_region,
+  size_t *r_idxs,
+  size_t idx1,
+  size_t idx5,
+  size_t idx6,
+  size_t idx7
+)
+{
+  bounded_tuple_ r = allocate_slab_aux_4_aux1(md_region, idx1, idx5, idx6, idx7);
+  allocate_slab_aux_4_aux2(size_class);
+  r_idxs[0U] = r.x;
+  r_idxs[4U] = r.y;
+  r_idxs[5U] = r.z;
+  r_idxs[6U] = r.w;
+  return r;
+}
 
-#define __StarMalloc_H_DEFINED
-#endif
+uint8_t
+*SlabsAlloc2_allocate_slab(
+  uint32_t size_class,
+  uint8_t *slab_region,
+  bool *md_bm_region,
+  ArrayList_cell *md_region,
+  size_t *md_count,
+  size_t *r_idxs
+)
+{
+  size_t md_count_v_ = *md_count;
+  size_t idx1_ = r_idxs[0U];
+  size_t idx3_ = r_idxs[2U];
+  size_t idx5_ = r_idxs[4U];
+  size_t idx6_ = r_idxs[5U];
+  size_t idx7_ = r_idxs[6U];
+  if (idx1_ != (size_t)16777217U)
+  {
+    uint8_t *ptr0 = slab_region;
+    size_t shift_size_t0 = idx1_ * SlabsCommon2_slab_size;
+    bool *ptr = md_bm_region;
+    size_t shift_size_t = idx1_;
+    uint8_t *r = allocate_slot(ptr0 + shift_size_t0, ptr + shift_size_t);
+    size_t idx1_0 = ArrayList_remove(md_region, idx1_, idx1_);
+    ArrayList_insert(md_region, idx3_, idx1_, 2U);
+    r_idxs[0U] = idx1_0;
+    r_idxs[2U] = idx1_;
+    uint8_t *r0 = r;
+    return r0;
+  }
+  else
+  {
+    bool b = idx7_ >= (size_t)256U;
+    if (b)
+    {
+      bounded_tuple_
+      idxs = allocate_slab_aux_4(size_class, md_region, r_idxs, idx1_, idx5_, idx6_, idx7_);
+      uint8_t *ptr0 = slab_region;
+      size_t shift_size_t0 = idxs.x * SlabsCommon2_slab_size;
+      bool *ptr = md_bm_region;
+      size_t shift_size_t = idxs.x;
+      uint8_t *r = allocate_slot(ptr0 + shift_size_t0, ptr + shift_size_t);
+      size_t idx1_ = ArrayList_remove(md_region, idxs.x, idxs.x);
+      ArrayList_insert(md_region, idx3_, idxs.x, 2U);
+      r_idxs[0U] = idx1_;
+      r_idxs[2U] = idxs.x;
+      uint8_t *r0 = r;
+      return r0;
+    }
+    else
+    {
+      size_t md_count_v_0 = *md_count;
+      bool b1 = md_count_v_0 + (size_t)1U <= SlabsCommon2_metadata_max_ex;
+      if (b1)
+      {
+        allocate_slab_aux_3(size_class, md_region, md_count, r_idxs, md_count_v_, idx1_);
+        uint8_t *ptr0 = slab_region;
+        size_t shift_size_t0 = md_count_v_ * SlabsCommon2_slab_size;
+        bool *ptr = md_bm_region;
+        size_t shift_size_t = md_count_v_;
+        uint8_t *r = allocate_slot(ptr0 + shift_size_t0, ptr + shift_size_t);
+        size_t idx1_ = ArrayList_remove(md_region, md_count_v_, md_count_v_);
+        ArrayList_insert(md_region, idx3_, md_count_v_, 2U);
+        r_idxs[0U] = idx1_;
+        r_idxs[2U] = md_count_v_;
+        uint8_t *r0 = r;
+        return r0;
+      }
+      else
+        return NULL;
+    }
+  }
+}
+
