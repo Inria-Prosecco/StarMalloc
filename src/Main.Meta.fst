@@ -125,6 +125,8 @@ let gen_arena_sizes
     w = arena_md_region_size
   }
 
+friend Main
+
 #push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
 let init
   (_:unit)
@@ -145,12 +147,35 @@ let init
   let md_bm_region_b = mmap_bool_init (US.mul arena_sizes.z nb_arenas) in
   let md_region = mmap_cell_status_init (US.mul arena_sizes.w nb_arenas) in
   let size_classes = mmap_sc_init (US.mul nb_size_classes nb_arenas) in
-  Pervasives.norm
-  [
-    zeta; delta_only [`%init_n_first_arenas]
+  //Pervasives.norm
+  //[
+  //  //delta_attr [`%reduce_attr];
+  //  delta_only [`%init_n_first_arenas];
+  //  iota; zeta; primops
+  //]
+  //admit ();
+  //init_one_arena
+  //  0sz
+  //  sc_list_sc
+  //  sc_list_ex
+  //  nb_size_classes_sc nb_size_classes_sc_ex
+  //  nb_size_classes
+  //  nb_arenas
+  //  arena_sizes.x
+  //  arena_sizes.y
+  //  arena_sizes.z
+  //  arena_sizes.w
+  //  slab_region
+  //  md_bm_region
+  //  md_bm_region_b
+  //  md_region
+  //  size_classes
+  //  sizes;
+  //sladmit ();
 
-  ]
-  (init_all_arenas
+
+
+  init_all_arenas
     sc_list_sc sc_list_ex
     nb_size_classes_sc nb_size_classes_sc_ex
     nb_size_classes
@@ -158,7 +183,7 @@ let init
     arena_sizes.y
     arena_sizes.z
     arena_sizes.w
-    nb_arenas)
+    nb_arenas
     slab_region
     md_bm_region
     md_bm_region_b
