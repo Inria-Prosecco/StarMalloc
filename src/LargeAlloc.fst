@@ -96,6 +96,7 @@ open SizeClass
 open FStar.Mul
 
 #push-options "--z3rlimit 50"
+inline_for_extraction noextract
 let trees_malloc2_aux (x: node)
   : Steel (ref node)
   (size_class_vprop metadata_slabs.scs)
@@ -169,6 +170,7 @@ let trees_malloc2 (x: node)
 
 module UP = FStar.PtrdiffT
 
+inline_for_extraction noextract
 let trees_free2_aux (r: ref node)
   : Steel unit
   (
