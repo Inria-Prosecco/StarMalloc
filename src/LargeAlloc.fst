@@ -343,7 +343,7 @@ let large_malloc_aux
     ) else (
       let h0 = get () in
       let size_r = mmap_actual_size size in
-      let md_v' = insert false md_v (ptr, size) in
+      let md_v' = insert false md_v (ptr, size_r) in
       Spec.lemma_insert false (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size);
       Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
       write metadata_ptr md_v';
