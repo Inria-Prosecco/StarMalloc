@@ -99,10 +99,8 @@ let metadata_slabs : mmap_md_slabs = init_mmap_md_slabs ()
 type data = x: (array U8.t * US.t){
   (
     US.v (snd x) > 0 /\
-    (enable_slab_canaries_malloc ==>
-      A.length (fst x) == US.v (snd x) + 2) /\
-    (not enable_slab_canaries_malloc ==>
-      A.length (fst x) == US.v (snd x)) /\
+    US.v (snd x) > U32.v page_size /\
+    A.length (fst x) == US.v (snd x) /\
     A.is_full_array (fst x)
   )
   \/

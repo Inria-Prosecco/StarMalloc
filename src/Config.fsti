@@ -8,6 +8,14 @@ module UP = FStar.PtrdiffT
 module L =  FStar.List
 
 open FStar.Mul
+open Prelude
+
+inline_for_extraction noextract
+let u32_to_sz
+  (x:U32.t)
+  : Tot (y:US.t{US.v y == U32.v x})
+  =
+  US.uint32_to_sizet x
 
 // LATER: code could be improved so that this value is not hardcoded anymore
 inline_for_extraction

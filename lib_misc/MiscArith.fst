@@ -4,6 +4,23 @@ module MiscArith
 
 open FStar.Mul
 
+module FML = FStar.Math.Lemmas
+
+let lemma_mod_add_inv (k: int) (n: pos)
+  : Lemma
+  (requires
+    k % n == 0
+  )
+  (ensures
+    (-k) % n == 0
+  )
+  =
+  FML.div_exact_r k n;
+  let i = k/n in
+  assert (i * n == k);
+  FML.lemma_mod_sub k n (2*i);
+  ()
+
 let lemma_mod_plus2 (a k: int) (n: pos)
   : Lemma
   (requires
@@ -15,7 +32,7 @@ let lemma_mod_plus2 (a k: int) (n: pos)
   =
   assert (k == k/n*n);
   let k' = k/n in
-  Math.Lemmas.lemma_mod_plus a k' n
+  FML.lemma_mod_plus a k' n
 
 let lemma_mod_mul2 (a k: int) (n: pos)
   : Lemma
@@ -26,7 +43,7 @@ let lemma_mod_mul2 (a k: int) (n: pos)
     (a * k) % n == 0
   )
   =
-  Math.Lemmas.lemma_mod_mul_distr_r a k n
+  FML.lemma_mod_mul_distr_r a k n
 
 let lemma_mul_le (a b c c':nat)
   : Lemma
@@ -60,8 +77,6 @@ let rec decompose_eq (n: pos)
 
 #restart-solver
 
-open FStar.Math.Lemmas
-
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 50 --split_queries always"
 let decompose_unicity_aux (i1 j1 i2 j2: nat)
   : Lemma
@@ -79,17 +94,17 @@ let decompose_unicity_aux (i1 j1 i2 j2: nat)
   let t = j2 * (pow2 (i2 - i1)) in
   calc (==) {
     j1;
-    == { cancel_mul_div j1 (pow2 i1) }
+    == { FML.cancel_mul_div j1 (pow2 i1) }
     j1 * (pow2 i1) / (pow2 i1);
-    == { swap_mul j1 (pow2 i1) }
+    == { FML.swap_mul j1 (pow2 i1) }
     (pow2 i2) * j2 / (pow2 i1);
-    == { swap_mul (pow2 i2) j2 }
+    == { FML.swap_mul (pow2 i2) j2 }
     j2 * (pow2 i2) / (pow2 i1);
-    == { pow2_plus (i2 - i1) i1 }
+    == { FML.pow2_plus (i2 - i1) i1 }
     j2 * ((pow2 (i2 - i1)) * (pow2 i1)) / (pow2 i1);
-    == { paren_mul_right j2 (pow2 (i2 - i1)) (pow2 i1) }
+    == { FML.paren_mul_right j2 (pow2 (i2 - i1)) (pow2 i1) }
     t * (pow2 i1) / (pow2 i1);
-    == { cancel_mul_div t (pow2 i1) }
+    == { FML.cancel_mul_div t (pow2 i1) }
     t;
   };
   if (i2 > i1) then (
@@ -137,7 +152,7 @@ let mul_odd_odd_is_odd (a b: nat)
   (requires a % 2 = 1 /\ b % 2 = 1)
   (ensures (a * b) % 2 = 1)
   =
-  lemma_mod_mul_distr_l a b 2
+  FML.lemma_mod_mul_distr_l a b 2
 
 let decompose_mul (n1 n2: pos)
   : Lemma
@@ -159,7 +174,7 @@ let decompose_mul (n1 n2: pos)
     ((pow2 i1) * j1) * ((pow2 i2) * j2);
     == { mul_abcd_acbd (pow2 i1) j1 (pow2 i2) j2 }
     ((pow2 i1) * (pow2 i2)) * (j1 * j2);
-    == { pow2_plus i1 i2 }
+    == { FML.pow2_plus i1 i2 }
     (pow2 (i1 + i2)) * (j1 * j2);
   };
   assert (n1 * n2 = (pow2 (i1 + i2)) * (j1 * j2));
@@ -187,7 +202,7 @@ let rec mod_thm (k: nat) (n: pos)
   = match (decompose n) with
   | (0, y) ->
       let z = pow2 k in
-      euclidean_division_definition z n;
+      FML.euclidean_division_definition z n;
       assert (z = z/n * n);
       (* LHS decomposition *)
       decompose_pow2 k;
@@ -204,11 +219,11 @@ let rec mod_thm (k: nat) (n: pos)
       let c = n/2 in
       calc (==) {
         (pow2 k) % n;
-        == { pow2_plus (k-1) 1 }
+        == { FML.pow2_plus (k-1) 1 }
         (a * b) % n;
         == { () }
         (a * b) % (b * c);
-        == { Math.Lemmas.modulo_scale_lemma a b c }
+        == { FML.modulo_scale_lemma a b c }
         (a % c) * b;
       };
       mod_thm (k-1) (n/2)
@@ -221,9 +236,9 @@ let rec pow2_mod (k1 k2: nat)
   = match k1 with
   | 0 -> ()
   | _ ->
-      pow2_plus (k2 - 1) 1;
-      pow2_plus 1 (k1 - 1);
-      Math.Lemmas.modulo_scale_lemma (pow2 (k2 - 1)) 2 (pow2 (k1 - 1));
+      FML.pow2_plus (k2 - 1) 1;
+      FML.pow2_plus 1 (k1 - 1);
+      FML.modulo_scale_lemma (pow2 (k2 - 1)) 2 (pow2 (k1 - 1));
       assert ((pow2 k2) % (pow2 k1) == ((pow2 (k2 - 1)) % (pow2 (k1 - 1))) * 2);
       pow2_mod (k1 - 1) (k2 - 1)
 
@@ -233,7 +248,7 @@ let pow2_is_increasing (x y: nat)
   (ensures x <= y)
   =
   if x > y then
-  pow2_lt_compat x y
+  FML.pow2_lt_compat x y
 
 let alignment_lemma (v:nat) (n: nat) (x y: pos)
   : Lemma
