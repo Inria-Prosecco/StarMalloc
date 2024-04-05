@@ -183,21 +183,6 @@ let spec_mmap_actual_size (size: nat)
   )
   =
   nearest_multiple_upper_rounding size (U32.v page_size)
-
-let mmap_actual_size (size: US.t)
-  : Pure US.t
-  (requires
-    US.v size >= U32.v page_size /\
-    US.fits (US.v size + U32.v page_size)
-  )
-  (ensures fun r ->
-    US.v r == spec_mmap_actual_size (US.v size)
-  )
-  =
-  let rem = US.rem size (u32_to_sz page_size) in
-  if rem <> 0sz
-  then US.add (US.sub size rem) (u32_to_sz page_size)
-  else size
 #pop-options
 
 // POSIX spec: mmap returns a page-aligned array of bytes;

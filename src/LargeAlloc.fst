@@ -254,6 +254,23 @@ let find = Map.M.find
 
 open Config
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
+let mmap_actual_size (size: US.t)
+  : Pure US.t
+  (requires
+    US.v size >= U32.v page_size /\
+    US.fits (US.v size + U32.v page_size)
+  )
+  (ensures fun r ->
+    US.v r == Mman.spec_mmap_actual_size (US.v size)
+  )
+  =
+  let rem = US.rem size (u32_to_sz page_size) in
+  if rem <> 0sz
+  then US.add (US.sub size rem) (u32_to_sz page_size)
+  else size
+#pop-options
+
 noextract inline_for_extraction
 let mmap_actual_size = Mman.mmap_actual_size
 
