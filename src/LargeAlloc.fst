@@ -166,7 +166,7 @@ let trees_malloc2 (x: node)
       not (is_null r) /\
       (G.reveal p) r
     )
-    (fun _ -> trees_malloc2_aux x) 
+    (fun _ -> trees_malloc2_aux x)
   in
   return r
 
@@ -269,7 +269,7 @@ let v_ind_tree
   let x
     : t_of (ind_linked_wf_tree ptr)
     = h (ind_linked_wf_tree ptr) in
-  admit ();
+  assert_norm (vdep_payload (vptr ptr) linked_wf_tree (dfst x) == (x: wdm data{is_wf x}));
   dsnd x
 #pop-options
 
