@@ -1781,7 +1781,7 @@ let deallocate_slab'
   =
   //let diff_sz = UP.ptrdifft_to_sizet diff in
   assert_norm (4 < FI.max_int 16);
-  let pos = US.div diff (u32_to_sz page_size) in
+  let pos = US.div diff slab_size in
   let pos2 = US.rem diff (u32_to_sz page_size) in
   // check diff/page_size < md_count
   if US.lt pos md_count_v then (
