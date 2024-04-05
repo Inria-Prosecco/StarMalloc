@@ -116,6 +116,7 @@ open MiscArith
 open FStar.Mul
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
+noextract
 let nearest_multiple_upper_rounding
   (n: nat)
   (multiple: nat{multiple > 0})
