@@ -119,9 +119,16 @@ let aligned_alloc arena_id alignment size
   let check = US.gt alignment 0sz && US.rem (US.uint32_to_sizet page_size) alignment = 0sz in
   if check then (
     let alignment_as_u32 = US.sizet_to_uint32 alignment in
+    assume (US.fits (U32.v page_size * US.v max_sc_coef));
+    let threshold' = US.mul (u32_to_sz page_size) max_sc_coef in
     let threshold = if enable_slab_canaries_malloc
-      then US.sub page_as_sz 2sz
-      else page_as_sz in
+      then US.sub threshold' 2sz
+      else threshold'
+    in
+//
+//    let threshold = if enable_slab_canaries_malloc
+//      then US.sub page_as_sz 2sz
+//      else page_as_sz in
     if (US.lte size threshold) then (
       let ptr = slab_aligned_alloc arena_id alignment_as_u32 (US.sizet_to_uint32 size) in
       if (A.is_null ptr || not enable_zeroing_malloc) then (
