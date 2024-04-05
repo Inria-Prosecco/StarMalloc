@@ -114,6 +114,9 @@ let rec find
   )
   (ensures fun h0 r h1 ->
     v_linked_tree p ptr h1 == v_linked_tree p ptr h0 /\
+    //h1 (linked_tree p ptr)
+    //==
+    //h0 (linked_tree p ptr) /\
     Spec.is_avl (spec_convert cmp) (v_linked_tree p ptr h0) /\
     (Some? r == Spec.mem (spec_convert cmp) (v_linked_tree p ptr h0) v) /\
     (Some? r == Spec.memopt (spec_convert cmp) (v_linked_tree p ptr h0) v) /\

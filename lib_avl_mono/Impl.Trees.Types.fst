@@ -116,9 +116,9 @@ module G = FStar.Ghost
 assume val ref_node__to__array_u8_tot
   (x: ref node)
   : Pure (G.erased (array U8.t))
-  (requires True)
+  (requires not (is_null x))
   (ensures fun r ->
-    A.is_null (G.reveal r) = is_null x /\
+    not (A.is_null (G.reveal r)) /\
     A.length (G.reveal r) == U32.v avl_data_size
   )
 
@@ -127,9 +127,10 @@ assume val ref_node__to__array_u8
   : Steel (array U8.t)
   (vptr x)
   (fun r -> A.varray r)
-  (requires fun _ -> True)
+  (requires fun _ -> not (is_null x))
   (ensures fun _ r _ ->
-    A.is_null r = is_null x /\
+    not (is_null x) /\
+    not (A.is_null r) /\
     A.length r == U32.v avl_data_size /\
     r == G.reveal (ref_node__to__array_u8_tot x)
   )
@@ -139,7 +140,7 @@ assume val array_u8__to__ref_node_tot
   : Pure (G.erased (ref node))
   (requires A.length arr == U32.v avl_data_size)
   (ensures fun r ->
-    A.is_null arr = is_null (G.reveal r)
+    not (is_null (G.reveal r))
   )
 
 assume val array_u8__to__ref_node
@@ -149,7 +150,7 @@ assume val array_u8__to__ref_node
   (fun r -> vptr r)
   (requires fun _ -> A.length arr == U32.v avl_data_size)
   (ensures fun _ r _ ->
-    A.is_null arr = is_null r /\
+    not (is_null r) /\
     A.length arr == U32.v avl_data_size /\
     r == G.reveal (array_u8__to__ref_node_tot arr)
   )
@@ -171,12 +172,14 @@ module UP = FStar.PtrdiffT
 let p : hpred data
   =
   G.hide (fun (x: ref node) ->
-    let ptr = ref_node__to__array_u8_tot x in
     is_null x \/
-    (same_base_array ptr metadata_slabs.scs.slab_region /\
-    UP.fits (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) /\
-    A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region) >= 0 /\
-    ((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) % U32.v page_size) % U32.v metadata_slabs.scs.size = 0)
+    (not (is_null x) /\
+      (let ptr = ref_node__to__array_u8_tot x in
+      same_base_array ptr metadata_slabs.scs.slab_region /\
+      UP.fits (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) /\
+      A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region) >= 0 /\
+      ((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region)) % U32.v page_size) % U32.v metadata_slabs.scs.size = 0)
+    )
   )
 #pop-options
 
