@@ -1,7 +1,6 @@
 module Quarantine
 
 open Utils2
-open SlotsAlloc
 
 open Steel.Effect.Atomic
 open Steel.Effect

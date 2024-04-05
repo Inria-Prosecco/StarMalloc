@@ -32,7 +32,7 @@ open SlabsCommon2
 
 #restart-solver
 
-#push-options "--z3rlimit 75"
+#push-options "--z3rlimit 75 --fuel 1 --ifuel 1"
 inline_for_extraction noextract
 let allocate_slab_aux_cond
   (size_class: sc_ex)
@@ -2561,16 +2561,19 @@ let allocate_slab_aux_4_aux2
     (f size_class slab_region md_bm_region md_count_v md_region_lv
       (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idxs.x)))
     (p_quarantine size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x));
-  rewrite_slprop
-    (p_quarantine size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x))
-    (slab_vprop size_class
-      (slab_array slab_region idxs.x)
-      (md_bm_array md_bm_region idxs.x))
-    (fun _ -> admit ());
-  admit ();
-  //p_quarantine_unpack size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x);
-  //Quarantine.mmap_untrap_quarantine (slab_array slab_region idxs.x) (u32_to_sz page_size);
+  //rewrite_slprop
+  //  (p_quarantine size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x))
+  //  (slab_vprop size_class
+  //    (slab_array slab_region idxs.x)
+  //    (md_bm_array md_bm_region idxs.x))
+  //  (fun _ -> admit ());
+  p_quarantine_unpack size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x);
+  Quarantine2.mmap_untrap_quarantine
+    size_class
+    (A.split_l (slab_array slab_region idxs.x) (u32_to_sz size_class))
+    (US.sub slab_size (u32_to_sz size_class));
   //Helpers.slab_to_slots size_class (slab_array slab_region idxs.x);
+  sladmit ();
   //let md = gget (A.varray (md_bm_array md_bm_region idxs.x)) in
   //empty_md_is_properly_zeroed size_class;
   //intro_slab_vprop size_class

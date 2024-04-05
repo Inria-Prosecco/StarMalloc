@@ -1,7 +1,6 @@
 module Quarantine2
 
 open Utils2
-open SlotsAlloc
 
 open Steel.Effect.Atomic
 open Steel.Effect
@@ -29,12 +28,12 @@ inline_for_extraction noextract
 val mmap_trap_quarantine
   (size_class: sc_ex)
   (arr: array U8.t{A.length arr = U32.v size_class})
-  (len: US.t{US.v len % U32.v page_size == 0})
+  (len: US.t{US.v len == U32.v size_class})
   : SteelT unit (A.varray arr) (fun _ -> quarantine_slab size_class arr)
 
 inline_for_extraction noextract
 val mmap_untrap_quarantine
   (size_class: sc_ex)
   (arr: array U8.t{A.length arr = U32.v size_class})
-  (len: US.t{US.v len % U32.v page_size == 0})
+  (len: US.t{US.v len == U32.v size_class})
   : SteelT unit (quarantine_slab size_class arr) (fun _ -> A.varray arr)

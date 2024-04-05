@@ -394,8 +394,6 @@ let pack_slab_starseq
       (p_full size_class (md_bm_array md_bm_region idx, slab_array slab_region idx))
       (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v)
         (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx)))
-  ) else if (U32.eq v 1ul) then (
-    sladmit ()
  ) else (
     p_empty_pack size_class
       (md_bm_array md_bm_region idx,
@@ -438,13 +436,18 @@ let upd_and_pack_slab_starseq_quarantine
     (slab_array slab_region idx)
     (md_bm_array md_bm_region idx)
   in
-  sladmit ();
+  //need for an analogous version of that helper
   //Helpers.intro_empty_slab_varray size_class md_as_seq (slab_array slab_region idx);
-  //mmap_trap_quarantine
-  //        (slab_array slab_region idx)
-  //        (u32_to_sz page_size);
-
-  //SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx);
+  sladmit ();
+  mmap_trap_quarantine
+    size_class
+    (A.split_l
+      (snd
+        (md_bm_array md_bm_region idx,
+        slab_array slab_region idx))
+      (u32_to_sz size_class))
+    (US.sub slab_size (u32_to_sz size_class));
+  SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx);
   p_quarantine_pack size_class (md_bm_array md_bm_region idx, slab_array slab_region idx);
   change_equal_slprop
     (p_quarantine size_class (md_bm_array md_bm_region idx, slab_array slab_region idx))

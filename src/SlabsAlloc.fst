@@ -754,6 +754,8 @@ let allocate_slab_aux_2_aux
       idx1 idx2 idx3 idx4 idx5 idx6 idx7
   )
 
+#restart-solver
+
 // Slab initially partial
 inline_for_extraction noextract
 let allocate_slab_aux_2

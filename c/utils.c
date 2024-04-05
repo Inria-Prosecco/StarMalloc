@@ -2,14 +2,15 @@
 #include <stdint.h>
 #include "internal/StarMalloc.h"
 #include "fatal_error.h"
+#include "Config.h"
 
 // glue
-uint32_t Utils2_ffs64(uint64_t x) {
+uint32_t ffs64(uint64_t x) {
   return __builtin_ctzll(~x);
 }
 
 // glue
-size_t StarMalloc_builtin_mul_overflow(size_t x, size_t y) {
+size_t builtin_mul_overflow(size_t x, size_t y) {
   size_t z;
   int r = __builtin_mul_overflow(x, y, &z);
   if (r) {
@@ -33,15 +34,15 @@ uint64_t Impl_Trees_Types_cmp(
   }
 }
 
-// monomorphized (from void* to uint8_t*) glue
-uint8_t* StarMalloc_memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
-  return (uint8_t*) memcpy((void*) dest, (void*) src, n);
+void apply_zeroing_u8(uint8_t* ptr, size_t n) {
+  for (size_t i = 0; i < n; i++) {
+    ptr[i] = 0;  
+  }
 }
 
 // monomorphized (from void* to uint8_t*) glue
-// TODO: memset can be optimized, use hacl-star libmemzero
-uint8_t* StarMalloc_memset_u8(uint8_t* dest, uint8_t v, size_t n) {
-  return (uint8_t*) memset((void*) dest, v, n);
+uint8_t* memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
+  return (uint8_t*) memcpy((void*) dest, (void*) src, n);
 }
 
 // required casts
@@ -59,16 +60,11 @@ void StarMalloc_malloc_zeroing_die(uint8_t* ptr) {
   fatal_error("malloc_zeroing_die");
 }
 
-bool StarMalloc_memcheck_u8(uint8_t* ptr, size_t len) {
+bool check_zeroing_u8(uint8_t* ptr, size_t len) {
   for (size_t i = 0; i < len; i++) {
     if (ptr[i] != 0) {
       return false;
     }
   }
   return true;
-}
-
-void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
-  size_t len = (size_t) sc;
-  memset(ptr, 0, len);
 }

@@ -19,6 +19,7 @@ module SM = Steel.Memory
 open Prelude
 open Config
 open Utils2
+open ExternUtils
 open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
@@ -565,20 +566,6 @@ let u32_bounded
 
 #restart-solver
 
-assume val deallocate_zeroing
-  (size_class: sc)
-  (ptr: array U8.t)
-  : Steel unit
-  (A.varray ptr) (fun _ -> A.varray ptr)
-  (requires fun h0 ->
-    A.length ptr = U32.v size_class
-  )
-  (ensures fun _ _ h1 ->
-    enable_zeroing_free ==> zf_u8 (A.asel ptr h1)
-  )
-
-//TODO: check for spec
-//CAUTION
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let deallocate_slot'
   (size_class: sc)
@@ -655,7 +642,7 @@ let deallocate_slot'
       Bitmap5.bm_unset #4 md pos;
       let md_as_seq2 = gget (A.varray md) in
       // analogous of Slots@returned_value lemma
-      deallocate_zeroing size_class ptr;
+      apply_zeroing_u8_cond ptr (u32_to_sz size_class);
       deallocate_slot'_aux0 size_class md_as_seq2 arr pos ptr;
       deallocate_slot'_aux1 size_class md_as_seq md_as_seq2 arr pos;
       deallocate_slot_aux size_class md md_as_seq2 arr pos;

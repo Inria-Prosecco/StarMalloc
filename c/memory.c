@@ -91,6 +91,10 @@ uint64_t *mmap_u64_init(size_t len) {
   return (uint64_t*) mmap_init(len * sizeof(uint64_t));
 }
 
+bool *mmap_bool_init(size_t len) {
+  return (bool*) mmap_init(len * sizeof(bool));
+}
+
 // slabs allocator init: initial large slabs mapping
 ArrayList_cell *mmap_cell_status_init(size_t len) {
   return (ArrayList_cell*) mmap_init(len * sizeof(ArrayList_cell));

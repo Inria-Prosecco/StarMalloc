@@ -13,8 +13,9 @@ module R = Steel.Reference
 module SAA = Steel.ArrayArith
 
 open Prelude
-open Utils2
 open Config
+open Utils2
+open ExternUtils
 open NullOrVarray
 
 // slab allocator
@@ -24,49 +25,6 @@ open Main.Meta
 open LargeAlloc
 
 #push-options "--fuel 0 --ifuel 0"
-
-assume val memcheck_u8 (ptr: array U8.t) (n: US.t)
-  : Steel bool
-  (A.varray ptr)
-  (fun _ -> A.varray ptr)
-  (requires fun _ ->
-    A.length ptr >= US.v n
-  )
-  (ensures fun h0 b h1 ->
-    A.length ptr >= US.v n /\
-    (b ==> zf_u8 (Seq.slice (A.asel ptr h1) 0 (US.v n)))
-  )
-
-assume val memset_u8 (dest: array U8.t) (c: U8.t) (n: US.t)
-  : Steel (array U8.t)
-  (A.varray dest)
-  (fun _ -> A.varray dest)
-  (requires fun _ ->
-    A.length dest >= US.v n
-  )
-  (ensures fun h0 r h1 ->
-    A.length dest >= US.v n /\
-    Seq.slice (A.asel dest h1) 0 (US.v n)
-    ==
-    Seq.create (US.v n) c
-  )
-
-assume val memcpy_u8 (dest src: array U8.t) (n: US.t)
-  : Steel (array U8.t)
-  (A.varray dest `star` A.varray src)
-  (fun _ -> A.varray dest `star` A.varray src)
-  (requires fun _ ->
-    A.length dest >= US.v n /\
-    A.length src >= US.v n
-  )
-  (ensures fun h0 r h1 ->
-    A.length dest >= US.v n /\
-    A.length src >= US.v n /\
-    Seq.slice (A.asel dest h1) 0 (US.v n)
-    ==
-    Seq.slice (A.asel src h0) 0 (US.v n) /\
-    A.asel src h1 == A.asel src h0
-  )
 
 #push-options "--fuel 1 --ifuel 1"
 val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
@@ -95,16 +53,19 @@ module G = FStar.Ghost
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 let malloc arena_id size =
+  assume (US.fits (U32.v page_size * US.v max_sc_coef));
+  let threshold' = US.mul (u32_to_sz page_size) max_sc_coef in
   let threshold = if enable_slab_canaries_malloc
-    then US.sub (US.uint32_to_sizet page_size) 2sz
-    else US.uint32_to_sizet page_size in
+    then US.sub threshold' 2sz
+    else threshold'
+  in
   if (US.lte size threshold) then (
     let ptr = slab_malloc arena_id (US.sizet_to_uint32 size) in
     if (A.is_null ptr || not enable_zeroing_malloc) then (
       return ptr
     ) else (
       elim_live_null_or_varray ptr;
-      let b = memcheck_u8 ptr size in
+      let b = check_zeroing_u8 ptr size in
       if b then (
         intro_live_null_or_varray ptr;
         return ptr
@@ -167,7 +128,7 @@ let aligned_alloc arena_id alignment size
         return ptr
       ) else (
         elim_live_null_or_varray ptr;
-        let b = memcheck_u8 ptr size in
+        let b = check_zeroing_u8 ptr size in
         if b then (
           intro_live_null_or_varray ptr;
           return ptr
@@ -417,13 +378,6 @@ let realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
     )
   )
 
-assume val builtin_mul_overflow(x y: US.t)
-  : Pure US.t
-  (requires True)
-  (ensures fun r ->
-    US.fits (US.v x * US.v y) /\
-    US.v r == US.v x * US.v y)
-
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 //TODO: there should be defensive checks and no precondition
 val calloc
@@ -465,7 +419,7 @@ let calloc arena_id size1 size2
       return ptr
     ) else (
       elim_live_null_or_varray ptr;
-      let _ = memset_u8 ptr 0z size in
+      let _ = apply_zeroing_u8_cond ptr size in
       intro_live_null_or_varray ptr;
       return ptr
     )

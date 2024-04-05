@@ -19,6 +19,7 @@ module SM = Steel.Memory
 open Prelude
 open Config
 open Utils2
+open ExternUtils
 open SteelOptUtils
 open SteelStarSeqUtils
 

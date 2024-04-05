@@ -16,19 +16,17 @@ module G = FStar.Ghost
 open Config
 open MemoryTrap
 
-let slab_size = Config.sc_ex_slab_size
-
 /// Depending on whether the config flag
 /// `enable_guard_pages` is enabled, this either
 /// corresponds to `trap_array` or to `varray`
 val guard_slab
   (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size - U32.v size_class})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size - U32.v size_class})
   : vprop
 
 inline_for_extraction noextract
 val mmap_trap_guard
   (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size - U32.v size_class})
-  (len: US.t{US.v len = U32.v page_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size - U32.v size_class})
+  (len: US.t{US.v len = US.v sc_ex_slab_size - U32.v size_class})
   : SteelT unit (A.varray arr) (fun _ -> guard_slab size_class arr)

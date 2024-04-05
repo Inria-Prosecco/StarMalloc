@@ -214,8 +214,8 @@ let slab_vprop (size_class: sc_ex)
       (A.split_l arr (u32_to_sz size_class))
       (Seq.index b 0))
   `star`
-  //guard_slab size_class (A.split_r arr (u32_to_sz size_class))
-  A.varray (A.split_r arr (u32_to_sz size_class))
+  guard_slab size_class (A.split_r arr (u32_to_sz size_class))
+  //A.varray (A.split_r arr (u32_to_sz size_class))
 
 #push-options "--z3rlimit 30"
 let slab_vprop_lemma (size_class: sc_ex)
@@ -252,7 +252,7 @@ let slab_vprop_lemma (size_class: sc_ex)
   //  (Seq.lseq bool (A.length arr_md))
   //  (Seq.lseq bool 1)
 
-#push-options "--z3rlimit 30 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects --fuel 1 --ifuel 1"
 let intro_slab_vprop (#opened:_) (size_class: sc_ex)
   (arr: array U8.t{A.length arr = US.v slab_size})
   (arr_md: slab_metadata)
@@ -264,7 +264,7 @@ let intro_slab_vprop (#opened:_) (size_class: sc_ex)
       (Seq.index (G.reveal md) 0) `star`
     (
       A.varray arr_md `star`
-      A.varray (A.split_r arr (u32_to_sz size_class))
+      guard_slab size_class (A.split_r arr (u32_to_sz size_class))
     )
   )
   (fun _ -> slab_vprop size_class arr arr_md)
@@ -281,7 +281,18 @@ let intro_slab_vprop (#opened:_) (size_class: sc_ex)
     == h0 (slab_vprop_aux size_class
       (A.split_l arr (u32_to_sz size_class))
       (Seq.index (G.reveal md) 0)) /\
-    snd blob1 = A.asel (A.split_r arr (u32_to_sz size_class)) h0
+    can_be_split
+      (
+        slab_vprop_aux size_class
+          (A.split_l arr (u32_to_sz size_class))
+          (Seq.index (G.reveal md) 0) `star`
+        (
+          A.varray arr_md `star`
+          guard_slab size_class (A.split_r arr (u32_to_sz size_class))
+        )
+      )
+      (guard_slab size_class (A.split_r arr (u32_to_sz size_class))) /\
+    snd blob1 == h0 (guard_slab size_class (A.split_r arr (u32_to_sz size_class))) 
   )
   =
   intro_vdep
@@ -299,10 +310,23 @@ let intro_slab_vprop (#opened:_) (size_class: sc_ex)
         (A.split_l arr (u32_to_sz size_class))
         (Seq.index b 0))
     `star`
-    A.varray (A.split_r arr (u32_to_sz size_class)))
+    guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
     (slab_vprop size_class arr arr_md)
     (fun x y -> x == y)
-    (fun _ -> admit ())
+    (fun _ -> admit ());
+  assume (
+    can_be_split
+      (
+        slab_vprop_aux size_class
+          (A.split_l arr (u32_to_sz size_class))
+          (Seq.index (G.reveal md) 0) `star`
+        (
+          A.varray arr_md `star`
+          guard_slab size_class (A.split_r arr (u32_to_sz size_class))
+        )
+      )
+      (guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
+  )
 
 let elim_slab_vprop (#opened:_) (size_class: sc_ex)
   (arr: array U8.t{A.length arr = US.v slab_size})
@@ -315,22 +339,33 @@ let elim_slab_vprop (#opened:_) (size_class: sc_ex)
       (Seq.index b 0) `star`
     (
       A.varray arr_md `star`
-      A.varray (A.split_r arr (u32_to_sz size_class))
+      guard_slab size_class (A.split_r arr (u32_to_sz size_class))
     )
   )
   (requires fun _ -> True)
-  (ensures fun h0 b h1 ->
+  (ensures fun h0 md h1 ->
     let blob0
       : t_of (slab_vprop size_class arr arr_md)
       = h0 (slab_vprop size_class arr arr_md) in
     let x0 : Seq.lseq bool 1 = dfst (fst blob0) in
-    G.reveal b == x0 /\
-    G.reveal b == A.asel arr_md h1 /\
+    G.reveal md == x0 /\
+    G.reveal md == A.asel arr_md h1 /\
     dsnd (fst blob0)
     == h1 (slab_vprop_aux size_class
       (A.split_l arr (u32_to_sz size_class))
-      (Seq.index b 0)) /\
-    snd blob0 == A.asel (A.split_r arr (u32_to_sz size_class)) h1
+      (Seq.index md 0)) /\
+    can_be_split
+      (
+        slab_vprop_aux size_class
+          (A.split_l arr (u32_to_sz size_class))
+          (Seq.index (G.reveal md) 0) `star`
+        (
+          A.varray arr_md `star`
+          guard_slab size_class (A.split_r arr (u32_to_sz size_class))
+        )
+      )
+      (guard_slab size_class (A.split_r arr (u32_to_sz size_class))) /\
+    snd blob0 == h1 (guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
   )
   =
   change_slprop_rel
@@ -341,10 +376,10 @@ let elim_slab_vprop (#opened:_) (size_class: sc_ex)
         (A.split_l arr (u32_to_sz size_class))
         (Seq.index b 0))
     `star`
-    A.varray (A.split_r arr (u32_to_sz size_class)))
+    guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
     (fun x y -> x == y)
     (fun _ -> admit ());
-  let r = elim_vdep
+  let md = elim_vdep
     (A.varray arr_md)
     (fun b -> slab_vprop_aux size_class
       (A.split_l arr (u32_to_sz size_class))
@@ -352,10 +387,24 @@ let elim_slab_vprop (#opened:_) (size_class: sc_ex)
   in
   let b
     : G.erased (Seq.lseq bool 1)
-    = G.hide (G.reveal r <: Seq.lseq bool 1) in
-  change_equal_slprop
-    (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index (G.reveal r) 0))
-    (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index (G.reveal b) 0));
+    = G.hide (G.reveal md <: Seq.lseq bool 1) in
+  sladmit ();
+  //change_equal_slprop
+  //  (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index (G.reveal md) 0))
+  //  (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index (G.reveal b) 0));
+  //assume (
+  //  can_be_split
+  //    (
+  //      slab_vprop_aux size_class
+  //        (A.split_l arr (u32_to_sz size_class))
+  //        (Seq.index (G.reveal b) 0) `star`
+  //      (
+  //        A.varray arr_md `star`
+  //        guard_slab size_class (A.split_r arr (u32_to_sz size_class))
+  //      )
+  //    )
+  //    (guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
+  //);
   b
 
 let is_empty (b:bool)
@@ -422,52 +471,65 @@ let allocate_slot (size_class: sc_ex)
 let deallocate_slot (size_class: sc_ex)
   (arr: array U8.t{A.length arr = US.v slab_size})
   (md: slab_metadata)
-  : Steel (array U8.t)
-  (slab_vprop size_class arr md)
-  (fun ptr ->
-    slab_vprop size_class arr md `star`
-    A.varray ptr
+  (ptr: array U8.t)
+  (diff_: US.t)
+  : Steel bool
+  (
+    A.varray ptr `star`
+    slab_vprop size_class arr md
+  )
+  (fun b ->
+    (if b then emp else A.varray ptr) `star`
+    slab_vprop size_class arr md
   )
   (requires fun h0 ->
-     let blob0
-     : t_of (slab_vprop size_class arr md)
-     = h0 (slab_vprop size_class arr md) in
-     let v0 : Seq.lseq bool 1 = dfst (fst blob0) in
-     is_full (Seq.index v0 0)
+    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
+    let blob0 : t_of (slab_vprop size_class arr md)
+      = h0 (slab_vprop size_class arr md) in
+    let v0 : Seq.lseq bool 1 = dfst (fst blob0) in
+    same_base_array arr ptr /\
+    US.v diff_ = diff /\
+    diff = 0 /\
+    A.length ptr == U32.v size_class /\
+    is_full (Seq.index v0 0)
   )
-  (ensures fun h0 r h1 ->
-     let blob1
-     : t_of (slab_vprop size_class arr md)
-     = h1 (slab_vprop size_class arr md) in
-     let v1 : Seq.lseq bool 1 = dfst (fst blob1) in
-     is_empty (Seq.index v1 0) /\
-     A.length r = U32.v size_class
+  (ensures fun h0 b h1 ->
+    let blob0 : t_of (slab_vprop size_class arr md)
+      = h0 (slab_vprop size_class arr md) in
+    let v0 : Seq.lseq bool 1 = dfst (fst blob0) in
+    let blob1 : t_of (slab_vprop size_class arr md)
+      = h1 (slab_vprop size_class arr md) in
+    let v1 : Seq.lseq bool 1 = dfst (fst blob1) in
+    is_empty (Seq.index v1 0) /\
+    b
   )
+    //(not b ==> v1 == v0))
   =
   assert (t_of (A.varray md) == Seq.lseq bool 1);
   let md_as_seq : G.erased (Seq.lseq bool 1)
     = elim_slab_vprop size_class arr md in
   let b = A.index md 0sz in
-  assert (b);
+  //assert (b);
   A.upd md 0sz false;
-  let md_as_seq' : G.erased (Seq.lseq bool 1)
-    = G.hide (Seq.upd (G.reveal md_as_seq) 0 false) in
-  rewrite_slprop
-    (slab_vprop_aux size_class
-      (A.split_l arr (u32_to_sz size_class))
-      (Seq.index md_as_seq 0))
-    (slab_vprop_aux size_class
-      (A.split_l arr (u32_to_sz size_class))
-      (Seq.index md_as_seq' 0) `star`
-    A.varray (A.split_l arr (u32_to_sz size_class))
-    )
-    (fun _ -> admit ());
-  intro_slab_vprop size_class arr md md_as_seq';
-  let ptr = A.split_l arr (u32_to_sz size_class) in
-  change_equal_slprop
-    (A.varray (A.split_l arr (u32_to_sz size_class)))
-    (A.varray ptr);
-  return ptr
+  sladmit ();
+  //let md_as_seq' : G.erased (Seq.lseq bool 1)
+  //  = G.hide (Seq.upd (G.reveal md_as_seq) 0 false) in
+  //rewrite_slprop
+  //  (slab_vprop_aux size_class
+  //    (A.split_l arr (u32_to_sz size_class))
+  //    (Seq.index md_as_seq 0))
+  //  (slab_vprop_aux size_class
+  //    (A.split_l arr (u32_to_sz size_class))
+  //    (Seq.index md_as_seq' 0) `star`
+  //  A.varray (A.split_l arr (u32_to_sz size_class))
+  //  )
+  //  (fun _ -> admit ());
+  //intro_slab_vprop size_class arr md md_as_seq';
+  //let ptr = A.split_l arr (u32_to_sz size_class) in
+  //change_equal_slprop
+  //  (A.varray (A.split_l arr (u32_to_sz size_class)))
+  //  (A.varray ptr);
+  return true
 
 #push-options "--z3rlimit 30"
 /// Predicates capturing that a slab is empty, partially full, or full respectively
@@ -512,10 +574,8 @@ let p_quarantine (size_class: sc_ex) : blob size_class -> vprop
     (
       (quarantine_slab size_class
         (A.split_l (snd b) (u32_to_sz size_class)) `star`
-      A.varray (fst b) `star`
-      A.varray (A.split_r (snd b) (u32_to_sz size_class)))
-      `VR2.vrefine`
-      (fun ((_,s),_) -> s `Seq.equal` Seq.create 1 true)
+      (A.varray (fst b) `vrefine` zf_b) `star`
+      guard_slab size_class (A.split_r (snd b) (u32_to_sz size_class)))
     ) `vrewrite` (fun _ ->  empty_t size_class)
 
 val p_empty_unpack (#opened:_)
@@ -619,7 +679,7 @@ val p_quarantine_pack (#opened:_)
   (b: blob size_class)
   : SteelGhost unit opened
   (quarantine_slab size_class (A.split_l (snd b) (u32_to_sz size_class)) `star`
-    A.varray (A.split_r (snd b) (u32_to_sz size_class)) `star`
+    guard_slab size_class (A.split_r (snd b) (u32_to_sz size_class)) `star`
     A.varray (fst b))
   (fun _ -> p_quarantine size_class b)
   (requires fun h0 ->
@@ -635,7 +695,7 @@ val p_quarantine_unpack (#opened:_)
   (p_quarantine size_class b)
   (fun _ ->
     quarantine_slab size_class (A.split_l (snd b) (u32_to_sz size_class)) `star`
-    A.varray (A.split_r (snd b) (u32_to_sz size_class)) `star`
+    guard_slab size_class (A.split_r (snd b) (u32_to_sz size_class)) `star`
     A.varray (fst b)
   )
   (requires fun _ -> True)
@@ -644,10 +704,10 @@ val p_quarantine_unpack (#opened:_)
     is_empty (Seq.index s 0)
   )
 
-let intro_slab_vprop_empty (#opened:_) (size_class: sc_ex)
+let intro_slab_vprop_empty (size_class: sc_ex)
   (arr: array U8.t{A.length arr = US.v slab_size})
   (arr_md: slab_metadata)
-  : SteelGhost unit opened
+  : Steel unit
   (
     A.varray arr `star`
     A.varray arr_md
@@ -685,6 +745,10 @@ let intro_slab_vprop_empty (#opened:_) (size_class: sc_ex)
     (some_as_vp #(Seq.lseq U8.t (U32.v size_class))
       (A.varray (A.split_l arr (u32_to_sz size_class))))
     (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index (G.reveal b) 0));
+  mmap_trap_guard
+    size_class
+    (A.split_r arr (u32_to_sz size_class))
+    (US.sub slab_size (u32_to_sz size_class));
   intro_slab_vprop size_class
     arr
     arr_md
