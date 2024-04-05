@@ -419,7 +419,7 @@ let calloc arena_id size1 size2
       return ptr
     ) else (
       elim_live_null_or_varray ptr;
-      let _ = apply_zeroing_u8_cond ptr size in
+      let _ = apply_zeroing_u8 ptr size in
       intro_live_null_or_varray ptr;
       return ptr
     )

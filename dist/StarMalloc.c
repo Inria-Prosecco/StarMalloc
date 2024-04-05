@@ -4487,7 +4487,7 @@ static size_t slab_getsize(uint8_t *ptr)
     size = scrut.case_Sc_ex;
   else
     size = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-  size_t index1 = index % (size_t)4U;
+  size_t index1 = index % (size_t)30U;
   if (index1 < (size_t)27U)
   {
     size_t rem_slot = diff_sz % (size_t)4096U;
@@ -4521,7 +4521,7 @@ static bool slab_free(uint8_t *ptr)
     size = scrut.case_Sc_ex;
   else
     size = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-  size_t index1 = index % (size_t)4U;
+  size_t index1 = index % (size_t)30U;
   if (index1 < (size_t)27U)
   {
     size_t rem_slab = diff_sz % sc_slab_region_size;

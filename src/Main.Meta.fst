@@ -644,7 +644,7 @@ let slab_getsize ptr =
   lemma_div_lt (US.v sc_slab_region_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
   assert (US.v index < US.v nb_size_classes * US.v nb_arenas);
   let size = get_u32 (TLA.get sizes index) in
-  let index1 = US.rem index nb_arenas in
+  let index1 = US.rem index nb_size_classes in
   if US.lt index1 nb_size_classes_sc then (
     let rem_slab = US.rem diff_sz sc_slab_region_size in
     let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
@@ -702,7 +702,7 @@ let slab_free ptr =
   lemma_div_lt (US.v sc_slab_region_size) (US.v nb_size_classes) (US.v nb_arenas) (US.v diff_sz);
   assert (US.v index < US.v nb_size_classes * US.v nb_arenas);
   let size = get_u32 (TLA.get sizes index) in
-  let index1 = US.rem index nb_arenas in
+  let index1 = US.rem index nb_size_classes in
   if US.lt index1 nb_size_classes_sc then (
     let rem_slab = US.rem diff_sz sc_slab_region_size in
     let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
