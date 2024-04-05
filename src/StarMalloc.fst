@@ -401,7 +401,7 @@ let realloc arena_id ptr new_size
       return (A.null #U8.t, G.hide (0, A.null #U8.t))
     ) else (
       // most common case
-      if (US.gt old_size (u32_to_sz page_size) && US.lte new_size old_size) then (
+      if (US.lte new_size old_size) then (
         // optimization
         (**) intro_live_null_or_varray ptr;
         (**) change_equal_slprop
