@@ -737,7 +737,7 @@ let slab_free ptr =
   ) else (
     let rem_slot = US.rem diff_sz slab_size in
     if rem_slot = 0sz then (
-      slab_free' index ptr rem_slot
+      slab_free' index ptr rem_slab
     ) else (
       return false
     )

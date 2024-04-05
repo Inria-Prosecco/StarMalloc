@@ -1008,7 +1008,6 @@ let deallocate_slab_aux_1
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   (pos: US.t{US.v pos < US.v md_count_v})
-  (pos2: US.t{US.v pos2 < US.v slab_size})
   : Steel bool
   (
     A.varray ptr `star`
@@ -1048,10 +1047,7 @@ let deallocate_slab_aux_1
     Seq.index idxs0 5 == idx6 /\
     Seq.index idxs0 6 == idx7 /\
     same_base_array arr' ptr /\
-    0 <= diff /\
-    diff < U32.v page_size /\
-    (diff % U32.v page_size) % U32.v size_class == 0 /\
-    US.v pos2 == diff /\
+    diff = 0 /\
     ALG.dataify gs0 `Seq.equal` G.reveal md_region_lv /\
     ALG.partition #AL.status gs0 (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) /\
     Seq.index (G.reveal md_region_lv) (US.v pos) = 2ul /\
@@ -1090,7 +1086,7 @@ let deallocate_slab_aux_1
   let b = deallocate_slot size_class
     (slab_array slab_region pos)
     (md_bm_array md_bm_region pos)
-    ptr pos2 in
+    ptr in
   if b then (
     if enable_quarantine then (
         upd_and_pack_slab_starseq_quarantine size_class
@@ -1782,7 +1778,6 @@ let deallocate_slab'
   //let diff_sz = UP.ptrdifft_to_sizet diff in
   assert_norm (4 < FI.max_int 16);
   let pos = US.div diff slab_size in
-  let pos2 = US.rem diff (u32_to_sz page_size) in
   // check diff/page_size < md_count
   if US.lt pos md_count_v then (
     A.ptr_shift_zero (A.ptr_of slab_region);
@@ -1802,7 +1797,7 @@ let deallocate_slab'
       let b = deallocate_slab_aux_1 ptr size_class
         slab_region md_bm_region md_region
         md_count r_idxs
-        md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 idx6 idx7 pos pos2 in
+        md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 idx6 idx7 pos in
       pack_right_and_refactor_vrefine_dep
         size_class slab_region md_bm_region md_region md_count
         r_idxs md_count_v;

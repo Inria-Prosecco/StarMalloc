@@ -472,7 +472,7 @@ let deallocate_slot (size_class: sc_ex)
   (arr: array U8.t{A.length arr = US.v slab_size})
   (md: slab_metadata)
   (ptr: array U8.t)
-  (diff_: US.t)
+  //(diff_: US.t)
   : Steel bool
   (
     A.varray ptr `star`
@@ -488,7 +488,7 @@ let deallocate_slot (size_class: sc_ex)
       = h0 (slab_vprop size_class arr md) in
     let v0 : Seq.lseq bool 1 = dfst (fst blob0) in
     same_base_array arr ptr /\
-    US.v diff_ = diff /\
+    //US.v diff_ = diff /\
     diff = 0 /\
     A.length ptr == U32.v size_class /\
     is_full (Seq.index v0 0)
