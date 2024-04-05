@@ -10,8 +10,6 @@
 
 #include "krmllib.h"
 
-extern size_t Guards2_slab_size;
-
 extern void Guards2_mmap_trap_guard(uint32_t size_class, uint8_t *arr, size_t len);
 
 

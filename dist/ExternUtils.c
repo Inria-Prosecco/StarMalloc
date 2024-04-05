@@ -5,85 +5,10 @@
   KaRaMeL version: <unknown>
  */
 
-#ifndef __Config_H
-#define __Config_H
+#include "ExternUtils.h"
 
-#include "krmllib.h"
-
-extern uint32_t Config_page_size;
-
-typedef uint32_t Config_sc;
-
-#define CONFIG_MAX_SC_COEF ((size_t)32U)
-
-extern size_t Config_sc_ex_slab_size;
-
-typedef uint32_t Config_sc_ex;
-
-#define Config_Sc 0
-#define Config_Sc_ex 1
-
-typedef uint8_t Config_sc_union_tags;
-
-typedef struct Config_sc_union_s
+void apply_zeroing_u8_cond(uint8_t *ptr, size_t n)
 {
-  Config_sc_union_tags tag;
-  union {
-    uint32_t case_Sc;
-    uint32_t case_Sc_ex;
-  }
-  ;
+  apply_zeroing_u8(ptr, n);
 }
-Config_sc_union;
 
-bool Config_uu___is_Sc(Config_sc_union projectee);
-
-bool Config_uu___is_Sc_ex(Config_sc_union projectee);
-
-uint32_t Config_get_sc(Config_sc_union scu);
-
-uint32_t Config_get_sc_ex(Config_sc_union scu);
-
-uint32_t Config_get_u32(Config_sc_union scu);
-
-#define CONFIG_NB_SIZE_CLASSES ((size_t)30U)
-
-#define CONFIG_NB_SIZE_CLASSES_SC ((size_t)27U)
-
-#define CONFIG_NB_SIZE_CLASSES_SC_EX ((size_t)3U)
-
-extern bool Config_enable_extended_size_classes;
-
-#define CONFIG_NB_ARENAS ((size_t)4U)
-
-extern size_t Config_metadata_max;
-
-extern bool Config_enable_guard_pages;
-
-extern size_t Config_guard_pages_interval;
-
-extern bool Config_enable_quarantine;
-
-extern bool Config_enable_quarantine_trap;
-
-extern bool Config_enable_quarantine_strict_trap;
-
-extern size_t Config_quarantine_queue_length;
-
-extern size_t Config_quarantine_queue_threshold;
-
-extern bool Config_enable_zeroing_malloc;
-
-extern bool Config_enable_zeroing_free;
-
-extern bool Config_enable_slab_canaries_malloc;
-
-extern bool Config_enable_slab_canaries_free;
-
-extern uint8_t Config_slab_canaries_magic1;
-
-extern uint8_t Config_slab_canaries_magic2;
-
-
-#define __Config_H_DEFINED
-#endif
