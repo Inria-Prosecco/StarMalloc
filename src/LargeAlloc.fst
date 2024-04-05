@@ -254,6 +254,8 @@ let find = Map.M.find
 
 open Config
 
+let mmap_actual_size = Mman.mmap_actual_size
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 inline_for_extraction noextract
 let large_malloc_aux
@@ -274,6 +276,7 @@ let large_malloc_aux
     let t : wdm data = dsnd blob0 in
     Spec.size_of_tree t < c /\
     US.v size > 0 /\
+    US.fits (US.v size + U32.v page_size) /\
     (enable_slab_canaries_malloc ==> US.fits (US.v size + 2))
   )
   (ensures fun h0 r h1 ->
@@ -324,6 +327,7 @@ let large_malloc_aux
       return r
     ) else (
       let h0 = get () in
+      let size_r = mmap_actual_size size in
       let md_v' = insert false md_v (ptr, size) in
       Spec.lemma_insert false (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size);
       Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
@@ -459,6 +463,7 @@ let large_malloc (size: US.t)
   (fun ptr -> null_or_varray ptr)
   (requires fun _ ->
     US.v size > 0 /\
+    US.fits (US.v size + U32.v page_size) /\
     (enable_slab_canaries_malloc ==> US.fits (US.v size + 2)))
   (ensures fun _ ptr h1 ->
     let s : (t_of (null_or_varray ptr))
@@ -603,12 +608,6 @@ let large_getsize (ptr: array U8.t)
   return r
 
 (*)
-- mmap/munmap: some improvements ahead? (better spec)
-  - mmap can fail -> null_or_varray instead of varray
-    - add a check in malloc
-    - what about initialization? could be a bit cumbersome...
-  - munmap better modelization
 - convert AVL lib to use size_t instead of u64
-
 - find: some improvements ahead? (better spec)
 - use a large vdep between avl and mmap'ed allocations?

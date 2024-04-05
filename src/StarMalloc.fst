@@ -74,6 +74,7 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
   emp
   (fun r -> null_or_varray r)
   (requires fun _ ->
+    US.fits (US.v size + U32.v page_size) /\
     (enable_slab_canaries_malloc ==> US.fits (US.v size + 2)))
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
@@ -136,6 +137,7 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
   emp
   (fun r -> null_or_varray r)
   (requires fun _ ->
+    US.fits (US.v size + U32.v page_size) /\
     (enable_slab_canaries_malloc ==> US.fits (US.v size + 2)))
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
@@ -318,6 +320,7 @@ val realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
   (requires fun _ -> within_size_classes_pred ptr /\
+    US.fits (US.v new_size + U32.v page_size) /\
     (enable_slab_canaries_malloc ==> US.fits (US.v new_size + 2)))
   (ensures fun h0 r h1 ->
     let s0 : t_of (null_or_varray ptr)
@@ -484,6 +487,7 @@ val calloc
   )
   (requires fun _ ->
     let size:nat = US.v size1 * US.v size2 in
+    US.fits (size + U32.v page_size) /\
     (enable_slab_canaries_malloc ==> US.fits (size + 2)))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
