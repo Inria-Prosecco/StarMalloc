@@ -449,7 +449,7 @@ let rec slab_aligned_alloc_i
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
       let size = get_u32 (TLA.get sizes idx) in
       admit ();
-      let b = U32.eq (U32.rem page_size size) 0ul in
+      let b = (US.rem slab_size (u32_to_sz size)) = 0sz in
       if b && bytes `U32.lte` size && alignment `U32.lte` size then (
         let r = slab_malloc_one idx bytes in
         let size_ = G.hide (get_u32 (Seq.index sc_all.g_size_classes (US.v idx)).data.size) in
@@ -500,7 +500,7 @@ let rec slab_aligned_alloc_canary_i
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
       let size = get_u32 (TLA.get sizes idx) in
       admit ();
-      let b = U32.eq (U32.rem page_size size) 0ul in
+      let b = (US.rem slab_size (u32_to_sz size)) = 0sz in
       if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then (
         let ptr = slab_malloc_one idx bytes in
         let size_ = G.hide (get_u32 (Seq.index sc_all.g_size_classes (US.v idx)).data.size) in
