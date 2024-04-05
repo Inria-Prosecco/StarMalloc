@@ -259,15 +259,32 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
     )
   )
   =
-  admit ();
-  let sc = index sc_all.ro_perm i in
-  L.acquire sc.lock;
-  let sc = index sc_all.ro_perm i in
-  change_equal_slprop (size_class_vprop _) (size_class_vprop _);
-  let ptr = allocate_size_class sc.data in
-  let sc = index sc_all.ro_perm i in
-  change_equal_slprop (size_class_vprop _) (size_class_vprop _);
-  L.release sc.lock;
+  let ptr = with_lock_roarray
+    size_class_struct
+    unit
+    (array U8.t)
+    size_class
+    sc_all.size_classes
+    (G.reveal sc_all.g_size_classes)
+    sc_all.ro_perm
+    (fun v0 -> size_class_vprop v0)
+    (fun s -> s.data)
+    (fun s -> s.lock)
+    (fun v1 -> emp)
+    (fun v1 r -> null_or_varray r)
+    i
+    ()
+    (fun _ _ r x1 ->
+      let size = (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size in
+      not (is_null r) ==> (
+        A.length r == U32.v size /\
+        A.length r >= U32.v bytes /\
+        array_u8_alignment r 16ul /\
+        ((U32.v page_size) % (U32.v size) == 0 ==> array_u8_alignment r size)
+      )
+    )
+    (fun sc_data -> allocate_size_class (G.hide i) sc_data)
+  in
   return ptr
 #pop-options
 
