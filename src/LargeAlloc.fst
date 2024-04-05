@@ -271,9 +271,6 @@ let mmap_actual_size (size: US.t)
   else size
 #pop-options
 
-noextract inline_for_extraction
-let mmap_actual_size = Mman.mmap_actual_size
-
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 inline_for_extraction noextract
 let large_malloc_aux
