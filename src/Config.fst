@@ -42,7 +42,9 @@ let sc_list_ex : list sc_ex = [
   //10240ul; 12288ul; 14336ul;
   16384ul;
   //20480ul; 24576ul; 28672ul;
-  32768ul
+  32768ul;
+  65536ul;
+  131072ul
 ]
 
 //DO NOT EDIT, edit sc_list_{sc,ex} instead
