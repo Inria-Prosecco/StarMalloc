@@ -583,12 +583,31 @@ val init_wrapper2
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 300 --query_stats --split_queries always"
+let split_r_length_lemma (#a: Type)
+  (arr: array a)
+  (n: US.t)
+  (k: US.t)
+  (c: US.t)
+  : Lemma
+  (requires
+    A.length arr == US.v c * US.v n /\
+    US.v k <= US.v n /\
+    US.fits (US.v c * US.v n)
+  )
+  (ensures
+    A.length (A.split_r arr (US.mul c k)) == US.v c * (US.v n - US.v k)
+  )
+  = ()
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 500 --query_stats"
 let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   =
   f_lemma n k;
   f_lemma n k';
   f_lemma n (US.sub n k);
+  split_r_length_lemma slab_region n k (US.mul metadata_max (u32_to_sz page_size));
+  split_r_length_lemma md_bm_region n k (US.mul metadata_max 4sz);
+  split_r_length_lemma md_region n k metadata_max;
   let data = init_struct (US.sub n k) sc
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k))
     (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k))
@@ -613,7 +632,6 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   let lock = L.new_lock (size_class_vprop data) in
   let sc = {data; lock} in
   return sc
-
 #pop-options
 
 module G = FStar.Ghost
