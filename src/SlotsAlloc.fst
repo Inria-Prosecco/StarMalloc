@@ -22,7 +22,9 @@ open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
+#push-options "--fuel 0 --ifuel 0"
+
+#push-options "--z3rlimit 50"
 let slot_array (size_class: sc) (arr: array U8.t) (pos: U32.t)
   : Pure (array U8.t)
   (requires
@@ -58,6 +60,7 @@ let slot_vprop
   =
   A.varray (slot_array size_class arr pos)
 
+#push-options "--fuel 1 --ifuel 1"
 let slot_vprop_lemma
   (size_class: sc)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
@@ -66,6 +69,7 @@ let slot_vprop_lemma
   (t_of (slot_vprop size_class arr pos) == Seq.lseq U8.t (U32.v size_class))
   =
   ()
+#pop-options
 
 let slab_vprop_aux_f
   (size_class: sc)
@@ -78,6 +82,7 @@ let slab_vprop_aux_f
   slot_vprop_lemma size_class arr i;
   c2 #(Seq.lseq U8.t (U32.v size_class)) (not (Bitmap4.get md_as_seq i)) vp
 
+#push-options "--fuel 1 --ifuel 1"
 let slab_vprop_aux_f_lemma
   (size_class: sc)
   (md_as_seq: Seq.lseq U64.t 4)
@@ -92,6 +97,7 @@ let slab_vprop_aux_f_lemma
   let vp = slot_vprop size_class arr i in
   slot_vprop_lemma size_class arr i;
   c2_t #(Seq.lseq U8.t (U32.v size_class)) (Bitmap4.get md_as_seq i) vp
+#pop-options
 
 let slab_vprop_aux
   (size_class: sc)
@@ -108,6 +114,7 @@ let slab_vprop_aux
     (slab_vprop_aux_f_lemma size_class md_as_seq arr)
     incr_seq
 
+#push-options "--fuel 1 --ifuel 1"
 let slab_vprop_aux_lemma
   (size_class: sc)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
@@ -120,6 +127,7 @@ let slab_vprop_aux_lemma
   =
   assert (Seq.length (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))) == U32.v (nb_slots size_class));
   ()
+#pop-options
 
 let slab_vprop_aux2
   (size_class: sc)
@@ -137,6 +145,7 @@ let slab_vprop_aux2
 
 open SteelVRefineDep
 
+#push-options "--fuel 1 --ifuel 1"
 let slab_vprop
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -148,7 +157,9 @@ let slab_vprop
     (fun (md_as_seq: Seq.lseq U64.t 4) -> slab_vprop_aux size_class (A.split_l arr (rounding size_class)) md_as_seq)
   `star`
   A.varray (A.split_r arr (rounding size_class))
+#pop-options
 
+#push-options "--fuel 1 --ifuel 1"
 let slab_vprop_lemma_aux
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -196,7 +207,9 @@ let slab_vprop_lemma_aux
        (Seq.length (SeqUtils.init_u32_refined (UInt32.v (nb_slots size_class)))))
      (Seq.lseq (G.erased (option (Seq.lseq U8.t (U32.v size_class))))
        (U32.v (nb_slots size_class)))
+#pop-options
 
+#push-options "--fuel 1 --ifuel 1"
 let slab_vprop_lemma
   (size_class: sc)
   (arr: array U8.t{A.length arr = U32.v page_size})
@@ -214,6 +227,7 @@ let slab_vprop_lemma
   slab_vprop_lemma_aux size_class arr md;
   assert(A.length (A.split_r arr (rounding size_class)) == U32.v page_size - US.v (rounding size_class));
   assert(t_of (A.varray (A.split_r arr (rounding size_class))) == Seq.lseq U8.t (U32.v page_size - US.v (rounding size_class)))
+#pop-options
 
 //[@@ __steel_reduce__]
 //let v_slab_vprop_slabs (#p:vprop)
@@ -232,7 +246,7 @@ let slab_vprop_lemma
 //  slab_vprop_aux_lemma size_class (A.split_l arr (rounding size_class)) (dfst (fst blob));
 //  dsnd (fst blob)
 
-#push-options "--print_implicits"
+//#push-options "--print_implicits"
 
 noextract
 let a2bv = Bitmap4.array_to_bv2 #4
@@ -456,6 +470,7 @@ let apply_starseq_upd (#opened:_)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (U32.v pos)
 
+#push-options "--fuel 1 --ifuel 1"
 let starseq_upd_aux_lemma3
   (size_class: sc)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
@@ -483,7 +498,9 @@ let starseq_upd_aux_lemma3
   equiv_get_a2bv_index size_class md_as_seq (U32.v pos);
   assert (Bitmap4.get md_as_seq pos = Seq.index bm k_index);
   assert (Bitmap4.get md_as_seq pos = false)
+#pop-options
 
+#push-options "--fuel 1 --ifuel 1"
 let get_slot_as_returned_value
   (size_class: sc)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
@@ -528,6 +545,7 @@ let get_slot_as_returned_value
       x' == Some y')
     (fun _ -> ());
   return r
+#pop-options
 
 noextract inline_for_extraction
 let allocate_slot_aux
@@ -764,6 +782,7 @@ let get_free_slot (size_class: sc) (bitmap: slab_metadata)
     get_free_slot_aux2 size_class bitmap
   )
 
+#push-options "--fuel 1 --ifuel 1"
 let elim_slab_vprop_aux
   (size_class: sc)
   (md: slab_metadata)
@@ -792,8 +811,9 @@ let elim_slab_vprop_aux
   ==
   sel_of (slab_vprop size_class arr md) m)
   = ()
+#pop-options
 
-#push-options "--z3rlimit 30 --compat_pre_typed_indexed_effects"
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 30"
 let intro_slab_vprop (#opened:_)
   (size_class: sc)
   (md: slab_metadata)
@@ -832,9 +852,11 @@ let intro_slab_vprop (#opened:_)
     `star`
     A.varray (A.split_r arr (rounding size_class)))
     (slab_vprop size_class arr md)
+#pop-options
 
 // without compat_pre_typed_indexed_effects
 // this fails in lax mode
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 30 --compat_pre_typed_indexed_effects"
 let elim_slab_vprop (#opened:_)
   (size_class: sc)
   (md: slab_metadata)
@@ -888,7 +910,7 @@ let elim_slab_vprop (#opened:_)
   md_as_seq2
 #pop-options
 
-#push-options "--z3rlimit 150 --fuel 0 --ifuel 0"
+#push-options "--z3rlimit 150"
 let bound2_inv
   (size_class: sc)
   (md_as_seq: Seq.lseq U64.t 4)
@@ -926,6 +948,9 @@ let bound2_inv
   )
 #pop-options
 
+#restart-solver
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let allocate_slot
   (size_class: sc)
   (md: slab_metadata)
@@ -972,6 +997,11 @@ let allocate_slot
     pos in
   set_lemma_nonempty size_class (G.reveal md_as_seq) (Bitmap4.set (G.reveal md_as_seq) pos) pos;
   bound2_inv size_class (G.reveal md_as_seq) pos;
-  intro_slab_vprop size_class md (G.hide (Bitmap4.set (G.reveal md_as_seq) pos)) arr;
+  let md_as_seq' : G.erased (Seq.lseq U64.t 4)
+    = G.hide (Bitmap4.set #4 md_as_seq pos) in
+  change_equal_slprop
+    (slab_vprop_aux _ _ _)
+    (slab_vprop_aux _ _ _);
+  intro_slab_vprop size_class md md_as_seq' arr;
   return r
 #pop-options
