@@ -998,10 +998,14 @@ let allocate_slot
   set_lemma_nonempty size_class (G.reveal md_as_seq) (Bitmap4.set (G.reveal md_as_seq) pos) pos;
   bound2_inv size_class (G.reveal md_as_seq) pos;
   let md_as_seq' : G.erased (Seq.lseq U64.t 4)
-    = G.hide (Bitmap4.set #4 md_as_seq pos) in
+    = G.hide (Bitmap4.set md_as_seq pos) in
   change_equal_slprop
-    (slab_vprop_aux _ _ _)
-    (slab_vprop_aux _ _ _);
+    (slab_vprop_aux
+      size_class (A.split_l arr (rounding size_class))
+      (Bitmap4.set md_as_seq pos))
+    (slab_vprop_aux
+      size_class (A.split_l arr (rounding size_class))
+      md_as_seq');
   intro_slab_vprop size_class md md_as_seq' arr;
   return r
 #pop-options
