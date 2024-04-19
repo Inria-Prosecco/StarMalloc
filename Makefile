@@ -11,6 +11,7 @@ include Makefile.include
 
 FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_INCLUDES) \
     --already_cached 'FStar Steel C Prims' \
+    --compat_pre_typed_indexed_effects \
 		--cmi --odir obj --cache_dir obj \
 		$(OTHERFLAGS)
 
