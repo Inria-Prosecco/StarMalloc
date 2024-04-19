@@ -18,7 +18,7 @@ on:
 
 jobs:
   test:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, nix]
     steps:
       - name: checkout
         uses: actions/checkout@v4
