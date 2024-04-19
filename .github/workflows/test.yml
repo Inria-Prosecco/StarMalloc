@@ -1,0 +1,33 @@
+name: Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      fstar:
+        description: "F*"
+        type: "string"
+        default: "master"
+      karamel:
+        description: "Karamel"
+        type: "string"
+        default: "master"
+      steel:
+        description: "Steel"
+        type: "string"
+        default: "main"
+
+jobs:
+  test:
+    runs-on: self-hosted
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: update lock file
+        run: |
+          nix flake update \
+            --override-input fstar "github:fstarlang/fstar/${{ inputs.fstar }}" \
+            --override-input karamel "github:fstarlang/karamel/${{ inputs.karamel }}" \
+            --override-input steel "github:fstarlang/steel/${{ inputs.steel }}"
+      - name: build StarMalloc
+        run: |
+          nix build -L .#starmalloc
