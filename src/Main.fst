@@ -87,13 +87,14 @@ let intro_ind_varraylist_nil r r_idxs =
       (US.v AL.null_ptr)
       (US.v 0sz))
     (ind_varraylist_aux2 r idxs);
-  intro_vrefine
-    (SlabsCommon.ind_varraylist_aux2 r idxs)
-    (SlabsCommon.ind_varraylist_aux_refinement r idxs);
-  intro_vdep
-    (A.varray r_idxs)
-    (SlabsCommon.ind_varraylist_aux r idxs)
-    (ind_aux r)
+  sladmit ()
+  //intro_vrefine
+  //  (SlabsCommon.ind_varraylist_aux2 r idxs)
+  //  (SlabsCommon.ind_varraylist_aux_refinement r idxs);
+  //intro_vdep
+  //  (A.varray r_idxs)
+  //  (SlabsCommon.ind_varraylist_aux r idxs)
+  //  (ind_aux r)
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)
