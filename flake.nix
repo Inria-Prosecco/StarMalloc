@@ -4,17 +4,17 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
-      url = "github:FStarLang/FStar";
+      url = "github:FStarLang/FStar?rev=bb9e55a2bf04feef4a26b7f8bdc69fc5e595dc57";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
-      url = "github:FStarLang/steel";
+      url = "github:FStarLang/steel?rev=876bf9343a3fa4b8ab2e3b26e3574c7a445c3cd8";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
     };
     krml-src = {
-      url = "github:FStarLang/karamel";
+      url = "github:FStarLang/karamel?rev=9e3c8dfb0e4925be49270e690ad839a7451bdb1a";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";

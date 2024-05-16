@@ -440,12 +440,13 @@ val calloc
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
   (requires fun _ ->
-    let size:nat = US.v size1 * US.v size2 in
+    let size = US.v size1 * US.v size2 in
     (enable_slab_canaries_malloc ==> US.fits (size + 2)))
   (ensures fun _ r h1 ->
     let size = US.v size1 * US.v size2 in
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
+    null_or_varray_t r;
     not (A.is_null r) ==> (
       A.length r >= size /\
       zf_u8 (Seq.slice s 0 size) /\
