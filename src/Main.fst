@@ -31,9 +31,6 @@ open Mman
 #push-options  "--ide_id_info_off"
 (**  Handwritten mmap functions to allocate basic data structures *)
 
-let ind_aux r idxs : vprop =
-  SlabsCommon.ind_varraylist_aux r idxs
-
 val intro_ind_varraylist_nil (#opened:_)
   (r: A.array AL.cell)
   (r_idxs: A.array US.t{A.length r_idxs = 7})
@@ -87,14 +84,13 @@ let intro_ind_varraylist_nil r r_idxs =
       (US.v AL.null_ptr)
       (US.v 0sz))
     (ind_varraylist_aux2 r idxs);
-  sladmit ()
-  //intro_vrefine
-  //  (SlabsCommon.ind_varraylist_aux2 r idxs)
-  //  (SlabsCommon.ind_varraylist_aux_refinement r idxs);
-  //intro_vdep
-  //  (A.varray r_idxs)
-  //  (SlabsCommon.ind_varraylist_aux r idxs)
-  //  (ind_aux r)
+  intro_vrefine
+    (SlabsCommon.ind_varraylist_aux2 r idxs)
+    (SlabsCommon.ind_varraylist_aux_refinement r idxs);
+  intro_vdep
+    (A.varray r_idxs)
+    (SlabsCommon.ind_varraylist_aux r idxs)
+    _
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)

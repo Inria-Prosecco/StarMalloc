@@ -9,7 +9,7 @@ KRML_EXE = $(KRML_HOME)/krml
 
 include Makefile.include
 
-FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_INCLUDES) \
+FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_EMACS_PARAMS) \
     --already_cached 'FStar Steel C Prims' \
     --compat_pre_typed_indexed_effects \
 		--cmi --odir obj --cache_dir obj \
