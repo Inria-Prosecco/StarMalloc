@@ -31,8 +31,9 @@ let create_leaf
     (G.reveal p) ptr)
 
   =
-  admit ();
+  reveal_null_t #node;
   intro_linked_tree_leaf p ();
+  extract_pred p null_t;
   return null_t
 
 //@Trees

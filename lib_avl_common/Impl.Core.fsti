@@ -65,7 +65,12 @@ val mk_node (#a: Type0)
 (**** Slprop and selector *)
 
 inline_for_extraction noextract
-val null_t (#a: Type0) : v:t a//{v == null}
+val null_t (#a: Type0) : t a
+
+val reveal_null_t (#a: Type0)
+  : Lemma
+  (null_t #a == null #(node a))
+
 inline_for_extraction noextract
 val is_null_t (#a: Type0) (r: t a) : (b:bool{b <==> r == null_t})
 

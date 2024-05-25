@@ -36,6 +36,9 @@ let mk_node #a data left right size height = {
 }
 
 let null_t #a = null
+
+let reveal_null_t #a = ()
+
 let is_null_t #a ptr = is_null ptr
 
 let rec tree_sl' (#a: Type0) (p: hpred a) (ptr: t a) (tree: wdm (node a))
@@ -285,7 +288,7 @@ let lemma_extract_pred (#a:Type) (p: hpred a) (ptr:t a) (t:wdm a) (m:mem)
   tree_sel_interp p ptr t' m;
   match reveal t' with
   | Spec.Leaf -> lemma_leaf_is_null p ptr t m
-  | Spec.Node _ _ _ _ _ -> admit ()
+  | Spec.Node _ _ _ _ _ -> Mem.pure_interp ((G.reveal p) ptr) m
 
 let extract_pred #opened #a p ptr =
   let h = get () in
@@ -695,31 +698,6 @@ let unpack_tree_node (#a:Type0) (p: hpred a) (ptr:t a)
 #restart-solver
 
 let unpack_tree (#a: Type0) (p: hpred a) (ptr: t a)
-//    : Steel (node a)
-//      (linked_tree p ptr)
-//      (fun node ->
-//        vptr ptr `star`
-//        linked_tree p (get_left node) `star`
-//        linked_tree p (get_right node))
-//      (requires (fun h0 -> not (is_null_t ptr)))
-//      (ensures (fun h0 node h1 ->
-//        v_linked_tree p ptr h0 == Spec.Node
-//          (get_data (sel ptr h1))
-//          (v_linked_tree p (get_left node) h1)
-//          (v_linked_tree p (get_right node) h1)
-//          (U.v (get_size node))
-//          (U.v (get_height node)) /\
-//        (sel ptr h1) == node /\
-//        U.v (get_size node)
-//        == Spec.size_of_tree (v_linked_tree p (get_left node) h1)
-//         + Spec.size_of_tree (v_linked_tree p (get_right node) h1) + 1 /\
-//        U.v (get_size node) <= c /\
-//        U.v (get_height node)
-//        == M.max (Spec.height_of_tree (v_linked_tree p (get_left node) h1))
-//                 (Spec.height_of_tree (v_linked_tree p (get_right node) h1)) + 1 /\
-//        U.v (get_height node) <= c /\
-//        (G.reveal p) ptr
-//      ))
   =
   let h0 = get() in
   change_slprop_rel
