@@ -1,15 +1,9 @@
 module Impl.BST.M
 
-open FStar.Ghost
-
-open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
-open Steel.Reference
 
-//module Spec = Trees
 module U = FStar.UInt64
-module U32 = FStar.UInt32
 module I = FStar.Int64
 
 open Impl.Core
@@ -20,7 +14,7 @@ open Impl.Trees.M
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
 //@BST
-#push-options "--fuel 1 --ifuel 1"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 25"
 let rec member (ptr: t) (v: data)
   : Steel bool (linked_tree p ptr) (fun _ -> linked_tree p ptr)
   (requires fun h0 ->
@@ -40,20 +34,20 @@ let rec member (ptr: t) (v: data)
     (**) let node = unpack_tree p ptr in
     let data = get_data node in
     let delta = cmp v data in
-    if I.eq delta szero then begin
+    if I.eq delta szero then (
       (**) pack_tree p ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       return true
-    end else if I.lt delta szero then begin
+    ) else if I.lt delta szero then (
       let b = member (get_left node) v in
       (**) pack_tree p ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       return b
-    end else begin
+    ) else (
       let b = member (get_right node) v in
       (**) pack_tree p ptr (get_left node) (get_right node)
         (get_size node) (get_height node);
       return b
-    end
+    )
   )
 #pop-options

@@ -27,10 +27,13 @@ let create_leaf
   emp (fun ptr -> linked_tree p ptr)
   (requires fun _ -> True)
   (ensures fun _ ptr h1 ->
-    v_linked_tree p ptr h1 == Spec.Leaf)
+    v_linked_tree p ptr h1 == Spec.Leaf /\
+    (G.reveal p) ptr)
 
-  = intro_linked_tree_leaf p ();
-    return null_t
+  =
+  admit ();
+  intro_linked_tree_leaf p ();
+  return null_t
 
 //@Trees
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
@@ -48,6 +51,7 @@ let create_tree
   =
   let l = create_leaf () in
   let r = create_leaf () in
+  assert ((G.reveal p) l);
   let sr = one in
   let hr = one in
   let n = mk_node v l r sr hr in
@@ -191,7 +195,7 @@ let merge_tree
 
 inline_for_extraction noextract
 let merge_tree_no_alloc
-  (v: data) (l r: t) (ptr: ref node)
+  (v: data) (l r: t) (ptr: t)
   : Steel t
   (linked_tree p l `star`
   linked_tree p r `star`

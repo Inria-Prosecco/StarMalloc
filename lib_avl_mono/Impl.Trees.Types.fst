@@ -183,7 +183,7 @@ let p : hpred data
   )
 #pop-options
 
-let t = t data
+let t = x:(t data){(G.reveal p) x}
 
 // CAUTION:
 // the refinement implies that the injectivity
