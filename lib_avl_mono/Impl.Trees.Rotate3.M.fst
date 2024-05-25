@@ -1,25 +1,19 @@
 module Impl.Trees.Rotate3.M
 
-open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
-open Steel.Reference
 
 module U = FStar.UInt64
-module U32 = FStar.UInt32
+module G = FStar.Ghost
 
 open Spec.Trees
 open Impl.Core
-open Impl.Common
 open Impl.Trees.Types
 open Impl.Trees.M
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-#restart-solver
-
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let rotate_left_right (ptr: t)
+val rotate_left_right (ptr: t)
   : Steel t
   (linked_tree p ptr)
   (fun ptr' -> linked_tree p ptr')
@@ -33,19 +27,26 @@ let rotate_left_right (ptr: t)
     rotate_left_right (v_linked_tree p ptr h0)
     == Some (v_linked_tree p ptr' h1)
   ))
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 75"
+let rotate_left_right ptr
   =
+  let h0 = get () in
+  let s0 = G.hide (size_of_tree (v_linked_tree p ptr h0)) in
+  assert (G.reveal s0 <= c);
   (**) node_is_not_null p ptr;
   // original root node
   (**) let x_node = unpack_tree p ptr in
+
   let x = get_data x_node in
   (**) node_is_not_null p (get_left x_node);
   // original left node
   // z = get_left x_node
   (**) let z_node = unpack_tree p (get_left x_node) in
+
   let z = get_data z_node in
   (**) node_is_not_null p (get_right z_node);
   // original right (left node)
-  // y = get_right (z_node)
   (**) let y_node = unpack_tree p (get_right z_node) in
   let y = get_data y_node in
 

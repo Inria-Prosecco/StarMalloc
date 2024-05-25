@@ -59,6 +59,7 @@ type mmap_md =
     lock : L.lock (ind_linked_wf_tree data);
   }
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let init_mmap_md (_:unit)
   : SteelTop mmap_md false (fun _ -> emp) (fun _ _ _ -> True)
   =
@@ -69,6 +70,7 @@ let init_mmap_md (_:unit)
   (**) intro_vdep (vptr ptr) (linked_wf_tree tree) linked_wf_tree;
   let lock = L.new_lock (ind_linked_wf_tree ptr) in
   return { data=ptr; lock=lock; }
+#pop-options
 
 // intentional top-level effect for initialization
 // corresponding warning temporarily disabled
@@ -164,7 +166,7 @@ let trees_malloc2 (x: node)
       not (is_null r) /\
       (G.reveal p) r
     )
-    (fun _ -> trees_malloc2_aux x) 
+    (fun _ -> trees_malloc2_aux x)
   in
   return r
 
@@ -255,6 +257,23 @@ let find = Map.M.find
 open Config
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+[@@ __steel_reduce__]
+let v_ind_tree
+  (#vp:vprop)
+  (ptr: ref t)
+  (h:rmem vp{
+    FStar.Tactics.with_tactic selector_tactic (can_be_split vp (ind_linked_wf_tree ptr) /\ True)
+  })
+  : GTot (wdm data)
+  =
+  let x
+    : t_of (ind_linked_wf_tree ptr)
+    = h (ind_linked_wf_tree ptr) in
+  assert_norm (vdep_payload (vptr ptr) linked_wf_tree (dfst x) == (x: wdm data{is_wf x}));
+  dsnd x
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 inline_for_extraction noextract
 let large_malloc_aux
   (metadata_ptr: ref t)
@@ -268,23 +287,14 @@ let large_malloc_aux
     ind_linked_wf_tree metadata_ptr
   )
   (requires fun h0 ->
-    let blob0
-      : t_of (ind_linked_wf_tree metadata_ptr)
-      = h0 (ind_linked_wf_tree metadata_ptr) in
-    let t : wdm data = dsnd blob0 in
+    let t : wdm data = v_ind_tree metadata_ptr h0 in
     Spec.size_of_tree t < c /\
     US.v size > 0 /\
     (enable_slab_canaries_malloc ==> US.fits (US.v size + 2))
   )
   (ensures fun h0 r h1 ->
-    let blob0
-      : t_of (ind_linked_wf_tree metadata_ptr)
-      = h0 (ind_linked_wf_tree metadata_ptr) in
-    let t : wdm data = dsnd blob0 in
-    let blob1
-      : t_of (ind_linked_wf_tree metadata_ptr)
-      = h1 (ind_linked_wf_tree metadata_ptr) in
-    let t' : wdm data = dsnd blob1 in
+    let t : wdm data = v_ind_tree metadata_ptr h0 in
+    let t' : wdm data = v_ind_tree metadata_ptr h1 in
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
     Spec.is_avl (spec_convert cmp) t /\
@@ -340,9 +350,7 @@ let _size (metadata: ref t) : Steel U64.t
   (fun _ -> ind_linked_wf_tree metadata)
   (requires fun _ -> True)
   (ensures fun h0 r h1 ->
-    let blob0 : t_of (ind_linked_wf_tree metadata)
-      = h0 (ind_linked_wf_tree metadata) in
-    let t : wdm data = dsnd blob0 in
+    let t : wdm data = v_ind_tree metadata h0 in
     h1 (ind_linked_wf_tree metadata)
     ==
     h0 (ind_linked_wf_tree metadata) /\
@@ -377,14 +385,8 @@ let large_free_aux
   )
   (requires fun h0 -> True)
   (ensures fun h0 b h1 ->
-    let blob0
-      : t_of (ind_linked_wf_tree metadata_ptr)
-      = h0 (ind_linked_wf_tree metadata_ptr) in
-    let t : wdm data = dsnd blob0 in
-    let blob1
-      : t_of (ind_linked_wf_tree metadata_ptr)
-      = h1 (ind_linked_wf_tree metadata_ptr) in
-    let t' : wdm data = dsnd blob1 in
+    let t : wdm data = v_ind_tree metadata_ptr h0 in
+    let t' : wdm data = v_ind_tree metadata_ptr h1 in
     b ==> (
       US.fits (A.length ptr) /\
       A.length ptr >= 2 /\
@@ -401,7 +403,9 @@ let large_free_aux
     not b ==> (
       not (Spec.mem (spec_convert cmp) t
         (ptr, 0sz)) /\
-      blob0 == blob1
+      h1 (ind_linked_wf_tree metadata_ptr)
+      ==
+      h0 (ind_linked_wf_tree metadata_ptr)
     )
   )
   =
@@ -534,13 +538,13 @@ let large_getsize_aux (metadata: ref t) (ptr: array U8.t)
   (fun _ -> A.varray ptr `star` ind_linked_wf_tree metadata)
   (requires fun _ -> True)
   (ensures fun h0 r h1 ->
-    h0 (A.varray ptr `star` ind_linked_wf_tree metadata)
+    h0 (A.varray ptr)
     ==
-    h1 (A.varray ptr `star` ind_linked_wf_tree metadata) /\
+    h1 (A.varray ptr) /\
     A.asel ptr h1 == A.asel ptr h0 /\
-    h1 (ind_linked_wf_tree metadata)
-    ==
-    h0 (ind_linked_wf_tree metadata) /\
+    //h1 (ind_linked_wf_tree metadata)
+    //==
+    //h0 (ind_linked_wf_tree metadata) /\
     (US.v r > 0 ==>
       (enable_slab_canaries_malloc ==> A.length ptr == US.v r + 2) /\
       (not enable_slab_canaries_malloc ==> A.length ptr == US.v r)

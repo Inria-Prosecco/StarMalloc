@@ -1,19 +1,13 @@
 module Impl.Trees.Rotate.M
 
-open FStar.Ghost
-
-open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
-open Steel.Reference
 
 module U = FStar.UInt64
-module U32 = FStar.UInt32
-module I = FStar.Int64
+module G = FStar.Ghost
 
 open Spec.Trees
 open Impl.Core
-open Impl.Common
 open Impl.Trees.Types
 open Impl.Trees.M
 

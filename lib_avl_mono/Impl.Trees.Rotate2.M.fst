@@ -1,26 +1,18 @@
 module Impl.Trees.Rotate2.M
 
-//open FStar.Ghost
-
-open Steel.Memory
 open Steel.Effect.Atomic
 open Steel.Effect
-open Steel.Reference
 
 module U = FStar.UInt64
-module U32 = FStar.UInt32
-//module I = FStar.Int64
 
 open Spec.Trees
 open Impl.Core
-open Impl.Common
 open Impl.Trees.Types
 open Impl.Trees.M
 
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 75"
-let rotate_right_left (ptr: t)
+val rotate_right_left (ptr: t)
   : Steel t
   (linked_tree p ptr)
   (fun ptr' -> linked_tree p ptr')
@@ -34,7 +26,15 @@ let rotate_right_left (ptr: t)
     rotate_right_left (v_linked_tree p ptr h0)
     == Some (v_linked_tree p ptr' h1)
   ))
+
+module G = FStar.Ghost
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 75"
+let rotate_right_left ptr
   =
+  let h0 = get () in
+  let s0 = G.hide (size_of_tree (v_linked_tree p ptr h0)) in
+  assert (G.reveal s0 <= c);
   (**) node_is_not_null p ptr;
   // original root node
   (**) let x_node = unpack_tree p ptr in

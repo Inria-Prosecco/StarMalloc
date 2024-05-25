@@ -1,6 +1,6 @@
 module Impl.AVL.M
 
-open FStar.Ghost
+module G = FStar.Ghost
 
 open Steel.Memory
 open Steel.Effect.Atomic
@@ -22,7 +22,7 @@ open Impl.BST.M
 #set-options "--fuel 0 --ifuel 0 --ide_id_info_off"
 
 //@AVL
-#push-options "--fuel 1 --ifuel 1"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec is_balanced_global (ptr: t)
   : Steel bool (linked_tree p ptr) (fun _ -> linked_tree p ptr)
   (requires fun h0 -> True)
@@ -30,11 +30,14 @@ let rec is_balanced_global (ptr: t)
       v_linked_tree p ptr h0 == v_linked_tree p ptr h1 /\
       Spec.is_balanced_global (v_linked_tree p ptr h0) == b))
   =
+  let h = get () in
+  let t = G.hide (v_linked_tree p ptr h) in
   if is_null_t ptr then (
     (**) null_is_leaf p ptr;
     return true
   ) else (
     let h = get () in
+    let s = G.hide (Spec.size_of_tree (v_linked_tree p ptr h)) in
     Spec.height_lte_size (v_linked_tree p ptr h);
     (**) let node = unpack_tree p ptr in
     let lh = hot_wdh (get_left node) in
@@ -214,9 +217,9 @@ let rec insert_avl
     Spec.insert_avl r (convert cmp) (v_linked_tree p ptr h0) new_data
     == v_linked_tree p ptr' h1)
   =
-  //let h0 = get () in
-  //let t1 = hide (v_linked_tree ptr h0) in
-  //assert (Spec.size_of_tree (reveal t1) < c);
+  let h = get () in
+  let t = G.hide (v_linked_tree p ptr h) in
+  assert (Spec.size_of_tree (G.reveal t) < c);
   //Spec.height_lte_size (v_linked_tree ptr h0);
   //let height_tree = hide (Spec.height_of_tree (reveal t1)) in
   //assert (reveal height_tree < c);
@@ -316,6 +319,8 @@ let rec remove_leftmost_avl
     == Spec.size_of_tree (v_linked_tree p ptr h0) - 1 /\
     Spec.is_avl (convert cmp) (v_linked_tree p ptr h0))
   =
+  let h = get () in
+  let t = G.hide (v_linked_tree p ptr h) in
   (**) node_is_not_null p ptr;
   (**) let node = unpack_tree p ptr in
   if is_null_t (get_left node) then (
@@ -340,8 +345,7 @@ let cright = Spec.cright
 let csize = Spec.csize
 let cheight = Spec.cheight
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
-//#push-options "--fuel 1 --ifuel 1"
+#push-options "--fuel 1 --ifuel 2 --z3rlimit 100"
 inline_for_extraction noextract
 let delete_avl_aux0
   (f1: f_malloc) (f2: f_free)
@@ -361,6 +365,8 @@ let delete_avl_aux0
     == Spec.delete_avl_aux0
       (convert cmp) (v_linked_tree p ptr h0) data_to_rm)
   =
+  let h = get () in
+  let t = G.hide (v_linked_tree p ptr h) in
   (**) node_is_not_null p ptr;
   (**) let node = unpack_tree p ptr in
   if is_null_t (get_right node) then (
@@ -382,6 +388,8 @@ let delete_avl_aux0
   )
 #pop-options
 
+#restart-solver
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
 let rec delete_avl
   (f1: f_malloc) (f2: f_free)
@@ -394,6 +402,8 @@ let rec delete_avl
     Spec.delete_avl (convert cmp) (v_linked_tree p ptr h0) data_to_rm
     == v_linked_tree p ptr' h1)
   =
+  let h = get () in
+  let t = G.hide (v_linked_tree p ptr h) in
   if is_null_t ptr then (
     (**) null_is_leaf p ptr;
     return ptr
