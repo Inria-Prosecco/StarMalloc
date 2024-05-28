@@ -137,22 +137,22 @@ free(ptr)
 ## Symbols provided by StarMalloc
 
 The following symbols are provided:
-1. as part of C standard library: malloc, calloc, realloc, free, aligned_alloc (C11), free_sized (C23, to be refined), free_aligned_sized (C23, to be refined);
-2. other symbols: posix_memalign (POSIX), malloc_usable_size (GNU), memalign (seems to be quite standard).
+1. as part of C standard library: `malloc`, `calloc`, `realloc`, `free, aligned_alloc` (C11), `free_sized` (C23, to be refined), `free_aligned_sized` (C23, to be refined);
+2. other symbols: `posix_memalign` (POSIX), `malloc_usable_size` (GNU), `memalign` (seems to be quite standard).
 
 pvalloc and valloc are not yet provided for compatibility purpose, cfree is not yet provided as a fatal error stub. (Note: The cfree has been removed since glibc 2.26, current Debian oldoldstable glibc = 2.28, as of 2024-02-05.)
 
 ## External repositories
 
-- hardened\_malloc: https://github.com/GrapheneOS/hardened_malloc
-- F\*: https://github.com/FStarLang/FStar
-- Steel: https://github.com/FStarLang/steel
-- KaRaMeL: https://github.com/FStarLang/karamel
-- mimalloc-bench: https://github.com/daanx/mimalloc-bench
+- [hardened\_malloc](https://github.com/GrapheneOS/hardened_malloc)
+- [F\*](https://github.com/FStarLang/FStar)
+- [Steel](https://github.com/FStarLang/steel)
+- [KaRaMeL](https://github.com/FStarLang/karamel)
+- [mimalloc-bench](https://github.com/daanx/mimalloc-bench)
 
 ## Future work
 
-- free_sized (C23) and free_aligned_sized (C23) implementations could be refined to be stricter
+- `free_sized` (C23) and `free_aligned_sized` (C23) implementations could be refined to be stricter
 - support for 16K pages
 - support for ARM MTE (Memory Tagging Extension)
 - Android support
