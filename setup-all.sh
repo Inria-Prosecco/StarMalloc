@@ -50,6 +50,7 @@ setup() {
 
   if [[ "$(sysctl -n vm.max_map_count)" -lt 1048576 ]]; then
 	  echo "sysctl vm.max_map_count < 1048576, not OK, please fix it, exiting"
+	  exit 1
   else
 	  echo "sysctl vm.max_map_count >= 1048576, OK"
   fi
