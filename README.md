@@ -85,14 +85,13 @@ Also, as StarMalloc is developed using Steel, a concurrent separation logic (CSL
 
 To lay the emphasis on this: no security property is formally proven, no security model is formally established, even though we would like to tackle this challenge in future work.
 
-Thanks to the use of a specific wrapper `with_lock` instead of manipulating mutexes manually, the risk of deadlocks within StarMalloc is rather limited.
-
-Also, other common conventions are respected by StarMalloc, for example, allocation size is limited to `PTRDIFF_MAX` to avoid undefined behaviour on the end user side when comparing pointers pointing to parts of a same allocation. (This would otherwise possibly lead to a `ptrdiff_t` integer overflow.)
-
 The verified functional correctness properties are proven to be correct using F\*, Steel, the extraction using KaRaMeL is not.
 Moreover, even though most of the resulting C code is extracted code, a small part of unverified C code remains.
 - C low-level initialization (with Thread Local Storage) that is based on hardened\_malloc's init, relies on C11 atomics to avoid race conditions, quite short and hence reasonably auditable (this code also has to set a pthread\_atfork hook to ensure correct behaviour with respect to the fork system call).
-- C glue between modelised OS system calls (mmap, munmap, madvise) and low-level utils (__builtin_mul_overflow, __builtin_ctzll, memcpy, memset (uintptr_t) casts).
+- C glue between modelised OS system calls (`mmap`, `munmap`, `madvise`) and low-level utils (`__builtin_mul_overflow`, `__builtin_ctzll`, `memcpy`, `memset`, `uintptr_t` casts).
+
+Also, other common conventions are respected by StarMalloc, for example, allocation size is limited to `PTRDIFF_MAX` to avoid undefined behaviour on the end user side when comparing pointers pointing to parts of a same allocation. (This would otherwise possibly lead to a `ptrdiff_t` integer overflow.)
+Thanks to the use of a specific wrapper `with_lock` instead of manipulating mutexes manually, the risk of deadlocks within StarMalloc is rather limited.
 
 ## Security mechanisms of the allocator
 
@@ -167,6 +166,6 @@ pvalloc and valloc are not yet provided for compatibility purpose, cfree is not 
 
 ## Authors
 
-Antonin Reitz `antonin.reitz@inria.fr`
-Aymeric Fromherz `aymeric.fromherz@inria.fr`
-Jonathan Protzenko `protz@microsoft.com`
+- Antonin Reitz `antonin.reitz@inria.fr`
+- Aymeric Fromherz `aymeric.fromherz@inria.fr`
+- Jonathan Protzenko `protz@microsoft.com`
