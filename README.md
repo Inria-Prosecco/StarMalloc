@@ -81,7 +81,7 @@ Verified means here that some functional correctness properties of the allocator
 - `malloc` returns `NULL` or a 16-bytes aligned array, `aligned_alloc` returns `NULL` or an array aligned as requested
 (caveat: no alignment larger than 4096 bytes is currently supported);
 - `realloc(old_ptr, new_size)` returns `NULL` or, if `old_ptr` is different from the `NULL` pointer, an array in which the `min(old_size, new_size)` first bytes of `old_ptr` have been copied.
-Also, as StarMalloc is developed using Steel, a concurrent separation logic (CSL) for F\*, StarMalloc is memory-safe.
+Also, as StarMalloc is developed using Steel, a concurrent separation logic (CSL) for F\*, StarMalloc is memory-safe, even in the presence of concurrent threads.
 
 To lay the emphasis on this: no security property is formally proven, no security model is formally established, even though we would like to tackle this challenge in future work.
 
