@@ -7,10 +7,9 @@ The code for all of the usual memory management primitives (`malloc`, `free`, `r
 
 ## Tested environments
 
-As of 2024-05-28, Debian stable and current Arch Linux have been successfully tested.
+As of 2024-05-28, Debian stable x86\_64 and current Arch Linux have been successfully tested.
 That is, StarMalloc has been successfully tested on the [mimalloc-bench](https://github.com/daanx/mimalloc-bench) benchmark suite, so that its properties can be compared with many other allocators.
-It has also been successfully tested as a replacement for the Firefox-shipped memory allocator.
-TODO: MacOS? ARM?
+Using Firefox, it has also been successfully tested on standard browser benchmarks as a replacement for the Firefox-shipped memory allocator.
 
 ## Performance
 
