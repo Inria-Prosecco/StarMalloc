@@ -23,6 +23,7 @@ obj:
 ALL_SOURCE_FILES = $(wildcard $(addsuffix /*.fsti,$(SOURCE_DIRS))) \
   $(wildcard $(addsuffix /*.fst,$(SOURCE_DIRS))) \
 
+ifndef NODEPEND
 ifndef MAKE_RESTARTS
 .depend: .FORCE
 	$(FSTAR) --dep full $(ALL_SOURCE_FILES) > $@
@@ -32,6 +33,7 @@ ifndef MAKE_RESTARTS
 endif
 
 include .depend
+endif
 
 depend: .depend
 

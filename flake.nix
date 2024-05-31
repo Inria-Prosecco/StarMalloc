@@ -49,6 +49,8 @@
         FSTAR_HOME = fstar;
         STEEL_HOME = steel;
         KRML_HOME = karamel;
+        # skip F* dependency check, that would require all F* directories to be included as source
+        NODEPEND=1;
         installPhase = "mkdir $out && cp -r dist out/*.so $out";
         buildFlags = [ "debug_light" "light" ];
         postInstall = ''
