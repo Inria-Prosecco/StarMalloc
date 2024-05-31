@@ -18,6 +18,12 @@ jobs:
       - name: build StarMalloc logs
         run: |
           nix log .#starmalloc
+      - name: build StarMalloc (light)
+        run: |
+          nix build -L .#starmalloc-light
+      - name: build StarMalloc (light) logs
+        run: |
+          nix log .#starmalloc-light
       #- name: bench StarMalloc
       #  run: |
       #    nix build -L .#bench

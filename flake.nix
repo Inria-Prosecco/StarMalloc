@@ -34,8 +34,29 @@
       # allocator derivation
       # TODO: use pkgs.llvmPackages_latest.stdenv.mkDerivation
       # currently, there is some linking issue, try to fix it/report it
+
+      starmalloc-light = pkgs.stdenv.mkDerivation {
+        name = "StarMalloc (light build)";
+        src = lib.sourceByRegex ./. [
+          "dist(/.*)?"
+          "src(/.*)?"
+          "c(/.*)?"
+          "Makefile.include"
+          "Makefile"
+        ];
+        enableParallelBuilding = true;
+        buildInputs = [ fstar steel karamel pkgs.removeReferencesTo ];
+        FSTAR_HOME = fstar;
+        STEEL_HOME = steel;
+        KRML_HOME = karamel;
+        installPhase = "mkdir $out && cp -r dist out/*.so $out";
+        buildFlags = [ "debug_light" "light" ];
+        postInstall = ''
+          find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
+        '';
+      };
       starmalloc = pkgs.stdenv.mkDerivation {
-        name = "steel-experiments";
+        name = "StarMalloc (full build)";
         src = lib.sourceByRegex ./. [
           "lib_avl_common(/.*)?"
           "lib_avl_mono(/.*)?"
@@ -54,7 +75,7 @@
         STEEL_HOME = steel;
         KRML_HOME = karamel;
         installPhase = "mkdir $out && cp -r dist out/*.so $out";
-        buildFlags = [ "lib" "hardened_lib" ];
+        buildFlags = [ "debug_lib" "lib" ];
         postInstall = ''
           find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
         '';
@@ -62,7 +83,7 @@
     in
     {
       packages.${system} = {
-        inherit starmalloc;
+        inherit starmalloc starmalloc-light;
         default=starmalloc;
       };
     };

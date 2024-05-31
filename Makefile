@@ -72,6 +72,7 @@ extract: $(ALL_KRML_FILES)
 	  -add-include 'Steel_SpinLock:"steel_base.h"' \
 	  $^
 
+# TODO: improve this
 FILES = \
 $(STEEL_HOME)/src/c/steel_spinlock.c \
 dist/ArrayList.c \
@@ -110,16 +111,19 @@ SHARED_FLAGS = -DRKML_VERIFIED_UINT128 \
 	       -std=c17 -D_DEFAULT_SOURCE \
 	       -shared -fPIC
 
-lib: verify extract
+build_from_extracted_files_debug:
 	mkdir -p out
 	$(CC) $(SHARED_FLAGS) \
 	  -O0 -g \
 	  $(FILES) \
-	  -o out/starmalloc.so
+	  -o out/starmalloc-debug.so
+
+debug_light: build_from_extracted_files_debug
+debug_lib: verify extract build_from_extracted_files_debug
 
 # visible symbols are restricted using -fvisibility=hidden
 # (this can be checked using nm -gC out/file.so)
-hardened_lib: verify extract
+build_from_extracted_files:
 	mkdir -p out
 	$(CC) $(SHARED_FLAGS) \
 	  -pipe -O3 -flto -fPIC \
@@ -128,6 +132,13 @@ hardened_lib: verify extract
 	  -march=native \
 	  -Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
 	  $(FILES) \
-	  -o out/h_starmalloc.so \
+	  -o out/starmalloc.so \
+
+light: build_from_extracted_files
+lib: verify extract build_from_extracted_files
+
+hardened_lib:
+	@echo "This target has been deprecated, use the lib target instead."
+	exit 1
 
 .PHONY: all world verify clean depend obj test
