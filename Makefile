@@ -57,7 +57,7 @@ obj/%.krml:
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
 	$(KRML_EXE) -skip-compilation -fparentheses -tmpdir dist \
-    -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
+	  -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 	  -bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main.Meta,LargeAlloc'[rename=StarMalloc] \
 	  -bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
@@ -87,17 +87,25 @@ c/fatal_error.c \
 c/memory.c \
 c/lib-alloc.c
 
+# general approach = try to use most of hardened_malloc's flags
+# TODO:
+# -Wcast-align=strict or -Wcast-qual
+# -Wwrite-strings -Wundef
+# -std=c17 -D_DEFAULT_SOURCE
+# TODO: supported gcc/clang versions
+SHARED_FLAGS = -DRKML_VERIFIED_UINT128 \
+	       -I dist \
+	       -I $(KRML_HOME)/include \
+	       -I $(KRML_LIB)/dist/minimal \
+	       -I $(STEEL_HOME)/include/steel \
+	       -pthread -lpthread \
+	       -Wall -Wextra \
+	       -shared -fPIC
+
 lib: verify extract
 	mkdir -p out
-	$(CC) -O3 -g \
-	  -DKRML_VERIFIED_UINT128 \
-	  -I $(KRML_HOME)/include \
-	  -I $(KRML_LIB)/dist/minimal -I dist \
-	  -I $(STEEL_HOME)/include/steel \
-	  -pthread -lpthread \
-	  -Wall -Wextra \
-          -std=gnu11 \
-	  -shared -fPIC \
+	$(CC) $(SHARED_FLAGS) \
+	  -O0 -g \
 	  $(FILES) \
 	  -o out/starmalloc.so
 
@@ -107,17 +115,11 @@ lib: verify extract
 #-fvisibility=hidden
 hardened_lib: verify extract
 	mkdir -p out
-	$(CC) -DKRML_VERIFIED_UINT128 \
-	  -pipe -O3 -g -flto -fPIC \
+	$(CC) $(SHARED_FLAGS) \
+	  -pipe -O3 -flto -fPIC \
 	  -fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
-	  -I $(KRML_HOME)/include \
-	  -I $(KRML_LIB)/dist/minimal -I dist \
-	  -I $(STEEL_HOME)/include/steel \
-	  -pthread -lpthread \
-	  -Wall -Wextra \
 	  -march=native \
 	  -Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
-	  -shared -fPIC \
 	  $(FILES) \
 	  -o out/h_starmalloc.so \
 
