@@ -4,17 +4,17 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
-      url = "github:FStarLang/FStar?rev=bb9e55a2bf04feef4a26b7f8bdc69fc5e595dc57";
+      url = "github:FStarLang/FStar";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
-      url = "github:FStarLang/steel?rev=876bf9343a3fa4b8ab2e3b26e3574c7a445c3cd8";
+      url = "github:FStarLang/steel";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
     };
     krml-src = {
-      url = "github:FStarLang/karamel?rev=9e3c8dfb0e4925be49270e690ad839a7451bdb1a";
+      url = "github:FStarLang/karamel";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
@@ -50,7 +50,7 @@
         STEEL_HOME = steel;
         KRML_HOME = karamel;
         # skip F* dependency check, that would require all F* directories to be included as source
-        NODEPEND=1;
+        NODEPEND = 1;
         installPhase = "mkdir $out && cp -r dist out/*.so $out";
         buildFlags = [ "debug_light" "light" ];
         postInstall = ''
@@ -85,7 +85,7 @@
     in
     {
       packages.${system} = {
-        inherit starmalloc starmalloc-light;
+        inherit starmalloc-light starmalloc;
         default=starmalloc;
       };
     };
