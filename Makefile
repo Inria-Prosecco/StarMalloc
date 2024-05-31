@@ -10,10 +10,10 @@ KRML_EXE = $(KRML_HOME)/krml
 include Makefile.include
 
 FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_EMACS_PARAMS) \
-    --already_cached 'FStar Steel C Prims' \
-    --compat_pre_typed_indexed_effects \
-		--cmi --odir obj --cache_dir obj \
-		$(OTHERFLAGS)
+  --already_cached 'FStar Steel C Prims' \
+  --compat_pre_typed_indexed_effects \
+  --cmi --odir obj --cache_dir obj \
+  $(OTHERFLAGS)
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 
@@ -50,7 +50,7 @@ clean:
 obj/%.krml:
 	@echo "[EXTRACT    $(basename $(notdir $@))]"
 	$(Q)$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
-	--extract_module $(basename $(notdir $(subst .checked,,$<)))
+	  --extract_module $(basename $(notdir $(subst .checked,,$<)))
 
 # steel_types.h defines symbols required by Steel.SpinLock
 # steel_base.h defines symbols required by Steel.ArrayArith
@@ -119,7 +119,8 @@ build_from_extracted_files_debug:
 	  -o out/starmalloc-debug.so
 
 debug_light: build_from_extracted_files_debug
-debug_lib: verify extract build_from_extracted_files_debug
+debug_lib: verify extract
+	$(MAKE) build_from_extracted_files_debug
 
 # visible symbols are restricted using -fvisibility=hidden
 # (this can be checked using nm -gC out/file.so)
@@ -135,7 +136,8 @@ build_from_extracted_files:
 	  -o out/starmalloc.so
 
 light: build_from_extracted_files
-lib: verify extract build_from_extracted_files
+lib: verify extract
+	$(MAKE) extract build_from_extracted_files
 
 hardened_lib:
 	@echo "This target has been deprecated, use the lib target instead."
