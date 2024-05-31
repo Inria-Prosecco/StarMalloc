@@ -90,7 +90,6 @@ c/lib-alloc.c
 # general approach = try to use most of hardened_malloc's flags
 # TODO:
 # -Wcast-align=strict or -Wcast-qual
-# -Wwrite-strings -Wundef
 # -std=c17 -D_DEFAULT_SOURCE
 # TODO: supported gcc/clang versions
 SHARED_FLAGS = -DRKML_VERIFIED_UINT128 \
@@ -99,7 +98,7 @@ SHARED_FLAGS = -DRKML_VERIFIED_UINT128 \
 	       -I $(KRML_LIB)/dist/minimal \
 	       -I $(STEEL_HOME)/include/steel \
 	       -pthread -lpthread \
-	       -Wall -Wextra \
+	       -Wall -Wextra -Wwrite-strings -Wundef \
 	       -shared -fPIC
 
 lib: verify extract
