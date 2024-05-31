@@ -132,7 +132,7 @@ build_from_extracted_files:
 	  -march=native \
 	  -Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
 	  $(FILES) \
-	  -o out/starmalloc.so \
+	  -o out/starmalloc.so
 
 light: build_from_extracted_files
 lib: verify extract build_from_extracted_files
