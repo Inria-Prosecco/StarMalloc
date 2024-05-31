@@ -88,9 +88,9 @@ c/memory.c \
 c/lib-alloc.c
 
 # general approach = try to use most of hardened_malloc's flags
+# use _DEFAULT_SOURCE instead of _BSD_SOURCE that is deprecated
 # TODO:
 # -Wcast-align=strict or -Wcast-qual
-# -std=c17 -D_DEFAULT_SOURCE
 # TODO: supported gcc/clang versions
 SHARED_FLAGS = -DRKML_VERIFIED_UINT128 \
 	       -I dist \
@@ -99,6 +99,7 @@ SHARED_FLAGS = -DRKML_VERIFIED_UINT128 \
 	       -I $(STEEL_HOME)/include/steel \
 	       -pthread -lpthread \
 	       -Wall -Wextra -Wwrite-strings -Wundef \
+	       -std=c17 -D_DEFAULT_SOURCE \
 	       -shared -fPIC
 
 lib: verify extract
