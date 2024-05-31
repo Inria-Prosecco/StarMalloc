@@ -83,6 +83,7 @@ static inline unsigned init(void) {
 //   - 16-bytes aligned
 //   - at least of the requested size
 // )
+__attribute__((visibility("default")))
 void* malloc(size_t size) {
   unsigned arena = init();
   return StarMalloc_malloc(arena, size);
@@ -93,12 +94,13 @@ void* malloc(size_t size) {
 //   - at least of the requested size (nb_elem * size_elem)
 //   - filled with zeroes for subarray corresponding to the requested size
 // )
+__attribute__((visibility("default")))
 void* calloc(size_t nb_elem, size_t size_elem) {
   unsigned arena = init();
   return StarMalloc_calloc(arena, nb_elem, size_elem);
 }
 
-// [...]
+__attribute__((visibility("default")))
 void* realloc(void* ptr, size_t new_size) {
   unsigned arena = init();
   return StarMalloc_realloc(arena, ptr, new_size);
@@ -107,7 +109,8 @@ void* realloc(void* ptr, size_t new_size) {
 // noop if ptr is null
 // deallocates previously allocated memory by (malloc / ...)
 // UAF + DF = undefined
-// TODO: ensure it stops the execution when the deallocation process fails
+// execution is stopped when the deallocation process fails
+__attribute__((visibility("default")))
 void free(void *ptr) {
   // TODO: use enforce_init instead
   init();
@@ -122,6 +125,7 @@ void free(void *ptr) {
 // returned value is the number of usable bytes
 // in the block pointed to by ptr,
 // a pointer to a block of memory allocated by (malloc / ...)
+__attribute__((visibility("default")))
 size_t malloc_usable_size(void* ptr) {
   // not needed for correctness, but way faster
   //if (ptr == NULL) {
@@ -133,52 +137,50 @@ size_t malloc_usable_size(void* ptr) {
 }
 
 //aligned_alloc, posix_memalign, memalign
+__attribute__((visibility("default")))
 void* aligned_alloc(size_t alignment, size_t size) {
   unsigned arena = init();
   return StarMalloc_aligned_alloc(arena, alignment, size);
 }
 
 //TODO: refine this, free_sized is part of C23
+__attribute__((visibility("default")))
 void free_sized(void* ptr, size_t size) {
   free(ptr);
 }
 
 //TODO: refine this, free_sized is part of C23
+__attribute__((visibility("default")))
 void free_aligned_sized(void* ptr, size_t size) {
   free(ptr);
 }
 
-//TODO: metaprogrammation like aligned_alloc
+__attribute__((visibility("default")))
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
-  //init();
-  //printf("%lu/%lu\n", alignment, size);
   void* ptr = aligned_alloc(alignment, size);
   *memptr = ptr;
-  //fatal_error ("posix_memalign not yet implemented");
   return 0;
 }
-//TODO: metaprogrammation like aligned_alloc
+
+__attribute__((visibility("default")))
 void* memalign(size_t alignment, size_t size) {
-  //init();
-  //printf("%lu/%lu\n", alignment, size);
   void* ptr = aligned_alloc(alignment, size);
   return ptr;
-  //assert (
-  //fatal_error ("memalign not yet implemented");
-  //return NULL;
 }
 
-// TODO: wrapper using large_alloc
+__attribute__((visibility("default")))
 void *valloc(size_t size) {
   fatal_error ("valloc not yet implemented");
   return NULL;
 }
-// TODO: wrapper using large_alloc
+
+__attribute__((visibility("default")))
 void *pvalloc(size_t size) {
   fatal_error ("pvalloc not yet implemented");
   return NULL;
 }
 
+__attribute__((visibility("default")))
 void cfree(void* ptr) {
   fatal_error ("cfree is not implemented: removed since glibc 2.26");
 }

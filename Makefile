@@ -117,15 +117,14 @@ lib: verify extract
 	  $(FILES) \
 	  -o out/starmalloc.so
 
-#-Wmissing-prototypes
-#-std=c17
-#-Wall -Wextra -Wcast-align=strict -Wcast-qual
-#-fvisibility=hidden
+# visible symbols are restricted using -fvisibility=hidden
+# (this can be checked using nm -gC out/file.so)
 hardened_lib: verify extract
 	mkdir -p out
 	$(CC) $(SHARED_FLAGS) \
 	  -pipe -O3 -flto -fPIC \
 	  -fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
+	  -fvisibility=hidden \
 	  -march=native \
 	  -Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
 	  $(FILES) \
