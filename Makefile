@@ -88,10 +88,18 @@ c/memory.c \
 c/lib-alloc.c
 
 # general approach = try to use most of hardened_malloc's flags
-# use _DEFAULT_SOURCE instead of _BSD_SOURCE that is deprecated
+# use _DEFAULT_SOURCE instead of deprecated _BSD_SOURCE
+# (2024-05-31) manually tested gcc/clang versions:
+# - gcc 14.1.0
+# - gcc 13.2.0
+# - gcc 12.3.0
+# - gcc 11.4.0
+# - clang 18.1.6
+# - clang 17.0.6
+# - clang 16.0.6
+# - clang 15.0.7
 # TODO:
-# -Wcast-align=strict or -Wcast-qual
-# TODO: supported gcc/clang versions
+# - add -Wcast-align=strict or -Wcast-qual
 SHARED_FLAGS = -DRKML_VERIFIED_UINT128 \
 	       -I dist \
 	       -I $(KRML_HOME)/include \
