@@ -50,6 +50,7 @@ setup() {
 
   if [[ "$(sysctl -n vm.max_map_count)" -lt 1048576 ]]; then
 	  echo "sysctl vm.max_map_count < 1048576, not OK, please fix it, exiting"
+	  exit 1
   else
 	  echo "sysctl vm.max_map_count >= 1048576, OK"
   fi
@@ -65,11 +66,11 @@ build_starmalloc() {
   #fi
 
   echo "1.b building StarMalloc"
-  if [[ -f "StarMalloc/out/h_starmalloc.so" ]]; then
-  	echo "StarMalloc lib is already built, skipping"
+  if [[ -f "StarMalloc/out/starmalloc.so" ]]; then
+    echo "StarMalloc lib is already built, skipping"
   else
-  	echo OTHERFLAGS=\"$OTHERFLAGS\" make lib hardened_lib -j $CORES
-  	OTHERFLAGS=$OTHERFLAGS make lib hardened_lib -j $CORES
+    echo OTHERFLAGS=\"$OTHERFLAGS\" make lib -j $CORES
+    OTHERFLAGS=$OTHERFLAGS make lib -j $CORES
   fi
 }
 
