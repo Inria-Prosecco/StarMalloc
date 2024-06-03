@@ -240,6 +240,7 @@ let free ptr =
     )
   )
 
+noextract
 let spec_getsize
   (length: nat{enable_slab_canaries_malloc ==> length >= 2})
   : Tot nat

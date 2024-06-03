@@ -77,6 +77,7 @@ extract: $(ALL_KRML_FILES)
 	  $^
 
 # TODO: improve this
+#dist/Mman.c leads to issue, moving non-extern code apart
 FILES = \
 $(STEEL_HOME)/src/c/steel_spinlock.c \
 dist/ArrayList.c \
@@ -87,7 +88,6 @@ dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 dist/SizeClass.c \
-dist/Mman.c \
 dist/PtrdiffWrapper.c \
 c/utils.c \
 c/fatal_error.c \

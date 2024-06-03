@@ -72,3 +72,5 @@ void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
   size_t len = (size_t) sc;
   memset(ptr, 0, len);
 }
+
+//const ptrdiff_t PtrdiffWrapper_ptrdiff_max = PTRDIFF_MAX;
