@@ -5,13 +5,16 @@
   KaRaMeL version: <unknown>
  */
 
-#ifndef __Helpers_H
-#define __Helpers_H
+#include "PtrdiffWrapper.h"
 
-#include "krmllib.h"
+size_t PtrdiffWrapper_mmap_bound = (size_t)4611686018427387904U;
 
-typedef void *Helpers_zero_beyond_bound;
+size_t PtrdiffWrapper_mmap_actual_size(size_t size)
+{
+  size_t rem = size % (size_t)4096U;
+  if (rem != (size_t)0U)
+    return size - rem + (size_t)4096U;
+  else
+    return size;
+}
 
-
-#define __Helpers_H_DEFINED
-#endif
