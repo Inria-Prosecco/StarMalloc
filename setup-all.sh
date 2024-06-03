@@ -101,14 +101,14 @@ apply_starmalloc_tweak() {
     installing StarMalloc libs within mimalloc-bench dir"
   pushd extern/mimalloc-bench 1>/dev/null
   mkdir -p extern/st
-  cp ../../out/*.so extern/st
+  cp ../../out/starmalloc.so extern/st
   if [[ -f "../mb-tweak-starmalloc.txt" ]]; then
   	echo "StarMalloc tweak already applied to mimalloc-bench"
   else
   	# add StarMalloc to the list of all allocators, using the st abbreviation
   	sed -i 's/readonly alloc_all="sys/readonly alloc_all="sys st/' bench.sh
   	# add StarMalloc to the list of all allocators paths, using the st abbreviation
-  	sed -i 's/readonly lib_tbb_dir="$(dirname $lib_tbb)"/readonly lib_tbb_dir="$(dirname $lib_tbb)"\nalloc_lib_add "st" "$localdevdir\/st\/h_starmalloc.so"\n/' bench.sh
+	sed -i 's/readonly lib_tbb_dir="$(dirname $lib_tbb)"/readonly lib_tbb_dir="$(dirname $lib_tbb)"\nalloc_lib_add "st" "$localdevdir\/st\/starmalloc.so"\n/' bench.sh
   	touch ../mb-tweak-starmalloc.txt
   fi
   popd 1>/dev/null
