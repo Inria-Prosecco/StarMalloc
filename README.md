@@ -9,7 +9,7 @@ The code for all of the usual memory management primitives (`malloc`, `free`, `r
 
 As of 2024-05-28, Debian stable x86\_64 and current Arch Linux have been successfully tested.
 That is, StarMalloc has been successfully tested on the [mimalloc-bench](https://github.com/daanx/mimalloc-bench) benchmark suite, so that its properties can be compared with many other allocators.
-Using Firefox, it has also been successfully tested on standard browser benchmarks as a replacement for the Firefox-shipped memory allocator.
+Using Firefox, it has also been successfully tested on standard browser benchmarks (such as JetStream2 and Speedometer 2.1) as a replacement for the Firefox-shipped memory allocator.
 
 ## Performance
 
@@ -69,7 +69,8 @@ Note: it can be necessary to set the `sysctl` `vm.max_map_count` to a higher tha
 
 - build Firefox with the additional `--disable-jemalloc` flag
 - test Firefox with StarMalloc: `LD_PRELOAD=out/starmalloc.so firefox`
-Firefox benchmarks such as JetStream2 have been successfully tested with StarMalloc.
+
+Firefox benchmarks such as JetStream2 and Speedometer 2.1 have been successfully tested with StarMalloc.
 
 ## Verification
 
@@ -148,20 +149,25 @@ pvalloc and valloc are not yet provided for compatibility purpose, cfree is not 
 - [Steel](https://github.com/FStarLang/steel)
 - [KaRaMeL](https://github.com/FStarLang/karamel)
 - [mimalloc-bench](https://github.com/daanx/mimalloc-bench)
+- [JetStream2](https://browserbench.org/JetStream/)
+- [Speedometer 2.1](https://browserbench.org/Speedometer2.1/)
+- [Speedometer 3.0](https://browserbench.org/Speedometer3.0/)
+
 
 ## Future work
 
-- `free_sized` (C23) and `free_aligned_sized` (C23) implementations could be refined to be stricter
-- support for 16K pages
-- support for ARM MTE (Memory Tagging Extension)
-- Android support
+- (benchmark) try Speedometer 3.0
+- (feature) `free_sized` (C23) and `free_aligned_sized` (C23) implementations could be refined to be stricter (only wrappers for now)
+- (feature) support for 16K pages
+- (feature) support for ARM MTE (Memory Tagging Extension)
+- (feature) Android support
 - slab allocations:
-  - initial mapping of allocation region should be `PROT_NONE`
-  - size class selection could be improved
-  - randomizing guard pages
+  - (security) initial mapping of allocation region should be `PROT_NONE`
+  - (performance) size class selection could be improved
+  - (security) randomizing guard pages
 - large allocations:
-  - some properties could be proven about the `PTRDIFF_MAX` limit
-  - AVL tree node allocation is reusing the slab allocator with an hardened configuration: use a dedicated light configuration instead
+  - (specification) some properties could be proven about the `PTRDIFF_MAX` limit
+  - (performance) AVL tree node allocation is reusing the slab allocator with an hardened configuration: use a dedicated light configuration instead
 
 ## License
 
