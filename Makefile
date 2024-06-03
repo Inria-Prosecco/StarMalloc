@@ -58,7 +58,9 @@ obj/%.krml:
 # steel_base.h defines symbols required by Steel.ArrayArith
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
-	$(KRML_EXE) -skip-compilation -fparentheses -tmpdir dist \
+	$(KRML_EXE) \
+	  -skip-compilation -skip-makefiles \
+	  -fparentheses -tmpdir dist \
 	  -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 	  -bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main.Meta,LargeAlloc'[rename=StarMalloc] \
@@ -85,6 +87,8 @@ dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 dist/SizeClass.c \
+dist/Mman.c \
+dist/PtrdiffWrapper.c \
 c/utils.c \
 c/fatal_error.c \
 c/memory.c \
