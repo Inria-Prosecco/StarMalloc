@@ -1,5 +1,14 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdatomic.h>
+
+#define DEBUG 1
+
+#ifdef DEBUG
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
 
 #include "krmlinit.h"
 #include "Config.h"
@@ -12,6 +21,11 @@ static _Thread_local unsigned thread_arena = CONFIG_NB_ARENAS;
 static atomic_uint thread_arena_counter = 0;
 
 static void* _Atomic slab_region_ptr;
+
+#ifdef DEBUG
+static int fd = 0;
+static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 static void full_lock(void) {
   pthread_mutex_lock(&metadata.lock);
@@ -60,6 +74,13 @@ static void init_slow_path(void) {
   }
   krmlinit_globals();
   atomic_store_explicit(&slab_region_ptr, Main_Meta_sc_all.slab_region, memory_order_release);
+  #ifdef DEBUG
+  fd = open("temp.txt", O_WRONLY | O_TRUNC | O_CREAT, 0640);
+  if (fd == -1) {
+    fatal_error("log file could not be opened");
+    return;
+  }
+  #endif
   pthread_mutex_unlock(&m);
   if (pthread_atfork(full_lock, full_unlock, post_fork_child)) {
     fatal_error("pthread_atfork failed");
@@ -79,6 +100,36 @@ static inline unsigned init(void) {
   return arena;
 }
 
+static inline void write_msg(size_t id_function, size_t p1, size_t p2, void* ptr) {
+  #ifdef DEBUG
+  pthread_mutex_lock(&m);
+  char buffer[1024] = { 0 };
+  switch (id_function) {
+    case 0:
+      snprintf(buffer, sizeof(buffer), "malloc: %zu\n", p1);
+      break;
+    case 1:
+      snprintf(buffer, sizeof(buffer), "free: %p\n", ptr);
+      break;
+    case 2:
+      snprintf(buffer, sizeof(buffer), "aligned_alloc: %zu/%zu\n", p1, p2);
+      break;
+    case 3:
+      snprintf(buffer, sizeof(buffer), "calloc: %zu/%zu\n", p1, p2);
+      break;
+    case 4:
+      snprintf(buffer, sizeof(buffer), "realloc: %p/%zu\n", ptr, p1);
+      break;
+    default:
+      pthread_mutex_unlock(&m);
+      return;
+  }
+  write(fd, buffer, sizeof(buffer));
+  pthread_mutex_unlock(&m);
+  #endif
+  return;
+}
+
 // returned pointer not null => (
 //   - 16-bytes aligned
 //   - at least of the requested size
@@ -86,6 +137,7 @@ static inline unsigned init(void) {
 __attribute__((visibility("default")))
 void* malloc(size_t size) {
   unsigned arena = init();
+  write_msg(0, size, 0, NULL);
   return StarMalloc_malloc(arena, size);
 }
 
@@ -97,12 +149,14 @@ void* malloc(size_t size) {
 __attribute__((visibility("default")))
 void* calloc(size_t nb_elem, size_t size_elem) {
   unsigned arena = init();
+  write_msg(3, nb_elem, size_elem, NULL);
   return StarMalloc_calloc(arena, nb_elem, size_elem);
 }
 
 __attribute__((visibility("default")))
 void* realloc(void* ptr, size_t new_size) {
   unsigned arena = init();
+  write_msg(4, new_size, 0, ptr);
   return StarMalloc_realloc(arena, ptr, new_size);
 }
 
@@ -114,6 +168,7 @@ __attribute__((visibility("default")))
 void free(void *ptr) {
   // TODO: use enforce_init instead
   init();
+  write_msg(1, 0, 0, ptr);
   bool b = StarMalloc_free(ptr);
   if (! b) {
     printf("free ptr: %p\n", ptr);
@@ -140,6 +195,7 @@ size_t malloc_usable_size(void* ptr) {
 __attribute__((visibility("default")))
 void* aligned_alloc(size_t alignment, size_t size) {
   unsigned arena = init();
+  write_msg(2, alignment, size, NULL);
   return StarMalloc_aligned_alloc(arena, alignment, size);
 }
 
