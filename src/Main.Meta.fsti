@@ -17,6 +17,7 @@ module L = Steel.SpinLock
 module TLA = Steel.TLArray
 
 open Prelude
+open Constants
 open SlabsCommon
 open SizeClass
 open Main
@@ -65,8 +66,10 @@ type size_classes_all =
 
 val sc_all : size_classes_all
 
+//TODO: hide from interface
 module T = FStar.Tactics
 
+//TODO: hide from interface
 /// A variant of the normalization, with a zeta full to reduce under
 /// matches (and if/then/else). To use with care, as zeta_full can
 /// loop and lead to stack overflows
@@ -75,14 +78,15 @@ let norm_full () : T.Tac unit =
   T.norm [zeta_full; iota; primops; delta_attr [`%reduce_attr]];
   T.trefl ()
 
-[@@ T.postprocess_with norm_full]
 val slab_malloc
   (arena_id: US.t{US.v arena_id < US.v nb_arenas})
   (bytes: U32.t)
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
-  (requires fun _ -> True)
+  (requires fun _ ->
+    U32.v bytes <= U32.v page_size
+  )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in

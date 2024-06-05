@@ -14,6 +14,7 @@ module US = FStar.SizeT
 module A = Steel.Array
 module G = FStar.Ghost
 
+open Constants
 open Config
 open MemoryTrap
 

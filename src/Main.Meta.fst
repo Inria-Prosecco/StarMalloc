@@ -382,13 +382,80 @@ let rec slab_malloc_canary_i
         slab_malloc_canary_i tl (i `US.add` 1sz) arena_id bytes
 #pop-options
 
+[@@ T.postprocess_with norm_full]
+val slab_malloc_norm
+  (arena_id: US.t{US.v arena_id < US.v nb_arenas})
+  (bytes: U32.t)
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ -> True)
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      array_u8_alignment r 16ul /\
+      Seq.length s >= 2 /\
+      (enable_slab_canaries_malloc ==>
+        Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+        Seq.index s (A.length r - 1) == slab_canaries_magic2
+      )
+    )
+  )
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
-let slab_malloc arena_id bytes =
+let slab_malloc_norm arena_id bytes =
   if enable_slab_canaries_malloc then
     (slab_malloc_canary_i sc_list 0sz) arena_id bytes
   else
     (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
+
+val slab_malloc_fast
+  (arena_id: US.t{US.v arena_id < US.v nb_arenas})
+  (bytes: U32.t)
+  : Steel (array U8.t)
+  emp
+  (fun r -> null_or_varray r)
+  (requires fun _ ->
+    U32.v bytes <= U32.v page_size
+  )
+  (ensures fun _ r h1 ->
+    let s : t_of (null_or_varray r)
+      = h1 (null_or_varray r) in
+    not (is_null r) ==> (
+      A.length r >= U32.v bytes /\
+      array_u8_alignment r 16ul /\
+      Seq.length s >= 2 /\
+      (enable_slab_canaries_malloc ==>
+        Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+        Seq.index s (A.length r - 1) == slab_canaries_magic2
+      )
+    )
+  )
+
+#restart-solver
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
+let slab_malloc_fast arena_id bytes
+  =
+  admit ();
+  //if enable_slab_canaries_malloc
+  let i = sc_selection (U32.add bytes 2ul) in
+  [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+  let size = TLA.get sizes idx in
+  let ptr = slab_malloc_one idx bytes in
+  set_canary ptr size;
+  //else noop ();
+  return ptr
+#pop-options
+
+let slab_malloc arena_id bytes
+  =
+  if enable_sc_fast_selection
+  then slab_malloc_fast arena_id bytes
+  else slab_malloc_norm arena_id bytes
 
 #restart-solver
 

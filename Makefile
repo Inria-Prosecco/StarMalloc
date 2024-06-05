@@ -69,6 +69,7 @@ extract: $(ALL_KRML_FILES)
 	  -no-prefix LargeAlloc \
 	  -no-prefix Mman \
 	  -no-prefix MemoryTrap \
+	  -no-prefix ExternUtils \
 	  -warn-error +9 \
 	  -add-include 'Steel_SpinLock:"steel_types.h"' \
 	  -add-include 'Steel_SpinLock:"steel_base.h"' \
@@ -85,6 +86,8 @@ dist/Slots.c \
 dist/Bitmap5.c \
 dist/Utils2.c \
 dist/SizeClass.c \
+dist/SizeClassSelection.c \
+dist/Config.c \
 c/utils.c \
 c/fatal_error.c \
 c/memory.c \

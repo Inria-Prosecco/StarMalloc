@@ -1,5 +1,8 @@
 module Guards
 
+open Constants
+open Config
+
 let guard_slab arr = if enable_guard_pages then trap_array arr else A.varray arr
 
 let mmap_trap_guard arr len =

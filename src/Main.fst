@@ -19,6 +19,7 @@ module ALG = ArrayListGen
 module SAA = Steel.ArrayArith
 
 open Prelude
+open Constants
 open SizeClass
 open SlabsCommon
 open SteelVRefineDep
