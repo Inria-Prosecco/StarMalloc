@@ -5,42 +5,25 @@
   KaRaMeL version: <unknown>
  */
 
-#include "Bitmap5.h"
+#ifndef __internal_Prims_H
+#define __internal_Prims_H
 
-bool Bitmap5_bm_get(uint64_t *arr, uint32_t k)
-{
-  uint32_t k1 = k / 64U;
-  size_t k_index = (size_t)k1;
-  uint32_t k2 = k % 64U;
-  uint64_t x = arr[k_index];
-  uint64_t r1 = x >> k2;
-  uint64_t r2 = r1 & 1ULL;
-  if (r2 == 1ULL)
-    return true;
-  else
-    return false;
-}
+#include "krmllib.h"
 
-void Bitmap5_bm_set(uint64_t *arr, uint32_t k)
-{
-  uint32_t k1 = k / 64U;
-  size_t k_index = (size_t)k1;
-  uint32_t k2 = k % 64U;
-  uint64_t x = arr[k_index];
-  uint64_t a = 1ULL << k2;
-  uint64_t r = a | x;
-  arr[k_index] = r;
-}
+extern krml_checked_int_t Prims_op_Multiply(krml_checked_int_t x, krml_checked_int_t y);
 
-void Bitmap5_bm_unset(uint64_t *arr, uint32_t k)
-{
-  uint32_t k1 = k / 64U;
-  size_t k_index = (size_t)k1;
-  uint32_t k2 = k % 64U;
-  uint64_t x = arr[k_index];
-  uint64_t a = 1ULL << k2;
-  uint64_t c = ~a;
-  uint64_t r = c & x;
-  arr[k_index] = r;
-}
+extern krml_checked_int_t Prims_op_Division(krml_checked_int_t x, krml_checked_int_t y);
 
+extern krml_checked_int_t Prims_op_Subtraction(krml_checked_int_t x, krml_checked_int_t y);
+
+extern krml_checked_int_t Prims_op_Addition(krml_checked_int_t x, krml_checked_int_t y);
+
+extern krml_checked_int_t Prims_op_Modulus(krml_checked_int_t x, krml_checked_int_t y);
+
+extern bool Prims_op_LessThanOrEqual(krml_checked_int_t x0, krml_checked_int_t x1);
+
+extern krml_checked_int_t Prims_pow2(krml_checked_int_t x0);
+
+
+#define __internal_Prims_H_DEFINED
+#endif

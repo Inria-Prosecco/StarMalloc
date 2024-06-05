@@ -5,42 +5,50 @@
   KaRaMeL version: <unknown>
  */
 
-#include "Bitmap5.h"
+#include "SizeClassSelection.h"
 
-bool Bitmap5_bm_get(uint64_t *arr, uint32_t k)
+uint32_t SizeClassSelection_log2u64(uint64_t x)
 {
-  uint32_t k1 = k / 64U;
-  size_t k_index = (size_t)k1;
-  uint32_t k2 = k % 64U;
-  uint64_t x = arr[k_index];
-  uint64_t r1 = x >> k2;
-  uint64_t r2 = r1 & 1ULL;
-  if (r2 == 1ULL)
-    return true;
+  uint32_t r = clz(x);
+  return 63U - r;
+}
+
+uint32_t SizeClassSelection_upper_div_impl(uint32_t x, uint32_t y)
+{
+  uint32_t v = y - 1U;
+  uint32_t x_ = x + v;
+  return x_ / y;
+}
+
+K___uint32_t_uint32_t SizeClassSelection_inv_impl_aux_2(uint32_t x)
+{
+  uint32_t x_as_u32 = x;
+  uint64_t x_as_u64 = (uint64_t)x_as_u32;
+  uint32_t log = SizeClassSelection_log2u64(x_as_u64);
+  uint32_t align = 1U << log;
+  uint32_t align2 = 1U << (log - 2U);
+  uint32_t y = log - 6U;
+  uint32_t z = SizeClassSelection_upper_div_impl(x_as_u32 - align, align2);
+  return ((K___uint32_t_uint32_t){ .fst = y, .snd = z });
+}
+
+uint32_t SizeClassSelection_inv_impl_aux(uint32_t x)
+{
+  K___uint32_t_uint32_t scrut = SizeClassSelection_inv_impl_aux_2(x);
+  uint32_t y = scrut.fst;
+  uint32_t z = scrut.snd;
+  return y * 4U + z;
+}
+
+uint32_t SizeClassSelection_inv_impl(uint32_t x)
+{
+  if (x <= 16U)
+    return 0U;
+  else if (x <= 32U)
+    return 1U;
+  else if (x <= 64U)
+    return 2U;
   else
-    return false;
-}
-
-void Bitmap5_bm_set(uint64_t *arr, uint32_t k)
-{
-  uint32_t k1 = k / 64U;
-  size_t k_index = (size_t)k1;
-  uint32_t k2 = k % 64U;
-  uint64_t x = arr[k_index];
-  uint64_t a = 1ULL << k2;
-  uint64_t r = a | x;
-  arr[k_index] = r;
-}
-
-void Bitmap5_bm_unset(uint64_t *arr, uint32_t k)
-{
-  uint32_t k1 = k / 64U;
-  size_t k_index = (size_t)k1;
-  uint32_t k2 = k % 64U;
-  uint64_t x = arr[k_index];
-  uint64_t a = 1ULL << k2;
-  uint64_t c = ~a;
-  uint64_t r = c & x;
-  arr[k_index] = r;
+    return SizeClassSelection_inv_impl_aux(x) + 2U;
 }
 
