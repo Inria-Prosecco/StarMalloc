@@ -102,7 +102,12 @@ Thanks to the use of a specific wrapper `with_lock` instead of manipulating mute
 - zeroing check on allocation
 - guard pages
 - quarantine
-- canaries
+- slot canaries (slab allocations)
+
+Many of these security mechanisms are configurable: see `src/Config.fst`.
+`src/Config.fsti` interface file is used as abstraction boundary.
+Thus, one can edit this configuration file and proceeds with a full rebuild easily,
+as most intermediary verification fails are preserved.
 
 ## Structure of the allocator
 
@@ -140,7 +145,8 @@ The following symbols are provided:
 1. as part of C standard library: `malloc`, `calloc`, `realloc`, `free, aligned_alloc` (C11), `free_sized` (C23, to be refined), `free_aligned_sized` (C23, to be refined);
 2. other symbols: `posix_memalign` (POSIX), `malloc_usable_size` (GNU), `memalign` (seems to be quite standard).
 
-pvalloc and valloc are not yet provided for compatibility purpose, cfree is not yet provided as a fatal error stub. (Note: The cfree has been removed since glibc 2.26, current Debian oldoldstable glibc = 2.28, as of 2024-02-05.)
+pvalloc and valloc are not yet provided for compatibility purpose, cfree is not yet provided as a fatal error stub.
+(Note: The cfree has been removed since glibc 2.26, current Debian oldoldstable glibc = 2.28, as of 2024-02-05.)
 
 ## External repositories
 
@@ -156,12 +162,16 @@ pvalloc and valloc are not yet provided for compatibility purpose, cfree is not 
 
 ## Future work
 
+- (CI) add CI check about compiling StarMalloc with `OTHERFLAGS="--admit_smt_queries true"` (currently fails on `src/Main.fst` file, upstream issue)
 - (benchmark) try Speedometer 3.0
 - (feature) `free_sized` (C23) and `free_aligned_sized` (C23) implementations could be refined to be stricter (only wrappers for now)
 - (feature) support for 16K pages
 - (feature) support for ARM MTE (Memory Tagging Extension)
 - (feature) Android support
+- (feature) improve support for a F\*/Steel client
 - slab allocations:
+  - (feature) add support for 48-bytes size-class
+  - (security) slots quarantine
   - (security) initial mapping of allocation region should be `PROT_NONE`
   - (performance) size class selection could be improved
   - (security) randomizing guard pages
