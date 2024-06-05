@@ -183,6 +183,61 @@ val allocate_size_class
 let allocate_size_class _ scs =
   Main.allocate_size_class scs
 
+/// Precondition of free, capturing that a client must return an array corresponding to the
+/// entire memory provided by the allocator:
+/// If a pointer is within a size class and aligned with
+/// the slots, then its length corresponds to the slot size
+let within_size_class_i (ptr:A.array U8.t) (sc: size_class_struct) : prop = (
+  // If ptr is within the size class sc
+  same_base_array sc.slab_region ptr /\
+  A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region)) >= 0 /\
+  A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region)) < US.v slab_size /\
+  // and it is aligned on the slots
+  ((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region))) % U32.v page_size) % U32.v sc.size = 0) ==>
+    // then its length is the length of a slot
+    A.length ptr == U32.v sc.size
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
+/// Elimination lemma for `within_size_class_i`, triggering F* to prove the precondition
+/// of the implication
+let elim_within_size_class_i (ptr:A.array U8.t) (i:nat{i < Seq.length sc_all.g_size_classes}) (size:sc)
+  : Lemma
+  (requires (
+    let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
+    size == sc.data.size /\
+    within_size_class_i ptr sc.data /\
+    same_base_array sc.data.slab_region ptr /\
+    A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) >= 0 /\
+    A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) < US.v slab_size /\
+    ((A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc_all.slab_region))) % U32.v page_size) % U32.v size = 0))
+  (ensures (
+    let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
+    ((A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region))) % U32.v page_size) % U32.v size = 0 /\
+    A.length ptr == U32.v size
+  ))
+  =
+  let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
+  let off_ptr = A.offset (A.ptr_of ptr) in
+  let off1 = A.offset (A.ptr_of (G.reveal sc_all.slab_region)) in
+  let off2 = A.offset (A.ptr_of (G.reveal sc.data.slab_region)) in
+  assert (off2 - off1 = i * US.v slab_size);
+  assert (off_ptr - off1 = off_ptr - off2 + i * US.v slab_size);
+  assert (i * US.v slab_size == i * US.v metadata_max * U32.v page_size);
+  Math.Lemmas.lemma_mod_plus
+    (off_ptr - off2)
+    (i * US.v metadata_max)
+    (U32.v page_size);
+  assert (
+    (off_ptr - off1) % U32.v page_size
+    ==
+    (off_ptr - off2) % U32.v page_size
+  )
+#pop-options
+
+let within_size_classes_pred (ptr:A.array U8.t) : prop =
+  forall (i:nat{i < Seq.length sc_all.g_size_classes}).
+    within_size_class_i ptr (Seq.index (G.reveal sc_all.g_size_classes) i).data
+
 #push-options "--fuel 0 --ifuel 0 --query_stats --z3rlimit 50"
 inline_for_extraction noextract
 let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
@@ -193,12 +248,17 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
     U32.v bytes <= U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size
   )
   (ensures fun _ r _ ->
-    let size = (Seq.index sc_all.g_size_classes (US.v i)).data.size in
+    let sc : size_class_struct
+      = (Seq.index sc_all.g_size_classes (US.v i)).data in
+    let size = sc.size in
     not (is_null r) ==> (
       A.length r == U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size /\
       A.length r >= U32.v bytes /\
       array_u8_alignment r 16ul /\
-      ((U32.v page_size) % (U32.v size) == 0 ==> array_u8_alignment r size)
+      ((U32.v page_size) % (U32.v size) == 0 ==> array_u8_alignment r size) /\
+      within_size_class_i r sc /\
+      True
+      //within_size_classes_pred r
     )
   )
   =
@@ -541,61 +601,6 @@ let slab_free' (i:US.t{US.v i < US.v nb_size_classes * US.v nb_arenas}) (ptr: ar
   in
   return b
 #pop-options
-
-/// Precondition of free, capturing that a client must return an array corresponding to the
-/// entire memory provided by the allocator:
-/// If a pointer is within a size class and aligned with
-/// the slots, then its length corresponds to the slot size
-let within_size_class_i (ptr:A.array U8.t) (sc: size_class_struct) : prop = (
-  // If ptr is within the size class sc
-  same_base_array sc.slab_region ptr /\
-  A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region)) >= 0 /\
-  A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region)) < US.v slab_size /\
-  // and it is aligned on the slots
-  ((A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (G.reveal sc.slab_region))) % U32.v page_size) % U32.v sc.size = 0) ==>
-    // then its length is the length of a slot
-    A.length ptr == U32.v sc.size
-
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
-/// Elimination lemma for `within_size_class_i`, triggering F* to prove the precondition
-/// of the implication
-let elim_within_size_class_i (ptr:A.array U8.t) (i:nat{i < Seq.length sc_all.g_size_classes}) (size:sc)
-  : Lemma
-  (requires (
-    let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
-    size == sc.data.size /\
-    within_size_class_i ptr sc.data /\
-    same_base_array sc.data.slab_region ptr /\
-    A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) >= 0 /\
-    A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region)) < US.v slab_size /\
-    ((A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc_all.slab_region))) % U32.v page_size) % U32.v size = 0))
-  (ensures (
-    let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
-    ((A.offset (A.ptr_of ptr) - A.offset (ptr_of (G.reveal sc.data.slab_region))) % U32.v page_size) % U32.v size = 0 /\
-    A.length ptr == U32.v size
-  ))
-  =
-  let sc : size_class = G.reveal (Seq.index sc_all.g_size_classes i) in
-  let off_ptr = A.offset (A.ptr_of ptr) in
-  let off1 = A.offset (A.ptr_of (G.reveal sc_all.slab_region)) in
-  let off2 = A.offset (A.ptr_of (G.reveal sc.data.slab_region)) in
-  assert (off2 - off1 = i * US.v slab_size);
-  assert (off_ptr - off1 = off_ptr - off2 + i * US.v slab_size);
-  assert (i * US.v slab_size == i * US.v metadata_max * U32.v page_size);
-  Math.Lemmas.lemma_mod_plus
-    (off_ptr - off2)
-    (i * US.v metadata_max)
-    (U32.v page_size);
-  assert (
-    (off_ptr - off1) % U32.v page_size
-    ==
-    (off_ptr - off2) % U32.v page_size
-  )
-#pop-options
-
-let within_size_classes_pred (ptr:A.array U8.t) : prop =
-  forall (i:nat{i < Seq.length sc_all.g_size_classes}).
-    within_size_class_i ptr (Seq.index (G.reveal sc_all.g_size_classes) i).data
 
 #restart-solver
 

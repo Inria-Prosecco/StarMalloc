@@ -75,6 +75,8 @@ let norm_full () : T.Tac unit =
   T.norm [zeta_full; iota; primops; delta_attr [`%reduce_attr]];
   T.trefl ()
 
+val within_size_classes_pred (ptr:A.array U8.t) : prop
+
 [@@ T.postprocess_with norm_full]
 val slab_malloc
   (arena_id: US.t{US.v arena_id < US.v nb_arenas})
@@ -123,7 +125,6 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
     )
   )
 
-val within_size_classes_pred (ptr:A.array U8.t) : prop
 
 val slab_getsize (ptr: array U8.t)
   : Steel US.t
