@@ -152,6 +152,38 @@ let log2u64_spec (x: nat)
   )
   = U32.v (log2u64 (U64.uint_to_t x))
 
+module FML = FStar.Math.Lemmas
+
+let rec log2u64_eq_lemma_aux (x: nat) (r1 r2: nat)
+  : Lemma
+  (requires
+    x > 0 /\
+    x >= pow2 r1 /\
+    x < pow2 (r1 + 1) /\
+    x >= pow2 r2 /\
+    x < pow2 (r2 + 1)
+  )
+  (ensures
+    r1 = r2
+  )
+  =
+  if x = 1 then ()
+  else log2u64_eq_lemma_aux (x/2) (r1-1) (r2-1)
+
+let log2u64_eq_lemma (x:nat) (r: nat)
+  : Lemma
+  (requires
+    x > 0 /\
+    x <= 4096 /\
+    x >= pow2 r /\
+    x < pow2 (r + 1))
+  (ensures
+    log2u64_spec x == r
+  )
+  =
+  let r2 = log2u64_spec x in
+  log2u64_eq_lemma_aux x r r2
+
 noextract
 let sc_list_f_aux_2 (x y: nat)
   : nat
@@ -195,6 +227,7 @@ let nearest_multiple_upper_div_lemma
   =
   ()
 
+inline_for_extraction noextract
 let upper_div_impl
   (x: U32.t)
   (y: U32.t)
@@ -215,6 +248,8 @@ let upper_div_impl
   r
 
 
+module FML = FStar.Math.Lemmas
+
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
 noextract
 let inv_aux_2 (x: nat)
@@ -231,7 +266,11 @@ let inv_aux_2 (x: nat)
   )
   =
   let log = log2u64_spec x in
-  assume (log >= 6 /\ log <= 12);
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 12 == 4096);
+  if log < 6 then FML.pow2_le_compat 6 (log+1);
+  if log > 12 then FML.pow2_lt_compat log 12;
+  assert (6 <= log /\ log <= 12);
   let align = pow2 log in
   let align2 = pow2 (log - 2) in
   let y = log - 6 in
@@ -239,13 +278,19 @@ let inv_aux_2 (x: nat)
   if (z >= 5)
   then (
     assert (x - align > 4 * align2);
-    assume (align == 4 * align2);
-    assume (align + align == pow2 (log + 1))
+    FML.pow2_plus (log - 2) 2;
+    assert_norm (pow2 2 == 4);
+    assert (align == 4 * align2);
+    FML.pow2_double_sum log;
+    assert (align + align == pow2 (log + 1))
   )
   else ();
   if (y = 6)
   then (
-    assume (z == 0)
+    assert (log == 12);
+    assert (x >= pow2 12);
+    assert_norm (pow2 12 == 4096);
+    assert (z == 0)
   ) else ();
   y, z
 
@@ -294,6 +339,7 @@ let inv (x: nat)
     inv_aux x + 2
   )
 
+inline_for_extraction noextract
 let inv_impl_aux_2 (x: U32.t)
   : Pure (U32.t & U32.t)
   (requires U32.v x >= 64 /\
@@ -311,16 +357,19 @@ let inv_impl_aux_2 (x: U32.t)
   let x_as_u64 = FIC.uint32_to_uint64 x_as_u32 in
   assert (U64.v x_as_u64 == U32.v x);
   let log = log2u64 x_as_u64 in
-  assume (U32.v log >= 6);
-  assume (U32.v log <= 12);
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 12 == 4096);
+  if U32.v log < 6 then FML.pow2_le_compat 6 (U32.v log + 1);
+  if U32.v log > 12 then FML.pow2_lt_compat (U32.v log) 12;
   let align = U32.shift_left 1ul log in
   let align2 = U32.shift_left 1ul (U32.sub log 2ul) in
-  assume (U32.v align2 < U32.v align);
-  assume (U32.v align2 == pow2 (U32.v log - 2));
+  FML.pow2_lt_compat (U32.v log) (U32.v log - 2);
+  assert (U32.v align2 < U32.v align);
   let y = U32.sub log 6ul in
   let z = upper_div_impl (U32.sub x_as_u32 align) align2 in
   y, z
 
+inline_for_extraction noextract
 let inv_impl_aux (x: U32.t)
   : Pure (U32.t)
   (requires U32.v x >= 64 /\
