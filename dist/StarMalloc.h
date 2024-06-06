@@ -11,10 +11,10 @@
 #include "krmllib.h"
 
 #include "Steel_SpinLock.h"
+#include "SizeClassSelection.h"
 #include "SizeClass.h"
 #include "Mman.h"
 #include "ExternUtils.h"
-#include "Config.h"
 #include "ArrayList.h"
 
 extern void StarMalloc_malloc_zeroing_die(uint8_t *ptr);

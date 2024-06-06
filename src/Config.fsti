@@ -29,6 +29,7 @@ unfold type sc_selection_f = (x:U32.t) -> Pure US.t
   )
 
 /// Size class selection (fast path)
+inline_for_extraction noextract
 val sc_selection : sc_selection_f
 
 // controls whether size class selection fast path is used

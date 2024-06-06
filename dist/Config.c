@@ -7,12 +7,6 @@
 
 #include "Config.h"
 
-size_t Config_sc_selection(uint32_t x)
-{
-  uint32_t r = SizeClassSelection_inv_impl(x);
-  return (size_t)r;
-}
-
 bool Config_enable_sc_fast_selection = true;
 
 size_t Config_metadata_max = (size_t)16777216U;

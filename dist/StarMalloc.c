@@ -1400,7 +1400,8 @@ static uint8_t *allocate_size_class(SizeClass_size_class_struct_ scs)
 
 static uint8_t *slab_malloc_fast(size_t arena_id, uint32_t bytes)
 {
-  size_t i = Config_sc_selection(bytes + 2U);
+  uint32_t r0 = SizeClassSelection_inv_impl(bytes + 2U);
+  size_t i = (size_t)r0;
   uint32_t size = sizes[arena_id * (size_t)27U + i];
   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + i].lock);
   uint8_t

@@ -10,13 +10,9 @@
 
 #include "krmllib.h"
 
-#include "SizeClassSelection.h"
-
 #define CONFIG_NB_SIZE_CLASSES ((size_t)27U)
 
 typedef size_t (*Config_sc_selection_f)(uint32_t x0);
-
-size_t Config_sc_selection(uint32_t x);
 
 extern bool Config_enable_sc_fast_selection;
 
