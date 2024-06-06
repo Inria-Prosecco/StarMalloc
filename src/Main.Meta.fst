@@ -15,6 +15,8 @@ let nb_arenas_nat : n:nat{n == US.v nb_arenas /\ n < pow2 32}
 = normalize_term (US.v nb_arenas)
 
 open FStar.Mul
+
+#push-options "--fuel 0 --ifuel 0"
 let total_nb_sc : n:nat{
   n == US.v nb_size_classes * US.v nb_arenas /\
   n == US.v nb_size_classes * nb_arenas_nat
@@ -23,6 +25,7 @@ let total_nb_sc : n:nat{
 assert_norm ((US.v nb_size_classes * US.v nb_arenas) < pow2 32);
 US.fits_u32_implies_fits (US.v nb_size_classes * US.v nb_arenas);
 normalize_term (US.v nb_size_classes * US.v nb_arenas)
+#pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// Duplicating the list of size_classes sizes for each arena, which enables a simpler
@@ -32,7 +35,9 @@ inline_for_extraction noextract
 let rec arena_sc_list'
   (i:nat{i <= US.v nb_arenas})
   (acc:list sc{List.length acc = i * US.v nb_size_classes})
-  : Tot (l:list sc{List.length l == total_nb_sc})
+  : Tot (l:list sc{
+    List.length l == total_nb_sc
+  })
   (decreases (US.v nb_arenas - i))
   =
   calc (==) {
@@ -50,7 +55,11 @@ let rec arena_sc_list'
 /// Fuel needed to establish that the length of [] is 0
 #push-options "--fuel 1"
 [@@ reduce_attr]
-let arena_sc_list = arena_sc_list' 0 []
+let arena_sc_list : l:list sc{
+  //(forall (i:nat{i < L.length l}). L.index l i == L.index sc_list (i % US.v nb_size_classes))
+  True
+}
+= arena_sc_list' 0 []
 #pop-options
 
 //let init_sizes (_:unit)
@@ -382,6 +391,7 @@ let rec slab_malloc_canary_i
         slab_malloc_canary_i tl (i `US.add` 1sz) arena_id bytes
 #pop-options
 
+//move this to Main.Meta2, cond on enable_slab_canaries
 [@@ T.postprocess_with norm_full]
 val slab_malloc_norm
   (arena_id: US.t{US.v arena_id < US.v nb_arenas})
@@ -404,6 +414,7 @@ val slab_malloc_norm
     )
   )
 
+//move this to Main.Meta2, cond on enable_slab_canaries
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_malloc_norm arena_id bytes =
   if enable_slab_canaries_malloc then
@@ -412,6 +423,7 @@ let slab_malloc_norm arena_id bytes =
     (slab_malloc_i sc_list 0sz) arena_id bytes
 #pop-options
 
+//move this to Main.Meta2, cond on enable_slab_canaries
 val slab_malloc_fast
   (arena_id: US.t{US.v arena_id < US.v nb_arenas})
   (bytes: U32.t)
@@ -419,7 +431,8 @@ val slab_malloc_fast
   emp
   (fun r -> null_or_varray r)
   (requires fun _ ->
-    U32.v bytes <= U32.v page_size
+    (enable_slab_canaries_malloc ==> U32.v bytes <= U32.v page_size - 2) /\
+    (not enable_slab_canaries_malloc ==> U32.v bytes <= U32.v page_size)
   )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
@@ -437,18 +450,23 @@ val slab_malloc_fast
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_malloc_fast arena_id bytes
   =
-  admit ();
-  //if enable_slab_canaries_malloc
-  let i = sc_selection (U32.add bytes 2ul) in
-  [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-  let size = TLA.get sizes idx in
-  let ptr = slab_malloc_one idx bytes in
-  set_canary ptr size;
-  //else noop ();
-  return ptr
+  if enable_slab_canaries_malloc then (
+    let i = sc_selection (U32.add bytes 2ul) in
+    [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+    let size = TLA.get sizes idx in
+    assume (size == L.index sc_list (US.v i));
+    let ptr = slab_malloc_one idx bytes in
+    set_canary ptr size;
+    return ptr
+  ) else (
+    let i = sc_selection bytes in
+    [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+    let ptr = slab_malloc_one idx bytes in
+    return ptr
+  )
 #pop-options
 
 let slab_malloc arena_id bytes

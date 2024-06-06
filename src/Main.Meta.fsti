@@ -6,6 +6,7 @@ module U64 = FStar.UInt64
 module US = FStar.SizeT
 module UP = FStar.PtrdiffT
 module G = FStar.Ghost
+module L = FStar.List.Tot
 
 open Steel.Effect.Atomic
 open Steel.Effect
@@ -13,7 +14,6 @@ open Steel.Array
 module A = Steel.Array
 module AL = ArrayList
 module SAA = Steel.ArrayArith
-module L = Steel.SpinLock
 module TLA = Steel.TLArray
 
 open Prelude
@@ -40,7 +40,7 @@ val arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l})
 let sizes_t = r:TLA.t sc{
   TLA.length r == total_nb_sc /\
   (forall (k:US.t{US.v k < total_nb_sc}).
-    TLA.get r k == List.Tot.index arena_sc_list (US.v k))
+    TLA.get r k == L.index arena_sc_list (US.v k))
 }
 
 val sizes : sizes_t
@@ -85,7 +85,8 @@ val slab_malloc
   emp
   (fun r -> null_or_varray r)
   (requires fun _ ->
-    U32.v bytes <= U32.v page_size
+    (enable_slab_canaries_malloc ==> U32.v bytes <= U32.v page_size - 2) /\
+    (not enable_slab_canaries_malloc ==> U32.v bytes <= U32.v page_size)
   )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)

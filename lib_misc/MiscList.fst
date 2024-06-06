@@ -36,6 +36,7 @@ let last_mem_lemma (#a: eqtype)
   L.rev_mem l x;
   assert (L.mem x l)
 
+noextract
 let rec init' (n:nat) (k:nat)
   : Pure (list nat)
   (requires True)
@@ -47,6 +48,7 @@ let rec init' (n:nat) (k:nat)
   then []
   else k::(init' (n-1) (k+1))
 
+noextract
 let init (n:nat)
   : list nat
   = init' n 0
@@ -64,6 +66,7 @@ let init_index (n: nat) (i:nat{i < n})
   (L.index (init n) i == i)
   = init_index' n 0 i
 
+noextract
 let test (_:unit)
   =
   assert (init 0 == []);
