@@ -61,7 +61,7 @@ let rec init_index' (n:nat) (k:nat) (i:nat{i < n})
   then ()
   else init_index' (n-1) (k+1) (i-1)
 
-let init_index (n: nat) (i:nat{i < n})
+let lemma_init_index (n: nat) (i:nat{i < n})
   : Lemma
   (L.index (init n) i == i)
   = init_index' n 0 i
@@ -73,7 +73,7 @@ let test (_:unit)
   assert (init 1 = [0]);
   assert (init 2 = [0; 1])
 
-let rec map_index
+let rec lemma_map_index
   (#a #b: Type)
   (f: a -> b)
   (l: list a)
@@ -84,10 +84,10 @@ let rec map_index
   | [] -> ()
   | x::tl -> if i = 0 then () else (
       assert (L.length tl = L.length l - 1);
-      map_index f tl (i-1)
+      lemma_map_index f tl (i-1)
     )
 
-let map_eq_to_index_eq
+let lemma_map_eq_to_index_eq
   (#a #b #c: Type)
   (f1: a -> c)
   (f2: b -> c)
@@ -102,5 +102,135 @@ let map_eq_to_index_eq
     f1 (L.index init1 i) == f2 (L.index init2 i)
   )
   =
-  map_index f1 init1 i;
-  map_index f2 init2 i
+  lemma_map_index f1 init1 i;
+  lemma_map_index f2 init2 i
+
+let rec lemma_index_append1
+  (#a: Type)
+  (l1 l2: list a)
+  (k:nat{k < L.length l1})
+  : Lemma
+  (let l = L.append l1 l2 in
+  L.append_length l1 l2;
+  L.index l1 k == L.index l k
+  )
+  =
+  let l = L.append l1 l2 in
+  L.append_length l1 l2;
+  if k = 0
+  then ()
+  else lemma_index_append1 (L.tl l1) l2 (k - 1)
+
+let rec lemma_index_append2
+  (#a: Type)
+  (l1 l2: list a)
+  (k:nat{k < L.length l2})
+  : Lemma
+  (let l = L.append l1 l2 in
+  L.append_length l1 l2;
+  L.index l2 k == L.index l (L.length l1 + k)
+  )
+  = match l1 with
+  | [] -> ()
+  | x::tl ->
+      L.append_length l1 l2;
+      lemma_index_append2 tl l2 k
+
+let lemma_index_slice
+  (#a: Type)
+  (l1 l2: list a)
+  (k:nat{k < L.length l1 + L.length l2})
+  : Lemma
+  (let l = L.append l1 l2 in
+  L.append_length l1 l2;
+  if k < L.length l1
+  then L.index l k == L.index l1 k
+  else L.index l k == L.index l2 (k - L.length l1)
+  )
+  =
+  if k < L.length l1
+  then lemma_index_append1 l1 l2 k
+  else lemma_index_append2 l1 l2 (k - L.length l1)
+
+open FStar.Mul
+
+module FML = FStar.Math.Lemmas
+
+let lemma_div_bounds_to_eq
+  (i k multiple: nat)
+  : Lemma
+  (requires
+    multiple > 0 /\
+    i >= k * multiple /\
+    i < (k+1) * multiple)
+  (ensures
+    i / multiple = k
+  )
+  =
+  let r = i - k * multiple in
+  FML.lemma_div_plus r k multiple
+
+let lemma_append_repeat'
+  (#a: Type)
+  (i:nat)
+  (basis: list a)
+  (l_basis: nat)
+  (acc: list a)
+  (k:nat)
+  : Lemma
+  (requires
+    k < (i+1) * l_basis /\
+    l_basis > 0 /\
+    L.length basis = l_basis /\
+    L.length acc = i * l_basis /\
+    (forall (k:nat{k < L.length acc}).
+      L.index acc k == L.index basis (k % l_basis)
+    )
+  )
+  (ensures (
+    let l = acc `L.append` basis in
+    L.append_length acc basis;
+    L.index l k == L.index basis (k % l_basis)
+  ))
+  = match i with
+  | 0 -> ()
+  | _ ->
+      let l = acc `L.append` basis in
+      L.append_length acc basis;
+      if k < i * l_basis
+      then lemma_index_append1 acc basis k
+      else (
+        lemma_index_append2 acc basis (k - i * l_basis);
+        lemma_div_bounds_to_eq k i l_basis;
+        FML.euclidean_division_definition k l_basis
+      )
+
+let lemma_append_repeat
+  (#a: Type)
+  (i:nat)
+  (basis: list a)
+  (l_basis: nat)
+  (acc: list a)
+  : Lemma
+  (requires
+    l_basis > 0 /\
+    L.length basis = l_basis /\
+    L.length acc = i * l_basis /\
+    (forall (k:nat{k < L.length acc}).
+      L.index acc k == L.index basis (k % l_basis)
+    )
+  )
+  (ensures (
+    let l = acc `L.append` basis in
+    (forall (k:nat{k < L.length l}).
+      L.index l k == L.index basis (k % l_basis)
+    )
+  ))
+  =
+  let l = acc `L.append` basis in
+  L.append_length acc basis;
+  assert (L.length l = (i+1) * l_basis);
+  Classical.forall_intro (Classical.move_requires (
+    fun (k:nat{k < L.length (acc `L.append` basis)}) ->
+      lemma_append_repeat' #a i basis l_basis acc k
+  ))

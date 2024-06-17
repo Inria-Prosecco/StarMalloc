@@ -27,6 +27,8 @@ US.fits_u32_implies_fits (US.v nb_size_classes * US.v nb_arenas);
 normalize_term (US.v nb_size_classes * US.v nb_arenas)
 #pop-options
 
+module ML = MiscList
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 /// Duplicating the list of size_classes sizes for each arena, which enables a simpler
 /// initialization directly using the mechanism in place for one arena
@@ -34,9 +36,13 @@ normalize_term (US.v nb_size_classes * US.v nb_arenas)
 inline_for_extraction noextract
 let rec arena_sc_list'
   (i:nat{i <= US.v nb_arenas})
-  (acc:list sc{List.length acc = i * US.v nb_size_classes})
+  (acc:list sc{
+    List.length acc = i * US.v nb_size_classes /\
+    (forall (k:nat{k < L.length acc}). L.index acc k == L.index sc_list (k % (US.v nb_size_classes)))
+  })
   : Tot (l:list sc{
-    List.length l == total_nb_sc
+    L.length l == total_nb_sc /\
+    (forall (k:nat{k < L.length l}). L.index l k == L.index sc_list (k % (US.v nb_size_classes)))
   })
   (decreases (US.v nb_arenas - i))
   =
@@ -46,9 +52,15 @@ let rec arena_sc_list'
     US.v nb_size_classes * nb_arenas_nat;
   };
   assert (total_nb_sc == nb_arenas_nat * US.v nb_size_classes);
-  if i = nb_arenas_nat then acc
-  else (
+  if i = nb_arenas_nat then (
+    acc
+  ) else (
     List.append_length acc sc_list;
+    let l = acc `List.append` sc_list in
+    ML.lemma_append_repeat #sc i sc_list (US.v nb_size_classes) acc;
+    assert (forall (k:nat{k < L.length acc}).
+      L.index l k == L.index sc_list (k % (US.v nb_size_classes))
+    );
     arena_sc_list' (i + 1) (acc `List.append` sc_list)
   )
 
@@ -56,23 +68,10 @@ let rec arena_sc_list'
 #push-options "--fuel 1"
 [@@ reduce_attr]
 let arena_sc_list : l:list sc{
-  //(forall (i:nat{i < L.length l}). L.index l i == L.index sc_list (i % US.v nb_size_classes))
-  True
+  (forall (i:nat{i < L.length l}). L.index l i == L.index sc_list (i % US.v nb_size_classes))
 }
 = arena_sc_list' 0 []
 #pop-options
-
-//let init_sizes (_:unit)
-//  : SteelTop (sizes_t) false
-//  (fun _ -> emp)
-//  (fun _ r _ ->
-//    TLA.length r == total_nb_sc /\
-//    (forall (k:U32.t{U32.v k < total_nb_sc}).
-//      TLA.get r k == List.Tot.index arena_sc_list (U32.v k))
-//  )
-//  =
-//  let v = TLA.create #sc arena_sc_list in
-//  return v
 
 #restart-solver
 
@@ -450,14 +449,30 @@ val slab_malloc_fast
 
 #restart-solver
 
+open MiscArith
+
+let adhoc_mod_lemma
+  (i k multiple: nat)
+  : Lemma
+  (requires
+    multiple > 0 /\
+    i < multiple
+  )
+  (ensures
+    (i + k * multiple) % multiple == i
+  )
+  =
+  lemma_mod_mul2 k multiple multiple;
+  lemma_mod_plus2 i (k * multiple) multiple
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_malloc_fast arena_id bytes
   =
   if enable_slab_canaries_malloc then (
     let i = sc_selection (U32.add bytes 2ul) in
     [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+    adhoc_mod_lemma (US.v i) (US.v arena_id) (US.v nb_size_classes);
     let size = TLA.get sizes idx in
-    assume (size == L.index sc_list (US.v i));
     let ptr = slab_malloc_one idx bytes in
     set_canary ptr size;
     return ptr
@@ -477,7 +492,6 @@ let slab_malloc arena_id bytes
 
 #restart-solver
 
-open MiscArith
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 /// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`

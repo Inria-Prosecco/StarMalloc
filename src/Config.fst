@@ -65,13 +65,13 @@ let sc_list_lemma (i:nat{i < L.length sc_list})
   (U32.v (L.index sc_list i) == sc_list_f i)
   =
   sc_list_check ();
-  map_eq_to_index_eq
+  lemma_map_eq_to_index_eq
     (fun (k:sc) -> U32.v k <: nat)
     (fun k -> sc_list_f k)
     (sc_list)
     (init (L.length sc_list))
     i;
-  init_index (L.length sc_list) i
+  lemma_init_index (L.length sc_list) i
 
 
 //DO NOT EDIT, edit sc_list instead

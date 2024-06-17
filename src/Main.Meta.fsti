@@ -40,7 +40,8 @@ val arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l})
 let sizes_t = r:TLA.t sc{
   TLA.length r == total_nb_sc /\
   (forall (k:US.t{US.v k < total_nb_sc}).
-    TLA.get r k == L.index arena_sc_list (US.v k))
+    TLA.get r k == L.index arena_sc_list (US.v k) /\
+    TLA.get r k == L.index sc_list (US.v k % US.v nb_size_classes))
 }
 
 val sizes : sizes_t
