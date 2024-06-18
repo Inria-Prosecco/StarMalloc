@@ -73,6 +73,7 @@
           "c(/.*)?"
           "Makefile.include"
           "Makefile"
+          "spdx-header.txt"
         ];
         enableParallelBuilding = true;
         buildInputs = [ fstar steel karamel pkgs.removeReferencesTo ];
