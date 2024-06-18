@@ -31,10 +31,11 @@
       steel = steel-src.packages.${system}.steel;
       karamel = krml-src.packages.${system}.karamel.home;
 
-      # allocator derivation
+      # allocator derivations
       # TODO: use pkgs.llvmPackages_latest.stdenv.mkDerivation
       # currently, there is some linking issue, try to fix it/report it
 
+      # light build: no verification involved, only compile C files
       starmalloc-light = pkgs.stdenv.mkDerivation {
         name = "StarMalloc (light build)";
         src = lib.sourceByRegex ./. [
@@ -57,6 +58,8 @@
           find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
         '';
       };
+
+      # full build: verify, extract and compile
       starmalloc = pkgs.stdenv.mkDerivation {
         name = "StarMalloc (full build)";
         src = lib.sourceByRegex ./. [
@@ -82,10 +85,19 @@
           find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
         '';
       };
+
+      # fast full build: extract and compile (verification is very light: SMT queries are admitted)
+      starmalloc-admit-smt = starmalloc.overrideAttrs (finalAttrs: previousAttrs: {
+        OTHERFLAGS = "--admit_smt_queries true";
+      });
+      # check that build is stable
+      starmalloc-quake = starmalloc.overrideAttrs (finalAttrs: previousAttrs: {
+        OTHERFLAGS = "--quake 5/5";
+      });
     in
     {
       packages.${system} = {
-        inherit starmalloc-light starmalloc;
+        inherit starmalloc-light starmalloc starmalloc-admit-smt starmalloc-quake;
         default=starmalloc;
       };
     };
