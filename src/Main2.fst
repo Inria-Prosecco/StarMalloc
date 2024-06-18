@@ -131,7 +131,7 @@ let slab_malloc_fast_lemma
 let slab_malloc_fast arena_id bytes
   =
   if enable_slab_canaries_malloc then (
-    let bytes = U32.add bytes 2ul in
+    [@inline_let] let bytes = U32.add bytes 2ul in
     let i = sc_selection bytes in
     slab_malloc_fast_lemma arena_id bytes i;
     [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
