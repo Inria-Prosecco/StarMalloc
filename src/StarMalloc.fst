@@ -20,8 +20,9 @@ open ExternUtils
 open NullOrVarray
 
 // small allocations: slab allocator
-open Main
+//open Main
 open Main.Meta
+open Main2
 // large allocations: AVL+mmap allocator
 open LargeAlloc
 
