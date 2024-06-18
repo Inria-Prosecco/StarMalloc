@@ -54,7 +54,7 @@ val intro_ind_varraylist_nil (#opened:_)
 module G = FStar.Ghost
 
 let intro_ind_varraylist_nil r r_idxs =
-  ALG.intro_arraylist_nil
+  ALG.intro_arraylist_nil #AL.status
     pred1 pred2 pred3 pred4 pred5
     r
     AL.null_ptr
@@ -91,7 +91,7 @@ let intro_ind_varraylist_nil r r_idxs =
   intro_vdep
     (A.varray r_idxs)
     (SlabsCommon.ind_varraylist_aux r idxs)
-    _
+    (SlabsCommon.ind_varraylist_aux r)
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)
