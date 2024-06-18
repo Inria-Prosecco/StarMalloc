@@ -75,6 +75,22 @@ let adhoc_mod_lemma
 
 #restart-solver
 
+module FML = FStar.Math.Lemmas
+
+let slab_malloc_fast_lemma_aux_mod
+  (i j k n: nat)
+  : Lemma
+  (requires
+    i < k /\
+    j < n
+  )
+  (ensures
+    i * n + j < k * n
+  )
+  =
+  FML.lemma_mult_le_right n i (k-1);
+  assert (i * n <= (k-1) * n)
+
 #push-options "--fuel 0 --ifuel 1 --z3rlimit 100"
 let slab_malloc_fast_lemma
   (arena_id: US.t{US.v arena_id < US.v nb_arenas})
@@ -95,7 +111,8 @@ let slab_malloc_fast_lemma
   =
   total_nb_sc_lemma ();
   assert (US.fits (US.v nb_arenas * US.v nb_size_classes));
-  assume (US.v arena_id * US.v nb_size_classes + US.v i < US.v nb_arenas * US.v nb_size_classes);
+  slab_malloc_fast_lemma_aux_mod (US.v arena_id) (US.v i) (US.v nb_arenas) (US.v nb_size_classes);
+  assert (US.v arena_id * US.v nb_size_classes + US.v i < US.v nb_arenas * US.v nb_size_classes);
   US.fits_lte (US.v arena_id * US.v nb_size_classes + US.v i) (US.v nb_arenas * US.v nb_size_classes);
   let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
   let size1 = L.index sc_list (US.v i) in
