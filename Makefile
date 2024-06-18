@@ -59,6 +59,7 @@ obj/%.krml:
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
 	$(KRML_EXE) -skip-compilation -fparentheses -tmpdir dist \
+	  -header spdx-header.txt \
 	  -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 	  -bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main.Meta,LargeAlloc'[rename=StarMalloc] \
