@@ -6,6 +6,7 @@ module U64 = FStar.UInt64
 module US = FStar.SizeT
 module UP = FStar.PtrdiffT
 module G = FStar.Ghost
+module L = FStar.List.Tot
 
 open Steel.Effect.Atomic
 open Steel.Effect

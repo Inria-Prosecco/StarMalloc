@@ -73,26 +73,58 @@ let adhoc_mod_lemma
   lemma_mod_mul2 k multiple multiple;
   lemma_mod_plus2 i (k * multiple) multiple
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
+#restart-solver
+
+#push-options "--fuel 0 --ifuel 1 --z3rlimit 100"
+let slab_malloc_fast_lemma
+  (arena_id: US.t{US.v arena_id < US.v nb_arenas})
+  (size: U32.t)
+  (i: US.t)
+  : Lemma
+  (requires
+    US.v i < US.v nb_size_classes /\
+    U32.v size <= U32.v (L.index sc_list (US.v i))
+  )
+  (ensures
+    US.fits (US.v arena_id * US.v nb_size_classes) /\
+    US.fits (US.v arena_id * US.v nb_size_classes + US.v i) /\
+    US.v arena_id * US.v nb_size_classes + US.v i < TLA.length sizes /\
+    (let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+    U32.v size <= U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v idx)).data.size
+  ))
+  =
+  total_nb_sc_lemma ();
+  assert (US.fits (US.v nb_arenas * US.v nb_size_classes));
+  assume (US.v arena_id * US.v nb_size_classes + US.v i < US.v nb_arenas * US.v nb_size_classes);
+  US.fits_lte (US.v arena_id * US.v nb_size_classes + US.v i) (US.v nb_arenas * US.v nb_size_classes);
+  let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
+  let size1 = L.index sc_list (US.v i) in
+  let size2 = TLA.get sizes idx in
+  let size3 = (Seq.index (G.reveal sc_all.g_size_classes) (US.v idx)).data.size in
+  sizes_t_pred_elim sizes;
+  assert (size2 == L.index arena_sc_list (US.v idx));
+  assert (size2 == L.index sc_list (US.v idx % US.v nb_size_classes));
+  adhoc_mod_lemma (US.v i) (US.v arena_id) (US.v nb_size_classes);
+  assert (US.v idx % US.v nb_size_classes == US.v i);
+  assert (size2 == size1);
+  assert (size3 == size2)
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let slab_malloc_fast arena_id bytes
   =
-  admit ();
   if enable_slab_canaries_malloc then (
-    let i = sc_selection (U32.add bytes 2ul) in
-    assume (US.fits (US.v arena_id * US.v nb_size_classes));
-    assume (US.fits (US.v arena_id * US.v nb_size_classes + US.v i));
+    let bytes = U32.add bytes 2ul in
+    let i = sc_selection bytes in
+    slab_malloc_fast_lemma arena_id bytes i;
     [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-    adhoc_mod_lemma (US.v i) (US.v arena_id) (US.v nb_size_classes);
-    sizes_t_pred_elim sizes;
-    total_nb_sc_lemma ();
     let size = TLA.get sizes idx in
     let ptr = slab_malloc_one idx bytes in
     set_canary ptr size;
     return ptr
   ) else (
     let i = sc_selection bytes in
-    assume (US.fits (US.v arena_id * US.v nb_size_classes));
-    assume (US.fits (US.v arena_id * US.v nb_size_classes + US.v i));
+    slab_malloc_fast_lemma arena_id bytes i;
     [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
     let ptr = slab_malloc_one idx bytes in
     return ptr
