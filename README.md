@@ -182,6 +182,7 @@ pvalloc and valloc are not yet provided for compatibility purpose, cfree is not 
 ## License
 
 All the code in this repository is released under an Apache 2.0 license, with the exception of `c/fatal_error.c` that contains some logging helpers from the [hardened\_malloc](https://github.com/GrapheneOS/hardened_malloc) repository under the MIT license.
+Please note that for practical reasons, some code from Steel and KaRaMeL is vendored in `vendor/`: the Apache 2.0 license also applies to this directory.
 
 ## Authors
 

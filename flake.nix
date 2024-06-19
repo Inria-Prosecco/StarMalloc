@@ -40,17 +40,19 @@
         name = "StarMalloc (light build)";
         src = lib.sourceByRegex ./. [
           "dist(/.*)?"
-          "src(/.*)?"
+          "vendor(/.*)?"
           "c(/.*)?"
           "Makefile.include"
           "Makefile"
         ];
         enableParallelBuilding = true;
-        buildInputs = [ fstar steel karamel pkgs.removeReferencesTo ];
-        FSTAR_HOME = fstar;
-        STEEL_HOME = steel;
+        buildInputs = [ karamel pkgs.removeReferencesTo ];
+        # TODO: unaesthetic workaround, could this be improved?
+        STEEL_HOME = 1;
         KRML_HOME = karamel;
-        # skip F* dependency check, that would require all F* directories to be included as source
+        # use vendored files, as this would require Steel and KaRaMeL
+        VENDOR = 1;
+        # skip F* dependency check, as this would require F*
         NODEPEND = 1;
         installPhase = "mkdir $out && cp -r dist out/*.so $out";
         buildFlags = [ "debug_light" "light" ];
