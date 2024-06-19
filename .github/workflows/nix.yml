@@ -12,18 +12,25 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-      - name: build StarMalloc
-        run: |
-          nix build -L .#starmalloc
-      - name: build StarMalloc logs
-        run: |
-          nix log .#starmalloc
       - name: build StarMalloc (light)
         run: |
           nix build -L .#starmalloc-light
       - name: build StarMalloc (light) logs
         run: |
           nix log .#starmalloc-light
+      - name: build StarMalloc
+        run: |
+          nix build -L .#starmalloc
+      - name: build StarMalloc logs
+        run: |
+          nix log .#starmalloc
+      - name: check dist/
+        run: |
+          nix build -L .#check-dist
+      - name: check dist/ logs
+        run: |
+          nix log .#check-dist
+
       #- name: bench StarMalloc
       #  run: |
       #    nix build -L .#bench

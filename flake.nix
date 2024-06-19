@@ -87,18 +87,30 @@
         '';
       };
 
+      # check that dist/ is up-to-date
+      check-dist = pkgs.stdenv.mkDerivation {
+        name = "StarMalloc (dist/ check)";
+        src = lib.sourceByRegex ./. [
+          "dist(/.*)?"
+        ];
+        buildInputs = [ starmalloc ];
+        installPhase = "([[ -z $(diff -qr dist/ ${starmalloc}/dist) ]] && exit 0 || (diff --color=always -Naur dist/ ${starmalloc}/dist; exit 1)) && mkdir $out";
+      };
+
       # fast full build: extract and compile (verification is very light: SMT queries are admitted)
       starmalloc-admit-smt = starmalloc.overrideAttrs (finalAttrs: previousAttrs: {
+        name = "StarMalloc (admit SMT queries build)";
         OTHERFLAGS = "--admit_smt_queries true";
       });
       # check that build is stable
       starmalloc-quake = starmalloc.overrideAttrs (finalAttrs: previousAttrs: {
+        name = "StarMalloc (stability check build)";
         OTHERFLAGS = "--quake 5/5";
       });
     in
     {
       packages.${system} = {
-        inherit starmalloc-light starmalloc starmalloc-admit-smt starmalloc-quake;
+        inherit starmalloc-light starmalloc starmalloc-admit-smt starmalloc-quake check-dist;
         default=starmalloc;
       };
     };
