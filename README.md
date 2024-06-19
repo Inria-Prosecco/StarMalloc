@@ -19,7 +19,14 @@ TODO: insert graph
 
 ### Light build (using extracted C code)
 
-`make light` will produce `out/starmalloc.so` out of pre-extracted C files (`dist/` directory).
+With only a C compiler as dependency, the following command will produce `out/starmalloc.so` out of pre-extracted C files (`dist/` directory) and vendored C files (`vendor/` directory):
+`FSTAR_HOME=1 STEEL_HOME=1 KRML_HOME=1 NODEPEND=1 VENDOR=1 make light`.
+
+TODO: this command should be easier
+- `{FSTAR,STEEl,KRML}_HOME=1` : so that checks in `Makefile.include` will not fail
+- `NODEPEND=1`: skip dependency check requiring F\*
+- `VENDOR=1`: use vendored files, otherwise Steel and KaRaMeL are required
+
 StarMalloc can then be used this way: `LD_PRELOAD=out/starmalloc.so <program>`.
 Note: some programs (e.g. Firefox or Chromium) use shipped allocators instead of the system (or environment) allocator.
 
@@ -43,6 +50,24 @@ Steps with corresponding Makefile build targets:
 tl;dr:
 - `make lib -j $CORES` produces `out/*.so` files;
 - `OTHERFLAGS="--admit_smt_queries true" make lib -j $CORES` produces `out/*.so` files while skipping most of the verification effort.
+
+
+## CI
+
+As of 2024-06-19, StarMalloc is actively maintained. Several CI checks are in place:
+- An internal CI job is run daily to check whether using last versions of F\*, Steel and KaRaMeL breaks the build.
+- Pull requests are required to contribute to the main branch. Several checks are run before merging:
+  + Verification, extraction and compilation of the extracted files must work (`starmalloc` job).
+  + Compilation of the shipped pre-extracted C files (`dist/`) must work (`starmalloc-light` job).
+  + Light build relies on pre-extracted C files.
+    To ensure light build and full build remain consistent,
+    pre-extracted C files (`dist/`) must be up-to-date (`check-dist` job)
+    with respect to the full build output.
+  + Light build with `VENDOR=1` relies on vendored C files,
+    so that Steel and KaRaMeL are not required.
+    To ensure light build and full build remain consistent,
+    vendored C files (`vendor/`) must be up-to-date (`check-vendor` job)
+    with respect to the full build inputs (that is, the content of Steel and KaRaMeL packages).
 
 ## Benchmarks
 
