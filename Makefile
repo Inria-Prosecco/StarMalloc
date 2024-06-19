@@ -91,6 +91,7 @@ FILES = \
   dist/Bitmap5.c \
   dist/Utils2.c \
   dist/SizeClass.c \
+  dist/SizeClassSelection.c \
   c/utils.c \
   c/fatal_error.c \
   c/memory.c \

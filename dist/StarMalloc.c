@@ -1394,7 +1394,7 @@ static uint8_t *allocate_size_class(SizeClass_size_class_struct_ scs)
   return r;
 }
 
-static uint8_t *slab_malloc_fast(size_t arena_id, uint32_t bytes)
+static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
 {
   uint32_t r0 = SizeClassSelection_inv_impl(bytes + 2U);
   size_t i = (size_t)r0;
@@ -1411,11 +1411,6 @@ static uint8_t *slab_malloc_fast(size_t arena_id, uint32_t bytes)
     ptr0[(size_t)(size - 1U)] = 23U;
   }
   return ptr0;
-}
-
-static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
-{
-  return slab_malloc_fast(arena_id, bytes);
 }
 
 static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t bytes)
