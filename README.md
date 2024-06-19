@@ -19,7 +19,14 @@ TODO: insert graph
 
 ### Light build (using extracted C code)
 
-`make light` will produce `out/starmalloc.so` out of pre-extracted C files (`dist/` directory).
+With only a C compiler as dependency, the following command will produce `out/starmalloc.so` out of pre-extracted C files (`dist/` directory) and vendored C files (`vendor/` directory):
+`FSTAR_HOME=1 STEEL_HOME=1 KRML_HOME=1 NODEPEND=1 VENDOR=1 make light`.
+
+TODO: this command should be easier
+- `{FSTAR,STEEl,KRML}_HOME=1` : so that checks in `Makefile.include` will not fail
+- `NODEPEND=1`: skip dependency check requiring F\*
+- `VENDOR=1`: use vendored files, otherwise Steel and KaRaMeL are required
+
 StarMalloc can then be used this way: `LD_PRELOAD=out/starmalloc.so <program>`.
 Note: some programs (e.g. Firefox or Chromium) use shipped allocators instead of the system (or environment) allocator.
 
@@ -43,6 +50,24 @@ Steps with corresponding Makefile build targets:
 tl;dr:
 - `make lib -j $CORES` produces `out/*.so` files;
 - `OTHERFLAGS="--admit_smt_queries true" make lib -j $CORES` produces `out/*.so` files while skipping most of the verification effort.
+
+
+## CI
+
+As of 2024-06-19, StarMalloc is actively maintained. Several CI checks are in place:
+- An internal CI job is run daily to check whether using last versions of F\*, Steel and KaRaMeL breaks the build.
+- Pull requests are required to contribute to the main branch. Several checks are run before merging:
+  + Verification, extraction and compilation of the extracted files must work (`starmalloc` job).
+  + Compilation of the shipped pre-extracted C files (`dist/`) must work (`starmalloc-light` job).
+  + Light build relies on pre-extracted C files.
+    To ensure light build and full build remain consistent,
+    pre-extracted C files (`dist/`) must be up-to-date (`check-dist` job)
+    with respect to the full build output.
+  + Light build with `VENDOR=1` relies on vendored C files,
+    so that Steel and KaRaMeL are not required.
+    To ensure light build and full build remain consistent,
+    vendored C files (`vendor/`) must be up-to-date (`check-vendor` job)
+    with respect to the full build inputs (that is, the content of Steel and KaRaMeL packages).
 
 ## Benchmarks
 
@@ -102,7 +127,12 @@ Thanks to the use of a specific wrapper `with_lock` instead of manipulating mute
 - zeroing check on allocation
 - guard pages
 - quarantine
-- canaries
+- slot canaries (slab allocations)
+
+Many of these security mechanisms are configurable: see `src/Config.fst`.
+`src/Config.fsti` interface file is used as abstraction boundary.
+Thus, one can edit this configuration file and proceeds with a full rebuild easily,
+as most intermediary verification fails are preserved.
 
 ## Structure of the allocator
 
@@ -140,7 +170,8 @@ The following symbols are provided:
 1. as part of C standard library: `malloc`, `calloc`, `realloc`, `free, aligned_alloc` (C11), `free_sized` (C23, to be refined), `free_aligned_sized` (C23, to be refined);
 2. other symbols: `posix_memalign` (POSIX), `malloc_usable_size` (GNU), `memalign` (seems to be quite standard).
 
-pvalloc and valloc are not yet provided for compatibility purpose, cfree is not yet provided as a fatal error stub. (Note: The cfree has been removed since glibc 2.26, current Debian oldoldstable glibc = 2.28, as of 2024-02-05.)
+pvalloc and valloc are not yet provided for compatibility purpose, cfree is not yet provided as a fatal error stub.
+(Note: The cfree has been removed since glibc 2.26, current Debian oldoldstable glibc = 2.28, as of 2024-02-05.)
 
 ## External repositories
 
@@ -156,12 +187,16 @@ pvalloc and valloc are not yet provided for compatibility purpose, cfree is not 
 
 ## Future work
 
+- (CI) add CI check about compiling StarMalloc with `OTHERFLAGS="--admit_smt_queries true"` (currently fails on `src/Main.fst` file, upstream issue)
 - (benchmark) try Speedometer 3.0
 - (feature) `free_sized` (C23) and `free_aligned_sized` (C23) implementations could be refined to be stricter (only wrappers for now)
 - (feature) support for 16K pages
 - (feature) support for ARM MTE (Memory Tagging Extension)
 - (feature) Android support
+- (feature) improve support for a F\*/Steel client
 - slab allocations:
+  - (feature) add support for 48-bytes size-class
+  - (security) slots quarantine
   - (security) initial mapping of allocation region should be `PROT_NONE`
   - (performance) size class selection could be improved (`malloc` case = done, `aligned_alloc` case remaining)
   - (security) randomizing guard pages
@@ -172,6 +207,7 @@ pvalloc and valloc are not yet provided for compatibility purpose, cfree is not 
 ## License
 
 All the code in this repository is released under an Apache 2.0 license, with the exception of `c/fatal_error.c` that contains some logging helpers from the [hardened\_malloc](https://github.com/GrapheneOS/hardened_malloc) repository under the MIT license.
+Please note that for practical reasons, some code from Steel and KaRaMeL is vendored in `vendor/`: the Apache 2.0 license also applies to this directory.
 
 ## Authors
 
