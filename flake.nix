@@ -87,14 +87,21 @@
         '';
       };
 
-      # check that dist/ is up-to-date
+      # check whether dist/ is up-to-date
       check-dist = pkgs.stdenv.mkDerivation {
         name = "StarMalloc (dist/ check)";
         src = lib.sourceByRegex ./. [
           "dist(/.*)?"
         ];
         buildInputs = [ starmalloc ];
-        installPhase = "([[ -z $(diff -qr dist/ ${starmalloc}/dist) ]] && exit 0 || (diff --color=always -Naur dist/ ${starmalloc}/dist; exit 1)) && mkdir $out";
+        installPhase = ''
+          if [[ -z $(diff -qr dist/ ${starmalloc}/dist) ]]; then
+            mkdir $out
+          else
+            diff --color=always -Naur dist/ ${starmalloc}/dist
+            exit 1
+          fi
+        '';
       };
 
       # fast full build: extract and compile (verification is very light: SMT queries are admitted)
