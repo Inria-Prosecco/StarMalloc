@@ -46,19 +46,17 @@
           "Makefile"
         ];
         enableParallelBuilding = true;
-        buildInputs = [ karamel pkgs.removeReferencesTo ];
+        buildInputs = [ ];
         # TODO: unaesthetic workaround, could this be improved?
+        FSTAR_HOME = 1;
         STEEL_HOME = 1;
-        KRML_HOME = karamel;
+        KRML_HOME = 1;
         # use vendored files, as this would require Steel and KaRaMeL
         VENDOR = 1;
         # skip F* dependency check, as this would require F*
         NODEPEND = 1;
         installPhase = "mkdir $out && cp -r dist out/*.so $out";
         buildFlags = [ "debug_light" "light" ];
-        postInstall = ''
-          find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
-        '';
       };
 
       # full build: verify, extract and compile

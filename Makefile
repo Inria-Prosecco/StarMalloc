@@ -123,8 +123,8 @@ INCLUDE_FLAGS = \
   -I $(STEEL_HOME)/include/steel
 
 INCLUDE_VENDOR_FLAGS = \
-  -I $(KRML_HOME)/include \
-  -I $(KRML_LIB)/dist/minimal \
+  -I vendor/karamel/include \
+  -I vendor/karamel/krmllib/dist/minimal \
   -I vendor/steel/include/steel
 
 ifeq ($(VENDOR), 1)
