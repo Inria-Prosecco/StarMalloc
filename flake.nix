@@ -31,10 +31,6 @@
       steel = steel-src.packages.${system}.steel;
       karamel = krml-src.packages.${system}.karamel.home;
 
-      # allocator derivations
-      # TODO: use pkgs.llvmPackages_latest.stdenv.mkDerivation
-      # currently, there is some linking issue, try to fix it/report it
-
       # light build: no verification involved, only compile C files
       starmalloc-light = pkgs.stdenv.mkDerivation {
         name = "StarMalloc (light build)";
@@ -76,15 +72,12 @@
           "spdx-header.txt"
         ];
         enableParallelBuilding = true;
-        buildInputs = [ fstar steel karamel pkgs.removeReferencesTo ];
+        buildInputs = [ fstar steel karamel ];
         FSTAR_HOME = fstar;
         STEEL_HOME = steel;
         KRML_HOME = karamel;
         installPhase = "mkdir $out && cp -r dist out/*.so $out";
         buildFlags = [ "debug_lib" "lib" ];
-        postInstall = ''
-          find dist -type f -name "*" -exec remove-references-to -t ${karamel} {} \;
-        '';
       };
 
       # check whether dist/ is up-to-date
@@ -141,15 +134,21 @@
         name = "StarMalloc (admit SMT queries build)";
         OTHERFLAGS = "--admit_smt_queries true";
       });
-      # check that build is stable
+
+      # check whether verification is stable
       starmalloc-quake = starmalloc.overrideAttrs (finalAttrs: previousAttrs: {
         name = "StarMalloc (stability check build)";
         OTHERFLAGS = "--quake 5/5";
       });
+
     in
     {
       packages.${system} = {
-        inherit starmalloc-light starmalloc starmalloc-admit-smt starmalloc-quake check-dist check-vendor;
+        inherit
+          starmalloc-light
+          starmalloc
+          starmalloc-admit-smt starmalloc-quake
+          check-dist check-vendor;
         default=starmalloc;
       };
     };
