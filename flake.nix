@@ -95,10 +95,42 @@
         ];
         buildInputs = [ starmalloc ];
         installPhase = ''
-          if [[ -z $(diff -qr dist/ ${starmalloc}/dist) ]]; then
+          if [[ -z $(diff -qr dist ${starmalloc}/dist) ]]; then
             mkdir $out
           else
-            diff --color=always -Naur dist/ ${starmalloc}/dist
+            diff --color=always -Naur dist ${starmalloc}/dist
+            exit 1
+          fi
+        '';
+      };
+
+      # check whether vendor/ is up-to-date
+      check-vendor = pkgs.stdenv.mkDerivation {
+        name = "StarMalloc (vendor/ check)";
+        src = lib.sourceByRegex ./. [
+          "vendor(/.*)?"
+        ];
+        buildInputs = [ steel karamel ];
+        STEEL_HOME = steel;
+        KRML_HOME = karamel;
+        installPhase = ''
+          # Steel
+          mkdir -p temp_vendor/steel
+          mkdir -p temp_vendor/steel/include
+          cp -r $STEEL_HOME/include/steel/ temp_vendor/steel/include/steel/
+          mkdir -p temp_vendor/steel/src
+          cp -r $STEEL_HOME/src/c/ temp_vendor/steel/src/c/
+
+          # KaRaMeL
+          mkdir -p temp_vendor/karamel
+          cp -r $KRML_HOME/include temp_vendor/karamel/include
+          mkdir -p temp_vendor/karamel/krmllib/dist
+          cp -r $KRML_HOME/krmllib/dist/minimal temp_vendor/karamel/krmllib/dist/minimal
+
+          if [[ -z $(diff -qr vendor temp_vendor) ]]; then
+            mkdir $out
+          else
+            diff --color=always -Naur vendor temp_vendor
             exit 1
           fi
         '';
@@ -117,7 +149,7 @@
     in
     {
       packages.${system} = {
-        inherit starmalloc-light starmalloc starmalloc-admit-smt starmalloc-quake check-dist;
+        inherit starmalloc-light starmalloc starmalloc-admit-smt starmalloc-quake check-dist check-vendor;
         default=starmalloc;
       };
     };
