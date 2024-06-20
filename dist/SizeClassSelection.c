@@ -27,7 +27,7 @@ uint32_t SizeClassSelection_inv_impl(uint32_t x)
     uint32_t y0 = log - 6U;
     uint32_t v = align2 - 1U;
     uint32_t x_ = x_as_u32 - align + v;
-    uint32_t z0 = x_ / align2;
+    uint32_t z0 = x_ >> (log - 2U);
     uint32_t y = y0;
     uint32_t z = z0;
     return y * 4U + z + 2U;

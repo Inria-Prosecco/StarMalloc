@@ -243,10 +243,30 @@ let upper_div_impl
   =
   let v = U32.sub y 1ul in
   let x' = U32.add x v in
-  //TODO: let r = U32.logand x' (U32.lognot v) in
   let r = U32.div x' y in
   r
 
+inline_for_extraction noextract
+let fast_upper_div_impl
+  (x: U32.t)
+  (y: U32.t)
+  (k: U32.t)
+  : Pure U32.t
+  (requires
+    U32.v x <= 4096 /\
+    U32.v y <= 4096 /\
+    //(exists (k:nat).
+    U32.v y == pow2 (U32.v k) /\
+    U32.v k < 32
+  )
+  (ensures fun r ->
+    U32.v r == nearest_multiple_upper_div (U32.v x) (U32.v y)
+  )
+  =
+  let v = U32.sub y 1ul in
+  let x' = U32.add x v in
+  let r = U32.shift_right x' k in
+  r
 
 module FML = FStar.Math.Lemmas
 
@@ -366,7 +386,7 @@ let inv_impl_aux_2 (x: U32.t)
   FML.pow2_lt_compat (U32.v log) (U32.v log - 2);
   assert (U32.v align2 < U32.v align);
   let y = U32.sub log 6ul in
-  let z = upper_div_impl (U32.sub x_as_u32 align) align2 in
+  let z = fast_upper_div_impl (U32.sub x_as_u32 align) align2 (U32.sub log 2ul) in
   y, z
 
 inline_for_extraction noextract
