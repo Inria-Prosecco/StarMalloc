@@ -67,7 +67,6 @@ extract: $(ALL_KRML_FILES)
 	  -bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
 	  -bundle 'SlotsFree,SlotsAlloc'[rename=Slots] \
 	  -bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
-	  -no-prefix Main \
 	  -no-prefix LargeAlloc \
 	  -no-prefix Mman \
 	  -no-prefix MemoryTrap \
