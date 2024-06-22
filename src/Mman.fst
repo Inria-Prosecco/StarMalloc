@@ -12,6 +12,7 @@ module UP = FStar.PtrdiffT
 module AL = ArrayList
 module R = Steel.Reference
 
+open Constants
 open Config
 open Utils2
 

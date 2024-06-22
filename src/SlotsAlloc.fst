@@ -17,8 +17,10 @@ module A = Steel.Array
 module SM = Steel.Memory
 
 open Prelude
+open Constants
 open Config
 open Utils2
+open ExternUtils
 open SteelOptUtils
 open SteelStarSeqUtils
 

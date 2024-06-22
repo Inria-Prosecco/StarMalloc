@@ -1,5 +1,8 @@
 module Quarantine
 
+open Constants
+open Config
+
 let quarantine_slab arr =
   if enable_quarantine_trap
   then trap_array arr

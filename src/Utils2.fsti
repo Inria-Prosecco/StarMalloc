@@ -11,7 +11,7 @@ open Steel.Effect
 open Steel.Reference
 module A = Steel.Array
 
-open Config
+open Constants
 
 #push-options "--fuel 1 --ifuel 1"
 
@@ -115,21 +115,6 @@ noextract
 let nth_is_zero (x: U64.t) (pos: U32.t{U32.v pos < 64})
   : bool
   = FU.nth (U64.v x) (U64.n - U32.v pos - 1) = false
-
-module G = FStar.Ghost
-// CAUTION: assume val, no implementation
-val ffs64 (x: U64.t) (bound: G.erased U32.t)
-  : Pure U32.t
-  (requires
-    U32.v (G.reveal bound) <= 64 /\
-    (exists (k:nat{k < U32.v (G.reveal bound)}). nth_is_zero x (U32.uint_to_t k)))
-  (ensures fun r ->
-    U32.v r < U32.v (G.reveal bound) /\
-    nth_is_zero x r /\
-    (forall (k:nat{k < U64.n /\ nth_is_zero x (U32.uint_to_t k)}).
-      U32.v r <= k
-    )
-  )
 
 let max64_lemma_aux (i:nat{i < 64})
   : Lemma
@@ -373,6 +358,8 @@ let full_n_lemma (x: U64.t) (bound: U32.t)
     max64_lemma_aux2 (U32.v bound) x (full_n bound)
   ))
 #pop-options
+
+module G = FStar.Ghost
 
 noextract inline_for_extraction
 let bound2_gen (v: U32.t) (size_class: G.erased sc)

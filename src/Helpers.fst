@@ -17,6 +17,7 @@ module A = Steel.Array
 module SM = Steel.Memory
 
 open Prelude
+open Constants
 open Config
 open Utils2
 open SteelOptUtils
@@ -476,6 +477,7 @@ let slab_to_slots (#opened:_)
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
 
+noextract
 let zero_beyond_bound
   (size_class: sc)
   (md_as_seq: Seq.lseq U64.t 4)

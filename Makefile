@@ -4,10 +4,11 @@ world: verify
 # Many thanks to Jonathan Protzenko for its Low* tutorial
 
 FSTAR_HOME ?= $(realpath $(dir $(shell which fstar.exe))/..)
-FSTAR_EXE = $(FSTAR_HOME)/bin/fstar.exe
-KRML_EXE = $(KRML_HOME)/krml
 
 include Makefile.include
+
+FSTAR_EXE = $(FSTAR_HOME)/bin/fstar.exe
+KRML_EXE = $(KRML_HOME)/krml
 
 FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_EMACS_PARAMS) \
   --already_cached 'FStar Steel C Prims' \
@@ -61,38 +62,43 @@ extract: $(ALL_KRML_FILES)
 	$(KRML_EXE) \
 	  -skip-compilation -skip-makefiles \
 	  -fparentheses -tmpdir dist \
+	  -header spdx-header.txt \
 	  -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
-	  -bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main.Meta,LargeAlloc'[rename=StarMalloc] \
+	  -bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main2,Main.Meta,LargeAlloc'[rename=StarMalloc] \
 	  -bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
 	  -bundle 'SlotsFree,SlotsAlloc'[rename=Slots] \
 	  -bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
-	  -no-prefix Main \
 	  -no-prefix LargeAlloc \
 	  -no-prefix Mman \
 	  -no-prefix MemoryTrap \
+	  -no-prefix ExternUtils \
 	  -warn-error +9 \
 	  -add-include 'Steel_SpinLock:"steel_types.h"' \
 	  -add-include 'Steel_SpinLock:"steel_base.h"' \
 	  $^
 
+EXT_FILES = $(STEEL_HOME)/src/c/steel_spinlock.c
+
+EXT_VENDOR_FILES = vendor/steel/src/c/steel_spinlock.c
+
 # TODO: improve this
 #dist/Mman.c leads to issue, moving non-extern code apart
 FILES = \
-$(STEEL_HOME)/src/c/steel_spinlock.c \
-dist/ArrayList.c \
-dist/krmlinit.c \
-dist/StarMalloc.c \
-dist/Slabs.c \
-dist/Slots.c \
-dist/Bitmap5.c \
-dist/Utils2.c \
-dist/SizeClass.c \
-dist/PtrdiffWrapper.c \
-c/utils.c \
-c/fatal_error.c \
-c/memory.c \
-c/lib-alloc.c
+  dist/ArrayList.c \
+  dist/krmlinit.c \
+  dist/StarMalloc.c \
+  dist/Slabs.c \
+  dist/Slots.c \
+  dist/Bitmap5.c \
+  dist/Utils2.c \
+  dist/SizeClass.c \
+  dist/SizeClassSelection.c \
+  dist/PtrdiffWrapper.c \
+  c/utils.c \
+  c/fatal_error.c \
+  c/memory.c \
+  c/lib-alloc.c
 
 # general approach = try to use most of hardened_malloc's flags
 # use _DEFAULT_SOURCE instead of deprecated _BSD_SOURCE
@@ -107,21 +113,37 @@ c/lib-alloc.c
 # - clang 15.0.7
 # TODO:
 # - add -Wcast-align=strict or -Wcast-qual
-SHARED_FLAGS = -DRKML_VERIFIED_UINT128 \
-	       -I dist \
-	       -I $(KRML_HOME)/include \
-	       -I $(KRML_LIB)/dist/minimal \
-	       -I $(STEEL_HOME)/include/steel \
-	       -pthread -lpthread \
-	       -Wall -Wextra -Wwrite-strings -Wundef \
-	       -std=c17 -D_DEFAULT_SOURCE \
-	       -shared -fPIC
+
+SHARED_FLAGS = \
+  -DRKML_VERIFIED_UINT128 \
+  -I dist \
+  -pthread -lpthread \
+  -Wall -Wextra -Wwrite-strings -Wundef \
+  -std=c17 -D_DEFAULT_SOURCE \
+  -shared -fPIC
+
+INCLUDE_FLAGS = \
+  -I $(KRML_HOME)/include \
+  -I $(KRML_LIB)/dist/minimal \
+  -I $(STEEL_HOME)/include/steel
+
+INCLUDE_VENDOR_FLAGS = \
+  -I vendor/karamel/include \
+  -I vendor/karamel/krmllib/dist/minimal \
+  -I vendor/steel/include/steel
+
+ifeq ($(VENDOR), 1)
+VENDOR_PARAMS = $(INCLUDE_VENDOR_FLAGS) $(EXT_VENDOR_FILES)
+else
+VENDOR_PARAMS = $(INCLUDE_FLAGS) $(EXT_FILES)
+endif
 
 build_from_extracted_files_debug:
 	mkdir -p out
 	$(CC) $(SHARED_FLAGS) \
 	  -O0 -g \
 	  $(FILES) \
+	  $(VENDOR_PARAMS) \
 	  -o out/starmalloc-debug.so
 
 debug_light: build_from_extracted_files_debug
@@ -139,6 +161,7 @@ build_from_extracted_files:
 	  -march=native \
 	  -Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
 	  $(FILES) \
+	  $(VENDOR_PARAMS) \
 	  -o out/starmalloc.so
 
 light: build_from_extracted_files

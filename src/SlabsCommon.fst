@@ -1,5 +1,6 @@
 module SlabsCommon
 
+#push-options "--fuel 0 --ifuel 0"
 let lemma_partition_and_pred_implies_mem2
   (hd1 hd2 hd3 hd4 hd5 tl5 sz5:nat)
   (s:Seq.seq AL.cell)
@@ -56,6 +57,7 @@ let lemma_partition_and_pred_implies_mem5
     Classical.move_requires (ALG.lemma_mem_implies_pred pred3 hd3 s) idx;
     Classical.move_requires (ALG.lemma_mem_implies_pred pred4 hd4 s) idx;
     Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
+#pop-options
 
 let t (size_class: sc) : Type0 =
   dtuple2

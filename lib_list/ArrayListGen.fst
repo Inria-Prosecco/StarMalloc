@@ -1213,40 +1213,6 @@ let lemma_insert_spec_dataify pred s hd idx v =
 
   Classical.forall_intro aux
 
-let rec last_rev_hd_lemma (#a: Type)
-  (l: list a{Cons? l})
-  : Lemma
-  (ensures (
-    L.rev_length l;
-    L.last l == L.hd (L.rev l)
-  ))
-  (decreases L.length l)
-  = match l with
-  | [] -> ()
-  | [x] -> ()
-  | x::l' ->
-      assert (Cons? l');
-      L.rev_length l';
-      assert (Cons? (L.rev l'));
-      assert (L.last l == L.last l');
-      last_rev_hd_lemma l';
-      L.rev_append [x] l';
-      assert (L.rev l == (L.rev l')@[x]);
-      assert (L.hd (L.rev l) == L.hd (L.rev l'))
-
-let last_mem_lemma (#a: eqtype)
-  (l: list a{Cons? l})
-  : Lemma
-  (L.mem (L.last l) l)
-  =
-  let x = L.last l in
-  L.rev_length l;
-  last_rev_hd_lemma l;
-  assert (x == L.hd (L.rev l));
-  assert (L.mem x (L.rev l));
-  L.rev_mem l x;
-  assert (L.mem x l)
-
 /// Inserting an element in list1 that was not in list2 does not impact list2
 val lemma_insert_spec_frame2 (#a:Type)
   (pred pred': a -> prop)
@@ -1270,6 +1236,8 @@ val lemma_insert_spec_frame2 (#a:Type)
   ))
 
 #restart-solver
+
+open MiscList
 
 let lemma_insert_spec_frame2 pred pred' s hd idx hd5 tl5 v =
   lemma_insert_spec_frame pred pred' s hd idx hd5 v;

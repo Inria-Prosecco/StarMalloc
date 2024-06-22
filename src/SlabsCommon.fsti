@@ -22,6 +22,7 @@ module AL = ArrayList
 module ALG = ArrayListGen
 
 open Prelude
+open Constants
 open Config
 open Utils2
 open SlotsAlloc
