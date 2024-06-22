@@ -14,8 +14,6 @@ size_t Utils2_rounding(uint32_t size_class);
 
 typedef void *Utils2_zf_b;
 
-extern uint32_t Utils2_ffs64(uint64_t x);
-
 uint64_t Utils2_full_n_aux(uint32_t bound);
 
 uint64_t Utils2_full_n(uint32_t bound);

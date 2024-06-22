@@ -39,7 +39,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
       {
         size_t i2 = (size_t)3U;
         uint64_t x = bitmap[i2];
-        uint32_t r = Utils2_ffs64(x);
+        uint32_t r = ffs64(x);
         uint32_t r_ = 192U;
         return r + r_;
       }
@@ -47,7 +47,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
       {
         size_t i2 = (size_t)2U;
         uint64_t x = bitmap[i2];
-        uint32_t r = Utils2_ffs64(x);
+        uint32_t r = ffs64(x);
         uint32_t r_ = 128U;
         return r + r_;
       }
@@ -56,7 +56,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
     {
       size_t i2 = (size_t)1U;
       uint64_t x = bitmap[i2];
-      uint32_t r = Utils2_ffs64(x);
+      uint32_t r = ffs64(x);
       uint32_t r_ = 64U;
       return r + r_;
     }
@@ -64,7 +64,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
   else
   {
     uint64_t x = bitmap[0U];
-    uint32_t r = Utils2_ffs64(x);
+    uint32_t r = ffs64(x);
     return r;
   }
 }

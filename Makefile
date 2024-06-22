@@ -63,14 +63,14 @@ extract: $(ALL_KRML_FILES)
 	  -header spdx-header.txt \
 	  -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
-	  -bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main.Meta,LargeAlloc'[rename=StarMalloc] \
+	  -bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main2,Main.Meta,LargeAlloc'[rename=StarMalloc] \
 	  -bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
 	  -bundle 'SlotsFree,SlotsAlloc'[rename=Slots] \
 	  -bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
-	  -no-prefix Main \
 	  -no-prefix LargeAlloc \
 	  -no-prefix Mman \
 	  -no-prefix MemoryTrap \
+	  -no-prefix ExternUtils \
 	  -warn-error +9 \
 	  -add-include 'Steel_SpinLock:"steel_types.h"' \
 	  -add-include 'Steel_SpinLock:"steel_base.h"' \
@@ -90,6 +90,7 @@ FILES = \
   dist/Bitmap5.c \
   dist/Utils2.c \
   dist/SizeClass.c \
+  dist/SizeClassSelection.c \
   c/utils.c \
   c/fatal_error.c \
   c/memory.c \

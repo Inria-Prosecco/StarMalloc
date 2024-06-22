@@ -5,48 +5,36 @@ module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module US = FStar.SizeT
 module UP = FStar.PtrdiffT
-module L =  FStar.List
+module L =  FStar.List.Tot
 
 open FStar.Mul
 
-// LATER: code could be improved so that this value is not hardcoded anymore
-inline_for_extraction
-let page_size: U32.t = 4096ul
-
-noextract
-let min_sc = 64
-noextract
-let max_sc = U32.v page_size
-
-// TODO: this could be improved
-// currently does not support size classes
-// such that:
-// - sc < 64, thus nb_slot sc > 64
-// and
-// - (nb_slots sc) % 64 <> 0
-// this allows to only have a particular mechanism
-// for the first u64 of the bitmap
-// note: this mechanism does not rely on any loop!
-let sc = x:U32.t{
-  (
-    U32.eq x 16ul \/
-    U32.eq x 32ul \/
-    (min_sc <= U32.v x /\ U32.v x <= max_sc)
-  ) /\
-  // https://www.intel.com/content/dam/develop/external/us/en/documents/mpx-linux64-abi.pdf
-  // allocated arrays should have alignment of at least 16 bytes,
-  // allowing use of SSE instructions
-  (U32.v x % 16 == 0)
-}
+open Constants
 
 /// List of size classes used in each arena
 inline_for_extraction noextract
-val sc_list : (l:list sc{Cons? l})
+val sc_list : (l:list sc{Cons? l /\ L.mem page_size l})
 
 /// Number of size classes per arena
 inline_for_extraction
 [@ CMacro ]
 val nb_size_classes: v:US.t{US.v v > 0 /\ US.v v == L.length sc_list}
+
+unfold type sc_selection_f = (x:U32.t) -> Pure US.t
+  (requires
+    U32.v x <= max_sc)
+  (ensures fun r ->
+    US.v r < US.v nb_size_classes /\
+    U32.v x <= U32.v (L.index sc_list (US.v r))
+  )
+
+/// Size class selection (fast path)
+inline_for_extraction noextract
+val sc_selection : sc_selection_f
+
+// controls whether size class selection fast path is used
+inline_for_extraction
+val enable_sc_fast_selection: bool
 
 /// Number of arenas
 inline_for_extraction

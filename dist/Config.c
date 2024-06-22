@@ -3,7 +3,7 @@
 
 #include "Config.h"
 
-uint32_t Config_page_size = 4096U;
+bool Config_enable_sc_fast_selection = true;
 
 size_t Config_metadata_max = (size_t)16777216U;
 

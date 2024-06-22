@@ -16,20 +16,63 @@ let _ : squash (US.fits_u64)
 let _ : squash (UP.fits (FStar.Int.max_int 64))
   = A.intro_fits_ptrdiff64 ()
 
-let sc_list = [
-    16ul; 32ul; 64ul;
-    80ul; 96ul; 112ul; 128ul;
-    160ul; 192ul; 224ul; 256ul;
-    320ul; 384ul; 448ul; 512ul;
-    640ul; 768ul; 896ul; 1024ul;
-    1280ul; 1536ul; 1792ul; 2048ul;
-    2560ul; 3072ul; 3584ul; 4096ul
+let sc_list1 : list sc = [
+    16ul; 32ul;
+    64ul; 80ul; 96ul; 112ul;
+    128ul; 160ul; 192ul; 224ul;
+    256ul; 320ul; 384ul; 448ul;
+    512ul; 640ul; 768ul; 896ul;
+    1024ul; 1280ul; 1536ul; 1792ul;
+    2048ul; 2560ul; 3072ul; 3584ul;
+    4096ul
   ]
+
 //let sc_list = [
 //    16ul; 32ul; 64ul;
 //    128ul; 256ul; 512ul;
 //    1024ul; 2048ul; 4096ul
 //  ]
+
+let sc_list_f1 : nat -> nat = SizeClassSelection.sc_list_f
+
+open MiscList
+
+let sc_list =
+  assert_norm (L.last sc_list1 = page_size);
+  last_mem_lemma sc_list1;
+  sc_list1
+
+let sc_list_f = SizeClassSelection.sc_list_f
+
+module T = FStar.Tactics
+
+let sc_list_check (_:unit)
+  : Lemma
+  (let l1 : list nat
+    = L.map (fun (k:sc) -> U32.v k <: nat) sc_list in
+  let l2 : list nat
+    = L.map (fun k -> sc_list_f k) (init (L.length sc_list)) in
+  l1 == l2)
+  =
+  let l1 : list nat
+    = L.map (fun (k:sc) -> U32.v k <: nat) sc_list in
+  let l2 : list nat
+    = L.map (fun k -> sc_list_f k) (init (L.length sc_list)) in
+  assert (l1 = l2) by T.compute ()
+
+let sc_list_lemma (i:nat{i < L.length sc_list})
+  : Lemma
+  (U32.v (L.index sc_list i) == sc_list_f i)
+  =
+  sc_list_check ();
+  lemma_map_eq_to_index_eq
+    (fun (k:sc) -> U32.v k <: nat)
+    (fun k -> sc_list_f k)
+    (sc_list)
+    (init (L.length sc_list))
+    i;
+  lemma_init_index (L.length sc_list) i
+
 
 //DO NOT EDIT, edit sc_list instead
 let nb_size_classes
@@ -48,6 +91,14 @@ let nb_size_classes
   // and size_t (expected type)
   US.fits_u64_implies_fits_32 ();
   US.of_u32 l_as_u32
+
+let sc_selection x =
+  let r = SizeClassSelection.inv_impl x in
+  assert_norm (L.length sc_list = 27);
+  sc_list_lemma (U32.v r);
+  US.uint32_to_sizet r
+
+let enable_sc_fast_selection = true
 
 let nb_arenas = 4sz
 

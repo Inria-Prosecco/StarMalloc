@@ -6,11 +6,11 @@
 
 #include "krmllib.h"
 
-extern uint32_t Config_page_size;
-
-typedef uint32_t Config_sc;
-
 #define CONFIG_NB_SIZE_CLASSES ((size_t)27U)
+
+typedef size_t (*Config_sc_selection_f)(uint32_t x0);
+
+extern bool Config_enable_sc_fast_selection;
 
 #define CONFIG_NB_ARENAS ((size_t)4U)
 

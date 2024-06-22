@@ -198,7 +198,7 @@ pvalloc and valloc are not yet provided for compatibility purpose, cfree is not 
   - (feature) add support for 48-bytes size-class
   - (security) slots quarantine
   - (security) initial mapping of allocation region should be `PROT_NONE`
-  - (performance) size class selection could be improved
+  - (performance) size class selection could be improved (`malloc` case = done, `aligned_alloc` case remaining)
   - (security) randomizing guard pages
 - large allocations:
   - (specification) some properties could be proven about the `PTRDIFF_MAX` limit

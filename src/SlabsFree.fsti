@@ -15,6 +15,7 @@ module A = Steel.Array
 open FStar.Mul
 open SteelVRefineDep
 
+open Constants
 open Config
 open Utils2
 

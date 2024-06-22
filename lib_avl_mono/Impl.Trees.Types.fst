@@ -16,6 +16,7 @@ module I64 = FStar.Int64
 noextract inline_for_extraction
 let array = Steel.ST.Array.array
 
+open Constants
 open Config
 open Utils2
 
@@ -34,7 +35,7 @@ val init_avl_scs (slab_region: array U8.t)
   (fun r -> size_class_vprop r)
   (requires fun h0 ->
     A.is_full_array slab_region /\
-    A.length slab_region = US.v metadata_max `FStar.Mul.op_Star` U32.v Config.page_size /\
+    A.length slab_region = US.v metadata_max `FStar.Mul.op_Star` U32.v page_size /\
     array_u8_alignment slab_region page_size /\
     zf_u8 (A.asel slab_region h0)
   )
@@ -75,7 +76,7 @@ type mmap_md_slabs =
 let init_mmap_md_slabs (_:unit)
   : SteelTop mmap_md_slabs false (fun _ -> emp) (fun _ _ _ -> True)
   =
-  let slab_region_size = US.mul metadata_max (US.uint32_to_sizet Config.page_size) in
+  let slab_region_size = US.mul metadata_max (US.uint32_to_sizet page_size) in
   let slab_region = mmap_u8_init slab_region_size in
   A.ghost_split slab_region 0sz;
   A.ptr_shift_zero (A.ptr_of slab_region);
