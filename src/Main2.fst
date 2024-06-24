@@ -274,9 +274,6 @@ let mod_lt (a b: US.t)
   = ()
 #pop-options
 
-inline_for_extraction noextract
-let u32_to_sz = SlabsCommon.u32_to_sz
-
 open Main
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --query_stats"

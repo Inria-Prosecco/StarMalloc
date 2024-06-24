@@ -90,7 +90,9 @@ val slab_getsize (ptr: array U8.t)
   )
   (ensures fun h0 r h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
+    US.v r <= U32.v page_size /\
     (r <> 0sz ==>
+      A.length ptr <= U32.v page_size /\
       (enable_slab_canaries_malloc ==>
         A.length ptr == US.v r + 2
       ) /\

@@ -3,7 +3,7 @@ module Map.M
 open Steel.Effect.Atomic
 open Steel.Effect
 
-open Config
+open Constants
 
 module US = FStar.SizeT
 module U32 = FStar.UInt32

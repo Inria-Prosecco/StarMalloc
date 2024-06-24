@@ -6,6 +6,7 @@ module UP = FStar.PtrdiffT
 module U64 = FStar.UInt64
 
 open FStar.Mul
+open Constants
 open Config
 
 // conservative axiomatization, C23 changed guarantees about ptrdiff_t bit width
