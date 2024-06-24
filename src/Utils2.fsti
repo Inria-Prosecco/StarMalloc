@@ -18,10 +18,12 @@ open Constants
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
 
+noextract
 unfold let same_base_array (#a: Type) (arr1 arr2: array a)
   =
   A.base (A.ptr_of arr1) == A.base (A.ptr_of arr2)
 
+noextract
 unfold let slab_metadata = r:array U64.t{A.length r = 4}
 
 // abstract property that the underlying pointer v-bytes aligned
@@ -86,6 +88,7 @@ let nb_slots_correct
   assert (U32.v (U32.mul (nb_slots size_class) size_class) <= U32.v page_size)
 #pop-options
 
+noextract
 let zf_b
   (arr: Seq.seq bool)
   : prop
@@ -505,6 +508,7 @@ let zeroes_impl_empty
   (ensures is_empty size_class s)
   = ()
 
+noextract
 let zf_u64
   (arr: Seq.seq U64.t)
   : prop
@@ -532,6 +536,7 @@ let zf_u64_split
   zf_u64_slice arr 0 i;
   zf_u64_slice arr i (Seq.length arr)
 
+noextract
 let zf_u8
   (arr: Seq.seq U8.t)
   : prop

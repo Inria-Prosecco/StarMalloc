@@ -2304,6 +2304,7 @@ open Config
 #restart-solver
 
 #push-options "--compat_pre_typed_indexed_effects --query_stats --z3rlimit 50"
+inline_for_extraction noextract
 let extend_insert_aux (#a: Type)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (r: A.array (cell a))
@@ -2498,6 +2499,7 @@ let lemma_upd_is_append (#a: Type0)
   Seq.lemma_split (Seq.slice s2 0 (k+i+2)) (k+1);
   ()
 
+inline_for_extraction noextract
 let extend_insert_aux2 (#a: Type0)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (r: A.array (cell a){A.length r <= US.v metadata_max})
@@ -2595,6 +2597,7 @@ let extend_insert_aux2 (#a: Type0)
     v1;
   ()
 
+inline_for_extraction noextract
 let extend_insert_aux3 (#a: Type0)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (r: A.array (cell a){A.length r <= US.v metadata_max})
@@ -2913,6 +2916,7 @@ let selpred_equiv_selpred2
 
 #restart-solver
 
+inline_for_extraction noextract
 let extend_insert_aux4_aux (#a: Type) (#opened: _)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (r: A.array (cell a){A.length r <= US.v metadata_max})
@@ -2958,6 +2962,7 @@ let extend_insert_aux4_aux (#a: Type) (#opened: _)
 
 #restart-solver
 
+inline_for_extraction noextract
 val extend_insert_aux4 (#a: Type)
   (#pred1 #pred2 #pred3 #pred4 #pred5: a -> prop)
   (r: A.array (cell a){A.length r <= US.v metadata_max})

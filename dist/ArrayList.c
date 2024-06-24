@@ -42,37 +42,19 @@ void ArrayList_insert(ArrayList_cell *r, size_t hd, size_t idx, uint32_t v)
   }
 }
 
-static void extend_insert_aux__uint32_t(ArrayList_cell *r, size_t k, size_t i, uint32_t v1)
-{
-  ArrayList_cell cell1 = { .prev = (size_t)16777217U, .next = k + i, .data = v1 };
-  r[k + i + (size_t)1U] = cell1;
-  if (k + i != (size_t)16777217U)
-  {
-    ArrayList_cell cell2 = r[k + i];
-    ArrayList_cell cell3 = { .prev = k + i + (size_t)1U, .next = cell2.next, .data = cell2.data };
-    r[k + i] = cell3;
-  }
-}
-
-static void extend_insert_aux2__uint32_t(ArrayList_cell *r, size_t k, size_t i, uint32_t v1)
-{
-  extend_insert_aux__uint32_t(r, k, i, v1);
-}
-
-static void extend_insert_aux3__uint32_t(ArrayList_cell *r, size_t k, size_t i, uint32_t v1)
-{
-  extend_insert_aux2__uint32_t(r, k, i, v1);
-}
-
-static void extend_insert_aux4__uint32_t(ArrayList_cell *r, size_t k, uint32_t v1, size_t i)
-{
-  extend_insert_aux3__uint32_t(r, k, i, v1);
-}
-
 static void extend_insert__uint32_t(size_t n2, ArrayList_cell *r, size_t k, uint32_t v1)
 {
   for (size_t i = (size_t)0U; i < n2; i++)
-    extend_insert_aux4__uint32_t(r, k, v1, i);
+  {
+    ArrayList_cell cell1 = { .prev = (size_t)16777217U, .next = k + i, .data = v1 };
+    r[k + i + (size_t)1U] = cell1;
+    if (k + i != (size_t)16777217U)
+    {
+      ArrayList_cell cell2 = r[k + i];
+      ArrayList_cell cell3 = { .prev = k + i + (size_t)1U, .next = cell2.next, .data = cell2.data };
+      r[k + i] = cell3;
+    }
+  }
 }
 
 void

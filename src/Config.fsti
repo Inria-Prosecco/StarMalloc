@@ -20,6 +20,7 @@ inline_for_extraction
 [@ CMacro ]
 val nb_size_classes: v:US.t{US.v v > 0 /\ US.v v == L.length sc_list}
 
+noextract
 unfold type sc_selection_f = (x:U32.t) -> Pure US.t
   (requires
     U32.v x <= max_sc)
