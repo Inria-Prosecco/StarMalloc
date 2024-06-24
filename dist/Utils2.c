@@ -3,8 +3,6 @@
 
 #include "Utils2.h"
 
-typedef uint64_t *slab_metadata;
-
 uint32_t Utils2_nb_slots(uint32_t size_class)
 {
   return 4096U / size_class;

@@ -8,8 +8,6 @@
 
 extern uint32_t Constants_page_size;
 
-typedef uint32_t Constants_sc;
-
 
 #define __Constants_H_DEFINED
 #endif

@@ -22,6 +22,7 @@ let max_sc = U32.v page_size
 // this allows to only have a particular mechanism
 // for the first u64 of the bitmap
 // note: this mechanism does not rely on any loop!
+inline_for_extraction noextract
 let sc = x:U32.t{
   (
     U32.eq x 16ul \/
