@@ -296,19 +296,21 @@ let large_malloc_aux
     let t : wdm data = v_ind_tree metadata_ptr h0 in
     Spec.size_of_tree t < c /\
     US.v size > 0 /\
-    US.v size > U32.v page_size
+    US.v size > U32.v page_size /\
+    US.fits (US.v size + U32.v page_size)
   )
   (ensures fun h0 r h1 ->
     let t : wdm data = v_ind_tree metadata_ptr h0 in
     let t' : wdm data = v_ind_tree metadata_ptr h1 in
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
+    US.fits (US.v size + U32.v page_size) /\
     US.v size > U32.v page_size /\
     Spec.is_avl (spec_convert cmp) t /\
     (not (A.is_null r) ==> (
-      US.v size <= US.v mmap_bound /\
+      //US.v size <= US.v mmap_bound /\
       (let size' = mmap_actual_size size in
-      US.v size' <= US.v mmap_bound /\
+      //US.v size' <= US.v mmap_bound /\
       A.length r == US.v size' /\
       A.is_full_array r /\
       array_u8_alignment r page_size /\
@@ -318,43 +320,39 @@ let large_malloc_aux
     )))
   )
   =
-  if US.lte size mmap_bound then (
-    (**) let t = elim_vdep (vptr metadata_ptr) linked_wf_tree in
-    (**) elim_vrefine (linked_tree p t) is_wf;
-    let md_v = read metadata_ptr in
-    (**) change_equal_slprop
-      (linked_tree p t)
-      (linked_tree p md_v);
-    (**) let h0 = get () in
-    (**) Spec.height_lte_size (v_linked_tree p md_v h0);
-    let ptr = mmap size in
-    if (A.is_null ptr) then (
+  (**) let t = elim_vdep (vptr metadata_ptr) linked_wf_tree in
+  (**) elim_vrefine (linked_tree p t) is_wf;
+  let md_v = read metadata_ptr in
+  (**) change_equal_slprop
+    (linked_tree p t)
+    (linked_tree p md_v);
+  (**) let h0 = get () in
+  (**) Spec.height_lte_size (v_linked_tree p md_v h0);
+  let ptr = mmap size in
+  if (A.is_null ptr) then (
+    (**) intro_vrefine (linked_tree p md_v) is_wf;
+    (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
+    return ptr
+  ) else (
+    let size' = mmap_actual_size size in
+    let b = mem md_v (ptr, size') in
+    if b then (
       (**) intro_vrefine (linked_tree p md_v) is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
-      return ptr
+      //TODO: add a die()
+      drop (null_or_varray ptr);
+      let r = intro_null_null_or_varray #U8.t in
+      return r
     ) else (
-      let size' = mmap_actual_size size in
-      let b = mem md_v (ptr, size') in
-      if b then (
-        (**) intro_vrefine (linked_tree p md_v) is_wf;
-        (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
-        //TODO: add a die()
-        drop (null_or_varray ptr);
-        let r = intro_null_null_or_varray #U8.t in
-        return r
-      ) else (
-        let h0 = get () in
-        let md_v' = insert false md_v (ptr, size') in
-        Spec.lemma_insert false (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size');
-        Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size') (fun x -> US.v (snd x) <> 0);
-        write metadata_ptr md_v';
-        (**) intro_vrefine (linked_tree p md_v') is_wf;
-        (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
-        return ptr
-      )
+      let h0 = get () in
+      let md_v' = insert false md_v (ptr, size') in
+      Spec.lemma_insert false (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size');
+      Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size') (fun x -> US.v (snd x) <> 0);
+      write metadata_ptr md_v';
+      (**) intro_vrefine (linked_tree p md_v') is_wf;
+      (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
+      return ptr
     )
-  ) else (
-    intro_null_null_or_varray #U8.t
   )
 
 inline_for_extraction noextract
@@ -466,15 +464,15 @@ let large_malloc (size: US.t)
   (fun ptr -> null_or_varray ptr)
   (requires fun _ ->
     US.v size > 0 /\
-    US.v size > U32.v page_size
+    US.v size > U32.v page_size /\
+    US.fits (US.v size + U32.v page_size)
   )
   (ensures fun _ ptr h1 ->
     let s : (t_of (null_or_varray ptr))
       = h1 (null_or_varray ptr) in
     not (A.is_null ptr) ==> (
-      US.v size <= US.v mmap_bound /\
+      US.fits (US.v size + U32.v page_size) /\
       (let size' = mmap_actual_size size in
-      US.v size' <= US.v mmap_bound /\
       A.length ptr == US.v size' /\
       A.is_full_array ptr /\
       array_u8_alignment ptr page_size /\
@@ -494,9 +492,7 @@ let large_malloc (size: US.t)
     metadata.lock
     (fun _ ptr s ->
       not (A.is_null ptr) ==> (
-        US.v size <= US.v mmap_bound /\
         (let size' = mmap_actual_size size in
-        US.v size' <= US.v mmap_bound /\
         A.length ptr == US.v size' /\
         array_u8_alignment ptr page_size /\
         A.is_full_array ptr /\

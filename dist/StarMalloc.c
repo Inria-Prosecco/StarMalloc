@@ -1152,36 +1152,31 @@ static uint8_t *large_malloc(size_t size)
   uint8_t *r;
   if (md_size < 18446744073709551615ULL)
   {
-    uint8_t *ptr0;
-    if (size <= PtrdiffWrapper_mmap_bound)
+    Impl_Trees_Types_node *md_v = *metadata.data;
+    uint8_t *ptr0 = mmap_u8(size);
+    uint8_t *ptr;
+    if (ptr0 == NULL)
+      ptr = ptr0;
+    else
     {
-      Impl_Trees_Types_node *md_v = *metadata.data;
-      uint8_t *ptr = mmap_u8(size);
-      if (ptr == NULL)
-        ptr0 = ptr;
+      size_t size_ = PtrdiffWrapper_mmap_actual_size(size);
+      bool b = Impl_BST_M_member(md_v, ((Impl_Trees_Types_data){ .fst = ptr0, .snd = size_ }));
+      if (b)
+        ptr = NULL;
       else
       {
-        size_t size_ = PtrdiffWrapper_mmap_actual_size(size);
-        bool b = Impl_BST_M_member(md_v, ((Impl_Trees_Types_data){ .fst = ptr, .snd = size_ }));
-        if (b)
-          ptr0 = NULL;
-        else
-        {
-          Impl_Trees_Types_node
-          *md_v_ =
-            Impl_AVL_M_insert_avl(trees_malloc2,
-              trees_free2,
-              false,
-              md_v,
-              ((Impl_Trees_Types_data){ .fst = ptr, .snd = size_ }));
-          *metadata.data = md_v_;
-          ptr0 = ptr;
-        }
+        Impl_Trees_Types_node
+        *md_v_ =
+          Impl_AVL_M_insert_avl(trees_malloc2,
+            trees_free2,
+            false,
+            md_v,
+            ((Impl_Trees_Types_data){ .fst = ptr0, .snd = size_ }));
+        *metadata.data = md_v_;
+        ptr = ptr0;
       }
     }
-    else
-      ptr0 = NULL;
-    r = ptr0;
+    r = ptr;
   }
   else
     r = NULL;

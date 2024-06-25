@@ -33,7 +33,9 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
-  (requires fun _ -> True)
+  (requires fun _ ->
+    US.fits (US.v size + U32.v page_size)
+  )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
@@ -41,6 +43,11 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
       A.length r >= US.v size /\
       array_u8_alignment r 16ul /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
+      //Seq.length s >= 2 /\
+      //(enable_slab_canaries_malloc ==>
+      //  Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
+      //  Seq.index s (A.length r - 1) == slab_canaries_magic2
+      //)
     )
   )
 #pop-options
@@ -73,6 +80,8 @@ let malloc arena_id size =
       )
     )
   ) else (
+    // TODO: use efficient align here
+    assert (US.v size > U32.v page_size - 2);
     let size' = if US.lte size (US.uint32_to_sizet page_size)
       then US.add (US.uint32_to_sizet page_size) 1sz
       else size in
@@ -97,7 +106,9 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
-  (requires fun _ -> True)
+  (requires fun _ ->
+    US.fits (US.v size + U32.v page_size)
+  )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
@@ -328,7 +339,10 @@ val realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
-  (requires fun _ -> within_size_classes_pred ptr)
+  (requires fun _ ->
+    within_size_classes_pred ptr /\
+    US.fits (US.v new_size + U32.v page_size)
+  )
   (ensures fun h0 r h1 ->
     let s0 : t_of (null_or_varray ptr)
       = h0 (null_or_varray ptr) in
@@ -483,7 +497,11 @@ val calloc
     (A.varray (A.split_l sc_all.slab_region 0sz) `star`
     A.varray (A.split_r sc_all.slab_region slab_region_size))
   )
-  (requires fun _ -> True)
+  (requires fun _ ->
+    FStar.Math.Lemmas.nat_times_nat_is_nat (US.v size1) (US.v size2);
+    let size : nat = US.v size1 * US.v size2 in
+    US.fits (size + U32.v page_size)
+  )
   (ensures fun _ r h1 ->
     FStar.Math.Lemmas.nat_times_nat_is_nat (US.v size1) (US.v size2);
     let size : nat = US.v size1 * US.v size2 in

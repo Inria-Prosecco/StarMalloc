@@ -9,54 +9,7 @@ open FStar.Mul
 open Constants
 open Config
 
-// conservative axiomatization, C23 changed guarantees about ptrdiff_t bit width
-//TODO: add const qualifier/upstream it to FStar.PtrdiffT
-//assume val ptrdiff_max: v:UP.t{
-//  UP.v v >= pow2 16 - 1 /\
-//  (exists (k:nat). UP.v v = pow2 k - 1)
-//}
-
-//TODO: remove this hardcoded constant
-//currently equal to (PTRDIFF_MAX/2)+1,
-//that is, 2^62 on x86_64-Linux
-
 open MiscArith
-
-let mmap_bound : v:US.t{
-  US.fits (US.v v + 2) /\
-  US.fits (US.v v + U32.v page_size) /\
-  US.v v % U32.v page_size = 0
-}
-  =
-  [@inline_let] let x = pow2 62 in
-  assume (US.fits x);
-  assume (US.fits (x + 2));
-  assume (US.fits (x + U32.v page_size));
-  pow2_mod 12 62;
-  normalize_term (US.uint_to_t x)
-
-//let mmap_bound : v:US.t{
-//  US.fits (US.v v + 2) /\
-//  US.fits (US.v v + U32.v page_size) /\
-//  US.v v % U32.v page_size = 0
-//}
-//  =
-//  let ptrdiff_max_as_sizet = UP.ptrdifft_to_sizet ptrdiff_max in
-//  // US.fits(x) where x = 2^n-1
-//  // y = x/2 = (2^n-1)/2 = 2^{n-1}-1
-//  let r = US.add (US.div ptrdiff_max_as_sizet 2sz) 1sz in
-//  eliminate exists (k:nat). UP.v ptrdiff_max = pow2 k - 1
-//    returns (US.v r % U32.v page_size = 0)
-//    with _. (
-//      assert (UP.v ptrdiff_max == pow2 k - 1);
-//      assert (US.v r == pow2 (k-1));
-//      assert (U32.v page_size == pow2 12);
-//      pow2_is_increasing 12 (k-1);
-//      pow2_mod 12 (k-1);
-//      ()
-//  );
-//  r
-
 module FML = FStar.Math.Lemmas
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
