@@ -221,7 +221,7 @@ let within_size_class_i (ptr:A.array U8.t) (sc: size_class_struct) : prop = (
     // then its length is the length of a slot
     A.length ptr == U32.v sc.size
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
+#push-options "--fuel 0 --ifuel 1 --z3rlimit 150"
 /// Elimination lemma for `within_size_class_i`, triggering F* to prove the precondition
 /// of the implication
 let elim_within_size_class_i (ptr:A.array U8.t) (i:nat{i < Seq.length sc_all.g_size_classes}) (size:sc)

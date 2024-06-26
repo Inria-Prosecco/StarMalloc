@@ -3,8 +3,6 @@
 
 #include "PtrdiffWrapper.h"
 
-size_t PtrdiffWrapper_mmap_bound = (size_t)4611686018427387904U;
-
 size_t PtrdiffWrapper_mmap_actual_size(size_t size)
 {
   size_t rem = size % (size_t)4096U;

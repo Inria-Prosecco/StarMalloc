@@ -6,8 +6,6 @@
 
 #include "krmllib.h"
 
-extern size_t PtrdiffWrapper_mmap_bound;
-
 size_t PtrdiffWrapper_mmap_actual_size(size_t size);
 
 
