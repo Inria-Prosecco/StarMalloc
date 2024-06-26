@@ -227,8 +227,9 @@ let spec_getsize
     length
   )
 
+inline_for_extraction noextract
 let full_getsize (ptr: array U8.t)
-  : Steel (US.t & bool)
+  : Steel (US.t & G.erased bool)
   (
     A.varray ptr `star`
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
@@ -240,13 +241,12 @@ let full_getsize (ptr: array U8.t)
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
   (requires fun _ -> within_size_classes_pred ptr)
-  (ensures fun h0 result h1 ->
-    let r = fst result in
-    let b = snd result in
+  (ensures fun h0 r h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
-    (US.v r > 0 ==>
+    (US.v (fst r) > 0 ==>
       (enable_slab_canaries_malloc ==> A.length ptr >= 2) /\
-      US.v r == spec_getsize (A.length ptr)
+      US.v (fst r) == spec_getsize (A.length ptr) /\
+      (G.reveal (snd r) <==> US.v (fst r) <= U32.v page_size)
     )
   )
   =
@@ -256,14 +256,14 @@ let full_getsize (ptr: array U8.t)
     (A.split_r sc_all.slab_region slab_region_size) in
   if b then (
     let r = slab_getsize ptr in
-    r, b
+    r, G.hide b
   ) else (
     let r = large_getsize ptr in
-    r, b
+    r, G.hide b
   )
 
 let getsize (ptr: array U8.t)
-  : Steel (US.t)
+  : Steel US.t
   (
     A.varray ptr `star`
     A.varray (A.split_l sc_all.slab_region 0sz) `star`
@@ -279,19 +279,14 @@ let getsize (ptr: array U8.t)
     A.asel ptr h1 == A.asel ptr h0 /\
     (US.v r > 0 ==>
       (enable_slab_canaries_malloc ==> A.length ptr >= 2) /\
-      US.v r == spec_getsize (A.length ptr)
+      US.v r == spec_getsize (A.length ptr) /\
+      //(G.reveal (snd r) <==> US.v r <= U32.v page_size)
+      True
     )
   )
   =
-  let b = SAA.within_bounds_intro
-    (A.split_l sc_all.slab_region 0sz)
-    ptr
-    (A.split_r sc_all.slab_region slab_region_size) in
-  if b then (
-    slab_getsize ptr
-  ) else (
-    large_getsize ptr
-  )
+  let r, _ = full_getsize ptr in
+  r
 
 module G = FStar.Ghost
 
@@ -406,9 +401,8 @@ let realloc arena_id ptr new_size
     )
   ) else (
     elim_live_null_or_varray ptr;
-    let getsize_result = full_getsize ptr in
-    let old_size = fst getsize_result in
-    let old_allocation_is_small = snd getsize_result in
+    let old_size = getsize ptr in
+    let old_allocation_is_small : bool = US.lte old_size (u32_to_sz page_size) in
     // not a valid pointer from the allocator point of view, fail
     if (old_size = 0sz) then (
       // 3) invalid pointer, fail

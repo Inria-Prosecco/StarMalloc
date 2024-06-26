@@ -2306,7 +2306,7 @@ bool StarMalloc_free(uint8_t *ptr)
   }
 }
 
-K___size_t_bool StarMalloc_full_getsize(uint8_t *ptr)
+size_t StarMalloc_getsize(uint8_t *ptr)
 {
   bool
   b =
@@ -2317,37 +2317,13 @@ K___size_t_bool StarMalloc_full_getsize(uint8_t *ptr)
   if (b0)
   {
     size_t r = slab_getsize(ptr);
-    return ((K___size_t_bool){ .fst = r, .snd = b0 });
+    return r;
   }
   else
   {
     size_t r = large_getsize(ptr);
-    return ((K___size_t_bool){ .fst = r, .snd = b0 });
+    return r;
   }
-}
-
-size_t StarMalloc_getsize(uint8_t *ptr)
-{
-  bool
-  b =
-    within_bounds_ptr(Main_Meta_sc_all.slab_region,
-      ptr,
-      Main_Meta_sc_all.slab_region + slab_region_size);
-  bool b0 = b;
-  if (b0)
-    return slab_getsize(ptr);
-  else
-    return large_getsize(ptr);
-}
-
-static size_t fst__size_t_bool(K___size_t_bool x)
-{
-  return x.fst;
-}
-
-static bool snd__size_t_bool(K___size_t_bool x)
-{
-  return x.snd;
 }
 
 uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
@@ -2367,9 +2343,8 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
   }
   else
   {
-    K___size_t_bool getsize_result = StarMalloc_full_getsize(ptr);
-    size_t old_size = fst__size_t_bool(getsize_result);
-    bool old_allocation_is_small = snd__size_t_bool(getsize_result);
+    size_t old_size = StarMalloc_getsize(ptr);
+    bool old_allocation_is_small = old_size <= (size_t)4096U;
     if (old_size == (size_t)0U)
       return NULL;
     else if (new_size <= old_size && !old_allocation_is_small)

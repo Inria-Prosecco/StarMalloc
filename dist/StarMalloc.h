@@ -22,15 +22,6 @@ uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size
 
 bool StarMalloc_free(uint8_t *ptr);
 
-typedef struct K___size_t_bool_s
-{
-  size_t fst;
-  bool snd;
-}
-K___size_t_bool;
-
-K___size_t_bool StarMalloc_full_getsize(uint8_t *ptr);
-
 size_t StarMalloc_getsize(uint8_t *ptr);
 
 uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size);
