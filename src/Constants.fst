@@ -8,6 +8,12 @@ open FStar.Mul
 inline_for_extraction
 let page_size: U32.t = 4096ul
 
+/// StarMalloc consists of three memory allocators:
+/// - one for small allocations (fit on one page)
+/// - one for medium allocations (fit on "a few" pages)
+/// - one for large allocations (no restriction)
+
+/// Size classes part of the small allocations allocator
 noextract
 let min_sc = 64
 noextract
@@ -34,3 +40,42 @@ let sc = x:U32.t{
   // allowing use of SSE instructions
   (U32.v x % 16 == 0)
 }
+
+/// Size classes part of the medium allocations allocator
+/// this controls the slab size, that is,
+/// what the page size is to the small allocations allocator ;
+/// slab size = 2 * max_sc_coef * page_size
+/// max allocation size within a slab = max_sc_coef * page_size,
+/// the other half of the slab is a guard region
+inline_for_extraction
+[@ CMacro ]
+let max_sc_coef: v:US.t{
+    1 <= US.v v /\
+    US.fits (U32.v page_size * US.v v * 2)
+  }
+  =
+  admit ();
+  32sz
+
+noextract
+let max_sc_ex = U32.v page_size * US.v max_sc_coef
+
+/// is to the medium allocations allocator
+/// what the page_size is to the small allocations allocator
+inline_for_extraction
+let sc_ex_slab_size
+  : v:US.t{US.v v > 0}
+  = US.mul (u32_to_sz page_size) (US.mul max_sc_coef 2sz)
+
+type sc_ex = x:U32.t{
+  (max_sc <= U32.v x /\ U32.v x <= max_sc_ex) /\
+  (U32.v x % U32.v page_size == 0)
+  //// https://www.intel.com/content/dam/develop/external/us/en/documents/mpx-linux64-abi.pdf
+  //// allocated arrays should have alignment of at least 16 bytes,
+  //// allowing use of SSE instructions
+  //(U32.v x % 16 == 0)
+}
+
+type sc_union =
+  | Sc of sc
+  | Sc_ex of sc_ex
