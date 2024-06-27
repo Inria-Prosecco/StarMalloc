@@ -406,6 +406,7 @@ let realloc arena_id ptr new_size
     // not a valid pointer from the allocator point of view, fail
     if (old_size = 0sz) then (
       // 3) invalid pointer, fail
+      //TODO: add a die(), internal error
       sladmit ();
       //change_equal_slprop
       //  (null_or_varray ptr `star` null_or_varray new_ptr)
