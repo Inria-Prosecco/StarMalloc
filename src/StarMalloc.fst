@@ -59,11 +59,14 @@ assume val malloc_zeroing_die (ptr: array U8.t)
 
 module G = FStar.Ghost
 
+//TODO: [@ CConst]
+let threshold : US.t =
+  if enable_slab_canaries_malloc
+  then US.sub (US.uint32_to_sizet page_size) 2sz
+  else US.uint32_to_sizet page_size
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 let malloc arena_id size =
-  let threshold = if enable_slab_canaries_malloc
-    then US.sub (US.uint32_to_sizet page_size) 2sz
-    else US.uint32_to_sizet page_size in
   if (US.lte size threshold) then (
     let ptr = slab_malloc arena_id (US.sizet_to_uint32 size) in
     if (A.is_null ptr || not enable_zeroing_malloc) then (
@@ -130,9 +133,6 @@ let aligned_alloc arena_id alignment size
   let check = US.gt alignment 0sz && US.rem (US.uint32_to_sizet page_size) alignment = 0sz in
   if check then (
     let alignment_as_u32 = US.sizet_to_uint32 alignment in
-    let threshold = if enable_slab_canaries_malloc
-      then US.sub page_as_sz 2sz
-      else page_as_sz in
     if (US.lte size threshold) then (
       let ptr = slab_aligned_alloc arena_id alignment_as_u32 (US.sizet_to_uint32 size) in
       if (A.is_null ptr || not enable_zeroing_malloc) then (
@@ -403,6 +403,21 @@ let realloc arena_id ptr new_size
     elim_live_null_or_varray ptr;
     let old_size = getsize ptr in
     let old_allocation_is_small : bool = US.lte old_size (u32_to_sz page_size) in
+    let new_allocation_is_small : bool = US.lte new_size threshold in
+    let same_case : bool = old_allocation_is_small = new_allocation_is_small in
+    //TODO: add enable_fast_sizeclass_selection as small_case_optim_condition precondition
+    let small_case_optim_condition = old_allocation_is_small && same_case && (
+      let old_sc = sc_selection (US.sizet_to_uint32 old_size) in
+      let new_sc = if enable_slab_canaries_malloc
+        then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
+        else sc_selection (US.sizet_to_uint32 new_size) in
+      old_sc = new_sc) in
+    let large_case_optim_condition = (not old_allocation_is_small) && same_case && (
+      US.lte new_size old_size
+    ) in
+    //TODO
+    assume (small_case_optim_condition ==> A.length ptr >= US.v new_size);
+    assert (large_case_optim_condition ==> A.length ptr >= US.v new_size);
     // not a valid pointer from the allocator point of view, fail
     if (old_size = 0sz) then (
       // 3) invalid pointer, fail
@@ -416,7 +431,7 @@ let realloc arena_id ptr new_size
       return (A.null #U8.t, G.hide (0, A.null #U8.t))
     ) else (
       // most common case
-      if (US.lte new_size old_size && not old_allocation_is_small) then (
+      if (small_case_optim_condition || large_case_optim_condition) then (
         // optimization
         (**) intro_live_null_or_varray ptr;
         (**) change_equal_slprop

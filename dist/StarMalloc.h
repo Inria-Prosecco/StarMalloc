@@ -16,6 +16,8 @@
 
 extern void StarMalloc_malloc_zeroing_die(uint8_t *ptr);
 
+extern size_t StarMalloc_threshold;
+
 uint8_t *StarMalloc_malloc(size_t arena_id, size_t size);
 
 uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size);
