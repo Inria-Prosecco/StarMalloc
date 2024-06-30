@@ -100,6 +100,18 @@ let sc_selection x =
 
 let enable_sc_fast_selection = true
 
+let sc_selection_is_exact1 k
+  =
+  assert_norm (L.length sc_list = 27);
+  sc_list_lemma k;
+  SizeClassSelection.inv_exact k
+
+let sc_selection_is_exact2 k
+  =
+  assert_norm (L.length sc_list = 27);
+  sc_list_lemma k;
+  SizeClassSelection.inv_exact2 k
+
 let nb_arenas = 4sz
 
 inline_for_extraction noextract

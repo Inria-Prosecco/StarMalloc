@@ -227,6 +227,8 @@ let spec_getsize
     length
   )
 
+module L = FStar.List.Tot
+
 inline_for_extraction noextract
 let full_getsize (ptr: array U8.t)
   : Steel (US.t & G.erased bool)
@@ -241,12 +243,23 @@ let full_getsize (ptr: array U8.t)
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
   (requires fun _ -> within_size_classes_pred ptr)
-  (ensures fun h0 r h1 ->
+  (ensures fun h0 result h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
-    (US.v (fst r) > 0 ==>
+    (US.v (fst result) > 0 ==>
       (enable_slab_canaries_malloc ==> A.length ptr >= 2) /\
-      US.v (fst r) == spec_getsize (A.length ptr) /\
-      (G.reveal (snd r) <==> US.v (fst r) <= U32.v page_size)
+      US.v (fst result) == spec_getsize (A.length ptr) /\
+      (G.reveal (snd result) <==> US.v (fst result) <= U32.v page_size) /\
+      (G.reveal (snd result) ==> (
+        let idx = sc_selection (US.sizet_to_uint32 (fst result)) in
+        (enable_sc_fast_selection ==>
+          A.length ptr == U32.v (L.index sc_list (US.v idx))) /\
+        (enable_slab_canaries_malloc ==>
+          A.length ptr == US.v (fst result) + 2
+        ) /\
+        (not enable_slab_canaries_malloc ==>
+          A.length ptr == US.v (fst result)
+        )
+      ))
     )
   )
   =
@@ -275,13 +288,22 @@ let getsize (ptr: array U8.t)
     A.varray (A.split_r sc_all.slab_region slab_region_size)
   )
   (requires fun _ -> within_size_classes_pred ptr)
-  (ensures fun h0 r h1 ->
+  (ensures fun h0 result h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
-    (US.v r > 0 ==>
+    (US.v result > 0 ==>
       (enable_slab_canaries_malloc ==> A.length ptr >= 2) /\
-      US.v r == spec_getsize (A.length ptr) /\
-      //(G.reveal (snd r) <==> US.v r <= U32.v page_size)
-      True
+      US.v result == spec_getsize (A.length ptr) /\
+      (US.v result <= U32.v page_size ==> (
+        let idx = sc_selection (US.sizet_to_uint32 result) in
+        (enable_sc_fast_selection ==>
+          A.length ptr == U32.v (L.index sc_list (US.v idx))) /\
+        (enable_slab_canaries_malloc ==>
+          A.length ptr == US.v result + 2
+        ) /\
+        (not enable_slab_canaries_malloc ==>
+          A.length ptr == US.v result
+        )
+      ))
     )
   )
   =
@@ -361,6 +383,31 @@ val realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   // The original pointer ptr remains valid and may need to be deallocated with free or realloc.
   //TODO: add corresponding postcond
 
+let realloc_small_optim_lemma
+  (old_size: US.t)
+  (new_size: US.t)
+  : Lemma
+  (requires enable_sc_fast_selection /\
+    US.v old_size <= U32.v page_size /\
+    US.v new_size <= US.v threshold /\
+    (let old_idx = sc_selection (US.sizet_to_uint32 old_size) in
+    let old_sc = L.index sc_list (US.v old_idx) in
+    let new_idx = if enable_slab_canaries_malloc
+      then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
+      else sc_selection (US.sizet_to_uint32 new_size) in
+    (enable_slab_canaries_malloc ==>
+      US.v old_size == U32.v old_sc - 2) /\
+    (not enable_slab_canaries_malloc ==>
+      US.v old_size == U32.v old_sc) /\
+    old_idx = new_idx)
+  )
+  (ensures
+    US.v new_size <= US.v old_size
+  )
+  =
+  ()
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let realloc arena_id ptr new_size
   =
   if A.is_null ptr then (
@@ -405,8 +452,7 @@ let realloc arena_id ptr new_size
     let old_allocation_is_small : bool = US.lte old_size (u32_to_sz page_size) in
     let new_allocation_is_small : bool = US.lte new_size threshold in
     let same_case : bool = old_allocation_is_small = new_allocation_is_small in
-    //TODO: add enable_fast_sizeclass_selection as small_case_optim_condition precondition
-    let small_case_optim_condition = old_allocation_is_small && same_case && (
+    let small_case_optim_condition = enable_sc_fast_selection && old_allocation_is_small && same_case && (
       let old_sc = sc_selection (US.sizet_to_uint32 old_size) in
       let new_sc = if enable_slab_canaries_malloc
         then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
@@ -415,9 +461,6 @@ let realloc arena_id ptr new_size
     let large_case_optim_condition = (not old_allocation_is_small) && same_case && (
       US.lte new_size old_size
     ) in
-    //TODO
-    assume (small_case_optim_condition ==> A.length ptr >= US.v new_size);
-    assert (large_case_optim_condition ==> A.length ptr >= US.v new_size);
     // not a valid pointer from the allocator point of view, fail
     if (old_size = 0sz) then (
       // 3) invalid pointer, fail
@@ -431,6 +474,9 @@ let realloc arena_id ptr new_size
       return (A.null #U8.t, G.hide (0, A.null #U8.t))
     ) else (
       // most common case
+      if small_case_optim_condition then realloc_small_optim_lemma old_size new_size else ();
+      assert (small_case_optim_condition ==> A.length ptr >= US.v new_size);
+      assert (large_case_optim_condition ==> A.length ptr >= US.v new_size);
       if (small_case_optim_condition || large_case_optim_condition) then (
         // optimization
         (**) intro_live_null_or_varray ptr;
@@ -491,6 +537,7 @@ let realloc arena_id ptr new_size
       )
     )
   ))
+#pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 //TODO: there should be defensive checks and no precondition

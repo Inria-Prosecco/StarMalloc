@@ -276,7 +276,9 @@ let mod_lt (a b: US.t)
 
 open Main
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --query_stats"
+#restart-solver
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 let slab_getsize ptr =
   SAA.within_bounds_elim
     (A.split_l sc_all.slab_region 0sz)
@@ -298,6 +300,16 @@ let slab_getsize ptr =
   assert (TLA.length sizes == US.v nb_size_classes * US.v nb_arenas);
   assert (US.v index < TLA.length sizes);
   let size = TLA.get sizes index in
+  sizes_t_pred_elim sizes;
+  let index' = G.hide (US.v index % US.v nb_size_classes) in
+  assert (size = L.index sc_list index');
+  if enable_sc_fast_selection then (
+    sc_selection_is_exact1 index';
+    sc_selection_is_exact2 index';
+    let index'' = G.hide (sc_selection size) in
+    assert (L.index sc_list (G.reveal index') == L.index sc_list (US.v (G.reveal index'')));
+    assert (size = L.index sc_list (US.v (G.reveal index'')))
+  ) else ();
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
   // TODO: some refactor needed wrt SlotsFree
@@ -321,9 +333,11 @@ let slab_getsize ptr =
     // invalid pointer
     return 0sz
   )
+#pop-options
 
 #restart-solver
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let slab_free ptr =
   SAA.within_bounds_elim
     (A.split_l sc_all.slab_region 0sz)
