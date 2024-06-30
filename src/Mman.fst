@@ -5,8 +5,10 @@ open Steel.Effect
 module A = Steel.Array
 
 module U8 = FStar.UInt8
+module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module US = FStar.SizeT
+module UP = FStar.PtrdiffT
 module AL = ArrayList
 module R = Steel.Reference
 
@@ -109,6 +111,8 @@ assume val mmap_sizes_init (len: US.t)
 
 open NullOrVarray
 
+open PtrdiffWrapper
+
 // POSIX spec: mmap returns a page-aligned array of bytes;
 // thus, mmap_u8 returns a page-aligned array of bytes;
 // hence the postcondition array_u8_alignment page_size
@@ -116,19 +120,19 @@ open NullOrVarray
 assume val mmap_u8
   (size: US.t)
   : Steel (array U8.t)
-    emp
-    (fun ptr -> null_or_varray ptr)
-    (requires fun _ -> US.v size > 0)
-    (ensures fun _ ptr h1 ->
-      let s : t_of (null_or_varray ptr)
-        = h1 (null_or_varray ptr) in
-      not (A.is_null ptr) ==> (
-        A.length ptr == US.v size /\
-        A.is_full_array ptr /\
-        array_u8_alignment ptr page_size /\
-        zf_u8 s
-      )
+  emp
+  (fun ptr -> null_or_varray ptr)
+  (requires fun _ -> US.v size > 0)
+  (ensures fun _ ptr h1 ->
+    let s : t_of (null_or_varray ptr)
+      = h1 (null_or_varray ptr) in
+    not (A.is_null ptr) ==> (
+      A.length ptr == spec_mmap_actual_size (US.v size) /\
+      A.is_full_array ptr /\
+      array_u8_alignment ptr page_size /\
+      zf_u8 s
     )
+  )
 
 // TODO: should the underlying munmap fail in a stricter manner?
 //noextract

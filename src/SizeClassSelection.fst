@@ -13,6 +13,8 @@ open ExternUtils
 
 open FStar.Mul
 
+#push-options "--fuel 0 --ifuel 0"
+
 // misc
 let from_vec_property (#n: pos) (a: FBV.bv_t n) (s:nat{s <= n})
   : Lemma
@@ -80,7 +82,6 @@ let clz_to_seq_zero_vec (x: U64.t) (r: U32.t)
   assert (forall (k:nat{k < idx}). Seq.index s1 k = false);
   Seq.lemma_eq_intro s1 (FBV.zero_vec #idx)
 
-#push-options "--fuel 0 --ifuel 0"
 let clz_to_seq (x: U64.t) (r: U32.t)
   : Lemma
   (requires
@@ -112,7 +113,6 @@ let clz_to_seq (x: U64.t) (r: U32.t)
   let x22 = FU.from_vec #(64 - idx - 1) s22 in
   assert (x2 == x21 * pow2 (64 - U32.v r - 1) + x22);
   assert (x2 >= pow2 (64 - U32.v r - 1))
-#pop-options
 
 noextract inline_for_extraction
 let log2u64_impl (x: U64.t)
@@ -139,21 +139,7 @@ let log2u64 (x: U64.t)
   )
   = log2u64_impl x
 
-noextract
-let log2u64_spec (x: nat)
-  : Pure nat
-  (requires
-    x > 0 /\
-    x <= 4096)
-  (ensures fun r ->
-    r < 64 /\
-    x >= pow2 r /\
-    x < pow2 (r + 1)
-  )
-  = U32.v (log2u64 (U64.uint_to_t x))
-
-module FML = FStar.Math.Lemmas
-
+#push-options "--fuel 1 --ifuel 0"
 let rec log2u64_eq_lemma_aux (x: nat) (r1 r2: nat)
   : Lemma
   (requires
@@ -169,8 +155,37 @@ let rec log2u64_eq_lemma_aux (x: nat) (r1 r2: nat)
   =
   if x = 1 then ()
   else log2u64_eq_lemma_aux (x/2) (r1-1) (r2-1)
+#pop-options
 
-let log2u64_eq_lemma (x:nat) (r: nat)
+//let log2u64_eq_lemma (x: U64.t) (r: U32.t)
+//  : Lemma
+//  (requires
+//    U64.v x > 0 /\
+//    pow2 (U32.v r) <= U64.v x /\
+//    U64.v x < pow2 (U32.v r + 1))
+//  (ensures
+//    U32.v (log2u64 x) == U32.v r
+//  )
+//  =
+//  let r2 = log2u64 x in
+//  log2u64_eq_lemma_aux (U64.v x) (U32.v r) (U32.v r2)
+
+noextract
+let log2u64_spec (x: nat)
+  : Pure nat
+  (requires
+    x > 0 /\
+    x <= 4096)
+  (ensures fun r ->
+    r < 64 /\
+    x >= pow2 r /\
+    x < pow2 (r + 1)
+  )
+  = U32.v (log2u64 (U64.uint_to_t x))
+
+module FML = FStar.Math.Lemmas
+
+let log2u64_spec_eq_lemma (x:nat) (r: nat)
   : Lemma
   (requires
     x > 0 /\
@@ -270,11 +285,12 @@ let fast_upper_div_impl
 
 module FML = FStar.Math.Lemmas
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
+#push-options "--z3rlimit 30"
 noextract
 let inv_aux_2 (x: nat)
   : Pure (nat & nat)
-  (requires x >= 64 /\
+  (requires
+    64 <= x /\
     x <= 4096
   )
   (ensures fun r ->
@@ -313,11 +329,13 @@ let inv_aux_2 (x: nat)
     assert (z == 0)
   ) else ();
   y, z
+#pop-options
 
 noextract
 let inv_aux (x: nat)
   : Pure (nat)
-  (requires x >= 64 /\
+  (requires
+    64 <= x /\
     x <= 4096
   )
   (ensures fun r ->
@@ -359,6 +377,7 @@ let inv (x: nat)
     inv_aux x + 2
   )
 
+#push-options "--z3rlimit 50"
 inline_for_extraction noextract
 let inv_impl_aux_2 (x: U32.t)
   : Pure (U32.t & U32.t)
@@ -388,6 +407,7 @@ let inv_impl_aux_2 (x: U32.t)
   let y = U32.sub log 6ul in
   let z = fast_upper_div_impl (U32.sub x_as_u32 align) align2 (U32.sub log 2ul) in
   y, z
+#pop-options
 
 inline_for_extraction noextract
 let inv_impl_aux (x: U32.t)
@@ -425,3 +445,386 @@ let inv_impl (x: U32.t)
     U32.add (inv_impl_aux x) 2ul
   )
 
+let log2u64_is_mon_increasing (x y: nat)
+  : Lemma
+  (requires
+    0 < x /\
+    x <= y /\
+    y <= 4096
+  )
+  (ensures
+    log2u64_spec x <= log2u64_spec y
+  )
+  =
+  let rx = log2u64_spec x in
+  let ry = log2u64_spec y in
+  if rx <= ry then ()
+  else (
+    FML.pow2_lt_compat rx ry;
+    log2u64_spec_eq_lemma x ry
+  )
+
+let nearest_multiple_upper_div_is_mon_increasing
+  (x y: nat)
+  (multiple: nat{multiple > 0})
+  : Lemma
+  (requires x <= y)
+  (ensures (
+    let rx = nearest_multiple_upper_div x multiple in
+    let ry = nearest_multiple_upper_div y multiple in
+    rx <= ry
+  ))
+  =
+  assert (x + multiple - 1 <= y + multiple - 1);
+  FML.lemma_div_le (x + multiple - 1) (y + multiple - 1) multiple
+
+#push-options "--z3rlimit 100"
+let inv_aux_is_mon_increasing (x y: nat)
+  : Lemma
+  (requires
+    64 <= x /\
+    x <= y /\
+    y <= 4096
+  )
+  (ensures (
+    let rx = inv_aux x in
+    let ry = inv_aux y in
+    rx <= ry
+  ))
+  =
+  let log_x = log2u64_spec x in
+  let log_y = log2u64_spec y in
+  log2u64_is_mon_increasing x y;
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 12 == 4096);
+  if log_x < 6 then FML.pow2_le_compat 6 (log_x+1);
+  if log_y > 12 then FML.pow2_lt_compat log_y 12;
+  assert (6 <= log_x /\ log_x <= log_y /\ log_y <= 12);
+  if log_x = log_y
+  then (
+    let align = pow2 log_x in
+    let align2 = pow2 (log_x - 2) in
+    nearest_multiple_upper_div_is_mon_increasing (x - align) (y - align) align2
+  ) else ()
+#pop-options
+
+let inv_is_mon_increasing (x y: nat)
+  : Lemma
+  (requires
+    x <= 4096 /\
+    y <= 4096
+  )
+  (ensures (
+    let rx = inv x in
+    let ry = inv y in
+    x <= y ==> rx <= ry
+  ))
+  =
+  if x <= y then (
+    if x <= 64
+    then ()
+    else inv_aux_is_mon_increasing x y
+  ) else ()
+
+#push-options "--z3rlimit 150"
+let sc_list_f_aux_is_smon_increasing_lt
+  (x y: nat)
+  : Lemma
+  (requires
+    x < y
+  )
+  (ensures
+    sc_list_f_aux x < sc_list_f_aux y /\
+    sc_list_f_aux y - sc_list_f_aux x >= 16
+  )
+  =
+  let rx = sc_list_f_aux x in
+  let ry = sc_list_f_aux y in
+  let x1 = x / 4 in
+  let y1 = y / 4 in
+  let x2 = x % 4 in
+  let y2 = y % 4 in
+  if x1 = y1 then (
+    assert (y2 - x2 > 0);
+    assert_norm (pow2 4 = 16);
+    FML.pow2_le_compat (x1 + 4) 4;
+    assert (ry - rx = (y2 - x2) * pow2 (x1 + 4))
+  ) else (
+    assert (x1 < y1);
+    // first step: factorization of the difference
+    let c = pow2 (x1 + 4) in
+    FML.pow2_plus (x1 + 4) (y1 - x1 + 2);
+    FML.pow2_plus (x1 + 4) (y1 - x1);
+    assert (ry = c * (pow2 (y1 - x1 + 2) + y2 * pow2 (y1 - x1)));
+    FML.pow2_plus (x1 + 4) 2;
+    assert_norm (pow2 2 == 4);
+    assert (rx = c * (4 + x2));
+    let ry' = pow2 (y1 - x1 + 2) + y2 * pow2 (y1 - x1) in
+    assert (ry = c * ry');
+    let rx' = 4 + x2 in
+    assert (rx = c * rx');
+    FML.distributivity_sub_right c ry' rx';
+    assert (ry - rx = c * (ry' - rx'));
+
+    // second step: ry' - rx' > 0
+    let c' = pow2 (y1 - x1) in
+    FML.pow2_plus (y1 - x1) 2;
+    assert (ry' = c' * (4 + y2));
+    FML.pow2_le_compat (y1 - x1) 1;
+    FML.lemma_mult_le_right (4 + y2) 2 c';
+    assert (ry' >= 2 * (4 + y2));
+    FML.lemma_mult_le_left 2 4 (4 + y2);
+    assert (ry' >= 8);
+    assert (rx' < 8);
+    assert (ry' - rx' > 0);
+    assert (ry - rx > 0);
+
+    // third step: c >= 16
+    assert_norm (pow2 4 = 16);
+    FML.pow2_le_compat (x1 + 4) 4;
+    ()
+  )
+#pop-options
+
+let sc_list_f_aux_is_smon_increasing_lte
+  (x y: nat)
+  : Lemma
+  (requires
+    x <= y
+  )
+  (ensures
+    sc_list_f_aux x <= sc_list_f_aux y
+  )
+  =
+  if x < y
+  then sc_list_f_aux_is_smon_increasing_lt x y
+  else ()
+
+let sc_list_f_aux_min
+  (x: nat)
+  : Lemma
+  (sc_list_f_aux x >= 64)
+  =
+  let r = sc_list_f_aux 0 in
+  assert_norm (r == 64);
+  sc_list_f_aux_is_smon_increasing_lte 0 x
+
+let sc_list_f_is_smon_increasing_lt
+  (x y: nat)
+  : Lemma
+  (requires
+    x < y
+  )
+  (ensures
+    sc_list_f x < sc_list_f y
+  )
+  =
+  let rx = sc_list_f x in
+  let ry = sc_list_f y in
+  if x > 1
+  then sc_list_f_aux_is_smon_increasing_lt (x - 2) (y - 2)
+  else (
+    FML.lemma_mult_le_right 16 (x+1) 2;
+    assert (sc_list_f x <= 32);
+    if y > 1 then (
+      sc_list_f_aux_min (y-2);
+      assert (sc_list_f y >= 64)
+    ) else (
+      FML.lemma_mult_lt_right 16 (x+1) (y+1)
+    )
+  )
+
+let sc_list_f_is_smon_increasing_lte
+  (x y: nat)
+  : Lemma
+  (requires
+    x <= y
+  )
+  (ensures
+    sc_list_f x <= sc_list_f y
+  )
+  =
+  if x < y
+  then sc_list_f_is_smon_increasing_lt x y
+  else ()
+
+#push-options "--z3rlimit 50"
+let inv_exact_log (k: nat)
+  : Lemma
+  (requires k <= 24)
+  (ensures
+    64 <= sc_list_f_aux k /\
+    sc_list_f_aux k <= 4096 /\
+    (let r = sc_list_f_aux k in
+    log2u64_spec r = (k/4) + 6
+  ))
+  =
+  let k1 = k/4 in
+  let k2 = k%4 in
+  let r = sc_list_f_aux k in
+  sc_list_f_aux_min k;
+  sc_list_f_aux_is_smon_increasing_lte k 24;
+  assert_norm (sc_list_f_aux 24 == 4096);
+  assert (r == pow2 (k1 + 6) + k2 * pow2 (k1 + 4));
+  assert (k2 < 4);
+  FML.pow2_plus (k1 + 4) 2;
+  assert_norm (pow2 2 == 4);
+  assert (pow2 (k1 + 4) * 4 = pow2 (k1 + 6));
+  assert (pow2 (k1 + 6) <= r);
+  FML.pow2_double_sum (k1 + 6);
+  assert (r < pow2 (k1 + 6 + 1));
+  log2u64_spec_eq_lemma r (k1 + 6)
+#pop-options
+
+#push-options "--z3rlimit 50"
+let inv_exact_aux (k: nat)
+  : Lemma
+  (requires k <= 24)
+  (ensures
+    64 <= sc_list_f_aux k /\
+    sc_list_f_aux k <= 4096 /\
+    inv_aux (sc_list_f_aux k) == k
+  )
+  =
+  let x = sc_list_f_aux k in
+  sc_list_f_aux_min k;
+  sc_list_f_aux_is_smon_increasing_lte k 24;
+  assert_norm (sc_list_f_aux 24 == 4096);
+  let log = log2u64_spec x in
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 12 == 4096);
+  inv_exact_log k;
+  assert (log = k/4 +6);
+  if log < 6 then FML.pow2_le_compat 6 (log+1);
+  if log > 12 then FML.pow2_lt_compat log 12;
+  assert (6 <= log /\ log <= 12);
+  let align = pow2 log in
+  let align2 = pow2 (log - 2) in
+  let y = log - 6 in
+  let z = nearest_multiple_upper_div (x - align) align2 in
+  assert ((y, z) = inv_aux_2 x);
+  assert (k / 4 = y);
+  ()
+#pop-options
+
+let inv_exact (k: nat)
+  : Lemma
+  (requires k <= 26)
+  (ensures
+    sc_list_f k <= 4096 /\
+    inv (sc_list_f k) == k
+  )
+  =
+  sc_list_f_is_smon_increasing_lte k 26;
+  assert (sc_list_f 26 = 4096) by T.compute();
+  if k = 0 then (
+    assert (sc_list_f 0 == 16) by T.compute()
+  ) else if (k = 1) then (
+    assert (sc_list_f 1 == 32) by T.compute()
+  ) else if (k = 2) then (
+    assert (sc_list_f 2 == 64) by T.compute()
+  ) else (
+    assert (k >= 3);
+    sc_list_f_is_smon_increasing_lt 2 k;
+    assert_norm (sc_list_f 2 >= 64);
+    assert (sc_list_f k > 64);
+    assert (sc_list_f k == sc_list_f_aux (k-2));
+    inv_exact_aux (k-2);
+    assert (inv_aux (sc_list_f_aux (k-2)) == k-2);
+    assert (inv (sc_list_f_aux (k-2)) == inv_aux (sc_list_f_aux (k-2)) + 2)
+  )
+
+let inv_exact_log2 (k: nat)
+  : Lemma
+  (requires 1 <= k /\ k <= 24)
+  (ensures
+    64 <= sc_list_f_aux (k-1) /\
+    sc_list_f_aux (k-1) < 4096 /\
+    (let r = sc_list_f_aux (k-1) + 1 in
+    log2u64_spec r = (k-1)/4 + 6
+  ))
+  =
+  let k1 = (k-1)/4 in
+  let k2 = (k-1)%4 in
+  let r = sc_list_f_aux (k-1) + 1 in
+  sc_list_f_aux_min (k-1);
+  sc_list_f_aux_is_smon_increasing_lt (k-1) 24;
+  assert_norm (sc_list_f_aux 24 == 4096);
+  assert (r == pow2 (k1 + 6) + k2 * pow2 (k1 + 4) + 1);
+  assert (r >= pow2 (k1 + 6));
+  assert (k2 < 4);
+  FML.pow2_plus (k1 + 4) 2;
+  assert_norm (pow2 2 == 4);
+  assert (pow2 (k1 + 4) * 4 = pow2 (k1 + 6));
+  assert (pow2 (k1 + 6) <= r);
+  FML.pow2_double_sum (k1 + 6);
+  assert (r < pow2 (k1 + 6 + 1));
+  log2u64_spec_eq_lemma r (k1 + 6)
+
+#push-options "--z3rlimit 30"
+let inv_exact_aux2 (k: nat)
+  : Lemma
+  (requires 1 <= k /\ k <= 24)
+  (ensures
+    64 <= sc_list_f_aux (k-1) /\
+    sc_list_f_aux (k-1) < 4096 /\
+    inv_aux (sc_list_f_aux (k-1) + 1) == k
+  )
+  =
+  let x = sc_list_f_aux (k-1) + 1 in
+  sc_list_f_aux_min (k-1);
+  sc_list_f_aux_is_smon_increasing_lt (k-1) 24;
+  assert_norm (sc_list_f_aux 24 == 4096);
+  let log = log2u64_spec x in
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 12 == 4096);
+  inv_exact_log2 k;
+  assert (log = (k-1)/4+6);
+  if log < 6 then FML.pow2_le_compat 6 (log+1);
+  if log > 12 then FML.pow2_lt_compat log 12;
+  assert (6 <= log /\ log <= 12);
+  let align = pow2 log in
+  let align2 = pow2 (log - 2) in
+  let y = log - 6 in
+  let z = nearest_multiple_upper_div (x - align) align2 in
+  assert ((y, z) = inv_aux_2 x);
+  assert ((k-1) / 4 = y);
+  ()
+#pop-options
+
+let inv_exact2 (k: nat)
+  : Lemma
+  (requires k <= 26)
+  (ensures
+    2 <= sc_list_f k /\
+    sc_list_f k <= 4096 /\
+    inv (sc_list_f k - 2) == k
+  )
+  =
+  sc_list_f_is_smon_increasing_lte 0 k;
+  sc_list_f_is_smon_increasing_lte k 26;
+  assert_norm (sc_list_f 0 = 16);
+  assert_norm (sc_list_f 26 = 4096);
+  if k = 0 then (
+    assert (sc_list_f 0 == 16) by T.compute()
+  ) else if (k = 1) then (
+    assert (sc_list_f 1 == 32) by T.compute()
+  ) else if (k = 2) then (
+    assert (sc_list_f 2 == 64) by T.compute()
+  ) else (
+    assert (k >= 3);
+    sc_list_f_is_smon_increasing_lt 2 k;
+    assert_norm (sc_list_f 2 >= 64);
+    assert (sc_list_f k > 64);
+    assert (sc_list_f k == sc_list_f_aux (k-2));
+    inv_exact_aux (k-2);
+    inv_exact_aux2 (k-2);
+    assert (inv_aux (sc_list_f_aux (k-2)) == k-2);
+    assert (inv_aux (sc_list_f_aux (k-3) + 1) == k-2);
+    sc_list_f_aux_is_smon_increasing_lt (k-3) (k-2);
+    assert (sc_list_f_aux (k-3) + 1 <= sc_list_f_aux (k-2) - 2);
+    assert (sc_list_f_aux (k-2) - 2 <= sc_list_f_aux (k-2));
+    inv_aux_is_mon_increasing (sc_list_f_aux (k-3) + 1) (sc_list_f_aux (k-2) - 2);
+    inv_aux_is_mon_increasing (sc_list_f_aux (k-2) - 2) (sc_list_f_aux (k-2));
+    assert (inv (sc_list_f_aux (k-2)) == inv_aux (sc_list_f_aux (k-2)) + 2)
+  )
