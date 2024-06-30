@@ -10,10 +10,11 @@ open Steel.Effect.Atomic
 open Steel.Effect
 open Steel.Reference
 module A = Steel.Array
+module FML = FStar.Math.Lemmas
 
 open Constants
 
-#push-options "--fuel 1 --ifuel 1"
+#push-options "--fuel 0 --ifuel 0"
 
 let array = Steel.ST.Array.array
 let ptr = Steel.ST.Array.ptr
@@ -49,6 +50,7 @@ val array_u8_alignment_lemma
   (ensures
     array_u8_alignment arr2 v2)
 
+#push-options "--z3rlimit 30"
 let nb_slots (size_class: sc)
   : Pure U32.t
   (requires True)
@@ -57,7 +59,9 @@ let nb_slots (size_class: sc)
     U32.v r <= 256
   )
   =
+  //TODO: stabilize
   U32.div page_size size_class
+#pop-options
 
 open FStar.Mul
 
@@ -72,7 +76,7 @@ let rounding (size_class: sc)
   =
   US.uint32_to_sizet (U32.mul (nb_slots size_class) size_class)
 
-#push-options "--ifuel 0 --fuel 0 --z3rlimit 50"
+#push-options "--z3rlimit 50"
 let nb_slots_correct
   (size_class: sc)
   (pos: U32.t)
@@ -83,7 +87,7 @@ let nb_slots_correct
     <= US.v (rounding size_class) - U32.v size_class)
   =
   assert (U32.v pos <= U32.v (nb_slots size_class) - 1);
-  FStar.Math.Lemmas.lemma_mult_le_left (U32.v size_class) (U32.v pos) (U32.v (nb_slots size_class) - 1);
+  FML.lemma_mult_le_left (U32.v size_class) (U32.v pos) (U32.v (nb_slots size_class) - 1);
   assert (U32.v pos * U32.v size_class <= U32.v (U32.mul (nb_slots size_class) size_class) - U32.v size_class);
   assert (U32.v (U32.mul (nb_slots size_class) size_class) <= U32.v page_size)
 #pop-options
@@ -200,18 +204,20 @@ let max64_lemma (x: U64.t)
   <> nth_is_zero max64 (U32.uint_to_t k))
 
 module FBV = FStar.BitVector
+
 let pow2_lemma (n: nat{n < 64}) (i: nat{i < n})
   : Lemma
   (
-    FStar.Math.Lemmas.pow2_lt_compat 64 n;
-    FStar.Math.Lemmas.pow2_le_compat n 0;
+    FML.pow2_lt_compat 64 n;
+    FML.pow2_le_compat n 0;
     not (nth_is_zero (U64.uint_to_t (pow2 n - 1)) (U32.uint_to_t i) = true))
   =
   match n with
   | 1 -> ()
   | n ->
-    FStar.Math.Lemmas.pow2_lt_compat 64 n;
-    FStar.Math.Lemmas.pow2_le_compat n 0;
+    FML.pow2_lt_compat 64 n;
+    FML.pow2_le_compat n 0;
+    FML.pow2_double_sum (n-1);
     assert (pow2 n - 1 == pow2 (n-1) +  pow2 (n-1) - 1);
     Classical.forall_intro_2 (Bitmap1.spec_bv_get #64);
     if i < n -1
@@ -235,15 +241,15 @@ let full_n_aux (bound: U32.t)
   =
   let x1 = U64.shift_left 1UL bound in
   FU.shift_left_value_lemma #64 (U64.v 1UL) (U32.v bound);
-  FStar.Math.Lemmas.pow2_lt_compat 64 (U32.v bound);
+  FML.pow2_lt_compat 64 (U32.v bound);
   assert (U64.v x1 == pow2 (U32.v bound));
-  FStar.Math.Lemmas.pow2_le_compat (U32.v bound) 0;
+  FML.pow2_le_compat (U32.v bound) 0;
   assert (U64.v x1 >= 1);
   let x2 = U64.sub x1 1UL in
   Classical.forall_intro (pow2_lemma (U32.v bound));
   x2
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
+#push-options "--z3rlimit 30"
 let full_n (bound: U32.t)
   : Pure U64.t
   (requires
@@ -281,7 +287,6 @@ let full_n_decomposition1 (bound: U32.t)
       (FBV.ones_vec #(U32.v bound))
   )
 
-#push-options "--fuel 0 --ifuel 0"
 let full_n_decomposition2 (bound: U32.t)
   : Lemma
   (requires 0 < U32.v bound /\ U32.v bound <= 64)
@@ -312,9 +317,7 @@ let full_n_decomposition2 (bound: U32.t)
       (Seq.slice bm 0 (64 - U32.v bound))
       (Seq.create (64 - U32.v bound) false)
   )
-#pop-options
 
-#push-options "--fuel 0 --ifuel 0"
 let full_n_lemma (x: U64.t) (bound: U32.t)
   : Lemma
   (requires
@@ -360,7 +363,6 @@ let full_n_lemma (x: U64.t) (bound: U32.t)
   Classical.forall_intro (Classical.move_requires (
     max64_lemma_aux2 (U32.v bound) x (full_n bound)
   ))
-#pop-options
 
 module G = FStar.Ghost
 
@@ -576,7 +578,7 @@ let lemma_div (x y z: nat)
     x / z = y
   )
   =
-  FStar.Math.Lemmas.lemma_mod_plus 0 y z;
+  FML.lemma_mod_plus 0 y z;
   assert ((y * z) % z = 0)
 
 let array_to_bv_slice
@@ -631,7 +633,7 @@ let lemma_nth_nonmax64
     FU.to_vec_lemma_1 #64 (U64.v x) 0
   ) else ()
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
+#push-options "--z3rlimit 50"
 let lemma_nth_nonfull
   (size_class: sc)
   (x: U64.t)
@@ -657,8 +659,9 @@ let lemma_nth_nonfull
   ) else ()
 #pop-options
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
-open FStar.UInt
+#restart-solver
+
+#push-options "--z3rlimit 100"
 let set_lemma_nonempty
   (size_class: sc)
   (md_as_seq1: Seq.lseq U64.t 4)
@@ -679,6 +682,7 @@ let set_lemma_nonempty
   assert (Seq.index bm2 idx = true);
   let i1 = U32.div pos 64ul in
   let i2 = U32.rem pos 64ul in
+  //TODO: stabilize
   assert (U32.v i1 * 64 <= idx /\ idx < (U32.v i1 + 1) * 64);
   array_to_bv_slice #4 md_as_seq2 (U32.v i1);
   Seq.lemma_index_slice bm2 (U32.v i1 * 64) ((U32.v i1+1) * 64) (idx - U32.v i1 * 64);
@@ -687,6 +691,7 @@ let set_lemma_nonempty
   lemma_nth_nonzero x (idx - U32.v i1 * 64);
   assert (x <> 0UL);
   assert (Seq.index md_as_seq2 (U32.v i1) <> 0UL)
+#pop-options
 
 let lemma_div_lt_aux
   (x y: pos) (z: nat)
@@ -701,17 +706,18 @@ let lemma_div_lt_aux
   )
   =
   let k = z/x in
-  FStar.Math.Lemmas.lemma_div_mod z x;
+  FML.lemma_div_mod z x;
   // (z/x)*x = z, as z % x = 0
   assert (k * x == z);
   // (b < c /\ a > 0) ==> a * b < a * c
-  FStar.Math.Lemmas.lemma_mult_lt_left k x y;
+  FML.lemma_mult_lt_left k x y;
   assert (k * x < k * y);
   assert (z < k * y);
   // (k * y) / y = k
-  FStar.Math.Lemmas.cancel_mul_div k y;
+  FML.cancel_mul_div k y;
   assert (k > z/y)
 
+#push-options "--z3rlimit 100"
 let set_lemma_nonfull
   (size_class: sc)
   (md_as_seq1: Seq.lseq U64.t 4)
@@ -732,6 +738,7 @@ let set_lemma_nonfull
   assert (Seq.index bm2 idx = false);
   let i1 = U32.div pos 64ul in
   let i2 = U32.rem pos 64ul in
+  //TODO: stabilize
   assert (U32.v i1 * 64 <= idx /\ idx < (U32.v i1 + 1) * 64);
   array_to_bv_slice #4 md_as_seq2 (U32.v i1);
   Seq.lemma_index_slice bm2 (U32.v i1 * 64) ((U32.v i1+1) * 64) (idx - U32.v i1 * 64);
@@ -766,3 +773,4 @@ let set_lemma_nonfull
     assert (x <> max64);
     assert (Seq.index md_as_seq2 (U32.v i1) <> max64)
   )
+#pop-options
