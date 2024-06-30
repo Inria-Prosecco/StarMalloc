@@ -127,41 +127,12 @@ assume val mmap_u8
     let s : t_of (null_or_varray ptr)
       = h1 (null_or_varray ptr) in
     not (A.is_null ptr) ==> (
-      // size <= mmap_bound
       A.length ptr == spec_mmap_actual_size (US.v size) /\
       A.is_full_array ptr /\
       array_u8_alignment ptr page_size /\
       zf_u8 s
     )
   )
-
-//open PtrdiffWrapper
-//
-//let mmap_u8_wrapper
-//  (size: US.t)
-//  : Steel (array U8.t)
-//  emp
-//  (fun ptr -> null_or_varray ptr)
-//  (requires fun _ -> US.v size > 0)
-//  (ensures fun _ ptr h1 ->
-//    let s : t_of (null_or_varray ptr)
-//      = h1 (null_or_varray ptr) in
-//    not (A.is_null ptr) ==> (
-//      A.length ptr == spec_mmap_actual_size (US.v size) /\
-//      A.length ptr <= US.v mmap_bound /\
-//      A.is_full_array ptr /\
-//      array_u8_alignment ptr page_size /\
-//      zf_u8 s
-//    )
-//  )
-//  =
-//  if US.lte size mmap_bound
-//  then (
-//    mmap_u8 size
-//  ) else (
-//    intro_null_null_or_varray #U8.t
-//  )
-
 
 // TODO: should the underlying munmap fail in a stricter manner?
 //noextract

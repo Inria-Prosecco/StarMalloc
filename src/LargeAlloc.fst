@@ -308,9 +308,7 @@ let large_malloc_aux
     US.v size > U32.v page_size /\
     Spec.is_avl (spec_convert cmp) t /\
     (not (A.is_null r) ==> (
-      //US.v size <= US.v mmap_bound /\
       (let size' = mmap_actual_size size in
-      //US.v size' <= US.v mmap_bound /\
       A.length r == US.v size' /\
       A.is_full_array r /\
       array_u8_alignment r page_size /\
