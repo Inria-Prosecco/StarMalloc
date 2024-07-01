@@ -16,6 +16,12 @@ let _ : squash (US.fits_u64)
 let _ : squash (UP.fits (FStar.Int.max_int 64))
   = A.intro_fits_ptrdiff64 ()
 
+//let sc_list = [
+//    16ul; 32ul; 64ul;
+//    128ul; 256ul; 512ul;
+//    1024ul; 2048ul; 4096ul
+//  ]
+
 let sc_list1 : list sc = [
     16ul; 32ul;
     64ul; 80ul; 96ul; 112ul;
@@ -27,11 +33,16 @@ let sc_list1 : list sc = [
     4096ul
   ]
 
-//let sc_list = [
-//    16ul; 32ul; 64ul;
-//    128ul; 256ul; 512ul;
-//    1024ul; 2048ul; 4096ul
-//  ]
+let sc_list_ex1 : list sc_ex = [
+    5120ul; 6144ul; 7168ul;
+    8192ul;
+    //10240ul; 12288ul; 14336ul;
+    //16384ul;
+  //20480ul; 24576ul; 28672ul;
+  //32768ul;
+  //65536ul;
+  //131072ul
+  ]
 
 let sc_list_f1 : nat -> nat = SizeClassSelection.sc_list_f
 
@@ -40,7 +51,11 @@ open MiscList
 let sc_list =
   assert_norm (L.last sc_list1 = page_size);
   last_mem_lemma sc_list1;
-  sc_list1
+  let l1 = L.map (fun x -> Sc x) sc_list1 in
+  let l2 = L.map (fun x -> Sc_ex x) sc_list_ex1 in
+  let l = L.append l1 l2 in
+  normalize_term_spec l;
+  normalize_term l
 
 let sc_list_f = SizeClassSelection.sc_list_f
 
@@ -49,24 +64,24 @@ module T = FStar.Tactics
 let sc_list_check (_:unit)
   : Lemma
   (let l1 : list nat
-    = L.map (fun (k:sc) -> U32.v k <: nat) sc_list in
+    = L.map (fun (k:sc_union) -> U32.v (get_u32 k) <: nat) sc_list in
   let l2 : list nat
     = L.map (fun k -> sc_list_f k) (init (L.length sc_list)) in
   l1 == l2)
   =
   let l1 : list nat
-    = L.map (fun (k:sc) -> U32.v k <: nat) sc_list in
+    = L.map (fun (k:sc_union) -> U32.v (get_u32 k) <: nat) sc_list in
   let l2 : list nat
     = L.map (fun k -> sc_list_f k) (init (L.length sc_list)) in
   assert (l1 = l2) by T.compute ()
 
 let sc_list_lemma (i:nat{i < L.length sc_list})
   : Lemma
-  (U32.v (L.index sc_list i) == sc_list_f i)
+  (U32.v (get_u32 (L.index sc_list i)) == sc_list_f i)
   =
   sc_list_check ();
   lemma_map_eq_to_index_eq
-    (fun (k:sc) -> U32.v k <: nat)
+    (fun (k:sc_union) -> U32.v (get_u32 k) <: nat)
     (fun k -> sc_list_f k)
     (sc_list)
     (init (L.length sc_list))
@@ -92,7 +107,50 @@ let nb_size_classes
   US.fits_u64_implies_fits_32 ();
   US.of_u32 l_as_u32
 
+//DO NOT EDIT, edit sc_list_{sc,ex} instead
+let nb_size_classes_sc
+  =
+  assert_norm (L.length sc_list1 < U32.n);
+  [@inline_let] let l = normalize_term (L.length sc_list1) in
+  normalize_term_spec (L.length sc_list1);
+  assert (l == L.length sc_list1);
+  [@inline_let] let l_as_u32 = normalize_term (U32.uint_to_t l) in
+  normalize_term_spec (U32.uint_to_t l);
+  assert (U32.v l_as_u32 == L.length sc_list1);
+  // do not normalize cast to size_t,
+  // as FStar.SizeT.t is internally represented
+  // as FStar.UInt64.t and yields a type mismatch
+  // between uint64_t (result after this possible normalization)
+  // and size_t (expected type)
+  US.fits_u64_implies_fits_32 ();
+  admit ();
+  US.of_u32 l_as_u32
+
+//DO NOT EDIT, edit sc_list_{sc,ex} instead
+let nb_size_classes_sc_ex
+  =
+  assert_norm (L.length sc_list_ex1 < U32.n);
+  [@inline_let] let l = normalize_term (L.length sc_list_ex1) in
+  normalize_term_spec (L.length sc_list_ex1);
+  assert (l == L.length sc_list_ex1);
+  [@inline_let] let l_as_u32 = normalize_term (U32.uint_to_t l) in
+  normalize_term_spec (U32.uint_to_t l);
+  assert (U32.v l_as_u32 == L.length sc_list_ex1);
+  // do not normalize cast to size_t,
+  // as FStar.SizeT.t is internally represented
+  // as FStar.UInt64.t and yields a type mismatch
+  // between uint64_t (result after this possible normalization)
+  // and size_t (expected type)
+  US.fits_u64_implies_fits_32 ();
+  admit ();
+  US.of_u32 l_as_u32
+
+let nb_size_classes_lemma _ = admit ()
+
+let enable_extended_size_classes = true
+
 let sc_selection x =
+  admit ();
   let r = SizeClassSelection.inv_impl x in
   assert_norm (L.length sc_list = 27);
   sc_list_lemma (U32.v r);
