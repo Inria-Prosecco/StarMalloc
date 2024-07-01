@@ -99,19 +99,19 @@ val lemma_partition_and_pred_implies_mem5
     (ensures ALG.mem idx hd5 s)
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 30"
-let nb_pages (sc: sc_ex)
-  : Tot (v:U32.t{
-    U32.v sc == U32.v v * U32.v page_size /\
-    U32.v v <= US.v max_sc_coef
-  })
-  =
-  Math.Lemmas.euclidean_division_definition (U32.v sc) (U32.v page_size);
-  Math.Lemmas.lemma_div_le (U32.v sc) max_sc_ex (U32.v page_size);
-  let x = U32.div sc page_size in
-  assert (U32.v x == U32.v sc / U32.v page_size);
-  assert (U32.v sc % U32.v page_size = 0);
-  Math.Lemmas.div_exact_r (U32.v sc) (U32.v page_size);
-  x
+//let nb_pages (sc: sc_ex)
+//  : Tot (v:U32.t{
+//    U32.v sc == U32.v v * U32.v page_size /\
+//    U32.v v <= US.v max_sc_coef
+//  })
+//  =
+//  Math.Lemmas.euclidean_division_definition (U32.v sc) (U32.v page_size);
+//  Math.Lemmas.lemma_div_le (U32.v sc) max_sc_ex (U32.v page_size);
+//  let x = U32.div sc page_size in
+//  assert (U32.v x == U32.v sc / U32.v page_size);
+//  //assert (U32.v sc % U32.v page_size = 0);
+//  //Math.Lemmas.div_exact_r (U32.v sc) (U32.v page_size);
+//  x
 
 let slab_region_size
   : v:US.t{
