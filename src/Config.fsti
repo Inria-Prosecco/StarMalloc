@@ -11,22 +11,57 @@ open FStar.Mul
 
 open Constants
 
+/// Small allocator size classes
+
 /// List of size classes used in each arena
 inline_for_extraction noextract
-val sc_list : (l:list sc{Cons? l /\ L.mem page_size l})
+val sc_list : (l:list sc_union{Cons? l})
 
 /// Number of size classes per arena
 inline_for_extraction
 [@ CMacro ]
-val nb_size_classes: v:US.t{US.v v > 0 /\ US.v v == L.length sc_list}
+val nb_size_classes: v:US.t{
+  0 < US.v v /\
+  US.v v == L.length sc_list
+}
+
+/// Number of normal size classes per arena
+inline_for_extraction
+[@ CMacro ]
+val nb_size_classes_sc: v:US.t{
+  0 <= US.v v /\
+  US.v v <= US.v nb_size_classes /\
+  US.v v == L.length (L.filter (fun v -> Sc? v) sc_list)
+}
+
+/// Number of extended size classes per arena
+inline_for_extraction
+[@ CMacro ]
+val nb_size_classes_sc_ex: v:US.t{
+  0 <= US.v v /\
+  US.v v <= US.v nb_size_classes /\
+  US.v v == L.length (L.filter (fun v -> Sc? v) sc_list)
+}
+
+val nb_size_classes_lemma (_:unit)
+  : Lemma
+  (US.v nb_size_classes_sc + US.v nb_size_classes_sc_ex
+  =
+  US.v nb_size_classes)
+
+/// Controls whether extended size classes
+/// (size classes whose size is >= page size)
+/// are enabled
+inline_for_extraction
+val enable_extended_size_classes: bool
 
 noextract
 unfold type sc_selection_f = (x:U32.t) -> Pure US.t
   (requires
-    U32.v x <= max_sc)
+    U32.v x <= max_sc_ex)
   (ensures fun r ->
     US.v r < US.v nb_size_classes /\
-    U32.v x <= U32.v (L.index sc_list (US.v r))
+    U32.v x <= U32.v (get_u32 (L.index sc_list (US.v r)))
   )
 
 /// Size class selection (fast path)
@@ -46,7 +81,8 @@ inline_for_extraction
 val metadata_max: v:US.t{
   US.v v > 0 /\
   US.fits (US.v v * U32.v page_size * US.v nb_size_classes * US.v nb_arenas) /\
-  US.fits (US.v v * U32.v page_size)
+  US.fits (US.v v * U32.v page_size) /\
+  (US.v v) % (US.v max_sc_coef * 2) == 0
 }
 
 val metadata_max_up_fits (_:unit)

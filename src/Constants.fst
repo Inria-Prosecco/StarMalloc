@@ -1,7 +1,9 @@
 module Constants
 
 module U32 = FStar.UInt32
+module US = FStar.SizeT
 
+open Prelude
 open FStar.Mul
 
 // LATER: code could be improved so that this value is not hardcoded anymore
@@ -48,13 +50,15 @@ let sc = x:U32.t{
 /// max allocation size within a slab = max_sc_coef * page_size,
 /// the other half of the slab is a guard region
 inline_for_extraction
-[@ CMacro ]
+//[@ CMacro ]
 let max_sc_coef: v:US.t{
     1 <= US.v v /\
     US.fits (U32.v page_size * US.v v * 2)
   }
   =
-  admit ();
+  [@inline_let] let v = 32sz in
+  assert_norm (U32.v page_size * US.v v * 2 < pow2 32);
+  US.fits_u32_implies_fits (U32.v page_size * US.v v * 2);
   32sz
 
 noextract
@@ -79,3 +83,20 @@ type sc_ex = x:U32.t{
 type sc_union =
   | Sc of sc
   | Sc_ex of sc_ex
+
+inline_for_extraction
+let get_sc (scu: sc_union{Sc? scu})
+  : sc
+  = match scu with
+  | Sc v -> v
+inline_for_extraction
+let get_sc_ex (scu: sc_union{Sc_ex? scu})
+  : sc_ex
+  = match scu with
+  | Sc_ex v -> v
+inline_for_extraction
+let get_u32 (scu: sc_union)
+  : U32.t
+  = match scu with
+  | Sc v -> v
+  | Sc_ex v -> v
