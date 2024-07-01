@@ -55,6 +55,17 @@ assume val mmap_cell_status_init (len: US.t)
       A.is_full_array r
     )
 
+assume val mmap_bool_init (len: US.t)
+  : Steel (array bool)
+     emp
+    (fun r -> A.varray r)
+    (fun _ -> US.v len > 0)
+    (fun _ r h1 ->
+      A.length r == US.v len /\
+      A.is_full_array r /\
+      A.asel r h1 == Seq.create (US.v len) false
+    )
+
 assume val mmap_ptr_us_init (_:unit)
   : SteelT (R.ref US.t)
     emp
