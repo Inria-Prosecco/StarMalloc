@@ -2568,6 +2568,7 @@ let allocate_slab_aux_4_aux2
   //    (md_bm_array md_bm_region idxs.x))
   //  (fun _ -> admit ());
   p_quarantine_unpack size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x);
+  admit ();
   Quarantine2.mmap_untrap_quarantine
     size_class
     (A.split_l (slab_array slab_region idxs.x) (u32_to_sz size_class))
