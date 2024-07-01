@@ -108,6 +108,18 @@ let zf_b_slice
   =
   Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) false)
 
+let zf_b_split
+  (arr: Seq.seq bool)
+  (i:nat{i <= Seq.length arr})
+  : Lemma
+  (requires zf_b arr)
+  (ensures
+    zf_b (fst (Seq.split arr i)) /\
+    zf_b (snd (Seq.split arr i)))
+  =
+  zf_b_slice arr 0 i;
+  zf_b_slice arr i (Seq.length arr)
+
 noextract
 let max64_nat : nat = FU.max_int U64.n
 noextract inline_for_extraction
