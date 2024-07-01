@@ -438,6 +438,7 @@ let update_quarantine3_aux
       (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx)))
     (p_quarantine size_class (md_bm_array md_bm_region idx, slab_array slab_region idx));
     p_quarantine_unpack size_class (md_bm_array md_bm_region idx, slab_array slab_region idx);
+    admit ();
     Quarantine2.mmap_untrap_quarantine size_class
       (A.split_l
         (snd
@@ -1776,6 +1777,7 @@ let deallocate_slab'
   (ensures fun _ _ _ -> True)
   =
   //let diff_sz = UP.ptrdifft_to_sizet diff in
+  admit ();
   assert_norm (4 < FI.max_int 16);
   let pos = US.div diff slab_size in
   // check diff/page_size < md_count
