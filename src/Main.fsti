@@ -155,7 +155,7 @@ val init_all_arenas
     A.varray size_classes
   )
   (requires fun h0 ->
-    array_u8_alignment (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) (u32_to_sz page_size) /\
+    array_u8_alignment (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) page_size /\
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0) /\
     zf_b (A.asel md_bm_region_b h0) /\
