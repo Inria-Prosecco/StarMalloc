@@ -23,7 +23,7 @@ open Utils2
 // this is a compilation-time assert, see c/utils.c static_assert usage
 assume val avl_data_size_aux : v:U32.t{U32.v v <= 64}
 
-let avl_data_size : v:sc{U32.v avl_data_size_aux <= U32.v v} = 64ul
+let avl_data_size : v:sc_union{U32.v avl_data_size_aux <= U32.v v} = Sc 64ul
 
 open SizeClass
 open Main
