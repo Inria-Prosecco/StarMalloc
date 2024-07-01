@@ -93,90 +93,90 @@ val synced_sizes
   })
   : prop
 
-//val hidden_pred
-//  (l1: list sc)
-//  (l2: list sc_ex)
-//  (n n1 n2 s1 s2 s3: US.t)
-//  : prop
-//
-//val hidden_pred2
-//  (n s1: US.t)
-//  : prop
+val hidden_pred
+  (l1: list sc)
+  (l2: list sc_ex)
+  (n n1 n2 s1 s2 s3: US.t)
+  : prop
 
-//noextract inline_for_extraction
-//val init_all_arenas
-//  (l1:list sc)
-//  (l2:list sc_ex)
-//  (n1 n2: US.t)
-//  (n: US.t{
-//    US.v n > 0 /\
-//    UInt.size (US.v n) U32.n /\
-//    True
-//    //US.fits (US.v n)
-//  })
-//  (arena_slab_region_size
-//   arena_md_region_size
-//   arena_md_bm_region_size
-//   arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
-//  (nb_arenas: US.t{US.v nb_arenas > 0 /\
-//    US.fits (US.v n * US.v nb_arenas) /\
-//    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
-//    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
-//    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
-//    US.fits (US.v arena_md_region_size * US.v nb_arenas)
-//  })
-//  (slab_region: array U8.t{
-//    A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas
-//  })
-//  (md_bm_region: array U64.t{
-//    A.length md_bm_region == US.v arena_md_bm_region_size * US.v nb_arenas
-//  })
-//  (md_bm_region_b: array bool{
-//    A.length md_bm_region_b == US.v arena_md_bm_region_b_size * US.v nb_arenas
-//  })
-//  (md_region: array AL.cell{
-//    A.length md_region == US.v arena_md_region_size * US.v nb_arenas
-//  })
-//  (size_classes: array size_class{
-//    A.length size_classes == US.v n * US.v nb_arenas
-//  })
-//  (sizes: TLA.t sc_union{
-//    TLA.length sizes == US.v n * US.v nb_arenas
-//  })
-//  : Steel unit
-//  (
-//    A.varray slab_region `star`
-//    A.varray md_bm_region `star`
-//    A.varray md_bm_region_b `star`
-//    A.varray md_region `star`
-//    A.varray size_classes
-//  )
-//  (fun _ ->
-//    A.varray size_classes
-//  )
-//  (requires fun h0 ->
-//    array_u8_alignment (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) (u32_to_sz page_size) /\
-//    zf_u8 (A.asel slab_region h0) /\
-//    zf_u64 (A.asel md_bm_region h0) /\
-//    zf_b (A.asel md_bm_region_b h0) /\
-//    hidden_pred l1 l2 n n1 n2
-//      arena_md_bm_region_size
-//      arena_md_bm_region_b_size
-//      arena_md_region_size /\
-//    hidden_pred2 n arena_slab_region_size /\
-//    US.fits (US.v n * US.v nb_arenas) /\
-//    True
-//  )
-//  (ensures fun _ _ h1 ->
-//    hidden_pred2 n arena_slab_region_size /\
-//    US.fits (US.v n * US.v nb_arenas) /\
-//    synced_sizes 0sz
-//      (A.asel size_classes h1) sizes (US.v nb_arenas * US.v n) /\
-//    (forall (i:nat{i < US.v nb_arenas * US.v n}).
-//      size_class_pred slab_region (Seq.index (A.asel size_classes h1) i) i
-//    ) /\
-//    True
-//  )
+val hidden_pred2
+  (n s1: US.t)
+  : prop
+
+noextract inline_for_extraction
+val init_all_arenas
+  (l1:list sc)
+  (l2:list sc_ex)
+  (n1 n2: US.t)
+  (n: US.t{
+    US.v n > 0 /\
+    UInt.size (US.v n) U32.n /\
+    True
+    //US.fits (US.v n)
+  })
+  (arena_slab_region_size
+   arena_md_region_size
+   arena_md_bm_region_size
+   arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
+  (nb_arenas: US.t{US.v nb_arenas > 0 /\
+    US.fits (US.v n * US.v nb_arenas) /\
+    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_region_size * US.v nb_arenas)
+  })
+  (slab_region: array U8.t{
+    A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas
+  })
+  (md_bm_region: array U64.t{
+    A.length md_bm_region == US.v arena_md_bm_region_size * US.v nb_arenas
+  })
+  (md_bm_region_b: array bool{
+    A.length md_bm_region_b == US.v arena_md_bm_region_b_size * US.v nb_arenas
+  })
+  (md_region: array AL.cell{
+    A.length md_region == US.v arena_md_region_size * US.v nb_arenas
+  })
+  (size_classes: array size_class{
+    A.length size_classes == US.v n * US.v nb_arenas
+  })
+  (sizes: TLA.t sc_union{
+    TLA.length sizes == US.v n * US.v nb_arenas
+  })
+  : Steel unit
+  (
+    A.varray slab_region `star`
+    A.varray md_bm_region `star`
+    A.varray md_bm_region_b `star`
+    A.varray md_region `star`
+    A.varray size_classes
+  )
+  (fun _ ->
+    A.varray size_classes
+  )
+  (requires fun h0 ->
+    array_u8_alignment (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) (u32_to_sz page_size) /\
+    zf_u8 (A.asel slab_region h0) /\
+    zf_u64 (A.asel md_bm_region h0) /\
+    zf_b (A.asel md_bm_region_b h0) /\
+    hidden_pred l1 l2 n n1 n2
+      arena_md_bm_region_size
+      arena_md_bm_region_b_size
+      arena_md_region_size /\
+    hidden_pred2 n arena_slab_region_size /\
+    US.fits (US.v n * US.v nb_arenas) /\
+    True
+  )
+  (ensures fun _ _ h1 ->
+    hidden_pred2 n arena_slab_region_size /\
+    US.fits (US.v n * US.v nb_arenas) /\
+    synced_sizes 0sz
+      (A.asel size_classes h1) sizes (US.v nb_arenas * US.v n) /\
+    (forall (i:nat{i < US.v nb_arenas * US.v n}).
+      size_class_pred slab_region (Seq.index (A.asel size_classes h1) i) i
+    ) /\
+    True
+  )
 
 open NullOrVarray
 
