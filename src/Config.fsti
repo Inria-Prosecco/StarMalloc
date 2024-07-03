@@ -13,9 +13,25 @@ open Constants
 
 /// Small allocator size classes
 
+/// List of small size classes
+inline_for_extraction noextract
+val sc_list_sc: list sc
+
+/// List of extended size classes
+inline_for_extraction noextract
+val sc_list_ex: list sc_ex
+///
 /// List of size classes used in each arena
 inline_for_extraction noextract
-val sc_list : (l:list sc_union{Cons? l})
+val sc_list: (l:list sc_union{Cons? l})
+
+val sc_list_reveal (_:unit)
+  : Lemma
+  (sc_list ==
+  L.append
+    (L.map (fun v -> Sc v) sc_list_sc)
+    (L.map (fun v -> Sc_ex v) sc_list_ex)
+  )
 
 /// Number of size classes per arena
 inline_for_extraction
@@ -31,7 +47,7 @@ inline_for_extraction
 val nb_size_classes_sc: v:US.t{
   0 <= US.v v /\
   US.v v <= US.v nb_size_classes /\
-  US.v v == L.length (L.filter (fun v -> Sc? v) sc_list)
+  US.v v == L.length sc_list_sc
 }
 
 /// Number of extended size classes per arena
@@ -40,7 +56,7 @@ inline_for_extraction
 val nb_size_classes_sc_ex: v:US.t{
   0 <= US.v v /\
   US.v v <= US.v nb_size_classes /\
-  US.v v == L.length (L.filter (fun v -> Sc? v) sc_list)
+  US.v v == L.length sc_list_ex
 }
 
 val nb_size_classes_lemma (_:unit)
