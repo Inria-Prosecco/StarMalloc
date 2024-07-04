@@ -973,6 +973,7 @@ let init_wrapper sc n k k' slab_region md_bm_region md_region
     md_region;
   // TODO: dedicated lemma
   assume (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
+  size_class_vprop_reveal data;
   change_slprop_rel
     (size_class_vprop_sc data)
     (size_class_vprop data)

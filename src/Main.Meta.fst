@@ -111,7 +111,7 @@ let gen_arena_sizes
     True
   )
   (ensures fun r ->
-    hidden_pred sc_list1 sc_list_ex1
+    hidden_pred sc_list_sc sc_list_ex
       nb_size_classes
       nb_size_classes_sc
       nb_size_classes_sc_ex
@@ -161,7 +161,12 @@ let init
     US.fits (US.v arena_sizes.x * US.v nb_arenas) /\
     US.fits (US.v arena_sizes.y * US.v nb_arenas) /\
     US.fits (US.v arena_sizes.z * US.v nb_arenas) /\
-    US.fits (US.v arena_sizes.w * US.v nb_arenas)
+    US.fits (US.v arena_sizes.w * US.v nb_arenas) /\
+    US.v nb_size_classes * US.v nb_arenas > 0 /\
+    US.v arena_sizes.x * US.v nb_arenas > 0 /\
+    US.v arena_sizes.y * US.v nb_arenas > 0 /\
+    US.v arena_sizes.z * US.v nb_arenas > 0 /\
+    US.v arena_sizes.w * US.v nb_arenas > 0
   );
   let slab_region = mmap_u8_init (US.mul arena_sizes.x nb_arenas) in
   let md_bm_region = mmap_u64_init (US.mul arena_sizes.y nb_arenas) in
@@ -196,14 +201,15 @@ let init
 
 
 
+  admit ();
   init_all_arenas
-    sc_list1 sc_list_ex1
+    sc_list_sc sc_list_ex
     nb_size_classes_sc nb_size_classes_sc_ex
     nb_size_classes
     arena_sizes.x
+    arena_sizes.w
     arena_sizes.y
     arena_sizes.z
-    arena_sizes.w
     nb_arenas
     slab_region
     md_bm_region

@@ -95,7 +95,8 @@ let get_sc_ex (scu: sc_union{Sc_ex? scu})
   : sc_ex
   = match scu with
   | Sc_ex v -> v
-inline_for_extraction
+// generic, should not be extracted
+noextract inline_for_extraction
 let get_u32 (scu: sc_union)
   : U32.t
   = match scu with

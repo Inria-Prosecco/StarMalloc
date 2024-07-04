@@ -98,12 +98,14 @@ open SizeClass
 
 open FStar.Mul
 
+#restart-solver
+
 #push-options "--z3rlimit 50"
 inline_for_extraction noextract
 let trees_malloc2_aux (x: node)
   : Steel (ref node)
-  (size_class_vprop metadata_slabs.scs)
-  (fun r -> size_class_vprop metadata_slabs.scs `star` vptr r)
+  (size_class_vprop_sc metadata_slabs.scs)
+  (fun r -> size_class_vprop_sc metadata_slabs.scs `star` vptr r)
   (requires fun _ -> True)
   (ensures fun _ r h1 ->
     sel r h1 == x /\
@@ -111,7 +113,7 @@ let trees_malloc2_aux (x: node)
     (G.reveal p) r
   )
   =
-  let ptr = SizeClass.allocate_size_class metadata_slabs.scs in
+  let ptr = SizeClass.allocate_size_class_sc metadata_slabs.scs in
   if A.is_null ptr
   then (
     // this should trigger a fatal error
@@ -134,11 +136,15 @@ let trees_malloc2_aux (x: node)
     let r' = array_u8__to__ref_node ptr in
     array_u8__to__ref_node_bijectivity ptr;
     write r' x;
+    //TODO: add dedicated function in SizeClass
+    assume ((G.reveal p) r');
     return r'
   )
 #pop-options
 
 open WithLock
+
+#restart-solver
 
 let trees_malloc2 (x: node)
   : Steel (ref node)
@@ -155,7 +161,7 @@ let trees_malloc2 (x: node)
     unit
     (ref node)
     (fun v0 ->
-      size_class_vprop metadata_slabs.scs `star`
+      size_class_vprop_sc metadata_slabs.scs `star`
       A.varray (A.split_l metadata_slabs.slab_region 0sz))
     (fun v1 -> emp)
     (fun _ r -> vptr r)
@@ -177,12 +183,12 @@ inline_for_extraction noextract
 let trees_free2_aux (r: ref node)
   : Steel unit
   (
-    size_class_vprop metadata_slabs.scs `star`
+    size_class_vprop_sc metadata_slabs.scs `star`
     A.varray (A.split_l metadata_slabs.slab_region 0sz) `star`
     vptr r
   )
   (fun _ ->
-    size_class_vprop metadata_slabs.scs `star`
+    size_class_vprop_sc metadata_slabs.scs `star`
     A.varray (A.split_l metadata_slabs.slab_region 0sz)
   )
   (requires fun _ -> (G.reveal p) r)
@@ -193,7 +199,7 @@ let trees_free2_aux (r: ref node)
   let diff = A.ptrdiff ptr (A.split_l metadata_slabs.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert (US.v diff_sz = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region));
-  let b = SizeClass.deallocate_size_class metadata_slabs.scs ptr diff_sz in
+  let b = SizeClass.deallocate_size_class_sc metadata_slabs.scs ptr diff_sz in
   if b
   then (
     change_equal_slprop
@@ -217,7 +223,7 @@ let trees_free2 (r: ref node)
     (ref node)
     unit
     (fun v0 ->
-      size_class_vprop metadata_slabs.scs `star`
+      size_class_vprop_sc metadata_slabs.scs `star`
       A.varray (A.split_l metadata_slabs.slab_region 0sz))
     (fun v1 -> vptr v1)
     (fun _ _ -> emp)

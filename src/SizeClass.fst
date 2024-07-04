@@ -1,51 +1,14 @@
 module SizeClass
 
-module U64 = FStar.UInt64
-module U32 = FStar.UInt32
-module U8 = FStar.UInt8
-module US = FStar.SizeT
-
 module G = FStar.Ghost
-
-module AL = ArrayList
-
-module P = Steel.FractionalPermission
 module SM = Steel.Memory
-module A = Steel.Array
 
-open Steel.Effect.Atomic
-open Steel.Effect
-open Steel.Reference
-
-open Constants
-open Config
-open Utils2
-
-open SlabsAlloc
+//open SlabsAlloc
 
 #reset-options "--fuel 1 --ifuel 1"
 #push-options "--ide_id_info_off"
 
-noeq
-type size_class_struct' = {
-  size: sc_union;
-  is_extended: bool;
-  slabs_idxs: A.array US.t;
-  md_count: ref US.t;
-  slab_region: array U8.t;
-  md_bm_region: array U64.t;
-  md_bm_region_b: array bool;
-  md_region: array AL.cell;
-}
-
 open Prelude
-open FStar.Mul
-
-let slab_region_size = SlabsCommon2.slab_region_size
-
-let metadata_max_ex = SlabsCommon2.metadata_max_ex
-
-let slab_size = SlabsCommon2.slab_size
 
 let slab_region_size_eq_lemma (_:unit)
   : Lemma
@@ -57,52 +20,25 @@ let slab_region_size_eq_lemma (_:unit)
 //let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size /\ US.v v > 0})
 //  = US.mul metadata_max (US.of_u32 page_size)
 
-type size_class_struct = s:size_class_struct'{
-  array_u8_alignment s.slab_region page_size /\
-  A.length s.slab_region == US.v slab_region_size /\
-  A.length s.slabs_idxs == 7 /\
-  // prove equivalence
-  (s.is_extended ==> (
-    Sc_ex? s.size /\
-    s.md_bm_region == A.null #U64.t /\
-    A.length s.md_bm_region_b == US.v metadata_max_ex/\
-    A.length s.md_region == US.v metadata_max_ex
-  )) /\
-  (not s.is_extended ==> (
-    Sc? s.size /\
-    s.md_bm_region_b == A.null #bool /\
-    A.length s.md_bm_region == US.v metadata_max * 4 /\
-    A.length s.md_region == US.v metadata_max
-  ))
-}
-
-open SteelVRefineDep
-
-unfold
-type size_class_struct_sc = s:size_class_struct{not s.is_extended}
-
-unfold
-type size_class_struct_sc_ex = s:size_class_struct{s.is_extended}
-
-let size_class_vprop_sc
-  (scs: size_class_struct_sc)
-  : vprop
-  =
-  vrefinedep
-    (vptr scs.md_count)
-    SlabsCommon.vrefinedep_prop
-    (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
-      scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
-
-let size_class_vprop_sc_ex
-  (scs: size_class_struct_sc_ex)
-  : vprop
-  =
-  vrefinedep
-    (vptr scs.md_count)
-    SlabsCommon2.vrefinedep_prop
-    (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
-      scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs)
+//let size_class_vprop_sc
+//  (scs: size_class_struct_sc)
+//  : vprop
+//  =
+//  vrefinedep
+//    (R.vptr scs.md_count)
+//    SlabsCommon.vrefinedep_prop
+//    (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+//      scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+//
+//let size_class_vprop_sc_ex
+//  (scs: size_class_struct_sc_ex)
+//  : vprop
+//  =
+//  vrefinedep
+//    (vptr scs.md_count)
+//    SlabsCommon2.vrefinedep_prop
+//    (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
+//      scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs)
 
 let size_class_vprop
   (scs: size_class_struct)
@@ -112,27 +48,29 @@ let size_class_vprop
   then size_class_vprop_sc_ex scs
   else size_class_vprop_sc scs
 
+let size_class_vprop_reveal _ = ()
+
+//TODO: rename as unpack lemma
 let allocate_size_class_sl_lemma1_ex
-  (scs: size_class_struct)
+  (scs: size_class_struct_sc_ex)
   (m: SM.mem)
   : Lemma
   (requires
-    SM.interp (hp_of (size_class_vprop scs)) m /\
-    scs.is_extended
+    SM.interp (hp_of (size_class_vprop_sc_ex scs)) m
   )
   (ensures
     SM.interp (hp_of (
       vrefinedep
-        (vptr scs.md_count)
+        (R.vptr scs.md_count)
         SlabsCommon2.vrefinedep_prop
         (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
           scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs)
     )) m /\
-    sel_of (size_class_vprop scs) m
+    sel_of (size_class_vprop_sc_ex scs) m
     ==
     sel_of (
       vrefinedep
-        (vptr scs.md_count)
+        (R.vptr scs.md_count)
         SlabsCommon2.vrefinedep_prop
         (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
           scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs)
@@ -140,98 +78,89 @@ let allocate_size_class_sl_lemma1_ex
   )
   = ()
 
+//TODO: rename as unpack lemma
 let allocate_size_class_sl_lemma1
-  (scs: size_class_struct)
+  (scs: size_class_struct_sc)
   (m: SM.mem)
   : Lemma
   (requires
-    SM.interp (hp_of (size_class_vprop scs)) m /\
-    not (scs.is_extended)
+    SM.interp (hp_of (size_class_vprop_sc scs)) m
   )
   (ensures
     SM.interp (hp_of (
-      //if scs.is_extended
-      //then emp
-      //else
-        vrefinedep
-          (vptr scs.md_count)
-          SlabsCommon.vrefinedep_prop
-          (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
-            scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+      vrefinedep
+        (R.vptr scs.md_count)
+        SlabsCommon.vrefinedep_prop
+        (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
     )) m /\
-    sel_of (size_class_vprop scs) m
+    sel_of (size_class_vprop_sc scs) m
     ==
     sel_of (
-      //if scs.is_extended
-      //then emp
-      //else
-        vrefinedep
-          (vptr scs.md_count)
-          SlabsCommon.vrefinedep_prop
-          (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
-            scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+      vrefinedep
+        (R.vptr scs.md_count)
+        SlabsCommon.vrefinedep_prop
+        (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
     ) m
   )
   = ()
 
+//TODO: rename as pack lemma
 let allocate_size_class_sl_lemma2_ex
-  (scs: size_class_struct)
+  (scs: size_class_struct_sc_ex)
   (m: SM.mem)
   : Lemma
   (requires
-    scs.is_extended /\
     SM.interp (hp_of (
-        vrefinedep
-          (vptr scs.md_count)
-          SlabsCommon2.vrefinedep_prop
-          (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
-            scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs)
+      vrefinedep
+        (R.vptr scs.md_count)
+        SlabsCommon2.vrefinedep_prop
+        (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
+          scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs)
     )) m
   )
   (ensures
-    SM.interp (hp_of (size_class_vprop scs)) m /\
-    sel_of (size_class_vprop scs) m
+    SM.interp (hp_of (size_class_vprop_sc_ex scs)) m /\
+    sel_of (size_class_vprop_sc_ex scs) m
     ==
     sel_of (
-        vrefinedep
-          (vptr scs.md_count)
-          SlabsCommon2.vrefinedep_prop
-          (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
-            scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs)
+      vrefinedep
+        (R.vptr scs.md_count)
+        SlabsCommon2.vrefinedep_prop
+        (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
+          scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs)
     ) m
   )
   = ()
 
+//TODO: rename as pack lemma
 let allocate_size_class_sl_lemma2
-  (scs: size_class_struct)
+  (scs: size_class_struct_sc)
   (m: SM.mem)
   : Lemma
   (requires
-    not (scs.is_extended) /\
     SM.interp (hp_of (
-        vrefinedep
-          (vptr scs.md_count)
-          SlabsCommon.vrefinedep_prop
-          (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
-            scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+      vrefinedep
+        (R.vptr scs.md_count)
+        SlabsCommon.vrefinedep_prop
+        (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
     )) m
   )
   (ensures
-    SM.interp (hp_of (size_class_vprop scs)) m /\
-    sel_of (size_class_vprop scs) m
+    SM.interp (hp_of (size_class_vprop_sc scs)) m /\
+    sel_of (size_class_vprop_sc scs) m
     ==
     sel_of (
-        vrefinedep
-          (vptr scs.md_count)
-          SlabsCommon.vrefinedep_prop
-          (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
-            scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+      vrefinedep
+        (R.vptr scs.md_count)
+        SlabsCommon.vrefinedep_prop
+        (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
     ) m
   )
   = ()
-
-
-
 
 open MiscArith
 #push-options "--fuel 0 --ifuel 0"
@@ -342,85 +271,171 @@ let mod_arith_lemma_applied2
 
 #restart-solver
 
+let allocate_size_class_sc_aux
+  (scs: size_class_struct_sc)
+  (r: array U8.t)
+  : Lemma
+  (requires (
+    let size = get_sc scs.size in
+    not (A.is_null r) ==> (
+      A.length r == U32.v size /\
+      same_base_array r scs.slab_region /\
+      A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v size) == 0
+    )
+  ))
+  (ensures (
+    let size = get_sc scs.size in
+    not (A.is_null r) ==> (
+      A.length r == U32.v size /\
+      same_base_array r scs.slab_region /\
+      A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v size) == 0 /\
+      array_u8_alignment r 16ul /\
+      ((U32.v page_size) % (U32.v size) == 0 ==> array_u8_alignment r size)
+    )
+  ))
+  =
+  let size = get_sc scs.size in
+  if not (A.is_null r)
+  then (
+    assert (same_base_array r scs.slab_region);
+    assert (same_base_array scs.slab_region r);
+    assert (array_u8_alignment scs.slab_region page_size);
+    mod_arith_lemma_applied
+      (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region))
+      (U32.v page_size)
+      (U32.v size)
+      16;
+    assert ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % 16 == 0);
+    array_u8_alignment_lemma scs.slab_region r page_size 16ul;
+    if ((U32.v page_size) % (U32.v size) = 0) then (
+      mod_arith_lemma_applied
+        (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region))
+        (U32.v page_size)
+        (U32.v size)
+        (U32.v size);
+      assert ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % (U32.v size) == 0);
+      array_u8_alignment_lemma scs.slab_region r page_size size
+    ) else ()
+  ) else ()
+
+#restart-solver
+
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --compat_pre_typed_indexed_effects"
-val allocate_size_class
-  (scs: size_class_struct)
+let allocate_size_class_sc scs
+  =
+  change_slprop_rel
+    (size_class_vprop_sc scs)
+    (vrefinedep
+      (R.vptr scs.md_count)
+      SlabsCommon.vrefinedep_prop
+      (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma1 scs m);
+  let result = SlabsAlloc.allocate_slab
+    (get_sc scs.size)
+    scs.slab_region scs.md_bm_region scs.md_region
+    scs.md_count scs.slabs_idxs in
+  change_slprop_rel
+    (vrefinedep
+      (R.vptr scs.md_count)
+      SlabsCommon.vrefinedep_prop
+      (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+    (size_class_vprop_sc scs)
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma2 scs m);
+  allocate_size_class_sc_aux scs result;
+  return result
+#pop-options
+
+let deallocate_size_class_sc scs ptr diff
+ =
+  change_slprop_rel
+    (size_class_vprop_sc scs)
+    (vrefinedep
+      (R.vptr scs.md_count)
+      SlabsCommon.vrefinedep_prop
+      (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma1 scs m);
+  let b = SlabsFree.deallocate_slab ptr
+    (get_sc scs.size)
+    scs.slab_region scs.md_bm_region scs.md_region
+    scs.md_count scs.slabs_idxs diff in
+  change_slprop_rel
+    (vrefinedep
+      (R.vptr scs.md_count)
+      SlabsCommon.vrefinedep_prop
+      (SlabsCommon.size_class_vprop_aux (get_sc scs.size)
+        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+    (size_class_vprop_sc scs)
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma2 scs m);
+  return b
+
+val allocate_size_class_sc_ex
+  (scs: size_class_struct_sc_ex)
   : Steel (array U8.t)
-  (size_class_vprop scs)
+  (size_class_vprop_sc_ex scs)
   (fun r ->
     (if (A.is_null r) then emp else A.varray r) `star`
-    size_class_vprop scs)
+    size_class_vprop_sc_ex scs)
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
-    let sc_size = get_u32 scs.size in
+    let sc_size = get_sc_ex scs.size in
     not (A.is_null r) ==> (
       A.length r == U32.v sc_size /\
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
-      //((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v scs.size) == 0 /\
+      //((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v (get_u32 scs.size)) == 0 /\
       array_u8_alignment r 16ul /\
       True
       //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
     )
   )
 
-let allocate_size_class scs
+let allocate_size_class_sc_ex scs
   =
-  if scs.is_extended
-  then (
-    change_slprop_rel
-      (size_class_vprop scs)
-      (size_class_vprop_sc_ex scs)
-      (fun x y -> y == x)
-      (fun m -> admit ());
-      //allocate_size_class_sl_lemma1_ex scs m);
-    let result = SlabsAlloc2.allocate_slab
-      (get_sc_ex scs.size)
-      scs.slab_region scs.md_bm_region_b scs.md_region
-      scs.md_count scs.slabs_idxs in
-    change_slprop_rel
-      (size_class_vprop_sc_ex scs)
-      (size_class_vprop scs)
-      (fun x y -> x == y)
-      (fun m -> admit ());
-      // allocate_size_class_sl_lemma2_ex scs m);
-    assume (not (A.is_null result) ==> array_u8_alignment result 16ul);
-    return result
-  ) else (
-    change_slprop_rel
-      (size_class_vprop scs)
-      (size_class_vprop_sc scs)
-      (fun x y -> y == x)
-      (fun m -> admit ());
-      //allocate_size_class_sl_lemma1_ex scs m);
-    let result = SlabsAlloc.allocate_slab
-      (get_sc scs.size)
-      scs.slab_region scs.md_bm_region scs.md_region
-      scs.md_count scs.slabs_idxs in
-    change_slprop_rel
-      (size_class_vprop_sc scs)
-      (size_class_vprop scs)
-      (fun x y -> x == y)
-      (fun m -> admit ());
-      // allocate_size_class_sl_lemma2_ex scs m);
-    assume (not (A.is_null result) ==> array_u8_alignment result 16ul);
-    return result
-  )
+  change_slprop_rel
+    (size_class_vprop_sc_ex scs)
+    (vrefinedep
+      (R.vptr scs.md_count)
+      SlabsCommon2.vrefinedep_prop
+      (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
+        scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs))
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma1_ex scs m);
+  let result = SlabsAlloc2.allocate_slab
+    (get_sc_ex scs.size)
+    scs.slab_region scs.md_bm_region_b scs.md_region
+    scs.md_count scs.slabs_idxs in
+  change_slprop_rel
+    (vrefinedep
+      (R.vptr scs.md_count)
+      SlabsCommon2.vrefinedep_prop
+      (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
+        scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs))
+    (size_class_vprop_sc_ex scs)
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma2_ex scs m);
+  //allocate_size_class_sc_aux scs result;
+  assume (array_u8_alignment result 16ul);
+  return result
 
-module UP = FStar.PtrdiffT
-
-open Steel.ArrayArith
-
-val deallocate_size_class
-  (scs: size_class_struct)
+val deallocate_size_class_sc_ex
+  (scs: size_class_struct_sc_ex)
   (ptr: array U8.t)
   (diff: US.t)
   : Steel bool
   (A.varray ptr `star`
-  size_class_vprop scs)
+  size_class_vprop_sc_ex scs)
   (fun b ->
     (if b then emp else A.varray ptr) `star`
-    size_class_vprop scs)
+    size_class_vprop_sc_ex scs)
   (requires fun h0 ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
     0 <= diff' /\
@@ -430,45 +445,56 @@ val deallocate_size_class
     same_base_array ptr scs.slab_region)
   (ensures fun h0 _ h1 -> True)
 
+let deallocate_size_class_sc_ex scs ptr diff
+ =
+  change_slprop_rel
+    (size_class_vprop_sc_ex scs)
+    (vrefinedep
+      (R.vptr scs.md_count)
+      SlabsCommon2.vrefinedep_prop
+      (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
+        scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs))
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma1_ex scs m);
+  let b = SlabsFree2.deallocate_slab ptr
+    (get_sc_ex scs.size)
+    scs.slab_region scs.md_bm_region_b scs.md_region
+    scs.md_count scs.slabs_idxs diff in
+  change_slprop_rel
+    (vrefinedep
+      (R.vptr scs.md_count)
+      SlabsCommon2.vrefinedep_prop
+      (SlabsCommon2.size_class_vprop_aux (get_sc_ex scs.size)
+        scs.slab_region scs.md_bm_region_b scs.md_region scs.slabs_idxs))
+    (size_class_vprop_sc_ex scs)
+    (fun x y -> x == y)
+    (fun m -> allocate_size_class_sl_lemma2_ex scs m);
+  return b
+
+let allocate_size_class scs
+  =
+  if scs.is_extended then (
+    change_equal_slprop (size_class_vprop scs) (size_class_vprop_sc_ex scs);
+    let r = allocate_size_class_sc_ex scs in
+    change_equal_slprop (size_class_vprop_sc_ex scs) (size_class_vprop scs);
+    return r
+  ) else (
+    change_equal_slprop (size_class_vprop scs) (size_class_vprop_sc scs);
+    let r = allocate_size_class_sc scs in
+    change_equal_slprop (size_class_vprop_sc scs) (size_class_vprop scs);
+    return r
+  )
+
 let deallocate_size_class scs ptr diff
   =
-  if scs.is_extended
-  then (
-    change_slprop_rel
-      (size_class_vprop scs)
-      (size_class_vprop_sc_ex scs)
-      (fun x y -> y == x)
-      (fun m -> admit ());
-      //allocate_size_class_sl_lemma1_ex scs m);
-    let b = SlabsFree2.deallocate_slab ptr
-      (get_sc_ex scs.size)
-      scs.slab_region scs.md_bm_region_b scs.md_region
-      scs.md_count scs.slabs_idxs
-      diff in
-    change_slprop_rel
-      (size_class_vprop_sc_ex scs)
-      (size_class_vprop scs)
-      (fun x y -> x == y)
-      (fun m -> admit ());
-      // allocate_size_class_sl_lemma2_ex scs m);
-    return b
+  if scs.is_extended then (
+    change_equal_slprop (size_class_vprop scs) (size_class_vprop_sc_ex scs);
+    let r = deallocate_size_class_sc_ex scs ptr diff in
+    change_equal_slprop (size_class_vprop_sc_ex scs) (size_class_vprop scs);
+    return r
   ) else (
-    change_slprop_rel
-      (size_class_vprop scs)
-      (size_class_vprop_sc scs)
-      (fun x y -> y == x)
-      (fun m -> admit ());
-      //allocate_size_class_sl_lemma1_ex scs m);
-    let b = SlabsFree.deallocate_slab ptr
-      (get_sc scs.size)
-      scs.slab_region scs.md_bm_region scs.md_region
-      scs.md_count scs.slabs_idxs
-      diff in
-    change_slprop_rel
-      (size_class_vprop_sc scs)
-      (size_class_vprop scs)
-      (fun x y -> x == y)
-      (fun m -> admit ());
-      // allocate_size_class_sl_lemma2_ex scs m);
-    return b
+    change_equal_slprop (size_class_vprop scs) (size_class_vprop_sc scs);
+    let r = deallocate_size_class_sc scs ptr diff in
+    change_equal_slprop (size_class_vprop_sc scs) (size_class_vprop scs);
+    return r
   )
