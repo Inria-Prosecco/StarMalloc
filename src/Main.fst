@@ -31,18 +31,13 @@ open Mman
 
 module G = FStar.Ghost
 
+#push-options "--query_stats"
+#push-options "--fuel 0 --ifuel 0"
 
 let metadata_max_ex = SlabsCommon2.metadata_max_ex
-
 let slab_size = SlabsCommon2.slab_size
-
-// Size of the slab region for one size class
-// metadata_max * page_size
-// ==
-// metadata_max_ex * slab_size
 let sc_slab_region_size = SlabsCommon2.slab_region_size
 
-#push-options  "--ide_id_info_off"
 (**  Handwritten mmap functions to allocate basic data structures *)
 
 val intro_ind_varraylist_nil (#opened:_)
@@ -64,6 +59,7 @@ val intro_ind_varraylist_nil (#opened:_)
       )
       (ensures fun _ _ _ -> True)
 
+#push-options "--fuel 2 --ifuel 1"
 let intro_ind_varraylist_nil r r_idxs =
   ALG.intro_arraylist_nil #AL.status
     pred1 pred2 pred3 pred4 pred5
@@ -103,6 +99,7 @@ let intro_ind_varraylist_nil r r_idxs =
     (A.varray r_idxs)
     (SlabsCommon.ind_varraylist_aux r idxs)
     (SlabsCommon.ind_varraylist_aux r)
+#pop-options
 
 val intro_ind_varraylist_nil2 (#opened:_)
   (r: A.array AL.cell)
@@ -123,6 +120,7 @@ val intro_ind_varraylist_nil2 (#opened:_)
       )
       (ensures fun _ _ _ -> True)
 
+#push-options "--fuel 2 --ifuel 1"
 let intro_ind_varraylist_nil2 r r_idxs =
   let open SlabsCommon2 in
   ALG.intro_arraylist_nil
@@ -163,6 +161,7 @@ let intro_ind_varraylist_nil2 r r_idxs =
     (A.varray r_idxs)
     (SlabsCommon2.ind_varraylist_aux r idxs)
     (SlabsCommon2.ind_varraylist_aux r)
+#pop-options
 
 val intro_left_vprop_empty (#opened:_)
   (sc:sc)
@@ -186,7 +185,7 @@ val intro_left_vprop_empty (#opened:_)
       )
       (ensures fun _ _ _ -> True)
 
-#push-options "--z3rlimit 50"
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 50"
 let intro_left_vprop_empty sc slab_region md_bm_region md_region r_idxs
   =
   intro_ind_varraylist_nil
@@ -253,7 +252,7 @@ val intro_left_vprop_empty2 (#opened:_)
       )
       (ensures fun _ _ _ -> True)
 
-#push-options "--z3rlimit 50"
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 50"
 let intro_left_vprop_empty2 sc slab_region md_bm_region md_region r_idxs
   =
   let open SlabsCommon2 in
@@ -309,10 +308,12 @@ val intro_right_vprop_empty (#opened:_)
       A.varray (split_r md_region 0sz))
     (fun _ -> SlabsCommon.right_vprop slab_region md_bm_region md_region 0sz)
     (requires fun h ->
-      A.asel (split_r slab_region 0sz) h `Seq.equal` Seq.create (A.length slab_region) U8.zero /\
-      A.asel (split_r md_bm_region 0sz) h `Seq.equal` Seq.create (A.length md_bm_region) U64.zero)
+      zf_u8 (A.asel (split_r slab_region 0sz) h) /\
+      zf_u64 (A.asel (split_r md_bm_region 0sz) h)
+    )
     (ensures fun _ _ _ -> True)
 
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 50"
 let intro_right_vprop_empty slab_region md_bm_region md_region =
   change_equal_slprop
     (A.varray (A.split_r slab_region 0sz))
@@ -338,6 +339,7 @@ let intro_right_vprop_empty slab_region md_bm_region md_region =
       `vrefine` zf_u64) `star`
     A.varray (A.split_r md_region 0sz))
     (right_vprop slab_region md_bm_region md_region 0sz)
+#pop-options
 
 val intro_right_vprop_empty2 (#opened:_)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
@@ -349,10 +351,12 @@ val intro_right_vprop_empty2 (#opened:_)
       A.varray (split_r md_region 0sz))
     (fun _ -> SlabsCommon2.right_vprop slab_region md_bm_region md_region 0sz)
     (requires fun h ->
-      A.asel (split_r slab_region 0sz) h `Seq.equal` Seq.create (A.length slab_region) U8.zero /\
-      A.asel (split_r md_bm_region 0sz) h `Seq.equal` Seq.create (A.length md_bm_region) false)
+      zf_u8 (A.asel (split_r slab_region 0sz) h) /\
+      zf_b (A.asel (split_r md_bm_region 0sz) h)
+    )
     (ensures fun _ _ _ -> True)
 
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 50"
 let intro_right_vprop_empty2 slab_region md_bm_region md_region =
   let open SlabsCommon2 in
   change_equal_slprop
@@ -376,18 +380,22 @@ let intro_right_vprop_empty2 slab_region md_bm_region md_region =
       `vrefine` zf_b) `star`
     A.varray (A.split_r md_region 0sz))
     (right_vprop slab_region md_bm_region md_region 0sz)
+#pop-options
 
 #restart-solver
 
+#push-options "--fuel 1 --ifuel 1"
 let vrefinedep_ext
   (v: vprop)
   (p: ( (t_of v) -> Tot prop))
   (f f': ( (t_of (vrefine v p)) -> Tot vprop))
   : Lemma (requires f == f') (ensures vrefinedep v p f == vrefinedep v p f')
   = ()
+#pop-options
 
 #restart-solver
 
+#push-options "--fuel 1 --ifuel 1"
 let init_idxs (r_idxs: array US.t{A.length r_idxs == 7})
   : Steel unit
   (A.varray r_idxs) (fun _ -> A.varray r_idxs)
@@ -412,6 +420,7 @@ let init_idxs (r_idxs: array US.t{A.length r_idxs == 7})
   A.upd r_idxs 4sz AL.null_ptr;
   A.upd r_idxs 5sz AL.null_ptr;
   A.upd r_idxs 6sz 0sz
+#pop-options
 
 #push-options "--z3rlimit 300 --compat_pre_typed_indexed_effects --fuel 0 --ifuel 0"
 noextract inline_for_extraction
@@ -612,6 +621,7 @@ let init_struct_aux2
       ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
     );
   return scs
+#pop-options
 
 open MiscArith
 #push-options "--z3rlimit 100"
@@ -844,8 +854,6 @@ let split_r_r_mul (#opened:_) (#a: Type)
   change_equal_slprop
     (A.varray (split_r arr (US.add (US.mul n k1) n)))
     (A.varray (split_r arr (US.mul n k2)))
-
-let _ = ()
 
 #restart-solver
 
@@ -3291,7 +3299,7 @@ let init_one_arena2
 //    size_class_pred slab_region (Seq.index size_classes i) i
 //  )
 
-
+#restart-solver
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 500 --split_queries no --query_stats"
 noextract inline_for_extraction
