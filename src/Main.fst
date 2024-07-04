@@ -1085,6 +1085,7 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   assume (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
   // TODO: dedicated lemma
   assume (array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k')) page_size);
+  size_class_vprop_reveal data;
   change_slprop_rel
     (size_class_vprop_sc_ex data)
     (size_class_vprop data)
