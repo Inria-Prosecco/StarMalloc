@@ -45,7 +45,7 @@ uint8_t* memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
 // monomorphized (from void* to uint8_t*) glue
 // TODO: memset can be optimized, use hacl-star libmemzero
 void apply_zeroing_u8(uint8_t* dest, size_t n) {
-  memset((void*) dest, 0, n);
+  explicit_bzero(dest, n);
   return;
 }
 
