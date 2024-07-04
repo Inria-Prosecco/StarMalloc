@@ -982,11 +982,9 @@ let init_wrapper sc n k k' slab_region md_bm_region md_region
   // TODO: dedicated lemma
   assume (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
   size_class_vprop_reveal data;
-  change_slprop_rel
+  change_equal_slprop
     (size_class_vprop_sc data)
-    (size_class_vprop data)
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+    (size_class_vprop data);
   let lock = L.new_lock (size_class_vprop data) in
   let sc = {data; lock} in
   return sc
@@ -1094,11 +1092,9 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
   // TODO: dedicated lemma
   assume (array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k')) page_size);
   size_class_vprop_reveal data;
-  change_slprop_rel
+  change_equal_slprop
     (size_class_vprop_sc_ex data)
-    (size_class_vprop data)
-    (fun x y -> x == y)
-    (fun _ -> admit ());
+    (size_class_vprop data);
   let lock = L.new_lock (size_class_vprop data) in
   let sc = {data; lock} in
   return sc
@@ -2232,8 +2228,6 @@ val slab_region_pred_join_lemma_aux'
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 let slab_region_pred_join_lemma_aux' n slab_region size_classes n1 n2 _ i
   =
-  //TODO: low-level proof work
-  admit ();
   let scs1, scs2 = Seq.split size_classes (US.v n1) in
   if i < US.v n1
   then (
@@ -2284,8 +2278,6 @@ val slab_region_pred_join_lemma'
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let slab_region_pred_join_lemma' n slab_region size_classes n1 n2
   =
-  //TODO: low-level proof work
-  admit ();
   Classical.forall_intro (Classical.move_requires (
     slab_region_pred_join_lemma_aux' n slab_region size_classes n1 n2 ()
   ))
