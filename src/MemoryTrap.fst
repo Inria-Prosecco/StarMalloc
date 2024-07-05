@@ -23,22 +23,22 @@ open Config
 /// this predicate is abstract, does not expose any
 /// primitive to use it, and can only be introduced
 /// through the mmap_trap function below
-val trap_array (arr: array U8.t) : vprop
+assume val trap_array (arr: array U8.t) : vprop
 
 /// Introduction function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a mmap(PROT_NONE)
-val mmap_strict_trap
+assume val mmap_strict_trap
   (arr: array U8.t)
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})
   : SteelT unit
   (A.varray arr)
   (fun _ -> trap_array arr)
-///
+
 /// Introduction function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a madvise(MADV_DONTNEED)
-val mmap_trap
+assume val mmap_trap
   (arr: array U8.t)
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})
   : SteelT unit
@@ -48,7 +48,7 @@ val mmap_trap
 /// Elimination function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a mmap(PROT_READ|PROT_WRITE)
-val mmap_strict_untrap
+assume val mmap_strict_untrap
   (arr: array U8.t)
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})
   : SteelT unit
@@ -58,7 +58,7 @@ val mmap_strict_untrap
 /// Elimination function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a noop.
-val mmap_untrap
+assume val mmap_untrap
   (arr: array U8.t)
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})
   : SteelT unit
