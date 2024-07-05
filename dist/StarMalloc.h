@@ -14,8 +14,6 @@
 #include "ExternUtils.h"
 #include "ArrayList.h"
 
-extern void StarMalloc_malloc_zeroing_die(uint8_t *ptr);
-
 extern size_t StarMalloc_threshold;
 
 uint8_t *StarMalloc_malloc(size_t arena_id, size_t size);
