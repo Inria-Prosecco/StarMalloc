@@ -27,26 +27,8 @@ unfold let same_base_array (#a: Type) (arr1 arr2: array a)
 noextract
 unfold let slab_metadata = r:array U64.t{A.length r = 4}
 
-// abstract property that the underlying pointer v-bytes aligned
-assume val array_u8_alignment (arr: array U8.t) (v: U32.t{U32.v v > 0}): prop
-
-// no model for the memory considered as the "root" array in a tree-like representation
-// thus, this *axiom* is required
-// to convey that if arr (of type uint8_t*) is v1-bytes aligned,
-// that v1 is a multiple of v2,
-// then forall k,
-// then arr[k * v2] is v2-bytes aligned
-assume val array_u8_alignment_lemma
-  (arr1 arr2: array U8.t)
-  (v1 v2: (v:U32.t{U32.v v > 0}))
-  : Lemma
-  (requires
-    same_base_array arr1 arr2 /\
-    array_u8_alignment arr1 v1 /\
-    (U32.v v1) % (U32.v v2) == 0 /\
-    (A.offset (A.ptr_of arr2) - A.offset (A.ptr_of arr1)) % (U32.v v2) == 0)
-  (ensures
-    array_u8_alignment arr2 v2)
+let array_u8_alignment = ArrayAlignment.array_u8_alignment
+let array_u8_alignment_lemma = ArrayAlignment.array_u8_alignment_lemma
 
 #push-options "--z3rlimit 30"
 let nb_slots (size_class: sc)

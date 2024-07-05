@@ -49,6 +49,15 @@ void apply_zeroing_u8(uint8_t* dest, size_t n) {
   return;
 }
 
+bool check_zeroing_u8(uint8_t* ptr, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    if (ptr[i] != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // required casts
 Impl_Trees_Cast_M_node* Impl_Trees_Cast_M_array_u8__to__ref_node(uint8_t* arr) {
   // see lib_avl_mono/Impl.Trees.Types.fst
@@ -73,19 +82,4 @@ void FatalError_die_from_realloc_invalid_previous_alloc (uint8_t* ptr) {
 }
 void FatalError_die_from_realloc_free_failure (uint8_t* ptr) {
   fatal_error("realloc: invalid internal free");
-}
-
-
-bool check_zeroing_u8(uint8_t* ptr, size_t len) {
-  for (size_t i = 0; i < len; i++) {
-    if (ptr[i] != 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void SlotsFree_deallocate_zeroing(uint32_t sc, uint8_t* ptr) {
-  size_t len = (size_t) sc;
-  memset(ptr, 0, len);
 }
