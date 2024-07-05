@@ -92,7 +92,8 @@ build_mimalloc_bench() {
   # no-pa: fetches >1G of binaries, will patch mimalloc-bench
   # no-tcg: depends on a modified version of bazel, see upstream
   # no-packages: do not use sudo within this script (hygiene)
-  bash build-bench-env.sh all no-pa no-tcg no-packages
+  # no-lp: artifact VM uses an old CMake version
+  bash build-bench-env.sh all no-pa no-tcg no-packages no-lp
   popd 1>/dev/null
 }
 
