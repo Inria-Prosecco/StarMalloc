@@ -70,10 +70,10 @@ TODO: Explain Nix and sources
 
 ### Proof artifact
 
-`cd ~/StarMalloc`
+`cd ~/starMalloc`
 
 Claims:
-1. Proofs can be reverified: `make lib`. This can take quite some time, `make lib -j 1` should work on 8GiB systems, `make lib -j 3` should work on 16GiB systems and `make lib -j` on 32GiB systems.
+1. Proofs can be reverified: `make clean && make lib`. This can take quite some time, `make lib -j 1` should work on 8GiB systems, `make lib -j 3` should work on 16GiB systems and `make lib -j` on 32GiB systems.
 2. Checking for admitted proofs:
   + check for `admit` keyword in `*.fst{,i}` files: there should not be any occurrence in proofs
   + same for `assume keyword`: only `assume val` declarations should contain the `assume` keyword in proofs, as these declarations model C code (such as syscalls)
@@ -93,10 +93,20 @@ Claims:
 Claims:
 1. StarMalloc can be executed on all `mimalloc-bench` benchmarks
 2. Performance is competitive with respect to `hardened_malloc`
+TODO
 
 - `cd out/bench`
-- `bash ../../bench.sh sys hm st allt`
-- TODO results
+- `bash ../../bench.sh sys hm st allt` to bench the system allocator, hardened_malloc and StarMalloc on all benchmarks
+- Results should be copied into `benchres.csv`, which can be read in the following manner.
+  + test/benchmark
+  + allocator
+  + time
+  + RSS (resident set size)
+  + time (user)
+  + time (sys)
+  + page faults
+  + page reclaims
+- `bash ../../bench.sh -h` can be used to select other allocators and/or benchmarks
 
 ## Reusability Guide
 StarMalloc and corresponding benches have been tested on recent versions of Arch Linux, Debian unstable and (partially) NixOS.
