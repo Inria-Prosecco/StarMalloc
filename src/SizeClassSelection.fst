@@ -761,7 +761,7 @@ let inv_exact_log2 (k: nat)
   assert (r < pow2 (k1 + 6 + 1));
   log2u64_spec_eq_lemma r (k1 + 6)
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 50"
 let inv_exact_aux2 (k: nat)
   : Lemma
   (requires 1 <= k /\ k <= 24)
