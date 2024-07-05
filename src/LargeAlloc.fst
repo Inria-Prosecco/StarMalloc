@@ -63,7 +63,7 @@ type mmap_md =
 let init_mmap_md (_:unit)
   : SteelTop mmap_md false (fun _ -> emp) (fun _ _ _ -> True)
   =
-  let ptr = mmap_ptr_metadata () in
+  let ptr = mmap_ptr_metadata_init () in
   let tree = create_leaf () in
   write ptr tree;
   (**) intro_vrefine (linked_tree p tree) is_wf;
