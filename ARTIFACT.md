@@ -2,84 +2,69 @@
 
 ## Introduction
 
-This artifact is in support of OOPSLA 24 paper TODO
+This artifact is in support of OOPSLA'24 paper 590.
 
 There are two independant parts in this artifact.
 1. StarMalloc source is included as a proof artifact in order to support the paper's formal verification claims.
 2. mimalloc-bench benchmarks are included in order to support the paper's experimental results.
-3. TODO: Firefox?
 
-This artifact is shipped as a VM, repurposing the ICFP 2024 artifact VM. The only VM tweak are the following in the VM initialization script:
-- by default, all host's cores should be used: otherwise, some benchmarks would be meaningless;
-- by default, 16GiB is mapped to the VM instead of 4GiB.(*)
+This artifact is shipped as a VM, repurposing the ICFP 2024 artifact VM. The only VM tweak are the following in the VM initialization script.
+- By default, all host's cores should be used: otherwise, some benchmarks would be meaningless.
+- By default, 16GiB is mapped to the VM instead of 4GiB. Please note that in case of insufficient RAM on the host, this setting can be tweaked and/or zRAM can be used.
 
-(*) Please note that in case of insufficient RAM on the host, ZRAM can be used.
+Note: Firefox specific build is not included, as the VM does not include a graphical environment.
 
 ### List of the claims
 
-Verified artifact, implemented in F\*-Steel
-Experimental evaluation on mimalloc-bench
-Integration with Firefox
+1. Proof artifact
+F\* is used as a proof assistant. More precisely, Steel is used in combination with F\*: it is a concurrent separation logic (CSL) embedded within F\*.
+There are two sorts of files: `*.fst` files and `*.fsti` files. The latter are interface files used to define clear abstraction boundaries between modules.
+As StarMalloc is written using a CSL, it is memory-safe.
 
-1. Proof artifact claims
-Quick presentation of F\*/CSL (fst/fsti files, Steel effect corresponds to the Steel framework with CSL guarantees)
+Following the paper apparition order:
++ Allocator APIs (section 3.1): Main theorem of (functional) correctness, present in file `src/StarMalloc.fst`
++ `starseq` combinator and lemmas (section 3.2): `lib_misc/SteelStarSeqUtils.fst`
++ `arraylist` datastructure (section 3.3): `lib_list/ArrayListGen.fst`
++ `starseq` is used for both slots and slabs (section 3.4):
+  - slabs, in `src/SlabsCommon.fst`: `left_vprop` describing the state of the memory currently used, relies on `left_vprop2`, itself relying on `starseq`
+  - slots, in `src/SlotsAlloc.fst`: `slab_vprop` describing the state of one slab (and thus many slots), relies on `slab_vprop_aux`, itself relying on `starseq`
++ Reusing the Slab Allocator (section 3.4): `src/LargeAlloc.fst`, e.g. the `trees_malloc2` function reusing the slab allocator `SizeClass.allocate_size_class` function
++ Configurability (section 3.5): Generic size classes in `Config.fst`, many configuration switches behind the interface
 
-+ Allocator APIs: Main theorem of correctness, present in file TODO
-+ StarSeq combinator and lemmas -> Files/Folder
-+ Using StarSeq -> Point to several uses
-+ varraylist
-+ Configurability (Section 3.5) -> Generic size classes in BLA, Config.fst
+StarMalloc is already verified and extracted as part of the VM.
+To reverify it from scratch: `make clean && make lib`. (`make lib -j 1` for systems with <=8 GiB of RAM, `make lib -j 3` for systems with <=16GiB of RAM, `make lib -j` otherwise).
+Proofs based on SMT can be unstable, in case of error please try the following command: `OTHERFLAGS="--z3rlimit_factor 4"` to raise timeouts.
+Total time expected: ~30 minutes on a modern machine with 16GiB of RAM.
 
-Reproducing claims: make TODO
-Proofs based on SMT can be unstable, might need OTHERFLAGS="--z3rlimit_factor 4" to help on your machine
-This reverifies proofs, and reruns extraction. Self-contained dist included
-Total time expected : TODO
+2. Experimental evaluation on mimalloc-bench
+mimalloc-bench is an already existing memory allocator benchmarking suite.
+The artifact VM contains a prebuilt version of mimalloc-bench.
+We observe variance across machines, however the trends should be similar
+Running all of the allocators on all of the benchmarks can be especially slow.
+A lighter version can be run using `bash ../../bench.sh sys hm st allt`, thus comparing 
+the system allocator (glibc allocator, `sys`), hardened\_malloc (`hm`), and StarMalloc (`st`) on all of the benchmarks.
 
-2. Run bla in mimalloc-bench, evaluated against ....
-   We observe variance across machines, however the trends should be similar
-   X especially slow, but you can run a lighter version omitting longer artifacts with X
-
-3. Firefox TODO
-
----
-
-
-1. Proof artifact claims
-+ challenge 1: interaction with the OS
-+ challenge 2: concurrency
-+ challenge 3: configurability
-+ challenge 4: non-local reasoning
-+ challenge 5: efficient datastructure
-+ challenge 6: iterating on verified implementatioN
-TODO
-
-+ val malloc -> StarMalloc
-+ val dispath -> SlabsCommon
-+ val starseq -> SteelStarSeqUtils
-+ val slabs_sl ?
-+ let slabs_sl ?
-+ let is_list -> ALG
-
-2. Experimental results
-TODO
+3. Firefox: as noted previously, a prebuilt version of Firefox with the required tweak (adding the `--disable-jemalloc` compilation flag) is not part of the artifact. Indeed, no graphical environment is part of the VM: as ICFP'24 submission guidelines put it, "Graphical environments in VMs are sometimes slow and unstable.". It has successfully been tested on Debian and Arch Linux with different Firefox versions throughout StarMalloc development. (TODO Aymeric wdyt?)
 
 ## Hardware Dependencies
 
 Only `x86_64-linux` environments have been tested: while other architectures could likely be used with QEMU, this could alter benchmarks.
-Also, while 16GiB of RAM should be enough, 32GiB is recommended to speed up verification time.
+Also, while 8/16GiB of RAM should be enough, 32GiB is recommended to speed up verification time.
 
 ## Getting Started Guide
 
-We provide both a fully installed VirtualBox and sources with a Nix script for StarMalloc
+We provide a full installed VM and sources.
+TODO: Explain Nix and sources
 
 - QEMU should be installed.
 - Leveraging the ICFP 2024 artifact VM: `./start.sh` will start the VM.
 - Once started, one can use SSH to connect to the VM: `ssh -p 5555 artifact@localhost`, the password is `password`.
-- Verification software is installed in `/home/artifact/setup_verif`.
-- To assess whether everything should work as expected in a very short time: `make test-artifact` should not display any error.
-- Internet access should be not be required.
-
-TODO: Explain Nix and sources
+- Structure of the artifact in `/home/artifact`:
+  + verification software (F\*, Steel, KaRaMeL) is installed in `setup_verif`.
+  + StarMalloc is installed in `starmalloc`.
+  + mimalloc-bench is installed in `mimalloc-bench`.
+- To assess whether everything should work as expected in a very short time: `pushd starmalloc && make test-artifact && popd` should not display any error.
+- Internet access should not be required.
 
 ## Step by Step Instructins
 
@@ -87,52 +72,46 @@ TODO: Explain Nix and sources
 
 `cd ~/StarMalloc`
 
-TODO: Do not claim, but present
-
 Claims:
 1. Proofs can be reverified: `make lib`. This can take quite some time, `make lib -j 1` should work on 8GiB systems, `make lib -j 3` should work on 16GiB systems and `make lib -j` on 32GiB systems.
 2. Checking for admitted proofs:
-  + `ag admit` should not yield any output, that is, no proof is admitted; TODO: there is output but irrelevant
-  + `ag assume | grep -v "assume val"` should not yield any output, that is, no part of a proof is omitted, but some external functions are assumed to exist, e.g. syscalls.
+  + check for `admit` keyword in `*.fst{,i}` files: there should not be any occurrence in proofs
+  + same for `assume keyword`: only `assume val` declarations should contain the `assume` keyword in proofs, as these declarations model C code (such as syscalls)
 3. Axioms with corresponding documentation are in the following files:
-  + `src/Mman.fst`: memory-management axiomatization
-  + TODO
+  + `src/ExternUtils.fst`: various compiler builtins/basic C code
+  + `src/Mman.fst` and `src/Mman2.fst`: memory management
+  + `src/MemoryTrap.fst`: memory permissions (guard pages and quarantine security mechanisms)
+  + `src/ArrayAlignment.fst`: array alignment (e.g. with respect to pages)
+  + `src/FatalError.fst`: context-specific wrappers of the C `fatal_error` function (see `c/fatal_error.{c,h}`)
+  + `lib_avl_mono/Impl.Trees.Cast.M`: mainly casts axiomatization, required to reuse the slab allocator for the AVL tree's nodes used as large allocations metadata
 4. Extracted files are up-to-date: once verification is done, `dist/` should still be up-to-date with respect to the git repository initial state. This can be checked using `git diff dist`.
 
 ### Benchmarks artifact
 
+`cd ~/mimalloc-bench`
 
 Claims:
-1. StarMalloc i
+1. StarMalloc can be executed on all `mimalloc-bench` benchmarks
+2. Performance is competitive with respect to `hardened_malloc`
 
-`cd ~/S
-
-## Getting Started Guide
-Roughly two steps are required to check the artifact:
-1. Proof artifact checks
-2. Experimental results checks
-
-## Step by Step Instructions
-TODO
+- `cd out/bench`
+- `bash ../../bench.sh sys hm st allt`
+- TODO results
 
 ## Reusability Guide
 StarMalloc and corresponding benches have been tested on recent versions of Arch Linux, Debian unstable and (partially) NixOS.
+Components of the allocator should be reusable to build other allocators: the slab allocator is reused as part of the large allocator (AVL tree node allocation).
+Configurability of the allocator (many options in `src/Config.fst` and `src/Config.fsti`) should help to reuse some security mechanisms or specific features in other contexts. The many librairies (bitmaps, AVL tree, arraylist, `starseq` combinator) could be used as building blocks for other verified low-level programming projects.
 
-StarMalloc is a verified memory allocator that can be used as a drop-in replacement of the libc memory allocator, as the included proof artifact and various included benches should tend to indicate.
-Furthermore, it is highly-configurable: the obtained security-oriented allocator (from the `dist/` C code) can be repurposed as a generic memory allocator by disabling security mechanisms.
-Relying on the modular development organisation, it should be reasonable to add additional features such as security mechanisms or Android support.
-
-Current main limitations may be the `x86_64-linux` requirement: there is planned work to adapt the allocator to MacOS and/or ARM environments, with a different page size (16K instead of currently-hardcoded 4K value).
+Finally, relying on the modular development organisation, it should be reasonable to add additional features such as security mechanisms, Android support or 16K page support.
 
 ## References
-
-[1] https://proofartifacts.github.io/guidelines/index.html#guidelines-for-authors
-[2] https://github.com/daanx/mimalloc-bench
-[3] https://firefox-source-docs.mozilla.org/contributing/directory_structure.html or https://searchfox.org/mozilla-central/source
-
-## Packaging references
+TODO: remove ?
+- https://proofartifacts.github.io/guidelines/index.html#guidelines-for-authors
+- https://github.com/daanx/mimalloc-bench
+- https://firefox-source-docs.mozilla.org/contributing/directory_structure.html or https://searchfox.org/mozilla-central/source
 - https://2024.splashcon.org/track/splash-2024-oopsla-artifacts#Call-for-Artifacts
 - https://proofartifacts.github.io/guidelines/index.html#guidelines-for-authors
-- https://icfp23.sigplan.org/track/icfp-2023-artifact-evaluation
+- https://icfp24.sigplan.org/track/icfp-2024-artifact-evaluation#Submission-Guidelines
 
 
