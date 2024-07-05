@@ -1,6 +1,5 @@
 module LargeAlloc
 
-open FStar.Ghost
 open Steel.Effect.Atomic
 open Steel.Effect
 module A = Steel.Array
@@ -18,23 +17,23 @@ module G = FStar.Ghost
 open Impl.Mono
 open Map.M
 open Impl.Core
-open Impl.Trees.Types
 
 open Prelude
 open Constants
 open Utils2
 open NullOrVarray
 
-#set-options "--ide_id_info_off"
-
 #push-options "--fuel 0 --ifuel 0"
 
 open Steel.Reference
 
-assume val mmap_ptr_metadata (_:unit)
-  : SteelT (ref t)
-  emp
-  (fun r -> vptr r)
+open Mman2
+
+open Impl.Trees.Types
+
+inline_for_extraction noextract
+unfold
+let linked_tree = Impl.Core.linked_tree #data
 
 // is well-formed (AVL + content)
 let is_wf (x: wdm data) : prop
@@ -114,9 +113,8 @@ let trees_malloc2_aux (x: node)
   let ptr = SizeClass.allocate_size_class metadata_slabs.scs in
   if A.is_null ptr
   then (
-    // this should trigger a fatal error
-    sladmit ();
-    return null
+    let r = FatalError.die_from_avl_node_malloc_failure x ptr in
+    return r
   ) else (
     change_equal_slprop
       (if (A.is_null ptr) then emp else A.varray ptr)
@@ -131,8 +129,8 @@ let trees_malloc2_aux (x: node)
       <=
       (US.v metadata_max * U32.v page_size) * US.v nb_size_classes * US.v nb_arenas);
     up_fits_propagation ptr metadata_slabs.scs.slab_region;
-    let r' = array_u8__to__ref_node ptr in
-    array_u8__to__ref_node_bijectivity ptr;
+    let r' = Impl.Trees.Cast.M.array_u8__to__ref_node ptr in
+    Impl.Trees.Cast.M.array_u8__to__ref_node_bijectivity ptr;
     write r' x;
     return r'
   )
@@ -189,7 +187,7 @@ let trees_free2_aux (r: ref node)
   (ensures fun _ _ _-> True)
   =
   vptr_not_null r;
-  let ptr = ref_node__to__array_u8 r in
+  let ptr = Impl.Trees.Cast.M.ref_node__to__array_u8 r in
   let diff = A.ptrdiff ptr (A.split_l metadata_slabs.slab_region 0sz) in
   let diff_sz = UP.ptrdifft_to_sizet diff in
   assert (US.v diff_sz = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of metadata_slabs.scs.slab_region));
@@ -201,8 +199,10 @@ let trees_free2_aux (r: ref node)
       emp;
     return ()
   ) else (
-    // this should trigger a fatal error
-    sladmit ();
+    change_equal_slprop
+      (if b then emp else A.varray ptr)
+      (A.varray ptr);
+    FatalError.die_from_avl_node_free_failure ptr;
     return ()
   )
 
@@ -229,11 +229,6 @@ let trees_free2 (r: ref node)
   in
   return r
 
-// machine representation
-inline_for_extraction noextract
-unfold
-let linked_tree = Impl.Core.linked_tree #data
-
 noextract inline_for_extraction
 let mmap = Mman.mmap_u8
 
@@ -257,9 +252,6 @@ let find = Map.M.find
 
 open Config
 
-inline_for_extraction noextract
-let mmap_actual_size = PtrdiffWrapper.mmap_actual_size
-
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 [@@ __steel_reduce__]
 let v_ind_tree
@@ -279,7 +271,11 @@ let v_ind_tree
 
 open PtrdiffWrapper
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
+#push-options "--print_implicits"
+
+#restart-solver
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 inline_for_extraction noextract
 let large_malloc_aux
   (metadata_ptr: ref t)
@@ -325,7 +321,9 @@ let large_malloc_aux
     (linked_tree p t)
     (linked_tree p md_v);
   (**) let h0 = get () in
-  (**) Spec.height_lte_size (v_linked_tree p md_v h0);
+  (**) let tree : G.erased (x:wdm data{is_wf x}) = G.hide (v_linked_tree p md_v h0) in
+  assert (Spec.forall_keys tree (fun x -> US.v (snd x) <> 0));
+  (**) Spec.height_lte_size tree;
   let ptr = mmap size in
   if (A.is_null ptr) then (
     (**) intro_vrefine (linked_tree p md_v) is_wf;
@@ -344,8 +342,8 @@ let large_malloc_aux
     ) else (
       let h0 = get () in
       let md_v' = insert false md_v (ptr, size') in
-      Spec.lemma_insert false (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size');
-      Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size') (fun x -> US.v (snd x) <> 0);
+      Spec.lemma_insert false (spec_convert cmp) tree (ptr, size');
+      Spec.lemma_insert2 #data (spec_convert cmp) tree (ptr, size') (fun x -> US.v (snd x) <> 0);
       write metadata_ptr md_v';
       (**) intro_vrefine (linked_tree p md_v') is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
@@ -435,7 +433,7 @@ let large_free_aux
     let h0 = get () in
     let md_v' = delete md_v (ptr, size) in
     Spec.lemma_delete (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size);
-    Spec.lemma_delete2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
+    Spec.lemma_delete2 #data (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
     write metadata_ptr md_v';
     (**) intro_vrefine (linked_tree p md_v') is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
@@ -609,6 +607,4 @@ let large_getsize (ptr: array U8.t)
   return r
 
 (*)
-- convert AVL lib to use size_t instead of u64
-- find: some improvements ahead? (better spec)
 - use a large vdep between avl and mmap'ed allocations?

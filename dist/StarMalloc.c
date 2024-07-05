@@ -3,6 +3,14 @@
 
 #include "internal/StarMalloc.h"
 
+static uint32_t avl_data_size = 64U;
+
+extern int64_t Impl_Trees_Cast_M_cmp(Impl_Trees_Cast_M_data uu___, Impl_Trees_Cast_M_data x0);
+
+extern uint8_t *Impl_Trees_Cast_M_ref_node__to__array_u8(Impl_Trees_Cast_M_node *x);
+
+extern Impl_Trees_Cast_M_node *Impl_Trees_Cast_M_array_u8__to__ref_node(uint8_t *arr);
+
 static void init_idxs(size_t *r_idxs)
 {
   r_idxs[0U] = (size_t)16777217U;
@@ -46,8 +54,6 @@ init_size_class(
   size_classes[k].data = data;
 }
 
-static uint32_t avl_data_size = 64U;
-
 void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
 {
   size_t slab_region_size = (size_t)16777216U * (size_t)4096U;
@@ -74,21 +80,28 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
 
 Impl_Trees_Types_mmap_md_slabs Impl_Trees_Types_metadata_slabs;
 
-extern uint8_t *Impl_Trees_Types_ref_node__to__array_u8(Impl_Trees_Types_node *x);
+extern Impl_Trees_Cast_M_node
+*FatalError_die_from_avl_node_malloc_failure(Impl_Trees_Cast_M_node x, uint8_t *ptr);
 
-extern Impl_Trees_Types_node *Impl_Trees_Types_array_u8__to__ref_node(uint8_t *arr);
+extern void FatalError_die_from_avl_node_free_failure(uint8_t *ptr);
 
-extern int64_t Impl_Trees_Types_cmp(Impl_Trees_Types_data uu___, Impl_Trees_Types_data x0);
+extern void FatalError_die_from_malloc_zeroing_check_failure(uint8_t *ptr);
 
-bool Impl_BST_M_member(Impl_Trees_Types_node *ptr, Impl_Trees_Types_data v)
+extern void FatalError_die_from_realloc_invalid_previous_alloc(uint8_t *ptr);
+
+extern void FatalError_die_from_realloc_free_failure(uint8_t *ptr);
+
+extern Impl_Trees_Cast_M_node **mmap_ptr_metadata(void);
+
+bool Impl_BST_M_member(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v)
 {
   if (ptr == NULL)
     return false;
   else
   {
-    Impl_Trees_Types_node node = *ptr;
-    Impl_Trees_Types_data data = node.data;
-    int64_t delta = Impl_Trees_Types_cmp(v, data);
+    Impl_Trees_Cast_M_node node = *ptr;
+    Impl_Trees_Cast_M_data data = node.data;
+    int64_t delta = Impl_Trees_Cast_M_cmp(v, data);
     if (delta == (int64_t)0)
       return true;
     else if (delta < (int64_t)0)
@@ -104,20 +117,20 @@ bool Impl_BST_M_member(Impl_Trees_Types_node *ptr, Impl_Trees_Types_data v)
   }
 }
 
-static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
+static Impl_Trees_Cast_M_node *rotate_left_right(Impl_Trees_Cast_M_node *ptr)
 {
-  Impl_Trees_Types_node x_node = *ptr;
-  Impl_Trees_Types_data x = x_node.data;
-  Impl_Trees_Types_node z_node = *x_node.left;
-  Impl_Trees_Types_data z = z_node.data;
-  Impl_Trees_Types_node y_node = *z_node.right;
-  Impl_Trees_Types_data y = y_node.data;
+  Impl_Trees_Cast_M_node x_node = *ptr;
+  Impl_Trees_Cast_M_data x = x_node.data;
+  Impl_Trees_Cast_M_node z_node = *x_node.left;
+  Impl_Trees_Cast_M_data z = z_node.data;
+  Impl_Trees_Cast_M_node y_node = *z_node.right;
+  Impl_Trees_Cast_M_data y = y_node.data;
   uint64_t s10;
   if (z_node.left == NULL)
     s10 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     s10 = node.size;
   }
   uint64_t s20;
@@ -125,7 +138,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     s20 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *y_node.left;
+    Impl_Trees_Cast_M_node node = *y_node.left;
     s20 = node.size;
   }
   uint64_t s = s10 + s20 + 1ULL;
@@ -134,7 +147,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     h10 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     h10 = node.height;
   }
   uint64_t h20;
@@ -142,7 +155,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     h20 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *y_node.left;
+    Impl_Trees_Cast_M_node node = *y_node.left;
     h20 = node.height;
   }
   uint64_t ite0;
@@ -151,16 +164,16 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
   else
     ite0 = h20;
   uint64_t h = ite0 + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n = { .data = z, .left = z_node.left, .right = y_node.left, .size = s, .height = h };
   *x_node.left = n;
-  Impl_Trees_Types_node *new_z = x_node.left;
+  Impl_Trees_Cast_M_node *new_z = x_node.left;
   uint64_t s11;
   if (y_node.right == NULL)
     s11 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *y_node.right;
+    Impl_Trees_Cast_M_node node = *y_node.right;
     s11 = node.size;
   }
   uint64_t s21;
@@ -168,7 +181,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     s21 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *x_node.right;
+    Impl_Trees_Cast_M_node node = *x_node.right;
     s21 = node.size;
   }
   uint64_t s0 = s11 + s21 + 1ULL;
@@ -177,7 +190,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     h11 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *y_node.right;
+    Impl_Trees_Cast_M_node node = *y_node.right;
     h11 = node.height;
   }
   uint64_t h21;
@@ -185,7 +198,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     h21 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *x_node.right;
+    Impl_Trees_Cast_M_node node = *x_node.right;
     h21 = node.height;
   }
   uint64_t ite1;
@@ -194,16 +207,16 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
   else
     ite1 = h21;
   uint64_t h0 = ite1 + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n0 = { .data = x, .left = y_node.right, .right = x_node.right, .size = s0, .height = h0 };
   *ptr = n0;
-  Impl_Trees_Types_node *new_x = ptr;
+  Impl_Trees_Cast_M_node *new_x = ptr;
   uint64_t s1;
   if (new_z == NULL)
     s1 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_z;
+    Impl_Trees_Cast_M_node node = *new_z;
     s1 = node.size;
   }
   uint64_t s2;
@@ -211,7 +224,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     s2 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_x;
+    Impl_Trees_Cast_M_node node = *new_x;
     s2 = node.size;
   }
   uint64_t s3 = s1 + s2 + 1ULL;
@@ -220,7 +233,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     h1 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_z;
+    Impl_Trees_Cast_M_node node = *new_z;
     h1 = node.height;
   }
   uint64_t h2;
@@ -228,7 +241,7 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
     h2 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_x;
+    Impl_Trees_Cast_M_node node = *new_x;
     h2 = node.height;
   }
   uint64_t ite;
@@ -237,27 +250,27 @@ static Impl_Trees_Types_node *rotate_left_right(Impl_Trees_Types_node *ptr)
   else
     ite = h2;
   uint64_t h3 = ite + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n1 = { .data = y, .left = new_z, .right = new_x, .size = s3, .height = h3 };
   *z_node.right = n1;
-  Impl_Trees_Types_node *new_y = z_node.right;
+  Impl_Trees_Cast_M_node *new_y = z_node.right;
   return new_y;
 }
 
-static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
+static Impl_Trees_Cast_M_node *rotate_right_left(Impl_Trees_Cast_M_node *ptr)
 {
-  Impl_Trees_Types_node x_node = *ptr;
-  Impl_Trees_Types_data x = x_node.data;
-  Impl_Trees_Types_node z_node = *x_node.right;
-  Impl_Trees_Types_data z = z_node.data;
-  Impl_Trees_Types_node y_node = *z_node.left;
-  Impl_Trees_Types_data y = y_node.data;
+  Impl_Trees_Cast_M_node x_node = *ptr;
+  Impl_Trees_Cast_M_data x = x_node.data;
+  Impl_Trees_Cast_M_node z_node = *x_node.right;
+  Impl_Trees_Cast_M_data z = z_node.data;
+  Impl_Trees_Cast_M_node y_node = *z_node.left;
+  Impl_Trees_Cast_M_data y = y_node.data;
   uint64_t s10;
   if (x_node.left == NULL)
     s10 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *x_node.left;
+    Impl_Trees_Cast_M_node node = *x_node.left;
     s10 = node.size;
   }
   uint64_t s20;
@@ -265,7 +278,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     s20 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *y_node.left;
+    Impl_Trees_Cast_M_node node = *y_node.left;
     s20 = node.size;
   }
   uint64_t s = s10 + s20 + 1ULL;
@@ -274,7 +287,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     h10 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *x_node.left;
+    Impl_Trees_Cast_M_node node = *x_node.left;
     h10 = node.height;
   }
   uint64_t h20;
@@ -282,7 +295,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     h20 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *y_node.left;
+    Impl_Trees_Cast_M_node node = *y_node.left;
     h20 = node.height;
   }
   uint64_t ite0;
@@ -291,16 +304,16 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
   else
     ite0 = h20;
   uint64_t h = ite0 + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n = { .data = x, .left = x_node.left, .right = y_node.left, .size = s, .height = h };
   *ptr = n;
-  Impl_Trees_Types_node *new_x = ptr;
+  Impl_Trees_Cast_M_node *new_x = ptr;
   uint64_t s11;
   if (y_node.right == NULL)
     s11 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *y_node.right;
+    Impl_Trees_Cast_M_node node = *y_node.right;
     s11 = node.size;
   }
   uint64_t s21;
@@ -308,7 +321,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     s21 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     s21 = node.size;
   }
   uint64_t s0 = s11 + s21 + 1ULL;
@@ -317,7 +330,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     h11 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *y_node.right;
+    Impl_Trees_Cast_M_node node = *y_node.right;
     h11 = node.height;
   }
   uint64_t h21;
@@ -325,7 +338,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     h21 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     h21 = node.height;
   }
   uint64_t ite1;
@@ -334,16 +347,16 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
   else
     ite1 = h21;
   uint64_t h0 = ite1 + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n0 = { .data = z, .left = y_node.right, .right = z_node.right, .size = s0, .height = h0 };
   *x_node.right = n0;
-  Impl_Trees_Types_node *new_z = x_node.right;
+  Impl_Trees_Cast_M_node *new_z = x_node.right;
   uint64_t s1;
   if (new_x == NULL)
     s1 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_x;
+    Impl_Trees_Cast_M_node node = *new_x;
     s1 = node.size;
   }
   uint64_t s2;
@@ -351,7 +364,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     s2 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_z;
+    Impl_Trees_Cast_M_node node = *new_z;
     s2 = node.size;
   }
   uint64_t s3 = s1 + s2 + 1ULL;
@@ -360,7 +373,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     h1 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_x;
+    Impl_Trees_Cast_M_node node = *new_x;
     h1 = node.height;
   }
   uint64_t h2;
@@ -368,7 +381,7 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
     h2 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_z;
+    Impl_Trees_Cast_M_node node = *new_z;
     h2 = node.height;
   }
   uint64_t ite;
@@ -377,25 +390,25 @@ static Impl_Trees_Types_node *rotate_right_left(Impl_Trees_Types_node *ptr)
   else
     ite = h2;
   uint64_t h3 = ite + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n1 = { .data = y, .left = new_x, .right = new_z, .size = s3, .height = h3 };
   *z_node.left = n1;
-  Impl_Trees_Types_node *new_y = z_node.left;
+  Impl_Trees_Cast_M_node *new_y = z_node.left;
   return new_y;
 }
 
-static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
+static Impl_Trees_Cast_M_node *rotate_left(Impl_Trees_Cast_M_node *ptr)
 {
-  Impl_Trees_Types_node x_node = *ptr;
-  Impl_Trees_Types_data x = x_node.data;
-  Impl_Trees_Types_node z_node = *x_node.right;
-  Impl_Trees_Types_data z = z_node.data;
+  Impl_Trees_Cast_M_node x_node = *ptr;
+  Impl_Trees_Cast_M_data x = x_node.data;
+  Impl_Trees_Cast_M_node z_node = *x_node.right;
+  Impl_Trees_Cast_M_data z = z_node.data;
   uint64_t s10;
   if (x_node.left == NULL)
     s10 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *x_node.left;
+    Impl_Trees_Cast_M_node node = *x_node.left;
     s10 = node.size;
   }
   uint64_t s20;
@@ -403,7 +416,7 @@ static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
     s20 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     s20 = node.size;
   }
   uint64_t s = s10 + s20 + 1ULL;
@@ -412,7 +425,7 @@ static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
     h10 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *x_node.left;
+    Impl_Trees_Cast_M_node node = *x_node.left;
     h10 = node.height;
   }
   uint64_t h20;
@@ -420,7 +433,7 @@ static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
     h20 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     h20 = node.height;
   }
   uint64_t ite0;
@@ -429,16 +442,16 @@ static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
   else
     ite0 = h20;
   uint64_t h = ite0 + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n = { .data = x, .left = x_node.left, .right = z_node.left, .size = s, .height = h };
   *ptr = n;
-  Impl_Trees_Types_node *new_subnode = ptr;
+  Impl_Trees_Cast_M_node *new_subnode = ptr;
   uint64_t s1;
   if (new_subnode == NULL)
     s1 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_subnode;
+    Impl_Trees_Cast_M_node node = *new_subnode;
     s1 = node.size;
   }
   uint64_t s2;
@@ -446,7 +459,7 @@ static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
     s2 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     s2 = node.size;
   }
   uint64_t s0 = s1 + s2 + 1ULL;
@@ -455,7 +468,7 @@ static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
     h1 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_subnode;
+    Impl_Trees_Cast_M_node node = *new_subnode;
     h1 = node.height;
   }
   uint64_t h2;
@@ -463,7 +476,7 @@ static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
     h2 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     h2 = node.height;
   }
   uint64_t ite;
@@ -472,25 +485,25 @@ static Impl_Trees_Types_node *rotate_left(Impl_Trees_Types_node *ptr)
   else
     ite = h2;
   uint64_t h0 = ite + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n0 = { .data = z, .left = new_subnode, .right = z_node.right, .size = s0, .height = h0 };
   *x_node.right = n0;
-  Impl_Trees_Types_node *new_node = x_node.right;
+  Impl_Trees_Cast_M_node *new_node = x_node.right;
   return new_node;
 }
 
-static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
+static Impl_Trees_Cast_M_node *rotate_right(Impl_Trees_Cast_M_node *ptr)
 {
-  Impl_Trees_Types_node x_node = *ptr;
-  Impl_Trees_Types_data x = x_node.data;
-  Impl_Trees_Types_node z_node = *x_node.left;
-  Impl_Trees_Types_data z = z_node.data;
+  Impl_Trees_Cast_M_node x_node = *ptr;
+  Impl_Trees_Cast_M_data x = x_node.data;
+  Impl_Trees_Cast_M_node z_node = *x_node.left;
+  Impl_Trees_Cast_M_data z = z_node.data;
   uint64_t s10;
   if (z_node.right == NULL)
     s10 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     s10 = node.size;
   }
   uint64_t s20;
@@ -498,7 +511,7 @@ static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
     s20 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *x_node.right;
+    Impl_Trees_Cast_M_node node = *x_node.right;
     s20 = node.size;
   }
   uint64_t s = s10 + s20 + 1ULL;
@@ -507,7 +520,7 @@ static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
     h10 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     h10 = node.height;
   }
   uint64_t h20;
@@ -515,7 +528,7 @@ static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
     h20 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *x_node.right;
+    Impl_Trees_Cast_M_node node = *x_node.right;
     h20 = node.height;
   }
   uint64_t ite0;
@@ -524,16 +537,16 @@ static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
   else
     ite0 = h20;
   uint64_t h = ite0 + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n = { .data = x, .left = z_node.right, .right = x_node.right, .size = s, .height = h };
   *ptr = n;
-  Impl_Trees_Types_node *new_subnode = ptr;
+  Impl_Trees_Cast_M_node *new_subnode = ptr;
   uint64_t s1;
   if (z_node.left == NULL)
     s1 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     s1 = node.size;
   }
   uint64_t s2;
@@ -541,7 +554,7 @@ static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
     s2 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_subnode;
+    Impl_Trees_Cast_M_node node = *new_subnode;
     s2 = node.size;
   }
   uint64_t s0 = s1 + s2 + 1ULL;
@@ -550,7 +563,7 @@ static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
     h1 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     h1 = node.height;
   }
   uint64_t h2;
@@ -558,7 +571,7 @@ static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
     h2 = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *new_subnode;
+    Impl_Trees_Cast_M_node node = *new_subnode;
     h2 = node.height;
   }
   uint64_t ite;
@@ -567,26 +580,26 @@ static Impl_Trees_Types_node *rotate_right(Impl_Trees_Types_node *ptr)
   else
     ite = h2;
   uint64_t h0 = ite + 1ULL;
-  Impl_Trees_Types_node
+  Impl_Trees_Cast_M_node
   n0 = { .data = z, .left = z_node.left, .right = new_subnode, .size = s0, .height = h0 };
   *x_node.left = n0;
-  Impl_Trees_Types_node *new_node = x_node.left;
+  Impl_Trees_Cast_M_node *new_node = x_node.left;
   return new_node;
 }
 
-static bool is_balanced_local(Impl_Trees_Types_node *ptr)
+static bool is_balanced_local(Impl_Trees_Cast_M_node *ptr)
 {
   if (ptr == NULL)
     return true;
   else
   {
-    Impl_Trees_Types_node node = *ptr;
+    Impl_Trees_Cast_M_node node = *ptr;
     uint64_t lh;
     if (node.left == NULL)
       lh = 0ULL;
     else
     {
-      Impl_Trees_Types_node node1 = *node.left;
+      Impl_Trees_Cast_M_node node1 = *node.left;
       lh = node1.height;
     }
     uint64_t rh;
@@ -594,7 +607,7 @@ static bool is_balanced_local(Impl_Trees_Types_node *ptr)
       rh = 0ULL;
     else
     {
-      Impl_Trees_Types_node node1 = *node.right;
+      Impl_Trees_Cast_M_node node1 = *node.right;
       rh = node1.height;
     }
     bool b1 = rh + 1ULL >= lh;
@@ -603,19 +616,19 @@ static bool is_balanced_local(Impl_Trees_Types_node *ptr)
   }
 }
 
-static Impl_Trees_Types_node *rebalance_avl(Impl_Trees_Types_node *ptr)
+static Impl_Trees_Cast_M_node *rebalance_avl(Impl_Trees_Cast_M_node *ptr)
 {
   if (is_balanced_local(ptr))
     return ptr;
   else
   {
-    Impl_Trees_Types_node node = *ptr;
+    Impl_Trees_Cast_M_node node = *ptr;
     uint64_t lh;
     if (node.left == NULL)
       lh = 0ULL;
     else
     {
-      Impl_Trees_Types_node node1 = *node.left;
+      Impl_Trees_Cast_M_node node1 = *node.left;
       lh = node1.height;
     }
     uint64_t rh;
@@ -623,18 +636,18 @@ static Impl_Trees_Types_node *rebalance_avl(Impl_Trees_Types_node *ptr)
       rh = 0ULL;
     else
     {
-      Impl_Trees_Types_node node1 = *node.right;
+      Impl_Trees_Cast_M_node node1 = *node.right;
       rh = node1.height;
     }
     if (lh > rh + 1ULL)
     {
-      Impl_Trees_Types_node l_node = *node.left;
+      Impl_Trees_Cast_M_node l_node = *node.left;
       uint64_t llh;
       if (l_node.left == NULL)
         llh = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *l_node.left;
+        Impl_Trees_Cast_M_node node1 = *l_node.left;
         llh = node1.height;
       }
       uint64_t lrh;
@@ -642,7 +655,7 @@ static Impl_Trees_Types_node *rebalance_avl(Impl_Trees_Types_node *ptr)
         lrh = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *l_node.right;
+        Impl_Trees_Cast_M_node node1 = *l_node.right;
         lrh = node1.height;
       }
       if (lrh > llh)
@@ -652,13 +665,13 @@ static Impl_Trees_Types_node *rebalance_avl(Impl_Trees_Types_node *ptr)
     }
     else if (rh > lh + 1ULL)
     {
-      Impl_Trees_Types_node r_node = *node.right;
+      Impl_Trees_Cast_M_node r_node = *node.right;
       uint64_t rlh;
       if (r_node.left == NULL)
         rlh = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *r_node.left;
+        Impl_Trees_Cast_M_node node1 = *r_node.left;
         rlh = node1.height;
       }
       uint64_t rrh;
@@ -666,7 +679,7 @@ static Impl_Trees_Types_node *rebalance_avl(Impl_Trees_Types_node *ptr)
         rrh = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *r_node.right;
+        Impl_Trees_Cast_M_node node1 = *r_node.right;
         rrh = node1.height;
       }
       if (rlh > rrh)
@@ -679,34 +692,34 @@ static Impl_Trees_Types_node *rebalance_avl(Impl_Trees_Types_node *ptr)
   }
 }
 
-Impl_Trees_Types_node
+Impl_Trees_Cast_M_node
 *Impl_AVL_M_insert_avl(
-  Impl_Trees_Types_node *(*f1)(Impl_Trees_Types_node x0),
-  void (*f2)(Impl_Trees_Types_node *x0),
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
   bool r,
-  Impl_Trees_Types_node *ptr,
-  Impl_Trees_Types_data new_data
+  Impl_Trees_Cast_M_node *ptr,
+  Impl_Trees_Cast_M_data new_data
 )
 {
   if (ptr == NULL)
   {
-    Impl_Trees_Types_node *l = NULL;
-    Impl_Trees_Types_node *r1 = NULL;
+    Impl_Trees_Cast_M_node *l = NULL;
+    Impl_Trees_Cast_M_node *r1 = NULL;
     uint64_t sr = 1ULL;
     uint64_t hr = 1ULL;
-    Impl_Trees_Types_node
+    Impl_Trees_Cast_M_node
     n = { .data = new_data, .left = l, .right = r1, .size = sr, .height = hr };
-    Impl_Trees_Types_node *ptr1 = f1(n);
+    Impl_Trees_Cast_M_node *ptr1 = f1(n);
     return ptr1;
   }
   else
   {
-    Impl_Trees_Types_node node = *ptr;
-    int64_t delta = Impl_Trees_Types_cmp(node.data, new_data);
+    Impl_Trees_Cast_M_node node = *ptr;
+    int64_t delta = Impl_Trees_Cast_M_cmp(node.data, new_data);
     if (delta == (int64_t)0)
       if (r)
       {
-        Impl_Trees_Types_node
+        Impl_Trees_Cast_M_node
         new_node =
           {
             .data = new_data, .left = node.left, .right = node.right, .size = node.size,
@@ -719,13 +732,13 @@ Impl_Trees_Types_node
         return ptr;
     else if (delta > (int64_t)0)
     {
-      Impl_Trees_Types_node *new_left = Impl_AVL_M_insert_avl(f1, f2, r, node.left, new_data);
+      Impl_Trees_Cast_M_node *new_left = Impl_AVL_M_insert_avl(f1, f2, r, node.left, new_data);
       uint64_t s1;
       if (new_left == NULL)
         s1 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *new_left;
+        Impl_Trees_Cast_M_node node1 = *new_left;
         s1 = node1.size;
       }
       uint64_t s2;
@@ -733,7 +746,7 @@ Impl_Trees_Types_node
         s2 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *node.right;
+        Impl_Trees_Cast_M_node node1 = *node.right;
         s2 = node1.size;
       }
       uint64_t s = s1 + s2 + 1ULL;
@@ -742,7 +755,7 @@ Impl_Trees_Types_node
         h1 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *new_left;
+        Impl_Trees_Cast_M_node node1 = *new_left;
         h1 = node1.height;
       }
       uint64_t h2;
@@ -750,7 +763,7 @@ Impl_Trees_Types_node
         h2 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *node.right;
+        Impl_Trees_Cast_M_node node1 = *node.right;
         h2 = node1.height;
       }
       uint64_t ite;
@@ -759,21 +772,21 @@ Impl_Trees_Types_node
       else
         ite = h2;
       uint64_t h = ite + 1ULL;
-      Impl_Trees_Types_node
+      Impl_Trees_Cast_M_node
       n = { .data = node.data, .left = new_left, .right = node.right, .size = s, .height = h };
       *ptr = n;
-      Impl_Trees_Types_node *new_ptr = ptr;
+      Impl_Trees_Cast_M_node *new_ptr = ptr;
       return rebalance_avl(new_ptr);
     }
     else
     {
-      Impl_Trees_Types_node *new_right = Impl_AVL_M_insert_avl(f1, f2, r, node.right, new_data);
+      Impl_Trees_Cast_M_node *new_right = Impl_AVL_M_insert_avl(f1, f2, r, node.right, new_data);
       uint64_t s1;
       if (node.left == NULL)
         s1 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *node.left;
+        Impl_Trees_Cast_M_node node1 = *node.left;
         s1 = node1.size;
       }
       uint64_t s2;
@@ -781,7 +794,7 @@ Impl_Trees_Types_node
         s2 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *new_right;
+        Impl_Trees_Cast_M_node node1 = *new_right;
         s2 = node1.size;
       }
       uint64_t s = s1 + s2 + 1ULL;
@@ -790,7 +803,7 @@ Impl_Trees_Types_node
         h1 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *node.left;
+        Impl_Trees_Cast_M_node node1 = *node.left;
         h1 = node1.height;
       }
       uint64_t h2;
@@ -798,7 +811,7 @@ Impl_Trees_Types_node
         h2 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *new_right;
+        Impl_Trees_Cast_M_node node1 = *new_right;
         h2 = node1.height;
       }
       uint64_t ite;
@@ -807,10 +820,10 @@ Impl_Trees_Types_node
       else
         ite = h2;
       uint64_t h = ite + 1ULL;
-      Impl_Trees_Types_node
+      Impl_Trees_Cast_M_node
       n = { .data = node.data, .left = node.left, .right = new_right, .size = s, .height = h };
       *ptr = n;
-      Impl_Trees_Types_node *new_ptr = ptr;
+      Impl_Trees_Cast_M_node *new_ptr = ptr;
       return rebalance_avl(new_ptr);
     }
   }
@@ -818,15 +831,15 @@ Impl_Trees_Types_node
 
 Impl_AVL_M_result
 Impl_AVL_M_remove_leftmost_avl(
-  Impl_Trees_Types_node *(*f1)(Impl_Trees_Types_node x0),
-  void (*f2)(Impl_Trees_Types_node *x0),
-  Impl_Trees_Types_node *ptr
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
+  Impl_Trees_Cast_M_node *ptr
 )
 {
-  Impl_Trees_Types_node node = *ptr;
+  Impl_Trees_Cast_M_node node = *ptr;
   if (node.left == NULL)
   {
-    Impl_Trees_Types_data data = node.data;
+    Impl_Trees_Cast_M_data data = node.data;
     f2(ptr);
     return ((Impl_AVL_M_result){ .ptr = node.right, .data = data });
   }
@@ -838,7 +851,7 @@ Impl_AVL_M_remove_leftmost_avl(
       s1 = 0ULL;
     else
     {
-      Impl_Trees_Types_node node1 = *r0.ptr;
+      Impl_Trees_Cast_M_node node1 = *r0.ptr;
       s1 = node1.size;
     }
     uint64_t s2;
@@ -846,7 +859,7 @@ Impl_AVL_M_remove_leftmost_avl(
       s2 = 0ULL;
     else
     {
-      Impl_Trees_Types_node node1 = *node.right;
+      Impl_Trees_Cast_M_node node1 = *node.right;
       s2 = node1.size;
     }
     uint64_t s = s1 + s2 + 1ULL;
@@ -855,7 +868,7 @@ Impl_AVL_M_remove_leftmost_avl(
       h1 = 0ULL;
     else
     {
-      Impl_Trees_Types_node node1 = *r0.ptr;
+      Impl_Trees_Cast_M_node node1 = *r0.ptr;
       h1 = node1.height;
     }
     uint64_t h2;
@@ -863,7 +876,7 @@ Impl_AVL_M_remove_leftmost_avl(
       h2 = 0ULL;
     else
     {
-      Impl_Trees_Types_node node1 = *node.right;
+      Impl_Trees_Cast_M_node node1 = *node.right;
       h2 = node1.height;
     }
     uint64_t ite;
@@ -872,32 +885,32 @@ Impl_AVL_M_remove_leftmost_avl(
     else
       ite = h2;
     uint64_t h = ite + 1ULL;
-    Impl_Trees_Types_node
+    Impl_Trees_Cast_M_node
     n = { .data = node.data, .left = r0.ptr, .right = node.right, .size = s, .height = h };
     *ptr = n;
-    Impl_Trees_Types_node *new_ptr = ptr;
-    Impl_Trees_Types_node *new_ptr1 = rebalance_avl(new_ptr);
+    Impl_Trees_Cast_M_node *new_ptr = ptr;
+    Impl_Trees_Cast_M_node *new_ptr1 = rebalance_avl(new_ptr);
     return ((Impl_AVL_M_result){ .ptr = new_ptr1, .data = r0.data });
   }
 }
 
-Impl_Trees_Types_node
+Impl_Trees_Cast_M_node
 *Impl_AVL_M_delete_avl(
-  Impl_Trees_Types_node *(*f1)(Impl_Trees_Types_node x0),
-  void (*f2)(Impl_Trees_Types_node *x0),
-  Impl_Trees_Types_node *ptr,
-  Impl_Trees_Types_data data_to_rm
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
+  Impl_Trees_Cast_M_node *ptr,
+  Impl_Trees_Cast_M_data data_to_rm
 )
 {
   if (ptr == NULL)
     return ptr;
   else
   {
-    Impl_Trees_Types_node node = *ptr;
-    int64_t delta = Impl_Trees_Types_cmp(data_to_rm, node.data);
+    Impl_Trees_Cast_M_node node = *ptr;
+    int64_t delta = Impl_Trees_Cast_M_cmp(data_to_rm, node.data);
     if (delta == (int64_t)0)
     {
-      Impl_Trees_Types_node node1 = *ptr;
+      Impl_Trees_Cast_M_node node1 = *ptr;
       if (node1.right == NULL)
       {
         f2(ptr);
@@ -916,7 +929,7 @@ Impl_Trees_Types_node
           s1 = 0ULL;
         else
         {
-          Impl_Trees_Types_node node2 = *node1.left;
+          Impl_Trees_Cast_M_node node2 = *node1.left;
           s1 = node2.size;
         }
         uint64_t s2;
@@ -924,7 +937,7 @@ Impl_Trees_Types_node
           s2 = 0ULL;
         else
         {
-          Impl_Trees_Types_node node2 = *r0.ptr;
+          Impl_Trees_Cast_M_node node2 = *r0.ptr;
           s2 = node2.size;
         }
         uint64_t s = s1 + s2 + 1ULL;
@@ -933,7 +946,7 @@ Impl_Trees_Types_node
           h1 = 0ULL;
         else
         {
-          Impl_Trees_Types_node node2 = *node1.left;
+          Impl_Trees_Cast_M_node node2 = *node1.left;
           h1 = node2.height;
         }
         uint64_t h2;
@@ -941,7 +954,7 @@ Impl_Trees_Types_node
           h2 = 0ULL;
         else
         {
-          Impl_Trees_Types_node node2 = *r0.ptr;
+          Impl_Trees_Cast_M_node node2 = *r0.ptr;
           h2 = node2.height;
         }
         uint64_t ite;
@@ -950,23 +963,23 @@ Impl_Trees_Types_node
         else
           ite = h2;
         uint64_t h = ite + 1ULL;
-        Impl_Trees_Types_node
+        Impl_Trees_Cast_M_node
         n = { .data = r0.data, .left = node1.left, .right = r0.ptr, .size = s, .height = h };
         *ptr = n;
-        Impl_Trees_Types_node *new_ptr = ptr;
-        Impl_Trees_Types_node *new_ptr1 = rebalance_avl(new_ptr);
+        Impl_Trees_Cast_M_node *new_ptr = ptr;
+        Impl_Trees_Cast_M_node *new_ptr1 = rebalance_avl(new_ptr);
         return new_ptr1;
       }
     }
     else if (delta < (int64_t)0)
     {
-      Impl_Trees_Types_node *new_left = Impl_AVL_M_delete_avl(f1, f2, node.left, data_to_rm);
+      Impl_Trees_Cast_M_node *new_left = Impl_AVL_M_delete_avl(f1, f2, node.left, data_to_rm);
       uint64_t s1;
       if (new_left == NULL)
         s1 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *new_left;
+        Impl_Trees_Cast_M_node node1 = *new_left;
         s1 = node1.size;
       }
       uint64_t s2;
@@ -974,7 +987,7 @@ Impl_Trees_Types_node
         s2 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *node.right;
+        Impl_Trees_Cast_M_node node1 = *node.right;
         s2 = node1.size;
       }
       uint64_t s = s1 + s2 + 1ULL;
@@ -983,7 +996,7 @@ Impl_Trees_Types_node
         h1 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *new_left;
+        Impl_Trees_Cast_M_node node1 = *new_left;
         h1 = node1.height;
       }
       uint64_t h2;
@@ -991,7 +1004,7 @@ Impl_Trees_Types_node
         h2 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *node.right;
+        Impl_Trees_Cast_M_node node1 = *node.right;
         h2 = node1.height;
       }
       uint64_t ite;
@@ -1000,21 +1013,21 @@ Impl_Trees_Types_node
       else
         ite = h2;
       uint64_t h = ite + 1ULL;
-      Impl_Trees_Types_node
+      Impl_Trees_Cast_M_node
       n = { .data = node.data, .left = new_left, .right = node.right, .size = s, .height = h };
       *ptr = n;
-      Impl_Trees_Types_node *new_ptr = ptr;
+      Impl_Trees_Cast_M_node *new_ptr = ptr;
       return rebalance_avl(new_ptr);
     }
     else
     {
-      Impl_Trees_Types_node *new_right = Impl_AVL_M_delete_avl(f1, f2, node.right, data_to_rm);
+      Impl_Trees_Cast_M_node *new_right = Impl_AVL_M_delete_avl(f1, f2, node.right, data_to_rm);
       uint64_t s1;
       if (node.left == NULL)
         s1 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *node.left;
+        Impl_Trees_Cast_M_node node1 = *node.left;
         s1 = node1.size;
       }
       uint64_t s2;
@@ -1022,7 +1035,7 @@ Impl_Trees_Types_node
         s2 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *new_right;
+        Impl_Trees_Cast_M_node node1 = *new_right;
         s2 = node1.size;
       }
       uint64_t s = s1 + s2 + 1ULL;
@@ -1031,7 +1044,7 @@ Impl_Trees_Types_node
         h1 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *node.left;
+        Impl_Trees_Cast_M_node node1 = *node.left;
         h1 = node1.height;
       }
       uint64_t h2;
@@ -1039,7 +1052,7 @@ Impl_Trees_Types_node
         h2 = 0ULL;
       else
       {
-        Impl_Trees_Types_node node1 = *new_right;
+        Impl_Trees_Cast_M_node node1 = *new_right;
         h2 = node1.height;
       }
       uint64_t ite;
@@ -1048,29 +1061,29 @@ Impl_Trees_Types_node
       else
         ite = h2;
       uint64_t h = ite + 1ULL;
-      Impl_Trees_Types_node
+      Impl_Trees_Cast_M_node
       n = { .data = node.data, .left = node.left, .right = new_right, .size = s, .height = h };
       *ptr = n;
-      Impl_Trees_Types_node *new_ptr = ptr;
+      Impl_Trees_Cast_M_node *new_ptr = ptr;
       return rebalance_avl(new_ptr);
     }
   }
 }
 
-static size_t snd__Prims_dtuple2__uint8_t_____size_t(Impl_Trees_Types_data x)
+static size_t snd__Prims_dtuple2__uint8_t_____size_t(Impl_Trees_Cast_M_data x)
 {
   return x.snd;
 }
 
 FStar_Pervasives_Native_option__size_t
-Map_M_find(Impl_Trees_Types_node *ptr, Impl_Trees_Types_data v)
+Map_M_find(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v)
 {
   if (ptr == NULL)
     return ((FStar_Pervasives_Native_option__size_t){ .tag = FStar_Pervasives_Native_None });
   else
   {
-    Impl_Trees_Types_node node = *ptr;
-    int64_t delta = Impl_Trees_Types_cmp(v, node.data);
+    Impl_Trees_Cast_M_node node = *ptr;
+    int64_t delta = Impl_Trees_Cast_M_cmp(v, node.data);
     if (delta == (int64_t)0)
     {
       size_t r = snd__Prims_dtuple2__uint8_t_____size_t(node.data);
@@ -1090,12 +1103,10 @@ Map_M_find(Impl_Trees_Types_node *ptr, Impl_Trees_Types_data v)
   }
 }
 
-extern Impl_Trees_Types_node **mmap_ptr_metadata(void);
-
 void init_mmap_md(mmap_md *ret)
 {
-  Impl_Trees_Types_node **ptr = mmap_ptr_metadata();
-  Impl_Trees_Types_node *tree = NULL;
+  Impl_Trees_Cast_M_node **ptr = mmap_ptr_metadata();
+  Impl_Trees_Cast_M_node *tree = NULL;
   *ptr = tree;
   Steel_SpinLock_new_lock(&ret->lock);
   ret->data = ptr;
@@ -1103,56 +1114,57 @@ void init_mmap_md(mmap_md *ret)
 
 mmap_md metadata;
 
-static Impl_Trees_Types_node *trees_malloc2(Impl_Trees_Types_node x)
+static Impl_Trees_Cast_M_node *trees_malloc2(Impl_Trees_Cast_M_node x)
 {
   Steel_SpinLock_acquire(&Impl_Trees_Types_metadata_slabs.lock);
   uint8_t *ptr = SizeClass_allocate_size_class(Impl_Trees_Types_metadata_slabs.scs);
-  Impl_Trees_Types_node *r;
+  Impl_Trees_Cast_M_node *r0;
   if (ptr == NULL)
-    r = NULL;
+  {
+    Impl_Trees_Cast_M_node *r = FatalError_die_from_avl_node_malloc_failure(x, ptr);
+    r0 = r;
+  }
   else
   {
-    Impl_Trees_Types_node *r_ = Impl_Trees_Types_array_u8__to__ref_node(ptr);
+    Impl_Trees_Cast_M_node *r_ = Impl_Trees_Cast_M_array_u8__to__ref_node(ptr);
     *r_ = x;
-    r = r_;
+    r0 = r_;
   }
   Steel_SpinLock_release(&Impl_Trees_Types_metadata_slabs.lock);
-  Impl_Trees_Types_node *r0 = r;
-  return r0;
+  Impl_Trees_Cast_M_node *r = r0;
+  return r;
 }
 
-static void trees_free2(Impl_Trees_Types_node *r)
+static void trees_free2(Impl_Trees_Cast_M_node *r)
 {
   Steel_SpinLock_acquire(&Impl_Trees_Types_metadata_slabs.lock);
-  uint8_t *ptr = Impl_Trees_Types_ref_node__to__array_u8(r);
+  uint8_t *ptr = Impl_Trees_Cast_M_ref_node__to__array_u8(r);
   uint8_t *pt0 = ptr;
   uint8_t *pt1 = Impl_Trees_Types_metadata_slabs.slab_region;
   ptrdiff_t diff = pt0 - pt1;
   size_t diff_sz = (size_t)diff;
   bool b = SizeClass_deallocate_size_class(Impl_Trees_Types_metadata_slabs.scs, ptr, diff_sz);
-  if (b)
-  {
-
-  }
+  if (!b)
+    FatalError_die_from_avl_node_free_failure(ptr);
   Steel_SpinLock_release(&Impl_Trees_Types_metadata_slabs.lock);
 }
 
 static uint8_t *large_malloc(size_t size)
 {
   Steel_SpinLock_acquire(&metadata.lock);
-  Impl_Trees_Types_node *md_v0 = *metadata.data;
+  Impl_Trees_Cast_M_node *md_v0 = *metadata.data;
   uint64_t md_size;
   if (md_v0 == NULL)
     md_size = 0ULL;
   else
   {
-    Impl_Trees_Types_node node = *md_v0;
+    Impl_Trees_Cast_M_node node = *md_v0;
     md_size = node.size;
   }
   uint8_t *r;
   if (md_size < 18446744073709551615ULL)
   {
-    Impl_Trees_Types_node *md_v = *metadata.data;
+    Impl_Trees_Cast_M_node *md_v = *metadata.data;
     uint8_t *ptr0 = mmap_u8(size);
     uint8_t *ptr;
     if (ptr0 == NULL)
@@ -1160,18 +1172,18 @@ static uint8_t *large_malloc(size_t size)
     else
     {
       size_t size_ = PtrdiffWrapper_mmap_actual_size(size);
-      bool b = Impl_BST_M_member(md_v, ((Impl_Trees_Types_data){ .fst = ptr0, .snd = size_ }));
+      bool b = Impl_BST_M_member(md_v, ((Impl_Trees_Cast_M_data){ .fst = ptr0, .snd = size_ }));
       if (b)
         ptr = NULL;
       else
       {
-        Impl_Trees_Types_node
+        Impl_Trees_Cast_M_node
         *md_v_ =
           Impl_AVL_M_insert_avl(trees_malloc2,
             trees_free2,
             false,
             md_v,
-            ((Impl_Trees_Types_data){ .fst = ptr0, .snd = size_ }));
+            ((Impl_Trees_Cast_M_data){ .fst = ptr0, .snd = size_ }));
         *metadata.data = md_v_;
         ptr = ptr0;
       }
@@ -1196,8 +1208,8 @@ static bool uu___is_Some__size_t(FStar_Pervasives_Native_option__size_t projecte
 static bool large_free(uint8_t *ptr)
 {
   Steel_SpinLock_acquire(&metadata.lock);
-  Impl_Trees_Types_node *md_v = *metadata.data;
-  Impl_Trees_Types_data k_elem = { .fst = ptr, .snd = (size_t)0U };
+  Impl_Trees_Cast_M_node *md_v = *metadata.data;
+  Impl_Trees_Cast_M_data k_elem = { .fst = ptr, .snd = (size_t)0U };
   FStar_Pervasives_Native_option__size_t size = Map_M_find(md_v, k_elem);
   bool r;
   if (uu___is_Some__size_t(size))
@@ -1208,12 +1220,12 @@ static bool large_free(uint8_t *ptr)
     else
       size1 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
     munmap_u8(ptr, size1);
-    Impl_Trees_Types_node
+    Impl_Trees_Cast_M_node
     *md_v_ =
       Impl_AVL_M_delete_avl(trees_malloc2,
         trees_free2,
         md_v,
-        ((Impl_Trees_Types_data){ .fst = ptr, .snd = size1 }));
+        ((Impl_Trees_Cast_M_data){ .fst = ptr, .snd = size1 }));
     *metadata.data = md_v_;
     r = true;
   }
@@ -1224,11 +1236,11 @@ static bool large_free(uint8_t *ptr)
   return b;
 }
 
-static size_t large_getsize_aux(Impl_Trees_Types_node **metadata1, uint8_t *ptr)
+static size_t large_getsize_aux(Impl_Trees_Cast_M_node **metadata1, uint8_t *ptr)
 {
-  Impl_Trees_Types_node *md_v = *metadata1;
+  Impl_Trees_Cast_M_node *md_v = *metadata1;
   FStar_Pervasives_Native_option__size_t
-  size = Map_M_find(md_v, ((Impl_Trees_Types_data){ .fst = ptr, .snd = (size_t)0U }));
+  size = Map_M_find(md_v, ((Impl_Trees_Cast_M_data){ .fst = ptr, .snd = (size_t)0U }));
   if (uu___is_Some__size_t(size))
     if (size.tag == FStar_Pervasives_Native_Some)
       return size.v;
@@ -2231,7 +2243,7 @@ uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
         return ptr;
       else
       {
-        StarMalloc_malloc_zeroing_die(ptr);
+        FatalError_die_from_malloc_zeroing_check_failure(ptr);
         return NULL;
       }
     }
@@ -2266,7 +2278,7 @@ uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size
           return ptr;
         else
         {
-          StarMalloc_malloc_zeroing_die(ptr);
+          FatalError_die_from_malloc_zeroing_check_failure(ptr);
           return NULL;
         }
       }
@@ -2338,7 +2350,10 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
     if (b)
       return NULL;
     else
+    {
+      FatalError_die_from_realloc_free_failure(ptr);
       return NULL;
+    }
   }
   else
   {
@@ -2360,7 +2375,10 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
     bool
     large_case_optim_condition = !old_allocation_is_small && same_case && new_size <= old_size;
     if (old_size == (size_t)0U)
+    {
+      FatalError_die_from_realloc_invalid_previous_alloc(ptr);
       return NULL;
+    }
     else if (small_case_optim_condition || large_case_optim_condition)
       return ptr;
     else
@@ -2380,7 +2398,10 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
         if (b)
           return new_ptr;
         else
+        {
+          FatalError_die_from_realloc_free_failure(ptr);
           return NULL;
+        }
       }
     }
   }

@@ -23,9 +23,9 @@ size_t builtin_mul_overflow(size_t x, size_t y) {
 }
 
 // required comparison using uintptr_t
-uint64_t Impl_Trees_Types_cmp(
-  Impl_Trees_Types_data x,
-  Impl_Trees_Types_data y) {
+uint64_t Impl_Trees_Cast_M_cmp(
+  Impl_Trees_Cast_M_data x,
+  Impl_Trees_Cast_M_data y) {
   uintptr_t x_cast = (uintptr_t) x.fst;
   uintptr_t y_cast = (uintptr_t) y.fst;
   if (x_cast == y_cast) {
@@ -43,26 +43,38 @@ uint8_t* memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
 }
 
 // monomorphized (from void* to uint8_t*) glue
-// TODO: memset can be optimized, use hacl-star libmemzero
+// TODO: compat, use hacl-star libmemzero
 void apply_zeroing_u8(uint8_t* dest, size_t n) {
   explicit_bzero(dest, n);
   return;
 }
 
 // required casts
-Impl_Trees_Types_node* Impl_Trees_Types_array_u8__to__ref_node(uint8_t* arr) {
+Impl_Trees_Cast_M_node* Impl_Trees_Cast_M_array_u8__to__ref_node(uint8_t* arr) {
   // see lib_avl_mono/Impl.Trees.Types.fst
-  static_assert(sizeof(Impl_Trees_Types_node) <= 64);
-  return (Impl_Trees_Types_node*) arr;
+  static_assert(sizeof(Impl_Trees_Cast_M_node) <= 64);
+  return (Impl_Trees_Cast_M_node*) arr;
 }
-uint8_t* Impl_Trees_Types_ref_node__to__array_u8(Impl_Trees_Types_node* r) {
+uint8_t* Impl_Trees_Cast_M_ref_node__to__array_u8(Impl_Trees_Cast_M_node* r) {
   return (uint8_t*) r;
 }
 
-// TODO: comment
-void StarMalloc_malloc_zeroing_die(uint8_t* ptr) {
-  fatal_error("malloc_zeroing_die");
+void FatalError_die_from_avl_node_malloc_failure (Impl_Trees_Cast_M_node x, uint8_t* ptr) {
+  fatal_error("large allocator: AVL node allocation failed");
 }
+void FatalError_die_from_avl_node_free_failure (uint8_t* ptr) {
+  fatal_error("large allocator: AVL node deallocation failed");
+}
+void FatalError_die_from_malloc_zeroing_check_failure (uint8_t* ptr) {
+  fatal_error("small allocator: malloc zeroing check failed");
+}
+void FatalError_die_from_realloc_invalid_previous_alloc (uint8_t* ptr) {
+  fatal_error("realloc: invalid realloc");
+}
+void FatalError_die_from_realloc_free_failure (uint8_t* ptr) {
+  fatal_error("realloc: invalid internal free");
+}
+
 
 bool check_zeroing_u8(uint8_t* ptr, size_t len) {
   for (size_t i = 0; i < len; i++) {

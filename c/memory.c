@@ -117,6 +117,6 @@ uint32_t* mmap_sizes_init (size_t len) {
 }
 
 // large allocator init
-Impl_Trees_Types_node** mmap_ptr_metadata() {
-  return (Impl_Trees_Types_node**) mmap_init(sizeof(Impl_Trees_Types_node*));
+Impl_Trees_Cast_M_node** mmap_ptr_metadata() {
+  return (Impl_Trees_Cast_M_node**) mmap_init(sizeof(Impl_Trees_Cast_M_node*));
 }
