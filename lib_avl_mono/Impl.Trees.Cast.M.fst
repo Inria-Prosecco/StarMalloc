@@ -47,9 +47,6 @@ assume val cmp
     forall (x y: data). I64.v (f x y) == 0 ==> fst x == fst y
   }
 
-
-
-
 assume val ref_node__to__array_u8_tot
   (x: R.ref node)
   : Pure (G.erased (array U8.t))
@@ -92,7 +89,6 @@ assume val array_u8__to__ref_node
     r == G.reveal (array_u8__to__ref_node_tot arr)
   )
 
-//CAUTION
 assume val array_u8__to__ref_node_bijectivity
   (ptr: array U8.t)
   : Lemma
