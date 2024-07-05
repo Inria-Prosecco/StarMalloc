@@ -91,7 +91,7 @@ extern void FatalError_die_from_realloc_invalid_previous_alloc(uint8_t *ptr);
 
 extern void FatalError_die_from_realloc_free_failure(uint8_t *ptr);
 
-extern Impl_Trees_Cast_M_node **mmap_ptr_metadata(void);
+extern Impl_Trees_Cast_M_node **mmap_ptr_metadata_init(void);
 
 bool Impl_BST_M_member(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v)
 {
@@ -1105,7 +1105,7 @@ Map_M_find(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v)
 
 void init_mmap_md(mmap_md *ret)
 {
-  Impl_Trees_Cast_M_node **ptr = mmap_ptr_metadata();
+  Impl_Trees_Cast_M_node **ptr = mmap_ptr_metadata_init();
   Impl_Trees_Cast_M_node *tree = NULL;
   *ptr = tree;
   Steel_SpinLock_new_lock(&ret->lock);

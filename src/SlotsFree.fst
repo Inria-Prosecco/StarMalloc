@@ -583,7 +583,7 @@ val deallocate_zeroing
 let deallocate_zeroing size_class ptr
   =
   if enable_zeroing_free then (
-    apply_zeroing_u8 ptr (US.of_u32 size_class)
+    apply_zeroing_u8 ptr (US.uint32_to_sizet size_class)
   ) else (
     return ()
   )

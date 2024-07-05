@@ -104,9 +104,6 @@ assume val mmap_sizes_init (len: US.t)
       A.is_full_array r
     )
 
-// used in src/LargeAlloc.fst
-// mmap_ptr_metadata
-
 /// 2) Large allocations wrappers
 
 open NullOrVarray

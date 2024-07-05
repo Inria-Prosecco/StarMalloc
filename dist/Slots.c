@@ -89,7 +89,10 @@ static uint32_t deallocate_slot_aux1(uint32_t size_class, uint32_t diff)
   return diff / size_class;
 }
 
-extern void SlotsFree_deallocate_zeroing(uint32_t size_class, uint8_t *ptr);
+static void deallocate_zeroing(uint32_t size_class, uint8_t *ptr)
+{
+  apply_zeroing_u8(ptr, (size_t)size_class);
+}
 
 static bool deallocate_slot_(uint32_t size_class, uint64_t *md, uint8_t *ptr, size_t diff_)
 {
@@ -102,7 +105,7 @@ static bool deallocate_slot_(uint32_t size_class, uint64_t *md, uint8_t *ptr, si
     if (b1)
     {
       Bitmap5_bm_unset(md, pos);
-      SlotsFree_deallocate_zeroing(size_class, ptr);
+      deallocate_zeroing(size_class, ptr);
       return true;
     }
     else
