@@ -28,8 +28,7 @@ noextract
 unfold let slab_metadata = r:array U64.t{A.length r = 4}
 
 // abstract property that the underlying pointer v-bytes aligned
-//assume
-val array_u8_alignment (arr: array U8.t) (v: U32.t{U32.v v > 0}): prop
+assume val array_u8_alignment (arr: array U8.t) (v: U32.t{U32.v v > 0}): prop
 
 // no model for the memory considered as the "root" array in a tree-like representation
 // thus, this *axiom* is required
@@ -37,8 +36,7 @@ val array_u8_alignment (arr: array U8.t) (v: U32.t{U32.v v > 0}): prop
 // that v1 is a multiple of v2,
 // then forall k,
 // then arr[k * v2] is v2-bytes aligned
-//assume
-val array_u8_alignment_lemma
+assume val array_u8_alignment_lemma
   (arr1 arr2: array U8.t)
   (v1 v2: (v:U32.t{U32.v v > 0}))
   : Lemma
