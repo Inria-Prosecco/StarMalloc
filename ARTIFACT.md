@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This artifact is in support of OOPSLA'24 paper 590.
+This artifact is in support of OOPSLA'24 paper 590, StarMalloc: Verifying a Modern, Hardened Memory Allocator.
 
 There are two independant parts in this artifact.
 1. StarMalloc source is included as a proof artifact in order to support the paper's formal verification claims.
@@ -23,28 +23,28 @@ As StarMalloc is written using a CSL, it is memory-safe.
 
 Following the paper apparition order:
 + Allocator APIs (section 3.1): Main theorem of (functional) correctness, present in file `src/StarMalloc.fst`
-+ `starseq` combinator and lemmas (section 3.2): `lib_misc/SteelStarSeqUtils.fst`
-+ `arraylist` datastructure (section 3.3): `lib_list/ArrayListGen.fst`
++ `starseq` combinator and lemmas (section 3.2): `lib_misc/SteelStarSeqUtils.fsti`
++ `arraylist` datastructure (section 3.3): `lib_list/ArrayListGen.fsti`, named `varraylist` in code`
 + `starseq` is used for both slots and slabs (section 3.4):
-  - slabs, in `src/SlabsCommon.fst`: `left_vprop` describing the state of the memory currently used, relies on `left_vprop2`, itself relying on `starseq`
-  - slots, in `src/SlotsAlloc.fst`: `slab_vprop` describing the state of one slab (and thus many slots), relies on `slab_vprop_aux`, itself relying on `starseq`
+  - slabs_sl, in `src/SlabsCommon.fsti`: `left_vprop` describing the state of the memory currently used, relies on `left_vprop2`, itself relying on `starseq`
+  - slots_sl, in `src/SlotsAlloc.fst`: `slab_vprop` describing the state of one slab (and thus many slots), relies on `slab_vprop_aux`, itself relying on `starseq`
 + Reusing the Slab Allocator (section 3.4): `src/LargeAlloc.fst`, e.g. the `trees_malloc2` function reusing the slab allocator `SizeClass.allocate_size_class` function
-+ Configurability (section 3.5): Generic size classes in `Config.fst`, many configuration switches behind the interface
++ Configurability (section 3.5): Generic size classes in `src/Config.fsti`, many configuration switches behind the interface
 
 StarMalloc is already verified and extracted as part of the VM.
 To reverify it from scratch: `make clean && make lib`. (`make lib -j 1` for systems with <=8 GiB of RAM, `make lib -j 3` for systems with <=16GiB of RAM, `make lib -j` otherwise).
-Proofs based on SMT can be unstable, in case of error please try the following command: `OTHERFLAGS="--z3rlimit_factor 4"` to raise timeouts.
+Proofs based on SMT can be unstable, in case of error please try the following command: `OTHERFLAGS="--z3rlimit_factor 4" make lib` to raise timeouts.
 Total time expected: ~30 minutes on a modern machine with 16GiB of RAM.
 
 2. Experimental evaluation on mimalloc-bench
 mimalloc-bench is an already existing memory allocator benchmarking suite.
 The artifact VM contains a prebuilt version of mimalloc-bench.
 We observe variance across machines, however the trends should be similar
-Running all of the allocators on all of the benchmarks can be especially slow.
+Running all of the allocators on all of the benchmarks can be especially slow, requiring several hours outside of the VM.
 A lighter version can be run using `bash ../../bench.sh sys hm st allt`, thus comparing 
 the system allocator (glibc allocator, `sys`), hardened\_malloc (`hm`), and StarMalloc (`st`) on all of the benchmarks.
 
-3. Firefox: as noted previously, a prebuilt version of Firefox with the required tweak (adding the `--disable-jemalloc` compilation flag) is not part of the artifact. Indeed, no graphical environment is part of the VM: as ICFP'24 submission guidelines put it, "Graphical environments in VMs are sometimes slow and unstable.". It has successfully been tested on Debian and Arch Linux with different Firefox versions throughout StarMalloc development. (TODO Aymeric wdyt?)
+3. Firefox: as noted previously, a prebuilt version of Firefox with the required tweak (adding the `--disable-jemalloc` compilation flag) is not part of the artifact. Indeed, no graphical environment is part of the VM: as ICFP'24 submission guidelines put it, "Graphical environments in VMs are sometimes slow and unstable.". It has successfully been tested on Debian and Arch Linux with different Firefox versions throughout StarMalloc development.
 
 ## Hardware Dependencies
 
@@ -71,7 +71,6 @@ We provide a full installed VM and sources.
 
 `cd ~/starMalloc`
 
-Claims:
 1. Proofs can be reverified: `make clean && make lib`. This can take quite some time, `make lib -j 1` should work on 8GiB systems, `make lib -j 3` should work on 16GiB systems and `make lib -j` on 32GiB systems.
 2. Checking for admitted proofs:
   + check for `admit` keyword in `*.fst{,i}` files: there should not be any occurrence in proofs
@@ -83,16 +82,13 @@ Claims:
   + `src/ArrayAlignment.fst`: array alignment (e.g. with respect to pages)
   + `src/FatalError.fst`: context-specific wrappers of the C `fatal_error` function (see `c/fatal_error.{c,h}`)
   + `lib_avl_mono/Impl.Trees.Cast.M`: mainly casts axiomatization, required to reuse the slab allocator for the AVL tree's nodes used as large allocations metadata
-4. Extracted files are up-to-date: once verification is done, `dist/` should still be up-to-date with respect to the git repository initial state. This can be checked using `git diff dist`.
+4. Once verification is done, the extracted C code can be found in `dist/`. In its initial state, the VM includes the generated code.
 
 ### Benchmarks artifact
 
-`cd ~/mimalloc-bench`
+The instructions to reproduce the experimental evaluation (Section 6) are as follows.
 
-Claims:
-1. StarMalloc can be executed on all `mimalloc-bench` benchmarks
-2. Performance is competitive with respect to `hardened_malloc`
-TODO
+`cd ~/mimalloc-bench`
 
 - (if StarMalloc has been tweaked and rebuilt, `cp ~/starmalloc/out/starmalloc.so extern/st/` to benchmark the correct version)
 - `cd out/bench`
@@ -106,7 +102,9 @@ TODO
   + time (sys)
   + page faults
   + page reclaims
+- Results in the paper have been normalized w.r.t. hardened_malloc.
 - `bash ../../bench.sh -h` can be used to select other allocators and/or benchmarks
+- (Not recommended) `bash ../../bench.sh alla allt` runs all allocators on all benchmarks, corresponding to the table in the appendix.
 
 ## Reusability Guide
 StarMalloc and corresponding benches have been tested on recent versions of Arch Linux, Debian unstable and (at least partially) NixOS.
