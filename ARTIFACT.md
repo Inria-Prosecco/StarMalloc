@@ -8,7 +8,7 @@ There are two independant parts in this artifact.
 1. StarMalloc source is included as a proof artifact in order to support the paper's formal verification claims.
 2. mimalloc-bench benchmarks are included in order to support the paper's experimental results.
 
-This artifact is shipped as a VM, repurposing the ICFP 2024 artifact VM. The only VM tweak are the following in the VM initialization script.
+This artifact is shipped as a VM, repurposing the ICFP 2024 artifact VM. The only VM tweaks are the following in the VM initialization script `script.sh`.
 - By default, all host's cores should be used: otherwise, some benchmarks would be meaningless.
 - By default, 16GiB is mapped to the VM instead of 4GiB. Please note that in case of insufficient RAM on the host, this setting can be tweaked and/or zRAM can be used.
 
@@ -54,7 +54,6 @@ Also, while 8/16GiB of RAM should be enough, 32GiB is recommended to speed up ve
 ## Getting Started Guide
 
 We provide a full installed VM and sources.
-TODO: Explain Nix and sources
 
 - QEMU should be installed.
 - Leveraging the ICFP 2024 artifact VM: `./start.sh` will start the VM.
@@ -95,6 +94,7 @@ Claims:
 2. Performance is competitive with respect to `hardened_malloc`
 TODO
 
+- (if StarMalloc has been tweaked and rebuilt, `cp ~/starmalloc/out/starmalloc.so extern/st/` to benchmark the correct version)
 - `cd out/bench`
 - `bash ../../bench.sh sys hm st allt` to bench the system allocator, hardened_malloc and StarMalloc on all benchmarks
 - Results should be copied into `benchres.csv`, which can be read in the following manner.
@@ -109,19 +109,9 @@ TODO
 - `bash ../../bench.sh -h` can be used to select other allocators and/or benchmarks
 
 ## Reusability Guide
-StarMalloc and corresponding benches have been tested on recent versions of Arch Linux, Debian unstable and (partially) NixOS.
+StarMalloc and corresponding benches have been tested on recent versions of Arch Linux, Debian unstable and (at least partially) NixOS.
+
 Components of the allocator should be reusable to build other allocators: the slab allocator is reused as part of the large allocator (AVL tree node allocation).
 Configurability of the allocator (many options in `src/Config.fst` and `src/Config.fsti`) should help to reuse some security mechanisms or specific features in other contexts. The many librairies (bitmaps, AVL tree, arraylist, `starseq` combinator) could be used as building blocks for other verified low-level programming projects.
 
 Finally, relying on the modular development organisation, it should be reasonable to add additional features such as security mechanisms, Android support or 16K page support.
-
-## References
-TODO: remove ?
-- https://proofartifacts.github.io/guidelines/index.html#guidelines-for-authors
-- https://github.com/daanx/mimalloc-bench
-- https://firefox-source-docs.mozilla.org/contributing/directory_structure.html or https://searchfox.org/mozilla-central/source
-- https://2024.splashcon.org/track/splash-2024-oopsla-artifacts#Call-for-Artifacts
-- https://proofartifacts.github.io/guidelines/index.html#guidelines-for-authors
-- https://icfp24.sigplan.org/track/icfp-2024-artifact-evaluation#Submission-Guidelines
-
-
