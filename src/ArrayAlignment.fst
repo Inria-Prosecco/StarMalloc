@@ -12,6 +12,8 @@ unfold let same_base_array (#a: Type) (arr1 arr2: array a)
   =
   A.base (A.ptr_of arr1) == A.base (A.ptr_of arr2)
 
+/// src/ArrayAlignment.fst contains axiomatization of array alignments.
+
 // abstract property that the underlying pointer v-bytes aligned
 assume val array_u8_alignment (arr: array U8.t) (v: U32.t{U32.v v > 0}): prop
 

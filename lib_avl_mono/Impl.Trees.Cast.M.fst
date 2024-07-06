@@ -15,6 +15,8 @@ module G = FStar.Ghost
 open Constants
 open Utils2
 
+/// lib_avl_mono/Impl.Trees.Cast.M.fst contains axiomatization that is required to reuse the slab allocator for the allocation of the large allocation metadata AVL tree's nodes. In particular, it consists mostly of corresponding casts.
+
 // this is a compilation-time assert, see c/utils.c static_assert usage
 assume val avl_data_size_aux : v:U32.t{U32.v v <= 64}
 

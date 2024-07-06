@@ -12,10 +12,7 @@ open Config
 open Utils2
 open NullOrVarray
 
-// fatal_error wrappers
-// these functions only perform a fatal_error call
-// thus, postcondition does not really matter as it is are tailored
-// to respect caller postcondition so that verification works
+/// src/FatalError.fst contains context-specific wrappers of the C fatal_error function.
 
 open Impl.Trees.Cast.M
 open Impl.Trees.Types
