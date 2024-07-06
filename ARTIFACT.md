@@ -120,7 +120,7 @@ When benchmarks are finished, `benchres.csv` should contain results.
 Then, to generate readable tables:
 - `cd ../../gen_table`
 - `python3 tabs.py ../out/bench/benchres.csv` will produce `tab.tex` containing two tables: execution time and RSS results
-- `python3 tabs2.py ../out/bench/benchres.csv` will produce `tabs-rss.tex` containing one table with both results
+- `python3 tabs2.py ../out/bench/benchres.csv` will produce `tabs2.tex` containing one table with both results
 
 ## Reusability Guide
 StarMalloc and corresponding benches have been tested on recent versions of Arch Linux, Debian unstable and (at least partially) NixOS.
