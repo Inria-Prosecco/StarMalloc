@@ -43,6 +43,7 @@ We observe variance across machines, however the trends should be similar
 Running all of the allocators on all of the benchmarks can be especially slow, requiring several hours outside of the VM.
 A lighter version can be run using `bash ../../bench.sh sys hm st allt`, thus comparing 
 the system allocator (glibc allocator, `sys`), hardened\_malloc (`hm`), and StarMalloc (`st`) on all of the benchmarks.
+Total time expected: ~15 minutes on a modern machine.
 
 3. Firefox: as noted previously, a prebuilt version of Firefox with the required tweak (adding the `--disable-jemalloc` compilation flag) is not part of the artifact. Indeed, no graphical environment is part of the VM: as ICFP'24 submission guidelines put it, "Graphical environments in VMs are sometimes slow and unstable.". It has successfully been tested on Debian and Arch Linux with different Firefox versions throughout StarMalloc development.
 
@@ -53,17 +54,26 @@ Also, while 8/16GiB of RAM should be enough, 32GiB is recommended to speed up ve
 
 ## Getting Started Guide
 
-We provide a full installed VM and sources.
+We provide a full installed VM (`VM.tar.zst`) and sources (`starmalloc.tar.gz`).
 
+1. VM:
 - QEMU should be installed.
+- `tar -xf VM.tar.zst`
 - Leveraging the ICFP 2024 artifact VM: `./start.sh` will start the VM.
 - Once started, one can use SSH to connect to the VM: `ssh -p 5555 artifact@localhost`, the password is `password`.
 - Structure of the artifact in `/home/artifact`:
   + verification software (F\*, Steel, KaRaMeL) is installed in `setup_verif`.
   + StarMalloc is installed in `starmalloc`.
   + mimalloc-bench is installed in `mimalloc-bench`.
-- To assess whether everything should work as expected in a very short time: `pushd starmalloc && make test-artifact && popd` should not display any error.
+- To assess whether everything should work as expected in a very short time: `bash test.sh` should not display any error (execution time: ~1 minute).
 - Internet access should not be required.
+
+2. sources
+- Nix should be installed
+- `tar -xf starmalloc.tar.gz`
+- `cd starmalloc && nix build`
+Please note that this installs `z3`, F\*, Steel, KaRaMeL and then builds StarMalloc.
+Total time expected: ~1h minutes on a modern machine with 16GiB of RAM.
 
 ## Step by Step Instructins
 
@@ -73,7 +83,7 @@ We provide a full installed VM and sources.
 
 1. Proofs can be reverified: `make clean && make lib`. This can take quite some time, `make lib -j 1` should work on 8GiB systems, `make lib -j 3` should work on 16GiB systems and `make lib -j` on 32GiB systems.
 2. Checking for admitted proofs:
-  + check for `admit` keyword in `*.fst{,i}` files: there should not be any occurrence in proofs
+  + check for `admit` keyword in `\*.fst{,i}` files: there should not be any occurrence in proofs
   + same for `assume keyword`: only `assume val` declarations should contain the `assume` keyword in proofs, as these declarations model C code (such as syscalls)
 3. Axioms with corresponding documentation are in the following files:
   + `src/ExternUtils.fst`: various compiler builtins/basic C code
@@ -82,7 +92,7 @@ We provide a full installed VM and sources.
   + `src/ArrayAlignment.fst`: array alignment (e.g. with respect to pages)
   + `src/FatalError.fst`: context-specific wrappers of the C `fatal_error` function (see `c/fatal_error.{c,h}`)
   + `lib_avl_mono/Impl.Trees.Cast.M`: mainly casts axiomatization, required to reuse the slab allocator for the AVL tree's nodes used as large allocations metadata
-4. Once verification is done, the extracted C code can be found in `dist/`. In its initial state, the VM includes the generated code.
+4. Once verification is done, the extracted C code can be found in `dist/`. In its initial state, the VM includes the generated code in `dist.bak/` to allow comparison.
 
 ### Benchmarks artifact
 
@@ -105,6 +115,12 @@ The instructions to reproduce the experimental evaluation (Section 6) are as fol
 - Results in the paper have been normalized w.r.t. hardened_malloc.
 - `bash ../../bench.sh -h` can be used to select other allocators and/or benchmarks
 - (Not recommended) `bash ../../bench.sh alla allt` runs all allocators on all benchmarks, corresponding to the table in the appendix.
+
+When benchmarks are finished, `benchres.csv` should contain results.
+Then, to generate readable tables:
+- `cd ../../gen_table`
+- `python3 tabs.py ../out/bench/benchres.csv` will produce `tab.tex` containing two tables: execution time and RSS results
+- `python3 tabs2.py ../out/bench/benchres.csv` will produce `tabs-rss.tex` containing one table with both results
 
 ## Reusability Guide
 StarMalloc and corresponding benches have been tested on recent versions of Arch Linux, Debian unstable and (at least partially) NixOS.
