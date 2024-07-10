@@ -8,6 +8,27 @@
 
 #include "../StarMalloc.h"
 
+typedef struct Impl_Trees_Cast_M_data_s
+{
+  uint8_t *fst;
+  size_t snd;
+}
+Impl_Trees_Cast_M_data;
+
+typedef struct Impl_Trees_Cast_M_node_s Impl_Trees_Cast_M_node;
+
+typedef struct Impl_Trees_Cast_M_node_s Impl_Trees_Cast_M_node;
+
+typedef struct Impl_Trees_Cast_M_node_s
+{
+  Impl_Trees_Cast_M_data data;
+  Impl_Trees_Cast_M_node *left;
+  Impl_Trees_Cast_M_node *right;
+  uint64_t size;
+  uint64_t height;
+}
+Impl_Trees_Cast_M_node;
+
 typedef struct Impl_Trees_Types_mmap_md_slabs_s
 {
   uint8_t *slab_region;
@@ -20,58 +41,37 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret);
 
 extern Impl_Trees_Types_mmap_md_slabs Impl_Trees_Types_metadata_slabs;
 
-typedef struct Impl_Trees_Types_data_s
-{
-  uint8_t *fst;
-  size_t snd;
-}
-Impl_Trees_Types_data;
+bool Impl_BST_M_member(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v);
 
-typedef struct Impl_Trees_Types_node_s Impl_Trees_Types_node;
-
-typedef struct Impl_Trees_Types_node_s Impl_Trees_Types_node;
-
-typedef struct Impl_Trees_Types_node_s
-{
-  Impl_Trees_Types_data data;
-  Impl_Trees_Types_node *left;
-  Impl_Trees_Types_node *right;
-  uint64_t size;
-  uint64_t height;
-}
-Impl_Trees_Types_node;
-
-bool Impl_BST_M_member(Impl_Trees_Types_node *ptr, Impl_Trees_Types_data v);
-
-Impl_Trees_Types_node
+Impl_Trees_Cast_M_node
 *Impl_AVL_M_insert_avl(
-  Impl_Trees_Types_node *(*f1)(Impl_Trees_Types_node x0),
-  void (*f2)(Impl_Trees_Types_node *x0),
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
   bool r,
-  Impl_Trees_Types_node *ptr,
-  Impl_Trees_Types_data new_data
+  Impl_Trees_Cast_M_node *ptr,
+  Impl_Trees_Cast_M_data new_data
 );
 
 typedef struct Impl_AVL_M_result_s
 {
-  Impl_Trees_Types_node *ptr;
-  Impl_Trees_Types_data data;
+  Impl_Trees_Cast_M_node *ptr;
+  Impl_Trees_Cast_M_data data;
 }
 Impl_AVL_M_result;
 
 Impl_AVL_M_result
 Impl_AVL_M_remove_leftmost_avl(
-  Impl_Trees_Types_node *(*f1)(Impl_Trees_Types_node x0),
-  void (*f2)(Impl_Trees_Types_node *x0),
-  Impl_Trees_Types_node *ptr
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
+  Impl_Trees_Cast_M_node *ptr
 );
 
-Impl_Trees_Types_node
+Impl_Trees_Cast_M_node
 *Impl_AVL_M_delete_avl(
-  Impl_Trees_Types_node *(*f1)(Impl_Trees_Types_node x0),
-  void (*f2)(Impl_Trees_Types_node *x0),
-  Impl_Trees_Types_node *ptr,
-  Impl_Trees_Types_data data_to_rm
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
+  Impl_Trees_Cast_M_node *ptr,
+  Impl_Trees_Cast_M_data data_to_rm
 );
 
 #define FStar_Pervasives_Native_None 0
@@ -87,11 +87,11 @@ typedef struct FStar_Pervasives_Native_option__size_t_s
 FStar_Pervasives_Native_option__size_t;
 
 FStar_Pervasives_Native_option__size_t
-Map_M_find(Impl_Trees_Types_node *ptr, Impl_Trees_Types_data v);
+Map_M_find(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v);
 
 typedef struct mmap_md_s
 {
-  Impl_Trees_Types_node **data;
+  Impl_Trees_Cast_M_node **data;
   Steel_SpinLock_lock lock;
 }
 mmap_md;

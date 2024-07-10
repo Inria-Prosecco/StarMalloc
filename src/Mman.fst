@@ -16,6 +16,8 @@ open Constants
 open Config
 open Utils2
 
+/// Memory management axiomatizations
+
 /// 1) Initialization of the allocator
 // all functions with a _init suffix
 // are only meant to be used at initialization
@@ -104,9 +106,6 @@ assume val mmap_sizes_init (len: US.t)
       A.is_full_array r
     )
 
-// used in src/LargeAlloc.fst
-// mmap_ptr_metadata
-
 /// 2) Large allocations wrappers
 
 open NullOrVarray
@@ -116,7 +115,7 @@ open PtrdiffWrapper
 // POSIX spec: mmap returns a page-aligned array of bytes;
 // thus, mmap_u8 returns a page-aligned array of bytes;
 // hence the postcondition array_u8_alignment page_size
-//noextract
+/// mmap syscall wrapper
 assume val mmap_u8
   (size: US.t)
   : Steel (array U8.t)
@@ -134,8 +133,7 @@ assume val mmap_u8
     )
   )
 
-// TODO: should the underlying munmap fail in a stricter manner?
-//noextract
+/// munmap syscall wrapper
 assume val munmap_u8 (ptr: array U8.t) (size: US.t)
   : Steel unit
     (A.varray ptr)

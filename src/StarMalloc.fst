@@ -52,11 +52,6 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
   )
 #pop-options
 
-assume val malloc_zeroing_die (ptr: array U8.t)
-  : SteelT unit
-  (A.varray ptr)
-  (fun _ -> emp)
-
 module G = FStar.Ghost
 
 //TODO: [@ CConst]
@@ -78,7 +73,7 @@ let malloc arena_id size =
         intro_live_null_or_varray ptr;
         return ptr
       ) else (
-        malloc_zeroing_die ptr;
+        FatalError.die_from_malloc_zeroing_check_failure ptr;
         intro_null_null_or_varray #U8.t
       )
     )
@@ -144,7 +139,8 @@ let aligned_alloc arena_id alignment size
           intro_live_null_or_varray ptr;
           return ptr
         ) else (
-          malloc_zeroing_die ptr;
+          // TODO: distinct case from malloc?
+          FatalError.die_from_malloc_zeroing_check_failure ptr;
           intro_null_null_or_varray #U8.t
         )
       )
@@ -313,15 +309,36 @@ let getsize (ptr: array U8.t)
 module G = FStar.Ghost
 
 noextract
-let return_status = x:nat{x < 3}
+let return_status = x:nat{x < 8}
+
+let realloc_small_optim_lemma
+  (old_size: US.t)
+  (new_size: US.t)
+  : Lemma
+  (requires enable_sc_fast_selection /\
+    US.v old_size <= U32.v page_size /\
+    US.v new_size <= US.v threshold /\
+    (let old_idx = sc_selection (US.sizet_to_uint32 old_size) in
+    let old_sc = L.index sc_list (US.v old_idx) in
+    let new_idx = if enable_slab_canaries_malloc
+      then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
+      else sc_selection (US.sizet_to_uint32 new_size) in
+    (enable_slab_canaries_malloc ==>
+      US.v old_size == U32.v old_sc - 2) /\
+    (not enable_slab_canaries_malloc ==>
+      US.v old_size == U32.v old_sc) /\
+    old_idx = new_idx)
+  )
+  (ensures
+    US.v new_size <= US.v old_size
+  )
+  =
+  ()
+
 
 // in case of failure, this vprop describes
 // memory that is still allocated but not returned
-// TODO: doc this better, realloc conforms to C DR 400
-// realloc(NULL,0) only gives NULL on alloc failure
-// (errno is ENOMEM)
-// realloc(ptr,0) only gives NULL on alloc failure, ptr unchanged
-// (errno is ENOMEM)
+// TODO: realloc(NULL, 0) could be POSIX or C23, deallocation is deprecated
 // TODO: errno
 
 let realloc_vp (status: return_status)
@@ -329,19 +346,164 @@ let realloc_vp (status: return_status)
   (new_ptr: array U8.t)
   : vprop
   = match status with
-  // success
+  // realloc(NULL, new_size): allocation, new_ptr should be returned
   | 0 -> emp
-  // new allocation fails, cannot memcpy,
-  // returning previous allocation
-  | 1 -> null_or_varray ptr
-  // new_allocation succeeds, freeing old allocation fails
-  // returning null
-  | 2 -> null_or_varray ptr `star` null_or_varray new_ptr
+  // realloc(ptr, 0): deallocation success, NULL should be returned
+  | 1 -> emp
+  // realloc(ptr, 0): deallocation failure, fatal_error (invalid free)
+  | 2 -> emp
+  // realloc(invalid pointer, ...): failure, fatal_error (invalid realloc)
+  | 3 -> emp
+  // realloc(valid pointer, ...): optim case (success), ptr should be returned
+  | 4 -> emp
+  // realloc(valid pointer, ...): allocation failure, NULL should be returned
+  | 5 -> null_or_varray ptr
+  // realloc(valid pointer, ...): success, new_ptr should be returned
+  | 6 -> emp
+  // realloc(valid pointer, ...): deallocation failure, fatal_error (invalid free)
+  | 7 -> null_or_varray new_ptr
 
 #restart-solver
 
 #push-options "--fuel 1 --ifuel 1"
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
+val realloc_standard_case (arena_id:US.t{US.v arena_id < US.v nb_arenas})
+  (ptr: array U8.t) (new_size: US.t)
+  : Steel (array U8.t & G.erased (return_status & array U8.t))
+  (
+    null_or_varray ptr `star`
+    (A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size))
+  )
+  (fun r ->
+    null_or_varray (fst r) `star`
+    (realloc_vp (fst (G.reveal (snd r))) ptr (snd (G.reveal (snd r))) `star`
+    A.varray (A.split_l sc_all.slab_region 0sz) `star`
+    A.varray (A.split_r sc_all.slab_region slab_region_size))
+  )
+  (requires fun _ ->
+    within_size_classes_pred ptr /\
+    US.fits (US.v new_size + U32.v page_size) /\
+    not (A.is_null ptr) /\
+    US.v new_size > 0
+  )
+  (ensures fun h0 r h1 ->
+    let s0 : t_of (null_or_varray ptr)
+      = h0 (null_or_varray ptr) in
+    let s1 : t_of (null_or_varray (fst r))
+      = h1 (null_or_varray (fst r)) in
+    // success
+    not (A.is_null (fst r)) ==> (
+      A.length (fst r) >= US.v new_size /\
+      //array_u8_alignment (fst r) 16ul /\
+      (not (A.is_null ptr) ==> (
+        (enable_slab_canaries_malloc ==> A.length ptr >= 2) /\
+        (let size = spec_getsize (A.length ptr) in
+          Seq.slice s1 0 (min size (US.v new_size))
+          ==
+          Seq.slice s0 0 (min size (US.v new_size))
+        )
+      ))
+    ) /\
+    True
+  )
+#pop-options
+
+#restart-solver
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
+let realloc_standard_case arena_id ptr new_size
+  =
+  elim_live_null_or_varray ptr;
+  let old_size = getsize ptr in
+  let old_allocation_is_small : bool = US.lte old_size (u32_to_sz page_size) in
+  let new_allocation_is_small : bool = US.lte new_size threshold in
+  let same_case : bool = old_allocation_is_small = new_allocation_is_small in
+  let small_case_optim_condition = enable_sc_fast_selection && old_allocation_is_small && same_case && (
+    let old_sc = sc_selection (US.sizet_to_uint32 old_size) in
+    let new_sc = if enable_slab_canaries_malloc
+      then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
+      else sc_selection (US.sizet_to_uint32 new_size) in
+    old_sc = new_sc) in
+  let large_case_optim_condition = (not old_allocation_is_small) && same_case && (
+    US.lte new_size old_size
+  ) in
+  // not a valid pointer from the allocator point of view, fail
+  if (old_size = 0sz) then (
+    // 3) invalid pointer, fatal_error
+    FatalError.die_from_realloc_invalid_previous_alloc ptr;
+    let r = intro_null_null_or_varray #U8.t in
+    change_equal_slprop
+      emp
+      (realloc_vp 3 ptr (A.null #U8.t));
+    return (r, G.hide (3, A.null #U8.t))
+  ) else (
+    // most common case
+    if small_case_optim_condition then realloc_small_optim_lemma old_size new_size else ();
+    assert (small_case_optim_condition ==> A.length ptr >= US.v new_size);
+    assert (large_case_optim_condition ==> A.length ptr >= US.v new_size);
+
+    if (small_case_optim_condition || large_case_optim_condition) then (
+      // 4) optimization
+      (**) intro_live_null_or_varray ptr;
+      (**) change_equal_slprop
+        emp
+        (realloc_vp 4 (A.null #U8.t) (A.null #U8.t));
+      return (ptr, G.hide (4, A.null #U8.t))
+    ) else (
+      // reallocation classical malloc/memcpy/free sequence of operations
+      let new_ptr = malloc arena_id new_size in
+      if (A.is_null new_ptr) then (
+        // If the function fails to allocate the requested block
+        // of memory, a null pointer is returned, and the memory
+        // block pointed to by argument ptr is not deallocated
+        // (it is still valid, and with its contents unchanged).
+        // 5) allocation failure
+        (**) elim_null_null_or_varray new_ptr;
+        (**) intro_live_null_or_varray ptr;
+        change_equal_slprop
+          (null_or_varray ptr)
+          (realloc_vp 5 ptr (A.null #U8.t));
+        let r = intro_null_null_or_varray #U8.t in
+        return (r, G.hide (5, A.null #U8.t))
+      ) else (
+        // The content of the memory block is preserved up to the
+        // lesser of the new and old sizes, even if the block is
+        // moved to a new location. If the new size is larger, the
+        // value of the newly allocated portion is indeterminate.
+        (**) elim_live_null_or_varray new_ptr;
+        assert (A.length new_ptr >= US.v new_size);
+        let min_of_sizes =
+          if US.lte new_size old_size
+          then new_size
+          else old_size in
+        let _ = memcpy_u8 new_ptr ptr min_of_sizes in
+        (**) intro_live_null_or_varray new_ptr;
+        (**) intro_live_null_or_varray ptr;
+        let b = free ptr in
+        if b then (
+          // 6) full reallocation success
+          change_equal_slprop
+            (if b then emp else A.varray ptr) emp;
+          change_equal_slprop
+            emp
+            (realloc_vp 0 ptr (A.null #U8.t));
+          return (new_ptr, G.hide (6, A.null #U8.t))
+        ) else (
+          // 7) deallocation failure, fatal_error
+          change_equal_slprop
+            (if b then emp else A.varray ptr)
+            (A.varray ptr);
+          FatalError.die_from_realloc_free_failure ptr;
+          let r = intro_null_null_or_varray #U8.t in
+          return (r, G.hide (7, new_ptr))
+        )
+      )
+    )
+  )
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1"
 val realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   (ptr: array U8.t) (new_size: US.t)
   : Steel (array U8.t & G.erased (return_status & array U8.t))
@@ -377,37 +539,12 @@ val realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
           Seq.slice s0 0 (min size (US.v new_size))
         )
       ))
-    )
+    ) /\
+    // optimization case
+    //(G.reveal (fst (snd r)) = 3 ==> fst r == ptr)
+    True
   )
-  // On failure, returns a null pointer.
-  // The original pointer ptr remains valid and may need to be deallocated with free or realloc.
-  //TODO: add corresponding postcond
 
-let realloc_small_optim_lemma
-  (old_size: US.t)
-  (new_size: US.t)
-  : Lemma
-  (requires enable_sc_fast_selection /\
-    US.v old_size <= U32.v page_size /\
-    US.v new_size <= US.v threshold /\
-    (let old_idx = sc_selection (US.sizet_to_uint32 old_size) in
-    let old_sc = L.index sc_list (US.v old_idx) in
-    let new_idx = if enable_slab_canaries_malloc
-      then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
-      else sc_selection (US.sizet_to_uint32 new_size) in
-    (enable_slab_canaries_malloc ==>
-      US.v old_size == U32.v old_sc - 2) /\
-    (not enable_slab_canaries_malloc ==>
-      US.v old_size == U32.v old_sc) /\
-    old_idx = new_idx)
-  )
-  (ensures
-    US.v new_size <= US.v old_size
-  )
-  =
-  ()
-
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let realloc arena_id ptr new_size
   =
   if A.is_null ptr then (
@@ -415,129 +552,39 @@ let realloc arena_id ptr new_size
     // In case that ptr is a null pointer, the function behaves
     // like malloc, assigning a new block of size bytes and
     // returning a pointer to its beginning.
-    elim_null_null_or_varray ptr;
+    (**) elim_null_null_or_varray ptr;
     let new_ptr = malloc arena_id new_size in
-    change_equal_slprop
+    (**) change_equal_slprop
       emp
       (realloc_vp 0 (A.null #U8.t) (A.null #U8.t));
     return (new_ptr, G.hide (0, A.null #U8.t))
   ) else (if (new_size = 0sz) then (
     // 2) realloc(ptr, 0sz)
     // freeing
+    // TODO: POSIX or C23: realloc(ptr, 0) does not free memory, add corresponding config switch
     let b = free ptr in
     if b then (
       (**) change_equal_slprop
         (if b then emp else A.varray ptr) emp;
       (**) change_equal_slprop
         emp
-        (realloc_vp 0 ptr (A.null #U8.t));
+        (realloc_vp 1 ptr (A.null #U8.t));
       let r = intro_null_null_or_varray #U8.t in
-      return (r, G.hide (0, A.null #U8.t))
-    ) else (
-      //TODO: add a die(), internal error
-      //change_equal_slprop
-      //  (if b then emp else A.varray ptr)
-      //  (A.varray ptr);
-      //intro_live_null_or_varray ptr;
-      //change_equal_slprop
-      //  (null_or_varray ptr)
-      //  (realloc_vp 1 ptr A.null #U8.t);
-      let r = intro_null_null_or_varray #U8.t in
-      sladmit ();
       return (r, G.hide (1, A.null #U8.t))
+    ) else (
+      (**) change_equal_slprop
+        (if b then emp else A.varray ptr)
+        (A.varray ptr);
+      FatalError.die_from_realloc_free_failure ptr;
+      let r = intro_null_null_or_varray #U8.t in
+      (**) change_equal_slprop
+        emp
+        (realloc_vp 2 (A.null #U8.t) (A.null #U8.t));
+      return (r, G.hide (2, A.null #U8.t))
     )
   ) else (
-    elim_live_null_or_varray ptr;
-    let old_size = getsize ptr in
-    let old_allocation_is_small : bool = US.lte old_size (u32_to_sz page_size) in
-    let new_allocation_is_small : bool = US.lte new_size threshold in
-    let same_case : bool = old_allocation_is_small = new_allocation_is_small in
-    let small_case_optim_condition = enable_sc_fast_selection && old_allocation_is_small && same_case && (
-      let old_sc = sc_selection (US.sizet_to_uint32 old_size) in
-      let new_sc = if enable_slab_canaries_malloc
-        then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
-        else sc_selection (US.sizet_to_uint32 new_size) in
-      old_sc = new_sc) in
-    let large_case_optim_condition = (not old_allocation_is_small) && same_case && (
-      US.lte new_size old_size
-    ) in
-    // not a valid pointer from the allocator point of view, fail
-    if (old_size = 0sz) then (
-      // 3) invalid pointer, fail
-      //TODO: add a die(), internal error
-      sladmit ();
-      //change_equal_slprop
-      //  (null_or_varray ptr `star` null_or_varray new_ptr)
-      //  (realloc_vp 2 ptr new_ptr);
-      //let r = intro_null_null_or_varray #U8.t in
-      //return (r, G.hide (2, new_ptr))
-      return (A.null #U8.t, G.hide (0, A.null #U8.t))
-    ) else (
-      // most common case
-      if small_case_optim_condition then realloc_small_optim_lemma old_size new_size else ();
-      assert (small_case_optim_condition ==> A.length ptr >= US.v new_size);
-      assert (large_case_optim_condition ==> A.length ptr >= US.v new_size);
-      if (small_case_optim_condition || large_case_optim_condition) then (
-        // optimization
-        (**) intro_live_null_or_varray ptr;
-        (**) change_equal_slprop
-          emp
-          (realloc_vp 0 (A.null #U8.t) (A.null #U8.t));
-        return (ptr, G.hide (0, A.null #U8.t))
-      ) else (
-        // reallocation classical malloc/memcpy/free sequence of operations
-        let new_ptr = malloc arena_id new_size in
-        if (A.is_null new_ptr) then (
-          // If the function fails to allocate the requested block
-          // of memory, a null pointer is returned, and the memory
-          // block pointed to by argument ptr is not deallocated
-          // (it is still valid, and with its contents unchanged).
-          (**) elim_null_null_or_varray new_ptr;
-          (**) intro_live_null_or_varray ptr;
-          change_equal_slprop
-            (null_or_varray ptr)
-            (realloc_vp 1 ptr (A.null #U8.t));
-          let r = intro_null_null_or_varray #U8.t in
-          return (r, G.hide (1, A.null #U8.t))
-        ) else (
-          // The content of the memory block is preserved up to the
-          // lesser of the new and old sizes, even if the block is
-          // moved to a new location. If the new size is larger, the
-          // value of the newly allocated portion is indeterminate.
-          (**) elim_live_null_or_varray new_ptr;
-          assert (A.length new_ptr >= US.v new_size);
-          let min_of_sizes =
-            if US.lte new_size old_size
-            then new_size
-            else old_size in
-          let _ = memcpy_u8 new_ptr ptr min_of_sizes in
-          (**) intro_live_null_or_varray new_ptr;
-          (**) intro_live_null_or_varray ptr;
-          let b = free ptr in
-          if b then (
-            change_equal_slprop
-              (if b then emp else A.varray ptr) emp;
-            change_equal_slprop
-              emp
-              (realloc_vp 0 ptr (A.null #U8.t));
-            return (new_ptr, G.hide (0, A.null #U8.t))
-          ) else (
-            //TODO: add a die(), internal error
-            change_equal_slprop
-              (if b then emp else A.varray ptr)
-              (A.varray ptr);
-            intro_live_null_or_varray ptr;
-            change_equal_slprop
-              (null_or_varray ptr `star` null_or_varray new_ptr)
-              (realloc_vp 2 ptr new_ptr);
-            let r = intro_null_null_or_varray #U8.t in
-            return (r, G.hide (2, new_ptr))
-          )
-        )
-      )
-    )
+    realloc_standard_case arena_id ptr new_size
   ))
-#pop-options
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 //TODO: there should be defensive checks and no precondition
