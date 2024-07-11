@@ -65,13 +65,14 @@ extract: $(ALL_KRML_FILES)
 	  -header spdx-header.txt \
 	  -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
-	  -bundle 'StarMalloc=Map.\*,Impl.\*,Spec.\*,Main,Main2,Main.Meta,LargeAlloc'[rename=StarMalloc] \
+	  -bundle 'StarMalloc=Mman2,FatalError,Map.\*,Impl.\*,Spec.\*,Main,Main2,Main.Meta,LargeAlloc'[rename=StarMalloc] \
 	  -bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
 	  -bundle 'SlabsCommon2,SlabsFree2,SlabsAlloc2'[rename=Slabs2] \
 	  -bundle 'SlotsFree,SlotsAlloc'[rename=Slots] \
 	  -bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
 	  -no-prefix LargeAlloc \
 	  -no-prefix Mman \
+	  -no-prefix Mman2 \
 	  -no-prefix MemoryTrap \
 	  -no-prefix ExternUtils \
 	  -warn-error +9 \

@@ -566,7 +566,9 @@ let u32_bounded
 
 #restart-solver
 
-assume val deallocate_zeroing
+open ExternUtils
+
+val deallocate_zeroing
   (size_class: sc)
   (ptr: array U8.t)
   : Steel unit
@@ -576,6 +578,14 @@ assume val deallocate_zeroing
   )
   (ensures fun _ _ h1 ->
     enable_zeroing_free ==> zf_u8 (A.asel ptr h1)
+  )
+
+let deallocate_zeroing size_class ptr
+  =
+  if enable_zeroing_free then (
+    apply_zeroing_u8 ptr (US.uint32_to_sizet size_class)
+  ) else (
+    return ()
   )
 
 //TODO: check for spec

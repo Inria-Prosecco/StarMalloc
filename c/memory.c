@@ -6,6 +6,8 @@
 #include "internal/StarMalloc.h"
 #include "fatal_error.h"
 
+/// Mman.fst
+
 // syscall wrapper: initialization (fatal error on failure)
 uint8_t *mmap_init(size_t size) {
   void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_NORESERVE, -1, 0);
@@ -39,38 +41,6 @@ void munmap_u8(uint8_t* ptr, size_t len) {
   if (b && errno != ENOMEM) {
     fatal_error("non-ENOMEM munmap failure");
   }
-  return;
-}
-
-// syscall wrapper
-void mmap_strict_trap (uint8_t* ptr, size_t len) {
-  void* p = mmap((void*) ptr, len, PROT_NONE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
-  if (p == MAP_FAILED && errno != ENOMEM) {
-    fatal_error("non-ENOMEM mmap failure");
-  }
-  return;
-}
-
-// syscall wrapper
-void mmap_strict_untrap (uint8_t* ptr, size_t len) {
-  void* p = mmap((void*) ptr, len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
-  if (p == MAP_FAILED && errno != ENOMEM) {
-    fatal_error("non-ENOMEM mmap failure");
-  }
-  return;
-}
-
-// syscall wrapper
-void mmap_trap (uint8_t* ptr, size_t len) {
-  int r = madvise((void*) ptr, len, MADV_DONTNEED);
-  if (r && errno != ENOMEM) {
-    fatal_error("non-ENOMEM MADV_DONTNEED madvise failure");
-  }
-  return;
-}
-
-// wrapper
-void mmap_untrap (uint8_t* ptr, size_t len) {
   return;
 }
 
@@ -121,7 +91,43 @@ bool* mmap_bool_init (size_t len) {
   return (bool*) mmap_init(len * sizeof(bool));
 }
 
+/// Mman2
+
 // large allocator init
-Impl_Trees_Types_node** mmap_ptr_metadata() {
-  return (Impl_Trees_Types_node**) mmap_init(sizeof(Impl_Trees_Types_node*));
+Impl_Trees_Cast_M_node** mmap_ptr_metadata_init() {
+  return (Impl_Trees_Cast_M_node**) mmap_init(sizeof(Impl_Trees_Cast_M_node*));
+}
+
+/// MemoryTrap.fst
+
+// syscall wrapper
+void mmap_strict_trap (uint8_t* ptr, size_t len) {
+  void* p = mmap((void*) ptr, len, PROT_NONE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
+  if (p == MAP_FAILED && errno != ENOMEM) {
+    fatal_error("non-ENOMEM mmap failure");
+  }
+  return;
+}
+
+// syscall wrapper
+void mmap_strict_untrap (uint8_t* ptr, size_t len) {
+  void* p = mmap((void*) ptr, len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0);
+  if (p == MAP_FAILED && errno != ENOMEM) {
+    fatal_error("non-ENOMEM mmap failure");
+  }
+  return;
+}
+
+// syscall wrapper
+void mmap_trap (uint8_t* ptr, size_t len) {
+  int r = madvise((void*) ptr, len, MADV_DONTNEED);
+  if (r && errno != ENOMEM) {
+    fatal_error("non-ENOMEM MADV_DONTNEED madvise failure");
+  }
+  return;
+}
+
+// wrapper
+void mmap_untrap (uint8_t* ptr, size_t len) {
+  return;
 }
