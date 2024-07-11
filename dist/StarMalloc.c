@@ -1223,14 +1223,14 @@ static uint8_t *large_malloc(size_t size)
   if (md_size < 18446744073709551615ULL)
   {
     Impl_Trees_Types_node *md_v = *metadata.data;
-    size_t size_ = size + (size_t)2U;
-    uint8_t *ptr0 = mmap_u8(size_);
+    uint8_t *ptr0 = mmap_u8(size);
     uint8_t *ptr;
     if (ptr0 == NULL)
       ptr = ptr0;
     else
     {
-      bool b = Impl_BST_M_member(md_v, ((Impl_Trees_Types_data){ .fst = ptr0, .snd = size }));
+      size_t size_ = PtrdiffWrapper_mmap_actual_size(size);
+      bool b = Impl_BST_M_member(md_v, ((Impl_Trees_Types_data){ .fst = ptr0, .snd = size_ }));
       if (b)
         ptr = NULL;
       else
@@ -1241,7 +1241,7 @@ static uint8_t *large_malloc(size_t size)
             trees_free2,
             false,
             md_v,
-            ((Impl_Trees_Types_data){ .fst = ptr0, .snd = size }));
+            ((Impl_Trees_Types_data){ .fst = ptr0, .snd = size_ }));
         *metadata.data = md_v_;
         ptr = ptr0;
       }
@@ -1277,8 +1277,7 @@ static bool large_free(uint8_t *ptr)
       size1 = size.v;
     else
       size1 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
-    size_t size_ = size1 + (size_t)2U;
-    munmap_u8(ptr, size_);
+    munmap_u8(ptr, size1);
     Impl_Trees_Types_node
     *md_v_ =
       Impl_AVL_M_delete_avl(trees_malloc2,
@@ -3904,10 +3903,11 @@ static bool slab_free(uint8_t *ptr)
     return false;
 }
 
+size_t StarMalloc_threshold = (size_t)4096U - (size_t)2U;
+
 uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
 {
-  size_t threshold = (size_t)4096U - (size_t)2U;
-  if (size <= threshold)
+  if (size <= StarMalloc_threshold)
   {
     uint8_t *ptr = slab_malloc(arena_id, (uint32_t)size);
     if (ptr == NULL || false)
@@ -3926,20 +3926,23 @@ uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
   }
   else
   {
-    uint8_t *r = large_malloc(size);
+    size_t size_;
+    if (size <= (size_t)4096U)
+      size_ = (size_t)4096U + (size_t)1U;
+    else
+      size_ = size;
+    uint8_t *r = large_malloc(size_);
     return r;
   }
 }
 
 uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size)
 {
-  size_t page_as_sz = (size_t)4096U;
   bool check = alignment > (size_t)0U && (size_t)4096U % alignment == (size_t)0U;
   if (check)
   {
     uint32_t alignment_as_u32 = (uint32_t)alignment;
-    size_t threshold = page_as_sz - (size_t)2U;
-    if (size <= threshold)
+    if (size <= StarMalloc_threshold)
     {
       uint8_t *ptr = slab_aligned_alloc(arena_id, alignment_as_u32, (uint32_t)size);
       if (ptr == NULL || false)
@@ -3958,7 +3961,12 @@ uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size
     }
     else
     {
-      uint8_t *ptr = large_malloc(size);
+      size_t size_;
+      if (size <= (size_t)4096U)
+        size_ = (size_t)4096U + (size_t)1U;
+      else
+        size_ = size;
+      uint8_t *ptr = large_malloc(size_);
       return ptr;
     }
   }
@@ -3994,9 +4002,15 @@ size_t StarMalloc_getsize(uint8_t *ptr)
       Main_Meta_sc_all.slab_region + Main_slab_region_size);
   bool b0 = b;
   if (b0)
-    return slab_getsize(ptr);
+  {
+    size_t r = slab_getsize(ptr);
+    return r;
+  }
   else
-    return large_getsize(ptr);
+  {
+    size_t r = large_getsize(ptr);
+    return r;
+  }
 }
 
 uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
@@ -4006,15 +4020,41 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
     uint8_t *new_ptr = StarMalloc_malloc(arena_id, new_size);
     return new_ptr;
   }
-  else
+  else if (new_size == (size_t)0U)
   {
-    uint8_t *new_ptr = StarMalloc_malloc(arena_id, new_size);
-    if (new_ptr == NULL)
+    bool b = StarMalloc_free(ptr);
+    if (b)
       return NULL;
     else
+      return NULL;
+  }
+  else
+  {
+    size_t old_size = StarMalloc_getsize(ptr);
+    bool old_allocation_is_small = old_size <= (size_t)4096U;
+    bool new_allocation_is_small = new_size <= StarMalloc_threshold;
+    bool same_case = old_allocation_is_small == new_allocation_is_small;
+    bool small_case_optim_condition;
+    if (old_allocation_is_small && same_case)
     {
-      size_t old_size = StarMalloc_getsize(ptr);
-      if (old_size == (size_t)0U)
+      uint32_t r0 = SizeClassSelection_inv_impl((uint32_t)old_size);
+      size_t old_sc = (size_t)r0;
+      uint32_t r = SizeClassSelection_inv_impl((uint32_t)(new_size + (size_t)2U));
+      size_t new_sc = (size_t)r;
+      small_case_optim_condition = old_sc == new_sc;
+    }
+    else
+      small_case_optim_condition = false;
+    bool
+    large_case_optim_condition = !old_allocation_is_small && same_case && new_size <= old_size;
+    if (old_size == (size_t)0U)
+      return NULL;
+    else if (small_case_optim_condition || large_case_optim_condition)
+      return ptr;
+    else
+    {
+      uint8_t *new_ptr = StarMalloc_malloc(arena_id, new_size);
+      if (new_ptr == NULL)
         return NULL;
       else
       {

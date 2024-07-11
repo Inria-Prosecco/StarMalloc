@@ -263,6 +263,9 @@ let find = Map.M.find
 
 open Config
 
+inline_for_extraction noextract
+let mmap_actual_size = PtrdiffWrapper.mmap_actual_size
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 [@@ __steel_reduce__]
 let v_ind_tree
@@ -279,6 +282,8 @@ let v_ind_tree
   assert_norm (vdep_payload (vptr ptr) linked_wf_tree (dfst x) == (x: wdm data{is_wf x}));
   dsnd x
 #pop-options
+
+open PtrdiffWrapper
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 inline_for_extraction noextract
@@ -297,23 +302,26 @@ let large_malloc_aux
     let t : wdm data = v_ind_tree metadata_ptr h0 in
     Spec.size_of_tree t < c /\
     US.v size > 0 /\
-    (enable_slab_canaries_malloc ==> US.fits (US.v size + 2))
+    US.v size > U32.v page_size /\
+    US.fits (US.v size + U32.v page_size)
   )
   (ensures fun h0 r h1 ->
     let t : wdm data = v_ind_tree metadata_ptr h0 in
     let t' : wdm data = v_ind_tree metadata_ptr h1 in
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
+    US.fits (US.v size + U32.v page_size) /\
+    US.v size > U32.v page_size /\
     Spec.is_avl (spec_convert cmp) t /\
     (not (A.is_null r) ==> (
-      (enable_slab_canaries_malloc ==> A.length r == US.v size + 2) /\
-      (not enable_slab_canaries_malloc ==> A.length r == US.v size) /\
+      (let size' = mmap_actual_size size in
+      A.length r == US.v size' /\
       A.is_full_array r /\
       array_u8_alignment r page_size /\
       zf_u8 s /\
-      not (Spec.mem (spec_convert cmp) t (r, size)) /\
-      Spec.mem (spec_convert cmp) t' (r, size)
-    ))
+      not (Spec.mem (spec_convert cmp) t (r, size')) /\
+      Spec.mem (spec_convert cmp) t' (r, size')
+    )))
   )
   =
   (**) let t = elim_vdep (vptr metadata_ptr) linked_wf_tree in
@@ -324,14 +332,14 @@ let large_malloc_aux
     (linked_tree p md_v);
   (**) let h0 = get () in
   (**) Spec.height_lte_size (v_linked_tree p md_v h0);
-  let size' = if enable_slab_canaries_malloc then US.add size 2sz else size in
-  let ptr = mmap size' in
+  let ptr = mmap size in
   if (A.is_null ptr) then (
     (**) intro_vrefine (linked_tree p md_v) is_wf;
     (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
     return ptr
   ) else (
-    let b = mem md_v (ptr, size) in
+    let size' = mmap_actual_size size in
+    let b = mem md_v (ptr, size') in
     if b then (
       (**) intro_vrefine (linked_tree p md_v) is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v) linked_wf_tree;
@@ -341,9 +349,9 @@ let large_malloc_aux
       return r
     ) else (
       let h0 = get () in
-      let md_v' = insert false md_v (ptr, size) in
-      Spec.lemma_insert false (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size);
-      Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size) (fun x -> US.v (snd x) <> 0);
+      let md_v' = insert false md_v (ptr, size') in
+      Spec.lemma_insert false (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size');
+      Spec.lemma_insert2 (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size') (fun x -> US.v (snd x) <> 0);
       write metadata_ptr md_v';
       (**) intro_vrefine (linked_tree p md_v') is_wf;
       (**) intro_vdep (vptr metadata_ptr) (linked_wf_tree md_v') linked_wf_tree;
@@ -396,11 +404,9 @@ let large_free_aux
     let t' : wdm data = v_ind_tree metadata_ptr h1 in
     b ==> (
       US.fits (A.length ptr) /\
-      A.length ptr >= 2 /\
       A.is_full_array ptr /\
-      (let size = if enable_slab_canaries_malloc
-        then US.uint_to_t (A.length ptr - 2)
-        else US.uint_to_t (A.length ptr) in
+      A.length ptr > U32.v page_size /\
+      (let size = US.uint_to_t (A.length ptr) in
         Spec.mem (spec_convert cmp) t
           (ptr, size) /\
         not (Spec.mem (spec_convert cmp) t'
@@ -430,16 +436,8 @@ let large_free_aux
     let size = Some?.v size in
     A.length_fits ptr;
     assert (US.fits (A.length ptr));
-    assert (
-      (enable_slab_canaries_malloc ==>
-        A.length ptr == US.v size + 2) /\
-      (not enable_slab_canaries_malloc ==>
-        A.length ptr == US.v size)
-    );
-    let size' = if enable_slab_canaries_malloc
-      then US.add size 2sz
-      else size in
-    munmap ptr size';
+    assert (A.length ptr == US.v size);
+    munmap ptr size;
     let h0 = get () in
     let md_v' = delete md_v (ptr, size) in
     Spec.lemma_delete (spec_convert cmp) (v_linked_tree p md_v h0) (ptr, size);
@@ -470,17 +468,20 @@ let large_malloc (size: US.t)
   (fun ptr -> null_or_varray ptr)
   (requires fun _ ->
     US.v size > 0 /\
-    (enable_slab_canaries_malloc ==> US.fits (US.v size + 2)))
+    US.v size > U32.v page_size /\
+    US.fits (US.v size + U32.v page_size)
+  )
   (ensures fun _ ptr h1 ->
     let s : (t_of (null_or_varray ptr))
       = h1 (null_or_varray ptr) in
     not (A.is_null ptr) ==> (
-      (enable_slab_canaries_malloc ==> A.length ptr == US.v size + 2) /\
-      (not enable_slab_canaries_malloc ==> A.length ptr == US.v size) /\
-      array_u8_alignment ptr page_size /\
+      US.fits (US.v size + U32.v page_size) /\
+      (let size' = mmap_actual_size size in
+      A.length ptr == US.v size' /\
       A.is_full_array ptr /\
+      array_u8_alignment ptr page_size /\
       zf_u8 s
-    )
+    ))
   )
   =
   let r = with_lock
@@ -495,12 +496,12 @@ let large_malloc (size: US.t)
     metadata.lock
     (fun _ ptr s ->
       not (A.is_null ptr) ==> (
-        (enable_slab_canaries_malloc ==> A.length ptr == US.v size + 2) /\
-        (not enable_slab_canaries_malloc ==> A.length ptr == US.v size) /\
+        (let size' = mmap_actual_size size in
+        A.length ptr == US.v size' /\
         array_u8_alignment ptr page_size /\
         A.is_full_array ptr /\
         zf_u8 s
-      )
+      ))
     )
     (fun _ ->
       let md_size = _size metadata.data in
@@ -553,8 +554,8 @@ let large_getsize_aux (metadata: ref t) (ptr: array U8.t)
     //==
     //h0 (ind_linked_wf_tree metadata) /\
     (US.v r > 0 ==>
-      (enable_slab_canaries_malloc ==> A.length ptr == US.v r + 2) /\
-      (not enable_slab_canaries_malloc ==> A.length ptr == US.v r)
+      A.length ptr == US.v r /\
+      US.v r > U32.v page_size
     )
   )
   =
@@ -585,8 +586,8 @@ let large_getsize (ptr: array U8.t)
   (ensures fun h0 r h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
     (US.v r > 0 ==>
-      (enable_slab_canaries_malloc ==> A.length ptr == US.v r + 2) /\
-      (not enable_slab_canaries_malloc ==> A.length ptr == US.v r)
+      A.length ptr == US.v r /\
+      US.v r > U32.v page_size
     )
   )
   =
@@ -605,8 +606,8 @@ let large_getsize (ptr: array U8.t)
          (x1: t_of (A.varray ptr)) ->
       x0 `Seq.equal` x1 /\
       (US.v r > 0 ==>
-        (enable_slab_canaries_malloc ==> A.length ptr == US.v r + 2) /\
-        (not enable_slab_canaries_malloc ==> A.length ptr == US.v r)
+        A.length ptr == US.v r /\
+        US.v r > U32.v page_size
       )
     )
     (fun _ -> large_getsize_aux metadata.data ptr)
@@ -614,12 +615,6 @@ let large_getsize (ptr: array U8.t)
   return r
 
 (*)
-- mmap/munmap: some improvements ahead? (better spec)
-  - mmap can fail -> null_or_varray instead of varray
-    - add a check in malloc
-    - what about initialization? could be a bit cumbersome...
-  - munmap better modelization
 - convert AVL lib to use size_t instead of u64
-
 - find: some improvements ahead? (better spec)
 - use a large vdep between avl and mmap'ed allocations?

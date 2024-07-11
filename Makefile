@@ -59,7 +59,9 @@ obj/%.krml:
 # steel_base.h defines symbols required by Steel.ArrayArith
 extract: $(ALL_KRML_FILES)
 	mkdir -p dist
-	$(KRML_EXE) -skip-compilation -fparentheses -tmpdir dist \
+	$(KRML_EXE) \
+	  -skip-compilation -skip-makefiles \
+	  -fparentheses -tmpdir dist \
 	  -header spdx-header.txt \
 	  -library Steel.ArrayArith -static-header Steel.ArrayArith -no-prefix Steel.ArrayArith \
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
@@ -77,11 +79,12 @@ extract: $(ALL_KRML_FILES)
 	  -add-include 'Steel_SpinLock:"steel_base.h"' \
 	  $^
 
-# TODO: improve this
 EXT_FILES = $(STEEL_HOME)/src/c/steel_spinlock.c
 
 EXT_VENDOR_FILES = vendor/steel/src/c/steel_spinlock.c
 
+# TODO: improve this
+#dist/Mman.c leads to issue, moving non-extern code apart
 FILES = \
   dist/ArrayList.c \
   dist/krmlinit.c \
@@ -93,6 +96,7 @@ FILES = \
   dist/Utils2.c \
   dist/SizeClass.c \
   dist/SizeClassSelection.c \
+  dist/PtrdiffWrapper.c \
   c/utils.c \
   c/fatal_error.c \
   c/memory.c \

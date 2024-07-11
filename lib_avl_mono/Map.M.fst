@@ -3,7 +3,10 @@ module Map.M
 open Steel.Effect.Atomic
 open Steel.Effect
 
+open Constants
+
 module US = FStar.SizeT
+module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module I64 = FStar.Int64
 
@@ -121,10 +124,9 @@ let rec find
     (Some? r == Spec.mem (spec_convert cmp) (v_linked_tree p ptr h0) v) /\
     (Some? r == Spec.memopt (spec_convert cmp) (v_linked_tree p ptr h0) v) /\
     (Some? r ==> (
-      (enable_slab_canaries_malloc ==>
-        A.length (fst v) == US.v (Some?.v r) + 2) /\
-      (not enable_slab_canaries_malloc ==>
-        A.length (fst v) == US.v (Some?.v r)) /\
+      let size = Some?.v r in
+      A.length (fst v) == US.v size /\
+      US.v size > U32.v page_size /\
       A.is_full_array (fst v) /\
       Spec.mem (spec_convert cmp) (v_linked_tree p ptr h0)
         (fst v, Some?.v r)
@@ -145,7 +147,9 @@ let rec find
       pack_tree p ptr
         (get_left node) (get_right node)
         (get_size node) (get_height node);
+      let d : data = get_data node in
       let r = snd (get_data node) in
+      assert (r <> 0sz);
       return (Some r)
     ) else (
       if I64.lt delta szero then (

@@ -79,8 +79,7 @@ let slab_region_size = Main.slab_region_size
 val slab_getsize (ptr: array U8.t)
   : Steel US.t
   (A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
-  (fun _ ->
-   A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
+  (fun _ -> A.varray ptr `star` A.varray (A.split_l sc_all.slab_region 0sz))
   (requires fun _ ->
     within_size_classes_pred ptr /\
     SAA.within_bounds
@@ -88,16 +87,21 @@ val slab_getsize (ptr: array U8.t)
       ptr
       (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
   )
-  (ensures fun h0 r h1 ->
+  (ensures fun h0 result h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
-    (r <> 0sz ==>
+    US.v result <= U32.v page_size /\
+    (result <> 0sz ==> (
+      let idx = sc_selection (US.sizet_to_uint32 result) in
+      A.length ptr <= U32.v page_size /\
       (enable_slab_canaries_malloc ==>
-        A.length ptr == US.v r + 2
+        A.length ptr == US.v result + 2
       ) /\
       (not enable_slab_canaries_malloc ==>
-        A.length ptr == US.v r
-      )
-    )
+        A.length ptr == US.v result
+      ) /\
+      (enable_sc_fast_selection ==>
+        A.length ptr == U32.v (L.index sc_list (US.v idx)))
+    ))
   )
 
 val slab_free (ptr:array U8.t)

@@ -8,6 +8,14 @@ module UP = FStar.PtrdiffT
 module L =  FStar.List.Tot
 
 open FStar.Mul
+open Prelude
+
+inline_for_extraction noextract
+let u32_to_sz
+  (x:U32.t)
+  : Tot (y:US.t{US.v y == U32.v x})
+  =
+  US.uint32_to_sizet x
 
 open Constants
 
@@ -87,6 +95,25 @@ val sc_selection : sc_selection_f
 // controls whether size class selection fast path is used
 inline_for_extraction
 val enable_sc_fast_selection: bool
+
+// lemmas useful for realloc optimization
+val sc_selection_is_exact1 (k:nat)
+  : Lemma
+  (requires enable_sc_fast_selection /\
+    k < US.v nb_size_classes
+  )
+  (ensures
+    US.v (sc_selection (L.index sc_list k)) == k
+  )
+
+val sc_selection_is_exact2 (k:nat)
+  : Lemma
+  (requires enable_sc_fast_selection /\
+    k < US.v nb_size_classes
+  )
+  (ensures
+    US.v (sc_selection (U32.sub (L.index sc_list k) 2ul)) == k
+  )
 
 /// Number of arenas
 inline_for_extraction
