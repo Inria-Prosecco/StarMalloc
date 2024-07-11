@@ -11,6 +11,7 @@
 #include "SizeClass.h"
 #include "Mman.h"
 #include "ExternUtils.h"
+#include "Constants.h"
 #include "ArrayList.h"
 
 extern void StarMalloc_malloc_zeroing_die(uint8_t *ptr);

@@ -3,6 +3,8 @@
 
 #include "Config.h"
 
+bool Config_enable_extended_size_classes = true;
+
 bool Config_enable_sc_fast_selection = true;
 
 size_t Config_metadata_max = (size_t)16777216U;

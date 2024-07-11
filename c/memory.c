@@ -116,6 +116,11 @@ uint32_t* mmap_sizes_init (size_t len) {
   return (uint32_t*) mmap_init(len * sizeof(uint32_t));
 }
 
+// slabs allocator init
+bool* mmap_bool_init (size_t len) {
+  return (bool*) mmap_init(len * sizeof(bool));
+}
+
 // large allocator init
 Impl_Trees_Types_node** mmap_ptr_metadata() {
   return (Impl_Trees_Types_node**) mmap_init(sizeof(Impl_Trees_Types_node*));

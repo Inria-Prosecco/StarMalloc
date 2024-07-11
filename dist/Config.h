@@ -6,7 +6,13 @@
 
 #include "krmllib.h"
 
-#define CONFIG_NB_SIZE_CLASSES ((size_t)27U)
+#define CONFIG_NB_SIZE_CLASSES ((size_t)31U)
+
+#define CONFIG_NB_SIZE_CLASSES_SC ((size_t)27U)
+
+#define CONFIG_NB_SIZE_CLASSES_SC_EX ((size_t)4U)
+
+extern bool Config_enable_extended_size_classes;
 
 extern bool Config_enable_sc_fast_selection;
 

@@ -3,6 +3,14 @@
 
 #include "internal/StarMalloc.h"
 
+#include "internal/Slabs2.h"
+
+size_t Main_metadata_max_ex;
+
+size_t Main_slab_size;
+
+size_t Main_sc_slab_region_size;
+
 static void init_idxs(size_t *r_idxs)
 {
   r_idxs[0U] = (size_t)16777217U;
@@ -14,36 +22,97 @@ static void init_idxs(size_t *r_idxs)
   r_idxs[6U] = (size_t)0U;
 }
 
-static size_t slab_region_size = (size_t)7421703487488U;
+size_t Main_slab_region_size;
 
 static void
 init_size_class(
+  size_t offset,
   size_t k,
   uint8_t *slab_region,
   uint64_t *md_bm_region,
   ArrayList_cell *md_region,
   size_class *size_classes,
-  const uint32_t *sizes
+  const Constants_sc_union *sizes
 )
 {
-  uint32_t size = sizes[k];
-  static_assert(UINT32_MAX <= SIZE_MAX);
-  uint8_t *slab_region_ = slab_region + (size_t)16777216U * (size_t)4096U * k;
-  uint64_t *md_bm_region_ = md_bm_region + (size_t)67108864U * k;
-  ArrayList_cell *md_region_ = md_region + (size_t)16777216U * k;
-  size_t *r_idxs = mmap_array_us_init((size_t)7U);
-  init_idxs(r_idxs);
-  size_t *md_count = mmap_ptr_us_init();
-  *md_count = (size_t)0U;
-  SizeClass_size_class_struct_
-  scs =
-    {
-      .size = size, .slabs_idxs = r_idxs, .md_count = md_count, .slab_region = slab_region_,
-      .md_bm_region = md_bm_region_, .md_region = md_region_
-    };
-  SizeClass_size_class_struct_ data = scs;
-  Steel_SpinLock_new_lock(&size_classes[k].lock);
-  size_classes[k].data = data;
+  size_t idx = offset + k;
+  Constants_sc_union size = sizes[idx];
+  if (size.tag == Constants_Sc)
+  {
+    uint32_t size1 = size.case_Sc;
+    static_assert(UINT32_MAX <= SIZE_MAX);
+    uint8_t *slab_region_ = slab_region + (size_t)16777216U * (size_t)4096U * k;
+    uint64_t *md_bm_region_ = md_bm_region + (size_t)67108864U * k;
+    ArrayList_cell *md_region_ = md_region + (size_t)16777216U * k;
+    size_t *r_idxs = mmap_array_us_init((size_t)7U);
+    init_idxs(r_idxs);
+    size_t *md_count = mmap_ptr_us_init();
+    *md_count = (size_t)0U;
+    SizeClass_size_class_struct_
+    scs =
+      {
+        .size = { .tag = Constants_Sc, { .case_Sc = size1 } }, .is_extended = false,
+        .slabs_idxs = r_idxs, .md_count = md_count, .slab_region = slab_region_,
+        .md_bm_region = md_bm_region_, .md_bm_region_b = NULL, .md_region = md_region_
+      };
+    SizeClass_size_class_struct_ data = scs;
+    Steel_SpinLock_new_lock(&size_classes[k].lock);
+    size_classes[k].data = data;
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+static void
+init_size_class2(
+  size_t offset,
+  size_t k,
+  uint8_t *slab_region,
+  bool *md_bm_region,
+  ArrayList_cell *md_region,
+  size_class *size_classes,
+  const Constants_sc_union *sizes
+)
+{
+  size_t idx = offset + k;
+  Constants_sc_union size = sizes[idx];
+  if (size.tag == Constants_Sc_ex)
+  {
+    uint32_t size1 = size.case_Sc_ex;
+    static_assert(UINT32_MAX <= SIZE_MAX);
+    uint8_t
+    *slab_region_ = slab_region + SlabsCommon2_metadata_max_ex * SlabsCommon2_slab_size * k;
+    bool *md_bm_region_ = md_bm_region + SlabsCommon2_metadata_max_ex * k;
+    ArrayList_cell *md_region_ = md_region + SlabsCommon2_metadata_max_ex * k;
+    size_t *r_idxs = mmap_array_us_init((size_t)7U);
+    init_idxs(r_idxs);
+    size_t *md_count = mmap_ptr_us_init();
+    *md_count = (size_t)0U;
+    SizeClass_size_class_struct_
+    scs =
+      {
+        .size = { .tag = Constants_Sc_ex, { .case_Sc_ex = size1 } }, .is_extended = true,
+        .slabs_idxs = r_idxs, .md_count = md_count, .slab_region = slab_region_,
+        .md_bm_region = NULL, .md_bm_region_b = md_bm_region_, .md_region = md_region_
+      };
+    SizeClass_size_class_struct_ data = scs;
+    Steel_SpinLock_new_lock(&size_classes[k].lock);
+    size_classes[k].data = data;
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
 }
 
 static uint32_t avl_data_size = 64U;
@@ -63,8 +132,9 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
   SizeClass_size_class_struct_
   scs =
     {
-      .size = avl_data_size, .slabs_idxs = r_idxs, .md_count = md_count, .slab_region = slab_region,
-      .md_bm_region = md_bm_region, .md_region = md_region
+      .size = { .tag = Constants_Sc, { .case_Sc = avl_data_size } }, .is_extended = false,
+      .slabs_idxs = r_idxs, .md_count = md_count, .slab_region = slab_region,
+      .md_bm_region = md_bm_region, .md_bm_region_b = NULL, .md_region = md_region
     };
   SizeClass_size_class_struct_ scs0 = scs;
   Steel_SpinLock_new_lock(&ret->lock);
@@ -1106,7 +1176,7 @@ mmap_md metadata;
 static Impl_Trees_Types_node *trees_malloc2(Impl_Trees_Types_node x)
 {
   Steel_SpinLock_acquire(&Impl_Trees_Types_metadata_slabs.lock);
-  uint8_t *ptr = SizeClass_allocate_size_class(Impl_Trees_Types_metadata_slabs.scs);
+  uint8_t *ptr = SizeClass_allocate_size_class_sc(Impl_Trees_Types_metadata_slabs.scs);
   Impl_Trees_Types_node *r;
   if (ptr == NULL)
     r = NULL;
@@ -1129,7 +1199,7 @@ static void trees_free2(Impl_Trees_Types_node *r)
   uint8_t *pt1 = Impl_Trees_Types_metadata_slabs.slab_region;
   ptrdiff_t diff = pt0 - pt1;
   size_t diff_sz = (size_t)diff;
-  bool b = SizeClass_deallocate_size_class(Impl_Trees_Types_metadata_slabs.scs, ptr, diff_sz);
+  bool b = SizeClass_deallocate_size_class_sc(Impl_Trees_Types_metadata_slabs.scs, ptr, diff_sz);
   if (b)
   {
 
@@ -1255,133 +1325,1041 @@ static size_t large_getsize(uint8_t *ptr)
 }
 
 static const
-uint32_t
-sizes[108U] =
+Constants_sc_union
+sizes[124U] =
   {
-    16U, 32U, 64U, 80U, 96U, 112U, 128U, 160U, 192U, 224U, 256U, 320U, 384U, 448U, 512U, 640U, 768U,
-    896U, 1024U, 1280U, 1536U, 1792U, 2048U, 2560U, 3072U, 3584U, 4096U, 16U, 32U, 64U, 80U, 96U,
-    112U, 128U, 160U, 192U, 224U, 256U, 320U, 384U, 448U, 512U, 640U, 768U, 896U, 1024U, 1280U,
-    1536U, 1792U, 2048U, 2560U, 3072U, 3584U, 4096U, 16U, 32U, 64U, 80U, 96U, 112U, 128U, 160U,
-    192U, 224U, 256U, 320U, 384U, 448U, 512U, 640U, 768U, 896U, 1024U, 1280U, 1536U, 1792U, 2048U,
-    2560U, 3072U, 3584U, 4096U, 16U, 32U, 64U, 80U, 96U, 112U, 128U, 160U, 192U, 224U, 256U, 320U,
-    384U, 448U, 512U, 640U, 768U, 896U, 1024U, 1280U, 1536U, 1792U, 2048U, 2560U, 3072U, 3584U,
-    4096U
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 80U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 96U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 112U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 128U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 160U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 224U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 256U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 320U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 384U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 448U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 512U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 640U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 768U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 896U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1024U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1280U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1536U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1792U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2048U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2560U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 5120U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 6144U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 7168U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 80U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 96U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 112U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 128U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 160U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 224U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 256U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 320U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 384U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 448U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 512U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 640U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 768U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 896U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1024U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1280U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1536U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1792U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2048U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2560U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 5120U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 6144U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 7168U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 80U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 96U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 112U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 128U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 160U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 224U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 256U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 320U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 384U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 448U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 512U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 640U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 768U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 896U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1024U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1280U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1536U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1792U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2048U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2560U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 5120U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 6144U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 7168U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 80U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 96U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 112U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 128U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 160U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 224U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 256U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 320U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 384U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 448U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 512U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 640U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 768U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 896U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1024U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1280U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1536U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1792U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2048U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2560U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 5120U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 6144U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 7168U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } })
   };
+
+typedef struct tuple4_s
+{
+  size_t x;
+  size_t y;
+  size_t z;
+  size_t w;
+}
+tuple4;
+
+static tuple4 gen_arena_sizes(void)
+{
+  size_t arena_slab_region_size = Main_sc_slab_region_size * (size_t)31U;
+  size_t arena_md_bm_region_size = (size_t)1811939328U;
+  size_t arena_md_bm_region_b_size = Main_metadata_max_ex * (size_t)4U;
+  size_t arena_md_region_size = (size_t)452984832U + Main_metadata_max_ex * (size_t)4U;
+  return
+    (
+      (tuple4){
+        .x = arena_slab_region_size,
+        .y = arena_md_bm_region_size,
+        .z = arena_md_bm_region_b_size,
+        .w = arena_md_region_size
+      }
+    );
+}
 
 Main_Meta_size_classes_all Main_Meta_init(void)
 {
-  uint8_t *slab_region = mmap_u8_init((size_t)16777216U * (size_t)4096U * (size_t)108U);
-  uint64_t *md_bm_region = mmap_u64_init((size_t)7247757312U);
-  ArrayList_cell *md_region = mmap_cell_status_init((size_t)1811939328U);
-  size_class *size_classes = mmap_sc_init((size_t)108U);
-  init_size_class((size_t)0U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)1U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)2U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)3U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)4U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)5U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)6U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)7U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)8U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)9U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)10U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)11U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)12U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)13U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)14U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)15U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)16U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)17U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)18U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)19U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)20U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)21U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)22U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)23U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)24U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)25U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)26U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)27U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)28U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)29U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)30U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)31U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)32U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)33U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)34U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)35U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)36U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)37U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)38U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)39U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)40U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)41U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)42U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)43U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)44U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)45U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)46U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)47U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)48U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)49U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)50U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)51U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)52U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)53U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)54U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)55U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)56U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)57U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)58U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)59U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)60U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)61U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)62U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)63U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)64U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)65U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)66U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)67U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)68U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)69U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)70U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)71U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)72U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)73U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)74U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)75U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)76U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)77U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)78U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)79U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)80U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)81U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)82U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)83U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)84U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)85U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)86U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)87U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)88U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)89U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)90U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)91U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)92U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)93U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)94U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)95U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)96U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)97U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)98U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)99U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)100U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)101U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)102U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)103U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)104U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)105U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)106U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)107U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  tuple4 arena_sizes = gen_arena_sizes();
+  uint8_t *slab_region = mmap_u8_init(arena_sizes.x * (size_t)4U);
+  uint64_t *md_bm_region = mmap_u64_init(arena_sizes.y * (size_t)4U);
+  bool *md_bm_region_b = mmap_bool_init(arena_sizes.z * (size_t)4U);
+  ArrayList_cell *md_region = mmap_cell_status_init(arena_sizes.w * (size_t)4U);
+  size_class *size_classes = mmap_sc_init((size_t)124U);
+  size_t offset_ = (size_t)0U;
+  init_size_class(offset_,
+    (size_t)0U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)1U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)2U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)3U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)4U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)5U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)6U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)7U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)8U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)9U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)10U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)11U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)12U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)13U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)14U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)15U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)16U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)17U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)18U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)19U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)20U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)21U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)22U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)23U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)24U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)25U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class(offset_,
+    (size_t)26U,
+    slab_region + arena_sizes.x * (size_t)0U,
+    md_bm_region + arena_sizes.y * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U,
+    size_classes,
+    sizes);
+  init_size_class2(offset_ + (size_t)27U,
+    (size_t)0U,
+    slab_region + arena_sizes.x * (size_t)0U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U + (size_t)452984832U,
+    size_classes + (size_t)27U,
+    sizes);
+  init_size_class2(offset_ + (size_t)27U,
+    (size_t)1U,
+    slab_region + arena_sizes.x * (size_t)0U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U + (size_t)452984832U,
+    size_classes + (size_t)27U,
+    sizes);
+  init_size_class2(offset_ + (size_t)27U,
+    (size_t)2U,
+    slab_region + arena_sizes.x * (size_t)0U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U + (size_t)452984832U,
+    size_classes + (size_t)27U,
+    sizes);
+  init_size_class2(offset_ + (size_t)27U,
+    (size_t)3U,
+    slab_region + arena_sizes.x * (size_t)0U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U + (size_t)452984832U,
+    size_classes + (size_t)27U,
+    sizes);
+  size_t offset_0 = (size_t)31U;
+  init_size_class(offset_0,
+    (size_t)0U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)1U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)2U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)3U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)4U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)5U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)6U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)7U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)8U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)9U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)10U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)11U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)12U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)13U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)14U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)15U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)16U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)17U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)18U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)19U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)20U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)21U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)22U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)23U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)24U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)25U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class(offset_0,
+    (size_t)26U,
+    slab_region + arena_sizes.x * (size_t)1U,
+    md_bm_region + arena_sizes.y * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U,
+    size_classes + (size_t)31U,
+    sizes);
+  init_size_class2(offset_0 + (size_t)27U,
+    (size_t)0U,
+    slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
+    size_classes + (size_t)31U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_0 + (size_t)27U,
+    (size_t)1U,
+    slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
+    size_classes + (size_t)31U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_0 + (size_t)27U,
+    (size_t)2U,
+    slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
+    size_classes + (size_t)31U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_0 + (size_t)27U,
+    (size_t)3U,
+    slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
+    size_classes + (size_t)31U + (size_t)27U,
+    sizes);
+  size_t offset_1 = (size_t)62U;
+  init_size_class(offset_1,
+    (size_t)0U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)1U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)2U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)3U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)4U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)5U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)6U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)7U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)8U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)9U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)10U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)11U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)12U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)13U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)14U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)15U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)16U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)17U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)18U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)19U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)20U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)21U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)22U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)23U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)24U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)25U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class(offset_1,
+    (size_t)26U,
+    slab_region + arena_sizes.x * (size_t)2U,
+    md_bm_region + arena_sizes.y * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U,
+    size_classes + (size_t)62U,
+    sizes);
+  init_size_class2(offset_1 + (size_t)27U,
+    (size_t)0U,
+    slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
+    size_classes + (size_t)62U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_1 + (size_t)27U,
+    (size_t)1U,
+    slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
+    size_classes + (size_t)62U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_1 + (size_t)27U,
+    (size_t)2U,
+    slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
+    size_classes + (size_t)62U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_1 + (size_t)27U,
+    (size_t)3U,
+    slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
+    size_classes + (size_t)62U + (size_t)27U,
+    sizes);
+  size_t offset_2 = (size_t)93U;
+  init_size_class(offset_2,
+    (size_t)0U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)1U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)2U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)3U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)4U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)5U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)6U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)7U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)8U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)9U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)10U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)11U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)12U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)13U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)14U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)15U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)16U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)17U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)18U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)19U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)20U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)21U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)22U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)23U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)24U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)25U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class(offset_2,
+    (size_t)26U,
+    slab_region + arena_sizes.x * (size_t)3U,
+    md_bm_region + arena_sizes.y * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U,
+    size_classes + (size_t)93U,
+    sizes);
+  init_size_class2(offset_2 + (size_t)27U,
+    (size_t)0U,
+    slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
+    size_classes + (size_t)93U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_2 + (size_t)27U,
+    (size_t)1U,
+    slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
+    size_classes + (size_t)93U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_2 + (size_t)27U,
+    (size_t)2U,
+    slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
+    size_classes + (size_t)93U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_2 + (size_t)27U,
+    (size_t)3U,
+    slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
+    size_classes + (size_t)93U + (size_t)27U,
+    sizes);
   return
     ((Main_Meta_size_classes_all){ .size_classes = size_classes, .slab_region = slab_region });
 }
@@ -1398,751 +2376,1447 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
 {
   uint32_t r0 = SizeClassSelection_inv_impl(bytes + 2U);
   size_t i = (size_t)r0;
-  uint32_t size = sizes[arena_id * (size_t)27U + i];
-  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + i].lock);
+  Constants_sc_union size = sizes[arena_id * (size_t)31U + i];
+  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + i].lock);
   uint8_t
-  *r = allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + i].data);
-  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + i].lock);
+  *r = allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + i].data);
+  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + i].lock);
   uint8_t *ptr = r;
   uint8_t *ptr0 = ptr;
+  uint32_t size1;
+  if (size.tag == Constants_Sc)
+    size1 = size.case_Sc;
+  else if (size.tag == Constants_Sc_ex)
+    size1 = size.case_Sc_ex;
+  else
+    size1 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
   if (!(ptr0 == NULL))
   {
-    ptr0[(size_t)(size - 2U)] = 42U;
-    ptr0[(size_t)(size - 1U)] = 23U;
+    ptr0[(size_t)(size1 - 2U)] = 42U;
+    ptr0[(size_t)(size1 - 1U)] = 23U;
   }
   return ptr0;
 }
 
 static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t bytes)
 {
-  uint32_t size = sizes[arena_id * (size_t)27U + (size_t)0U];
-  bool b = 4096U % size == 0U;
-  if (b && bytes <= size - 2U && alignment <= size)
+  Constants_sc_union size = sizes[arena_id * (size_t)31U + (size_t)0U];
+  uint32_t size_;
+  if (size.tag == Constants_Sc)
+    size_ = size.case_Sc;
+  else if (size.tag == Constants_Sc_ex)
+    size_ = size.case_Sc_ex;
+  else
+    size_ = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+  bool b = 4096U % size_ == 0U;
+  if (b && bytes <= size_ - 2U && alignment <= size_)
   {
-    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)0U].lock);
+    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + (size_t)0U].lock);
     uint8_t
     *r =
-      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)0U].data);
-    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)0U].lock);
+      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + (size_t)0U].data);
+    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + (size_t)0U].lock);
     uint8_t *ptr = r;
     uint8_t *ptr0 = ptr;
+    uint32_t size1;
+    if (size.tag == Constants_Sc)
+      size1 = size.case_Sc;
+    else if (size.tag == Constants_Sc_ex)
+      size1 = size.case_Sc_ex;
+    else
+      size1 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
     if (!(ptr0 == NULL))
     {
-      ptr0[(size_t)(size - 2U)] = 42U;
-      ptr0[(size_t)(size - 1U)] = 23U;
+      ptr0[(size_t)(size1 - 2U)] = 42U;
+      ptr0[(size_t)(size1 - 1U)] = 23U;
     }
     return ptr0;
   }
   else
   {
-    uint32_t size1 = sizes[arena_id * (size_t)27U + (size_t)1U];
-    bool b1 = 4096U % size1 == 0U;
-    if (b1 && bytes <= size1 - 2U && alignment <= size1)
+    Constants_sc_union size1 = sizes[arena_id * (size_t)31U + (size_t)1U];
+    uint32_t size_1;
+    if (size1.tag == Constants_Sc)
+      size_1 = size1.case_Sc;
+    else if (size1.tag == Constants_Sc_ex)
+      size_1 = size1.case_Sc_ex;
+    else
+      size_1 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+    bool b1 = 4096U % size_1 == 0U;
+    if (b1 && bytes <= size_1 - 2U && alignment <= size_1)
     {
       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-        * (size_t)27U
+        * (size_t)31U
         + (size_t)1U].lock);
       uint8_t
       *r =
-        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)1U].data);
+        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + (size_t)1U].data);
       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-        * (size_t)27U
+        * (size_t)31U
         + (size_t)1U].lock);
       uint8_t *ptr = r;
       uint8_t *ptr0 = ptr;
+      uint32_t size2;
+      if (size1.tag == Constants_Sc)
+        size2 = size1.case_Sc;
+      else if (size1.tag == Constants_Sc_ex)
+        size2 = size1.case_Sc_ex;
+      else
+        size2 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
       if (!(ptr0 == NULL))
       {
-        ptr0[(size_t)(size1 - 2U)] = 42U;
-        ptr0[(size_t)(size1 - 1U)] = 23U;
+        ptr0[(size_t)(size2 - 2U)] = 42U;
+        ptr0[(size_t)(size2 - 1U)] = 23U;
       }
       return ptr0;
     }
     else
     {
-      uint32_t size2 = sizes[arena_id * (size_t)27U + (size_t)2U];
-      bool b2 = 4096U % size2 == 0U;
-      if (b2 && bytes <= size2 - 2U && alignment <= size2)
+      Constants_sc_union size2 = sizes[arena_id * (size_t)31U + (size_t)2U];
+      uint32_t size_2;
+      if (size2.tag == Constants_Sc)
+        size_2 = size2.case_Sc;
+      else if (size2.tag == Constants_Sc_ex)
+        size_2 = size2.case_Sc_ex;
+      else
+        size_2 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+      bool b2 = 4096U % size_2 == 0U;
+      if (b2 && bytes <= size_2 - 2U && alignment <= size_2)
       {
         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-          * (size_t)27U
+          * (size_t)31U
           + (size_t)2U].lock);
         uint8_t
         *r =
           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-            * (size_t)27U
+            * (size_t)31U
             + (size_t)2U].data);
         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-          * (size_t)27U
+          * (size_t)31U
           + (size_t)2U].lock);
         uint8_t *ptr = r;
         uint8_t *ptr0 = ptr;
+        uint32_t size3;
+        if (size2.tag == Constants_Sc)
+          size3 = size2.case_Sc;
+        else if (size2.tag == Constants_Sc_ex)
+          size3 = size2.case_Sc_ex;
+        else
+          size3 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
         if (!(ptr0 == NULL))
         {
-          ptr0[(size_t)(size2 - 2U)] = 42U;
-          ptr0[(size_t)(size2 - 1U)] = 23U;
+          ptr0[(size_t)(size3 - 2U)] = 42U;
+          ptr0[(size_t)(size3 - 1U)] = 23U;
         }
         return ptr0;
       }
       else
       {
-        uint32_t size3 = sizes[arena_id * (size_t)27U + (size_t)3U];
-        bool b3 = 4096U % size3 == 0U;
-        if (b3 && bytes <= size3 - 2U && alignment <= size3)
+        Constants_sc_union size3 = sizes[arena_id * (size_t)31U + (size_t)3U];
+        uint32_t size_3;
+        if (size3.tag == Constants_Sc)
+          size_3 = size3.case_Sc;
+        else if (size3.tag == Constants_Sc_ex)
+          size_3 = size3.case_Sc_ex;
+        else
+          size_3 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+        bool b3 = 4096U % size_3 == 0U;
+        if (b3 && bytes <= size_3 - 2U && alignment <= size_3)
         {
           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-            * (size_t)27U
+            * (size_t)31U
             + (size_t)3U].lock);
           uint8_t
           *r =
             allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-              * (size_t)27U
+              * (size_t)31U
               + (size_t)3U].data);
           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-            * (size_t)27U
+            * (size_t)31U
             + (size_t)3U].lock);
           uint8_t *ptr = r;
           uint8_t *ptr0 = ptr;
+          uint32_t size4;
+          if (size3.tag == Constants_Sc)
+            size4 = size3.case_Sc;
+          else if (size3.tag == Constants_Sc_ex)
+            size4 = size3.case_Sc_ex;
+          else
+            size4 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
           if (!(ptr0 == NULL))
           {
-            ptr0[(size_t)(size3 - 2U)] = 42U;
-            ptr0[(size_t)(size3 - 1U)] = 23U;
+            ptr0[(size_t)(size4 - 2U)] = 42U;
+            ptr0[(size_t)(size4 - 1U)] = 23U;
           }
           return ptr0;
         }
         else
         {
-          uint32_t size4 = sizes[arena_id * (size_t)27U + (size_t)4U];
-          bool b4 = 4096U % size4 == 0U;
-          if (b4 && bytes <= size4 - 2U && alignment <= size4)
+          Constants_sc_union size4 = sizes[arena_id * (size_t)31U + (size_t)4U];
+          uint32_t size_4;
+          if (size4.tag == Constants_Sc)
+            size_4 = size4.case_Sc;
+          else if (size4.tag == Constants_Sc_ex)
+            size_4 = size4.case_Sc_ex;
+          else
+            size_4 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+          bool b4 = 4096U % size_4 == 0U;
+          if (b4 && bytes <= size_4 - 2U && alignment <= size_4)
           {
             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-              * (size_t)27U
+              * (size_t)31U
               + (size_t)4U].lock);
             uint8_t
             *r =
               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                * (size_t)27U
+                * (size_t)31U
                 + (size_t)4U].data);
             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-              * (size_t)27U
+              * (size_t)31U
               + (size_t)4U].lock);
             uint8_t *ptr = r;
             uint8_t *ptr0 = ptr;
+            uint32_t size5;
+            if (size4.tag == Constants_Sc)
+              size5 = size4.case_Sc;
+            else if (size4.tag == Constants_Sc_ex)
+              size5 = size4.case_Sc_ex;
+            else
+              size5 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
             if (!(ptr0 == NULL))
             {
-              ptr0[(size_t)(size4 - 2U)] = 42U;
-              ptr0[(size_t)(size4 - 1U)] = 23U;
+              ptr0[(size_t)(size5 - 2U)] = 42U;
+              ptr0[(size_t)(size5 - 1U)] = 23U;
             }
             return ptr0;
           }
           else
           {
-            uint32_t size5 = sizes[arena_id * (size_t)27U + (size_t)5U];
-            bool b5 = 4096U % size5 == 0U;
-            if (b5 && bytes <= size5 - 2U && alignment <= size5)
+            Constants_sc_union size5 = sizes[arena_id * (size_t)31U + (size_t)5U];
+            uint32_t size_5;
+            if (size5.tag == Constants_Sc)
+              size_5 = size5.case_Sc;
+            else if (size5.tag == Constants_Sc_ex)
+              size_5 = size5.case_Sc_ex;
+            else
+              size_5 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+            bool b5 = 4096U % size_5 == 0U;
+            if (b5 && bytes <= size_5 - 2U && alignment <= size_5)
             {
               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                * (size_t)27U
+                * (size_t)31U
                 + (size_t)5U].lock);
               uint8_t
               *r =
                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                  * (size_t)27U
+                  * (size_t)31U
                   + (size_t)5U].data);
               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                * (size_t)27U
+                * (size_t)31U
                 + (size_t)5U].lock);
               uint8_t *ptr = r;
               uint8_t *ptr0 = ptr;
+              uint32_t size6;
+              if (size5.tag == Constants_Sc)
+                size6 = size5.case_Sc;
+              else if (size5.tag == Constants_Sc_ex)
+                size6 = size5.case_Sc_ex;
+              else
+                size6 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
               if (!(ptr0 == NULL))
               {
-                ptr0[(size_t)(size5 - 2U)] = 42U;
-                ptr0[(size_t)(size5 - 1U)] = 23U;
+                ptr0[(size_t)(size6 - 2U)] = 42U;
+                ptr0[(size_t)(size6 - 1U)] = 23U;
               }
               return ptr0;
             }
             else
             {
-              uint32_t size6 = sizes[arena_id * (size_t)27U + (size_t)6U];
-              bool b6 = 4096U % size6 == 0U;
-              if (b6 && bytes <= size6 - 2U && alignment <= size6)
+              Constants_sc_union size6 = sizes[arena_id * (size_t)31U + (size_t)6U];
+              uint32_t size_6;
+              if (size6.tag == Constants_Sc)
+                size_6 = size6.case_Sc;
+              else if (size6.tag == Constants_Sc_ex)
+                size_6 = size6.case_Sc_ex;
+              else
+                size_6 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+              bool b6 = 4096U % size_6 == 0U;
+              if (b6 && bytes <= size_6 - 2U && alignment <= size_6)
               {
                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                  * (size_t)27U
+                  * (size_t)31U
                   + (size_t)6U].lock);
                 uint8_t
                 *r =
                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                    * (size_t)27U
+                    * (size_t)31U
                     + (size_t)6U].data);
                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                  * (size_t)27U
+                  * (size_t)31U
                   + (size_t)6U].lock);
                 uint8_t *ptr = r;
                 uint8_t *ptr0 = ptr;
+                uint32_t size7;
+                if (size6.tag == Constants_Sc)
+                  size7 = size6.case_Sc;
+                else if (size6.tag == Constants_Sc_ex)
+                  size7 = size6.case_Sc_ex;
+                else
+                  size7 =
+                    KRML_EABORT(uint32_t,
+                      "unreachable (pattern matches are exhaustive in F*)");
                 if (!(ptr0 == NULL))
                 {
-                  ptr0[(size_t)(size6 - 2U)] = 42U;
-                  ptr0[(size_t)(size6 - 1U)] = 23U;
+                  ptr0[(size_t)(size7 - 2U)] = 42U;
+                  ptr0[(size_t)(size7 - 1U)] = 23U;
                 }
                 return ptr0;
               }
               else
               {
-                uint32_t size7 = sizes[arena_id * (size_t)27U + (size_t)7U];
-                bool b7 = 4096U % size7 == 0U;
-                if (b7 && bytes <= size7 - 2U && alignment <= size7)
+                Constants_sc_union size7 = sizes[arena_id * (size_t)31U + (size_t)7U];
+                uint32_t size_7;
+                if (size7.tag == Constants_Sc)
+                  size_7 = size7.case_Sc;
+                else if (size7.tag == Constants_Sc_ex)
+                  size_7 = size7.case_Sc_ex;
+                else
+                  size_7 =
+                    KRML_EABORT(uint32_t,
+                      "unreachable (pattern matches are exhaustive in F*)");
+                bool b7 = 4096U % size_7 == 0U;
+                if (b7 && bytes <= size_7 - 2U && alignment <= size_7)
                 {
                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                    * (size_t)27U
+                    * (size_t)31U
                     + (size_t)7U].lock);
                   uint8_t
                   *r =
                     allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                      * (size_t)27U
+                      * (size_t)31U
                       + (size_t)7U].data);
                   Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                    * (size_t)27U
+                    * (size_t)31U
                     + (size_t)7U].lock);
                   uint8_t *ptr = r;
                   uint8_t *ptr0 = ptr;
+                  uint32_t size8;
+                  if (size7.tag == Constants_Sc)
+                    size8 = size7.case_Sc;
+                  else if (size7.tag == Constants_Sc_ex)
+                    size8 = size7.case_Sc_ex;
+                  else
+                    size8 =
+                      KRML_EABORT(uint32_t,
+                        "unreachable (pattern matches are exhaustive in F*)");
                   if (!(ptr0 == NULL))
                   {
-                    ptr0[(size_t)(size7 - 2U)] = 42U;
-                    ptr0[(size_t)(size7 - 1U)] = 23U;
+                    ptr0[(size_t)(size8 - 2U)] = 42U;
+                    ptr0[(size_t)(size8 - 1U)] = 23U;
                   }
                   return ptr0;
                 }
                 else
                 {
-                  uint32_t size8 = sizes[arena_id * (size_t)27U + (size_t)8U];
-                  bool b8 = 4096U % size8 == 0U;
-                  if (b8 && bytes <= size8 - 2U && alignment <= size8)
+                  Constants_sc_union size8 = sizes[arena_id * (size_t)31U + (size_t)8U];
+                  uint32_t size_8;
+                  if (size8.tag == Constants_Sc)
+                    size_8 = size8.case_Sc;
+                  else if (size8.tag == Constants_Sc_ex)
+                    size_8 = size8.case_Sc_ex;
+                  else
+                    size_8 =
+                      KRML_EABORT(uint32_t,
+                        "unreachable (pattern matches are exhaustive in F*)");
+                  bool b8 = 4096U % size_8 == 0U;
+                  if (b8 && bytes <= size_8 - 2U && alignment <= size_8)
                   {
                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                      * (size_t)27U
+                      * (size_t)31U
                       + (size_t)8U].lock);
                     uint8_t
                     *r =
                       allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                        * (size_t)27U
+                        * (size_t)31U
                         + (size_t)8U].data);
                     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                      * (size_t)27U
+                      * (size_t)31U
                       + (size_t)8U].lock);
                     uint8_t *ptr = r;
                     uint8_t *ptr0 = ptr;
+                    uint32_t size9;
+                    if (size8.tag == Constants_Sc)
+                      size9 = size8.case_Sc;
+                    else if (size8.tag == Constants_Sc_ex)
+                      size9 = size8.case_Sc_ex;
+                    else
+                      size9 =
+                        KRML_EABORT(uint32_t,
+                          "unreachable (pattern matches are exhaustive in F*)");
                     if (!(ptr0 == NULL))
                     {
-                      ptr0[(size_t)(size8 - 2U)] = 42U;
-                      ptr0[(size_t)(size8 - 1U)] = 23U;
+                      ptr0[(size_t)(size9 - 2U)] = 42U;
+                      ptr0[(size_t)(size9 - 1U)] = 23U;
                     }
                     return ptr0;
                   }
                   else
                   {
-                    uint32_t size9 = sizes[arena_id * (size_t)27U + (size_t)9U];
-                    bool b9 = 4096U % size9 == 0U;
-                    if (b9 && bytes <= size9 - 2U && alignment <= size9)
+                    Constants_sc_union size9 = sizes[arena_id * (size_t)31U + (size_t)9U];
+                    uint32_t size_9;
+                    if (size9.tag == Constants_Sc)
+                      size_9 = size9.case_Sc;
+                    else if (size9.tag == Constants_Sc_ex)
+                      size_9 = size9.case_Sc_ex;
+                    else
+                      size_9 =
+                        KRML_EABORT(uint32_t,
+                          "unreachable (pattern matches are exhaustive in F*)");
+                    bool b9 = 4096U % size_9 == 0U;
+                    if (b9 && bytes <= size_9 - 2U && alignment <= size_9)
                     {
                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                        * (size_t)27U
+                        * (size_t)31U
                         + (size_t)9U].lock);
                       uint8_t
                       *r =
                         allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                          * (size_t)27U
+                          * (size_t)31U
                           + (size_t)9U].data);
                       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                        * (size_t)27U
+                        * (size_t)31U
                         + (size_t)9U].lock);
                       uint8_t *ptr = r;
                       uint8_t *ptr0 = ptr;
+                      uint32_t size10;
+                      if (size9.tag == Constants_Sc)
+                        size10 = size9.case_Sc;
+                      else if (size9.tag == Constants_Sc_ex)
+                        size10 = size9.case_Sc_ex;
+                      else
+                        size10 =
+                          KRML_EABORT(uint32_t,
+                            "unreachable (pattern matches are exhaustive in F*)");
                       if (!(ptr0 == NULL))
                       {
-                        ptr0[(size_t)(size9 - 2U)] = 42U;
-                        ptr0[(size_t)(size9 - 1U)] = 23U;
+                        ptr0[(size_t)(size10 - 2U)] = 42U;
+                        ptr0[(size_t)(size10 - 1U)] = 23U;
                       }
                       return ptr0;
                     }
                     else
                     {
-                      uint32_t size10 = sizes[arena_id * (size_t)27U + (size_t)10U];
-                      bool b10 = 4096U % size10 == 0U;
-                      if (b10 && bytes <= size10 - 2U && alignment <= size10)
+                      Constants_sc_union size10 = sizes[arena_id * (size_t)31U + (size_t)10U];
+                      uint32_t size_10;
+                      if (size10.tag == Constants_Sc)
+                        size_10 = size10.case_Sc;
+                      else if (size10.tag == Constants_Sc_ex)
+                        size_10 = size10.case_Sc_ex;
+                      else
+                        size_10 =
+                          KRML_EABORT(uint32_t,
+                            "unreachable (pattern matches are exhaustive in F*)");
+                      bool b10 = 4096U % size_10 == 0U;
+                      if (b10 && bytes <= size_10 - 2U && alignment <= size_10)
                       {
                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                          * (size_t)27U
+                          * (size_t)31U
                           + (size_t)10U].lock);
                         uint8_t
                         *r =
                           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                            * (size_t)27U
+                            * (size_t)31U
                             + (size_t)10U].data);
                         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                          * (size_t)27U
+                          * (size_t)31U
                           + (size_t)10U].lock);
                         uint8_t *ptr = r;
                         uint8_t *ptr0 = ptr;
+                        uint32_t size11;
+                        if (size10.tag == Constants_Sc)
+                          size11 = size10.case_Sc;
+                        else if (size10.tag == Constants_Sc_ex)
+                          size11 = size10.case_Sc_ex;
+                        else
+                          size11 =
+                            KRML_EABORT(uint32_t,
+                              "unreachable (pattern matches are exhaustive in F*)");
                         if (!(ptr0 == NULL))
                         {
-                          ptr0[(size_t)(size10 - 2U)] = 42U;
-                          ptr0[(size_t)(size10 - 1U)] = 23U;
+                          ptr0[(size_t)(size11 - 2U)] = 42U;
+                          ptr0[(size_t)(size11 - 1U)] = 23U;
                         }
                         return ptr0;
                       }
                       else
                       {
-                        uint32_t size11 = sizes[arena_id * (size_t)27U + (size_t)11U];
-                        bool b11 = 4096U % size11 == 0U;
-                        if (b11 && bytes <= size11 - 2U && alignment <= size11)
+                        Constants_sc_union size11 = sizes[arena_id * (size_t)31U + (size_t)11U];
+                        uint32_t size_11;
+                        if (size11.tag == Constants_Sc)
+                          size_11 = size11.case_Sc;
+                        else if (size11.tag == Constants_Sc_ex)
+                          size_11 = size11.case_Sc_ex;
+                        else
+                          size_11 =
+                            KRML_EABORT(uint32_t,
+                              "unreachable (pattern matches are exhaustive in F*)");
+                        bool b11 = 4096U % size_11 == 0U;
+                        if (b11 && bytes <= size_11 - 2U && alignment <= size_11)
                         {
                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                            * (size_t)27U
+                            * (size_t)31U
                             + (size_t)11U].lock);
                           uint8_t
                           *r =
                             allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                              * (size_t)27U
+                              * (size_t)31U
                               + (size_t)11U].data);
                           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                            * (size_t)27U
+                            * (size_t)31U
                             + (size_t)11U].lock);
                           uint8_t *ptr = r;
                           uint8_t *ptr0 = ptr;
+                          uint32_t size12;
+                          if (size11.tag == Constants_Sc)
+                            size12 = size11.case_Sc;
+                          else if (size11.tag == Constants_Sc_ex)
+                            size12 = size11.case_Sc_ex;
+                          else
+                            size12 =
+                              KRML_EABORT(uint32_t,
+                                "unreachable (pattern matches are exhaustive in F*)");
                           if (!(ptr0 == NULL))
                           {
-                            ptr0[(size_t)(size11 - 2U)] = 42U;
-                            ptr0[(size_t)(size11 - 1U)] = 23U;
+                            ptr0[(size_t)(size12 - 2U)] = 42U;
+                            ptr0[(size_t)(size12 - 1U)] = 23U;
                           }
                           return ptr0;
                         }
                         else
                         {
-                          uint32_t size12 = sizes[arena_id * (size_t)27U + (size_t)12U];
-                          bool b12 = 4096U % size12 == 0U;
-                          if (b12 && bytes <= size12 - 2U && alignment <= size12)
+                          Constants_sc_union size12 = sizes[arena_id * (size_t)31U + (size_t)12U];
+                          uint32_t size_12;
+                          if (size12.tag == Constants_Sc)
+                            size_12 = size12.case_Sc;
+                          else if (size12.tag == Constants_Sc_ex)
+                            size_12 = size12.case_Sc_ex;
+                          else
+                            size_12 =
+                              KRML_EABORT(uint32_t,
+                                "unreachable (pattern matches are exhaustive in F*)");
+                          bool b12 = 4096U % size_12 == 0U;
+                          if (b12 && bytes <= size_12 - 2U && alignment <= size_12)
                           {
                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                              * (size_t)27U
+                              * (size_t)31U
                               + (size_t)12U].lock);
                             uint8_t
                             *r =
                               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                * (size_t)27U
+                                * (size_t)31U
                                 + (size_t)12U].data);
                             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                              * (size_t)27U
+                              * (size_t)31U
                               + (size_t)12U].lock);
                             uint8_t *ptr = r;
                             uint8_t *ptr0 = ptr;
+                            uint32_t size13;
+                            if (size12.tag == Constants_Sc)
+                              size13 = size12.case_Sc;
+                            else if (size12.tag == Constants_Sc_ex)
+                              size13 = size12.case_Sc_ex;
+                            else
+                              size13 =
+                                KRML_EABORT(uint32_t,
+                                  "unreachable (pattern matches are exhaustive in F*)");
                             if (!(ptr0 == NULL))
                             {
-                              ptr0[(size_t)(size12 - 2U)] = 42U;
-                              ptr0[(size_t)(size12 - 1U)] = 23U;
+                              ptr0[(size_t)(size13 - 2U)] = 42U;
+                              ptr0[(size_t)(size13 - 1U)] = 23U;
                             }
                             return ptr0;
                           }
                           else
                           {
-                            uint32_t size13 = sizes[arena_id * (size_t)27U + (size_t)13U];
-                            bool b13 = 4096U % size13 == 0U;
-                            if (b13 && bytes <= size13 - 2U && alignment <= size13)
+                            Constants_sc_union size13 = sizes[arena_id * (size_t)31U + (size_t)13U];
+                            uint32_t size_13;
+                            if (size13.tag == Constants_Sc)
+                              size_13 = size13.case_Sc;
+                            else if (size13.tag == Constants_Sc_ex)
+                              size_13 = size13.case_Sc_ex;
+                            else
+                              size_13 =
+                                KRML_EABORT(uint32_t,
+                                  "unreachable (pattern matches are exhaustive in F*)");
+                            bool b13 = 4096U % size_13 == 0U;
+                            if (b13 && bytes <= size_13 - 2U && alignment <= size_13)
                             {
                               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                * (size_t)27U
+                                * (size_t)31U
                                 + (size_t)13U].lock);
                               uint8_t
                               *r =
                                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                  * (size_t)27U
+                                  * (size_t)31U
                                   + (size_t)13U].data);
                               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                * (size_t)27U
+                                * (size_t)31U
                                 + (size_t)13U].lock);
                               uint8_t *ptr = r;
                               uint8_t *ptr0 = ptr;
+                              uint32_t size14;
+                              if (size13.tag == Constants_Sc)
+                                size14 = size13.case_Sc;
+                              else if (size13.tag == Constants_Sc_ex)
+                                size14 = size13.case_Sc_ex;
+                              else
+                                size14 =
+                                  KRML_EABORT(uint32_t,
+                                    "unreachable (pattern matches are exhaustive in F*)");
                               if (!(ptr0 == NULL))
                               {
-                                ptr0[(size_t)(size13 - 2U)] = 42U;
-                                ptr0[(size_t)(size13 - 1U)] = 23U;
+                                ptr0[(size_t)(size14 - 2U)] = 42U;
+                                ptr0[(size_t)(size14 - 1U)] = 23U;
                               }
                               return ptr0;
                             }
                             else
                             {
-                              uint32_t size14 = sizes[arena_id * (size_t)27U + (size_t)14U];
-                              bool b14 = 4096U % size14 == 0U;
-                              if (b14 && bytes <= size14 - 2U && alignment <= size14)
+                              Constants_sc_union
+                              size14 = sizes[arena_id * (size_t)31U + (size_t)14U];
+                              uint32_t size_14;
+                              if (size14.tag == Constants_Sc)
+                                size_14 = size14.case_Sc;
+                              else if (size14.tag == Constants_Sc_ex)
+                                size_14 = size14.case_Sc_ex;
+                              else
+                                size_14 =
+                                  KRML_EABORT(uint32_t,
+                                    "unreachable (pattern matches are exhaustive in F*)");
+                              bool b14 = 4096U % size_14 == 0U;
+                              if (b14 && bytes <= size_14 - 2U && alignment <= size_14)
                               {
                                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                  * (size_t)27U
+                                  * (size_t)31U
                                   + (size_t)14U].lock);
                                 uint8_t
                                 *r =
                                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                    * (size_t)27U
+                                    * (size_t)31U
                                     + (size_t)14U].data);
                                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                  * (size_t)27U
+                                  * (size_t)31U
                                   + (size_t)14U].lock);
                                 uint8_t *ptr = r;
                                 uint8_t *ptr0 = ptr;
+                                uint32_t size15;
+                                if (size14.tag == Constants_Sc)
+                                  size15 = size14.case_Sc;
+                                else if (size14.tag == Constants_Sc_ex)
+                                  size15 = size14.case_Sc_ex;
+                                else
+                                  size15 =
+                                    KRML_EABORT(uint32_t,
+                                      "unreachable (pattern matches are exhaustive in F*)");
                                 if (!(ptr0 == NULL))
                                 {
-                                  ptr0[(size_t)(size14 - 2U)] = 42U;
-                                  ptr0[(size_t)(size14 - 1U)] = 23U;
+                                  ptr0[(size_t)(size15 - 2U)] = 42U;
+                                  ptr0[(size_t)(size15 - 1U)] = 23U;
                                 }
                                 return ptr0;
                               }
                               else
                               {
-                                uint32_t size15 = sizes[arena_id * (size_t)27U + (size_t)15U];
-                                bool b15 = 4096U % size15 == 0U;
-                                if (b15 && bytes <= size15 - 2U && alignment <= size15)
+                                Constants_sc_union
+                                size15 = sizes[arena_id * (size_t)31U + (size_t)15U];
+                                uint32_t size_15;
+                                if (size15.tag == Constants_Sc)
+                                  size_15 = size15.case_Sc;
+                                else if (size15.tag == Constants_Sc_ex)
+                                  size_15 = size15.case_Sc_ex;
+                                else
+                                  size_15 =
+                                    KRML_EABORT(uint32_t,
+                                      "unreachable (pattern matches are exhaustive in F*)");
+                                bool b15 = 4096U % size_15 == 0U;
+                                if (b15 && bytes <= size_15 - 2U && alignment <= size_15)
                                 {
                                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                    * (size_t)27U
+                                    * (size_t)31U
                                     + (size_t)15U].lock);
                                   uint8_t
                                   *r =
                                     allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                      * (size_t)27U
+                                      * (size_t)31U
                                       + (size_t)15U].data);
                                   Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                    * (size_t)27U
+                                    * (size_t)31U
                                     + (size_t)15U].lock);
                                   uint8_t *ptr = r;
                                   uint8_t *ptr0 = ptr;
+                                  uint32_t size16;
+                                  if (size15.tag == Constants_Sc)
+                                    size16 = size15.case_Sc;
+                                  else if (size15.tag == Constants_Sc_ex)
+                                    size16 = size15.case_Sc_ex;
+                                  else
+                                    size16 =
+                                      KRML_EABORT(uint32_t,
+                                        "unreachable (pattern matches are exhaustive in F*)");
                                   if (!(ptr0 == NULL))
                                   {
-                                    ptr0[(size_t)(size15 - 2U)] = 42U;
-                                    ptr0[(size_t)(size15 - 1U)] = 23U;
+                                    ptr0[(size_t)(size16 - 2U)] = 42U;
+                                    ptr0[(size_t)(size16 - 1U)] = 23U;
                                   }
                                   return ptr0;
                                 }
                                 else
                                 {
-                                  uint32_t size16 = sizes[arena_id * (size_t)27U + (size_t)16U];
-                                  bool b16 = 4096U % size16 == 0U;
-                                  if (b16 && bytes <= size16 - 2U && alignment <= size16)
+                                  Constants_sc_union
+                                  size16 = sizes[arena_id * (size_t)31U + (size_t)16U];
+                                  uint32_t size_16;
+                                  if (size16.tag == Constants_Sc)
+                                    size_16 = size16.case_Sc;
+                                  else if (size16.tag == Constants_Sc_ex)
+                                    size_16 = size16.case_Sc_ex;
+                                  else
+                                    size_16 =
+                                      KRML_EABORT(uint32_t,
+                                        "unreachable (pattern matches are exhaustive in F*)");
+                                  bool b16 = 4096U % size_16 == 0U;
+                                  if (b16 && bytes <= size_16 - 2U && alignment <= size_16)
                                   {
                                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                      * (size_t)27U
+                                      * (size_t)31U
                                       + (size_t)16U].lock);
                                     uint8_t
                                     *r =
                                       allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                        * (size_t)27U
+                                        * (size_t)31U
                                         + (size_t)16U].data);
                                     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                      * (size_t)27U
+                                      * (size_t)31U
                                       + (size_t)16U].lock);
                                     uint8_t *ptr = r;
                                     uint8_t *ptr0 = ptr;
+                                    uint32_t size17;
+                                    if (size16.tag == Constants_Sc)
+                                      size17 = size16.case_Sc;
+                                    else if (size16.tag == Constants_Sc_ex)
+                                      size17 = size16.case_Sc_ex;
+                                    else
+                                      size17 =
+                                        KRML_EABORT(uint32_t,
+                                          "unreachable (pattern matches are exhaustive in F*)");
                                     if (!(ptr0 == NULL))
                                     {
-                                      ptr0[(size_t)(size16 - 2U)] = 42U;
-                                      ptr0[(size_t)(size16 - 1U)] = 23U;
+                                      ptr0[(size_t)(size17 - 2U)] = 42U;
+                                      ptr0[(size_t)(size17 - 1U)] = 23U;
                                     }
                                     return ptr0;
                                   }
                                   else
                                   {
-                                    uint32_t size17 = sizes[arena_id * (size_t)27U + (size_t)17U];
-                                    bool b17 = 4096U % size17 == 0U;
-                                    if (b17 && bytes <= size17 - 2U && alignment <= size17)
+                                    Constants_sc_union
+                                    size17 = sizes[arena_id * (size_t)31U + (size_t)17U];
+                                    uint32_t size_17;
+                                    if (size17.tag == Constants_Sc)
+                                      size_17 = size17.case_Sc;
+                                    else if (size17.tag == Constants_Sc_ex)
+                                      size_17 = size17.case_Sc_ex;
+                                    else
+                                      size_17 =
+                                        KRML_EABORT(uint32_t,
+                                          "unreachable (pattern matches are exhaustive in F*)");
+                                    bool b17 = 4096U % size_17 == 0U;
+                                    if (b17 && bytes <= size_17 - 2U && alignment <= size_17)
                                     {
                                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                        * (size_t)27U
+                                        * (size_t)31U
                                         + (size_t)17U].lock);
                                       uint8_t
                                       *r =
                                         allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                          * (size_t)27U
+                                          * (size_t)31U
                                           + (size_t)17U].data);
                                       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                        * (size_t)27U
+                                        * (size_t)31U
                                         + (size_t)17U].lock);
                                       uint8_t *ptr = r;
                                       uint8_t *ptr0 = ptr;
+                                      uint32_t size18;
+                                      if (size17.tag == Constants_Sc)
+                                        size18 = size17.case_Sc;
+                                      else if (size17.tag == Constants_Sc_ex)
+                                        size18 = size17.case_Sc_ex;
+                                      else
+                                        size18 =
+                                          KRML_EABORT(uint32_t,
+                                            "unreachable (pattern matches are exhaustive in F*)");
                                       if (!(ptr0 == NULL))
                                       {
-                                        ptr0[(size_t)(size17 - 2U)] = 42U;
-                                        ptr0[(size_t)(size17 - 1U)] = 23U;
+                                        ptr0[(size_t)(size18 - 2U)] = 42U;
+                                        ptr0[(size_t)(size18 - 1U)] = 23U;
                                       }
                                       return ptr0;
                                     }
                                     else
                                     {
-                                      uint32_t size18 = sizes[arena_id * (size_t)27U + (size_t)18U];
-                                      bool b18 = 4096U % size18 == 0U;
-                                      if (b18 && bytes <= size18 - 2U && alignment <= size18)
+                                      Constants_sc_union
+                                      size18 = sizes[arena_id * (size_t)31U + (size_t)18U];
+                                      uint32_t size_18;
+                                      if (size18.tag == Constants_Sc)
+                                        size_18 = size18.case_Sc;
+                                      else if (size18.tag == Constants_Sc_ex)
+                                        size_18 = size18.case_Sc_ex;
+                                      else
+                                        size_18 =
+                                          KRML_EABORT(uint32_t,
+                                            "unreachable (pattern matches are exhaustive in F*)");
+                                      bool b18 = 4096U % size_18 == 0U;
+                                      if (b18 && bytes <= size_18 - 2U && alignment <= size_18)
                                       {
                                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                          * (size_t)27U
+                                          * (size_t)31U
                                           + (size_t)18U].lock);
                                         uint8_t
                                         *r =
                                           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)27U
+                                            * (size_t)31U
                                             + (size_t)18U].data);
                                         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                          * (size_t)27U
+                                          * (size_t)31U
                                           + (size_t)18U].lock);
                                         uint8_t *ptr = r;
                                         uint8_t *ptr0 = ptr;
+                                        uint32_t size19;
+                                        if (size18.tag == Constants_Sc)
+                                          size19 = size18.case_Sc;
+                                        else if (size18.tag == Constants_Sc_ex)
+                                          size19 = size18.case_Sc_ex;
+                                        else
+                                          size19 =
+                                            KRML_EABORT(uint32_t,
+                                              "unreachable (pattern matches are exhaustive in F*)");
                                         if (!(ptr0 == NULL))
                                         {
-                                          ptr0[(size_t)(size18 - 2U)] = 42U;
-                                          ptr0[(size_t)(size18 - 1U)] = 23U;
+                                          ptr0[(size_t)(size19 - 2U)] = 42U;
+                                          ptr0[(size_t)(size19 - 1U)] = 23U;
                                         }
                                         return ptr0;
                                       }
                                       else
                                       {
-                                        uint32_t
-                                        size19 = sizes[arena_id * (size_t)27U + (size_t)19U];
-                                        bool b19 = 4096U % size19 == 0U;
-                                        if (b19 && bytes <= size19 - 2U && alignment <= size19)
+                                        Constants_sc_union
+                                        size19 = sizes[arena_id * (size_t)31U + (size_t)19U];
+                                        uint32_t size_19;
+                                        if (size19.tag == Constants_Sc)
+                                          size_19 = size19.case_Sc;
+                                        else if (size19.tag == Constants_Sc_ex)
+                                          size_19 = size19.case_Sc_ex;
+                                        else
+                                          size_19 =
+                                            KRML_EABORT(uint32_t,
+                                              "unreachable (pattern matches are exhaustive in F*)");
+                                        bool b19 = 4096U % size_19 == 0U;
+                                        if (b19 && bytes <= size_19 - 2U && alignment <= size_19)
                                         {
                                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)27U
+                                            * (size_t)31U
                                             + (size_t)19U].lock);
                                           uint8_t
                                           *r =
                                             allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)27U
+                                              * (size_t)31U
                                               + (size_t)19U].data);
                                           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)27U
+                                            * (size_t)31U
                                             + (size_t)19U].lock);
                                           uint8_t *ptr = r;
                                           uint8_t *ptr0 = ptr;
+                                          uint32_t size20;
+                                          if (size19.tag == Constants_Sc)
+                                            size20 = size19.case_Sc;
+                                          else if (size19.tag == Constants_Sc_ex)
+                                            size20 = size19.case_Sc_ex;
+                                          else
+                                            size20 =
+                                              KRML_EABORT(uint32_t,
+                                                "unreachable (pattern matches are exhaustive in F*)");
                                           if (!(ptr0 == NULL))
                                           {
-                                            ptr0[(size_t)(size19 - 2U)] = 42U;
-                                            ptr0[(size_t)(size19 - 1U)] = 23U;
+                                            ptr0[(size_t)(size20 - 2U)] = 42U;
+                                            ptr0[(size_t)(size20 - 1U)] = 23U;
                                           }
                                           return ptr0;
                                         }
                                         else
                                         {
-                                          uint32_t
-                                          size20 = sizes[arena_id * (size_t)27U + (size_t)20U];
-                                          bool b20 = 4096U % size20 == 0U;
-                                          if (b20 && bytes <= size20 - 2U && alignment <= size20)
+                                          Constants_sc_union
+                                          size20 = sizes[arena_id * (size_t)31U + (size_t)20U];
+                                          uint32_t size_20;
+                                          if (size20.tag == Constants_Sc)
+                                            size_20 = size20.case_Sc;
+                                          else if (size20.tag == Constants_Sc_ex)
+                                            size_20 = size20.case_Sc_ex;
+                                          else
+                                            size_20 =
+                                              KRML_EABORT(uint32_t,
+                                                "unreachable (pattern matches are exhaustive in F*)");
+                                          bool b20 = 4096U % size_20 == 0U;
+                                          if (b20 && bytes <= size_20 - 2U && alignment <= size_20)
                                           {
                                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)27U
+                                              * (size_t)31U
                                               + (size_t)20U].lock);
                                             uint8_t
                                             *r =
                                               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)27U
+                                                * (size_t)31U
                                                 + (size_t)20U].data);
                                             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)27U
+                                              * (size_t)31U
                                               + (size_t)20U].lock);
                                             uint8_t *ptr = r;
                                             uint8_t *ptr0 = ptr;
+                                            uint32_t size21;
+                                            if (size20.tag == Constants_Sc)
+                                              size21 = size20.case_Sc;
+                                            else if (size20.tag == Constants_Sc_ex)
+                                              size21 = size20.case_Sc_ex;
+                                            else
+                                              size21 =
+                                                KRML_EABORT(uint32_t,
+                                                  "unreachable (pattern matches are exhaustive in F*)");
                                             if (!(ptr0 == NULL))
                                             {
-                                              ptr0[(size_t)(size20 - 2U)] = 42U;
-                                              ptr0[(size_t)(size20 - 1U)] = 23U;
+                                              ptr0[(size_t)(size21 - 2U)] = 42U;
+                                              ptr0[(size_t)(size21 - 1U)] = 23U;
                                             }
                                             return ptr0;
                                           }
                                           else
                                           {
-                                            uint32_t
-                                            size21 = sizes[arena_id * (size_t)27U + (size_t)21U];
-                                            bool b21 = 4096U % size21 == 0U;
-                                            if (b21 && bytes <= size21 - 2U && alignment <= size21)
+                                            Constants_sc_union
+                                            size21 = sizes[arena_id * (size_t)31U + (size_t)21U];
+                                            uint32_t size_21;
+                                            if (size21.tag == Constants_Sc)
+                                              size_21 = size21.case_Sc;
+                                            else if (size21.tag == Constants_Sc_ex)
+                                              size_21 = size21.case_Sc_ex;
+                                            else
+                                              size_21 =
+                                                KRML_EABORT(uint32_t,
+                                                  "unreachable (pattern matches are exhaustive in F*)");
+                                            bool b21 = 4096U % size_21 == 0U;
+                                            if
+                                            (b21 && bytes <= size_21 - 2U && alignment <= size_21)
                                             {
                                               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)27U
+                                                * (size_t)31U
                                                 + (size_t)21U].lock);
                                               uint8_t
                                               *r =
                                                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)27U
+                                                  * (size_t)31U
                                                   + (size_t)21U].data);
                                               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)27U
+                                                * (size_t)31U
                                                 + (size_t)21U].lock);
                                               uint8_t *ptr = r;
                                               uint8_t *ptr0 = ptr;
+                                              uint32_t size22;
+                                              if (size21.tag == Constants_Sc)
+                                                size22 = size21.case_Sc;
+                                              else if (size21.tag == Constants_Sc_ex)
+                                                size22 = size21.case_Sc_ex;
+                                              else
+                                                size22 =
+                                                  KRML_EABORT(uint32_t,
+                                                    "unreachable (pattern matches are exhaustive in F*)");
                                               if (!(ptr0 == NULL))
                                               {
-                                                ptr0[(size_t)(size21 - 2U)] = 42U;
-                                                ptr0[(size_t)(size21 - 1U)] = 23U;
+                                                ptr0[(size_t)(size22 - 2U)] = 42U;
+                                                ptr0[(size_t)(size22 - 1U)] = 23U;
                                               }
                                               return ptr0;
                                             }
                                             else
                                             {
-                                              uint32_t
-                                              size22 = sizes[arena_id * (size_t)27U + (size_t)22U];
-                                              bool b22 = 4096U % size22 == 0U;
+                                              Constants_sc_union
+                                              size22 = sizes[arena_id * (size_t)31U + (size_t)22U];
+                                              uint32_t size_22;
+                                              if (size22.tag == Constants_Sc)
+                                                size_22 = size22.case_Sc;
+                                              else if (size22.tag == Constants_Sc_ex)
+                                                size_22 = size22.case_Sc_ex;
+                                              else
+                                                size_22 =
+                                                  KRML_EABORT(uint32_t,
+                                                    "unreachable (pattern matches are exhaustive in F*)");
+                                              bool b22 = 4096U % size_22 == 0U;
                                               if
-                                              (b22 && bytes <= size22 - 2U && alignment <= size22)
+                                              (b22 && bytes <= size_22 - 2U && alignment <= size_22)
                                               {
                                                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)27U
+                                                  * (size_t)31U
                                                   + (size_t)22U].lock);
                                                 uint8_t
                                                 *r =
                                                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)27U
+                                                    * (size_t)31U
                                                     + (size_t)22U].data);
                                                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)27U
+                                                  * (size_t)31U
                                                   + (size_t)22U].lock);
                                                 uint8_t *ptr = r;
                                                 uint8_t *ptr0 = ptr;
+                                                uint32_t size23;
+                                                if (size22.tag == Constants_Sc)
+                                                  size23 = size22.case_Sc;
+                                                else if (size22.tag == Constants_Sc_ex)
+                                                  size23 = size22.case_Sc_ex;
+                                                else
+                                                  size23 =
+                                                    KRML_EABORT(uint32_t,
+                                                      "unreachable (pattern matches are exhaustive in F*)");
                                                 if (!(ptr0 == NULL))
                                                 {
-                                                  ptr0[(size_t)(size22 - 2U)] = 42U;
-                                                  ptr0[(size_t)(size22 - 1U)] = 23U;
+                                                  ptr0[(size_t)(size23 - 2U)] = 42U;
+                                                  ptr0[(size_t)(size23 - 1U)] = 23U;
                                                 }
                                                 return ptr0;
                                               }
                                               else
                                               {
-                                                uint32_t
-                                                size23 = sizes[arena_id * (size_t)27U + (size_t)23U];
-                                                bool b23 = 4096U % size23 == 0U;
+                                                Constants_sc_union
+                                                size23 = sizes[arena_id * (size_t)31U + (size_t)23U];
+                                                uint32_t size_23;
+                                                if (size23.tag == Constants_Sc)
+                                                  size_23 = size23.case_Sc;
+                                                else if (size23.tag == Constants_Sc_ex)
+                                                  size_23 = size23.case_Sc_ex;
+                                                else
+                                                  size_23 =
+                                                    KRML_EABORT(uint32_t,
+                                                      "unreachable (pattern matches are exhaustive in F*)");
+                                                bool b23 = 4096U % size_23 == 0U;
                                                 if
-                                                (b23 && bytes <= size23 - 2U && alignment <= size23)
+                                                (
+                                                  b23
+                                                  && bytes <= size_23 - 2U
+                                                  && alignment <= size_23
+                                                )
                                                 {
                                                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)27U
+                                                    * (size_t)31U
                                                     + (size_t)23U].lock);
                                                   uint8_t
                                                   *r =
                                                     allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)27U
+                                                      * (size_t)31U
                                                       + (size_t)23U].data);
                                                   Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)27U
+                                                    * (size_t)31U
                                                     + (size_t)23U].lock);
                                                   uint8_t *ptr = r;
                                                   uint8_t *ptr0 = ptr;
+                                                  uint32_t size24;
+                                                  if (size23.tag == Constants_Sc)
+                                                    size24 = size23.case_Sc;
+                                                  else if (size23.tag == Constants_Sc_ex)
+                                                    size24 = size23.case_Sc_ex;
+                                                  else
+                                                    size24 =
+                                                      KRML_EABORT(uint32_t,
+                                                        "unreachable (pattern matches are exhaustive in F*)");
                                                   if (!(ptr0 == NULL))
                                                   {
-                                                    ptr0[(size_t)(size23 - 2U)] = 42U;
-                                                    ptr0[(size_t)(size23 - 1U)] = 23U;
+                                                    ptr0[(size_t)(size24 - 2U)] = 42U;
+                                                    ptr0[(size_t)(size24 - 1U)] = 23U;
                                                   }
                                                   return ptr0;
                                                 }
                                                 else
                                                 {
-                                                  uint32_t
+                                                  Constants_sc_union
                                                   size24 =
                                                     sizes[arena_id
-                                                    * (size_t)27U
+                                                    * (size_t)31U
                                                     + (size_t)24U];
-                                                  bool b24 = 4096U % size24 == 0U;
+                                                  uint32_t size_24;
+                                                  if (size24.tag == Constants_Sc)
+                                                    size_24 = size24.case_Sc;
+                                                  else if (size24.tag == Constants_Sc_ex)
+                                                    size_24 = size24.case_Sc_ex;
+                                                  else
+                                                    size_24 =
+                                                      KRML_EABORT(uint32_t,
+                                                        "unreachable (pattern matches are exhaustive in F*)");
+                                                  bool b24 = 4096U % size_24 == 0U;
                                                   if
                                                   (
                                                     b24
-                                                    && bytes <= size24 - 2U
-                                                    && alignment <= size24
+                                                    && bytes <= size_24 - 2U
+                                                    && alignment <= size_24
                                                   )
                                                   {
                                                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)27U
+                                                      * (size_t)31U
                                                       + (size_t)24U].lock);
                                                     uint8_t
                                                     *r =
                                                       allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)27U
+                                                        * (size_t)31U
                                                         + (size_t)24U].data);
                                                     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)27U
+                                                      * (size_t)31U
                                                       + (size_t)24U].lock);
                                                     uint8_t *ptr = r;
                                                     uint8_t *ptr0 = ptr;
+                                                    uint32_t size25;
+                                                    if (size24.tag == Constants_Sc)
+                                                      size25 = size24.case_Sc;
+                                                    else if (size24.tag == Constants_Sc_ex)
+                                                      size25 = size24.case_Sc_ex;
+                                                    else
+                                                      size25 =
+                                                        KRML_EABORT(uint32_t,
+                                                          "unreachable (pattern matches are exhaustive in F*)");
                                                     if (!(ptr0 == NULL))
                                                     {
-                                                      ptr0[(size_t)(size24 - 2U)] = 42U;
-                                                      ptr0[(size_t)(size24 - 1U)] = 23U;
+                                                      ptr0[(size_t)(size25 - 2U)] = 42U;
+                                                      ptr0[(size_t)(size25 - 1U)] = 23U;
                                                     }
                                                     return ptr0;
                                                   }
                                                   else
                                                   {
-                                                    uint32_t
+                                                    Constants_sc_union
                                                     size25 =
                                                       sizes[arena_id
-                                                      * (size_t)27U
+                                                      * (size_t)31U
                                                       + (size_t)25U];
-                                                    bool b25 = 4096U % size25 == 0U;
+                                                    uint32_t size_25;
+                                                    if (size25.tag == Constants_Sc)
+                                                      size_25 = size25.case_Sc;
+                                                    else if (size25.tag == Constants_Sc_ex)
+                                                      size_25 = size25.case_Sc_ex;
+                                                    else
+                                                      size_25 =
+                                                        KRML_EABORT(uint32_t,
+                                                          "unreachable (pattern matches are exhaustive in F*)");
+                                                    bool b25 = 4096U % size_25 == 0U;
                                                     if
                                                     (
                                                       b25
-                                                      && bytes <= size25 - 2U
-                                                      && alignment <= size25
+                                                      && bytes <= size_25 - 2U
+                                                      && alignment <= size_25
                                                     )
                                                     {
                                                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)27U
+                                                        * (size_t)31U
                                                         + (size_t)25U].lock);
                                                       uint8_t
                                                       *r =
                                                         allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)27U
+                                                          * (size_t)31U
                                                           + (size_t)25U].data);
                                                       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)27U
+                                                        * (size_t)31U
                                                         + (size_t)25U].lock);
                                                       uint8_t *ptr = r;
                                                       uint8_t *ptr0 = ptr;
+                                                      uint32_t size26;
+                                                      if (size25.tag == Constants_Sc)
+                                                        size26 = size25.case_Sc;
+                                                      else if (size25.tag == Constants_Sc_ex)
+                                                        size26 = size25.case_Sc_ex;
+                                                      else
+                                                        size26 =
+                                                          KRML_EABORT(uint32_t,
+                                                            "unreachable (pattern matches are exhaustive in F*)");
                                                       if (!(ptr0 == NULL))
                                                       {
-                                                        ptr0[(size_t)(size25 - 2U)] = 42U;
-                                                        ptr0[(size_t)(size25 - 1U)] = 23U;
+                                                        ptr0[(size_t)(size26 - 2U)] = 42U;
+                                                        ptr0[(size_t)(size26 - 1U)] = 23U;
                                                       }
                                                       return ptr0;
                                                     }
                                                     else
                                                     {
-                                                      uint32_t
+                                                      Constants_sc_union
                                                       size26 =
                                                         sizes[arena_id
-                                                        * (size_t)27U
+                                                        * (size_t)31U
                                                         + (size_t)26U];
-                                                      bool b26 = 4096U % size26 == 0U;
+                                                      uint32_t size_26;
+                                                      if (size26.tag == Constants_Sc)
+                                                        size_26 = size26.case_Sc;
+                                                      else if (size26.tag == Constants_Sc_ex)
+                                                        size_26 = size26.case_Sc_ex;
+                                                      else
+                                                        size_26 =
+                                                          KRML_EABORT(uint32_t,
+                                                            "unreachable (pattern matches are exhaustive in F*)");
+                                                      bool b26 = 4096U % size_26 == 0U;
                                                       if
                                                       (
                                                         b26
-                                                        && bytes <= size26 - 2U
-                                                        && alignment <= size26
+                                                        && bytes <= size_26 - 2U
+                                                        && alignment <= size_26
                                                       )
                                                       {
                                                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)27U
+                                                          * (size_t)31U
                                                           + (size_t)26U].lock);
                                                         uint8_t
                                                         *r =
                                                           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                            * (size_t)27U
+                                                            * (size_t)31U
                                                             + (size_t)26U].data);
                                                         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)27U
+                                                          * (size_t)31U
                                                           + (size_t)26U].lock);
                                                         uint8_t *ptr = r;
                                                         uint8_t *ptr0 = ptr;
+                                                        uint32_t size27;
+                                                        if (size26.tag == Constants_Sc)
+                                                          size27 = size26.case_Sc;
+                                                        else if (size26.tag == Constants_Sc_ex)
+                                                          size27 = size26.case_Sc_ex;
+                                                        else
+                                                          size27 =
+                                                            KRML_EABORT(uint32_t,
+                                                              "unreachable (pattern matches are exhaustive in F*)");
                                                         if (!(ptr0 == NULL))
                                                         {
-                                                          ptr0[(size_t)(size26 - 2U)] = 42U;
-                                                          ptr0[(size_t)(size26 - 1U)] = 23U;
+                                                          ptr0[(size_t)(size27 - 2U)] = 42U;
+                                                          ptr0[(size_t)(size27 - 1U)] = 23U;
                                                         }
                                                         return ptr0;
                                                       }
                                                       else
-                                                        return NULL;
+                                                      {
+                                                        Constants_sc_union
+                                                        size27 =
+                                                          sizes[arena_id
+                                                          * (size_t)31U
+                                                          + (size_t)27U];
+                                                        uint32_t size_27;
+                                                        if (size27.tag == Constants_Sc)
+                                                          size_27 = size27.case_Sc;
+                                                        else if (size27.tag == Constants_Sc_ex)
+                                                          size_27 = size27.case_Sc_ex;
+                                                        else
+                                                          size_27 =
+                                                            KRML_EABORT(uint32_t,
+                                                              "unreachable (pattern matches are exhaustive in F*)");
+                                                        bool b27 = 4096U % size_27 == 0U;
+                                                        if
+                                                        (
+                                                          b27
+                                                          && bytes <= size_27 - 2U
+                                                          && alignment <= size_27
+                                                        )
+                                                        {
+                                                          Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                            * (size_t)31U
+                                                            + (size_t)27U].lock);
+                                                          uint8_t
+                                                          *r =
+                                                            allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                              * (size_t)31U
+                                                              + (size_t)27U].data);
+                                                          Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                            * (size_t)31U
+                                                            + (size_t)27U].lock);
+                                                          uint8_t *ptr = r;
+                                                          uint8_t *ptr0 = ptr;
+                                                          uint32_t size28;
+                                                          if (size27.tag == Constants_Sc)
+                                                            size28 = size27.case_Sc;
+                                                          else if (size27.tag == Constants_Sc_ex)
+                                                            size28 = size27.case_Sc_ex;
+                                                          else
+                                                            size28 =
+                                                              KRML_EABORT(uint32_t,
+                                                                "unreachable (pattern matches are exhaustive in F*)");
+                                                          if (!(ptr0 == NULL))
+                                                          {
+                                                            ptr0[(size_t)(size28 - 2U)] = 42U;
+                                                            ptr0[(size_t)(size28 - 1U)] = 23U;
+                                                          }
+                                                          return ptr0;
+                                                        }
+                                                        else
+                                                        {
+                                                          Constants_sc_union
+                                                          size28 =
+                                                            sizes[arena_id
+                                                            * (size_t)31U
+                                                            + (size_t)28U];
+                                                          uint32_t size_28;
+                                                          if (size28.tag == Constants_Sc)
+                                                            size_28 = size28.case_Sc;
+                                                          else if (size28.tag == Constants_Sc_ex)
+                                                            size_28 = size28.case_Sc_ex;
+                                                          else
+                                                            size_28 =
+                                                              KRML_EABORT(uint32_t,
+                                                                "unreachable (pattern matches are exhaustive in F*)");
+                                                          bool b28 = 4096U % size_28 == 0U;
+                                                          if
+                                                          (
+                                                            b28
+                                                            && bytes <= size_28 - 2U
+                                                            && alignment <= size_28
+                                                          )
+                                                          {
+                                                            Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                              * (size_t)31U
+                                                              + (size_t)28U].lock);
+                                                            uint8_t
+                                                            *r =
+                                                              allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                * (size_t)31U
+                                                                + (size_t)28U].data);
+                                                            Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                              * (size_t)31U
+                                                              + (size_t)28U].lock);
+                                                            uint8_t *ptr = r;
+                                                            uint8_t *ptr0 = ptr;
+                                                            uint32_t size29;
+                                                            if (size28.tag == Constants_Sc)
+                                                              size29 = size28.case_Sc;
+                                                            else if (size28.tag == Constants_Sc_ex)
+                                                              size29 = size28.case_Sc_ex;
+                                                            else
+                                                              size29 =
+                                                                KRML_EABORT(uint32_t,
+                                                                  "unreachable (pattern matches are exhaustive in F*)");
+                                                            if (!(ptr0 == NULL))
+                                                            {
+                                                              ptr0[(size_t)(size29 - 2U)] = 42U;
+                                                              ptr0[(size_t)(size29 - 1U)] = 23U;
+                                                            }
+                                                            return ptr0;
+                                                          }
+                                                          else
+                                                          {
+                                                            Constants_sc_union
+                                                            size29 =
+                                                              sizes[arena_id
+                                                              * (size_t)31U
+                                                              + (size_t)29U];
+                                                            uint32_t size_29;
+                                                            if (size29.tag == Constants_Sc)
+                                                              size_29 = size29.case_Sc;
+                                                            else if (size29.tag == Constants_Sc_ex)
+                                                              size_29 = size29.case_Sc_ex;
+                                                            else
+                                                              size_29 =
+                                                                KRML_EABORT(uint32_t,
+                                                                  "unreachable (pattern matches are exhaustive in F*)");
+                                                            bool b29 = 4096U % size_29 == 0U;
+                                                            if
+                                                            (
+                                                              b29
+                                                              && bytes <= size_29 - 2U
+                                                              && alignment <= size_29
+                                                            )
+                                                            {
+                                                              Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                * (size_t)31U
+                                                                + (size_t)29U].lock);
+                                                              uint8_t
+                                                              *r =
+                                                                allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                  * (size_t)31U
+                                                                  + (size_t)29U].data);
+                                                              Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                * (size_t)31U
+                                                                + (size_t)29U].lock);
+                                                              uint8_t *ptr = r;
+                                                              uint8_t *ptr0 = ptr;
+                                                              uint32_t size30;
+                                                              if (size29.tag == Constants_Sc)
+                                                                size30 = size29.case_Sc;
+                                                              else if
+                                                              (size29.tag == Constants_Sc_ex)
+                                                                size30 = size29.case_Sc_ex;
+                                                              else
+                                                                size30 =
+                                                                  KRML_EABORT(uint32_t,
+                                                                    "unreachable (pattern matches are exhaustive in F*)");
+                                                              if (!(ptr0 == NULL))
+                                                              {
+                                                                ptr0[(size_t)(size30 - 2U)] = 42U;
+                                                                ptr0[(size_t)(size30 - 1U)] = 23U;
+                                                              }
+                                                              return ptr0;
+                                                            }
+                                                            else
+                                                            {
+                                                              Constants_sc_union
+                                                              size30 =
+                                                                sizes[arena_id
+                                                                * (size_t)31U
+                                                                + (size_t)30U];
+                                                              uint32_t size_30;
+                                                              if (size30.tag == Constants_Sc)
+                                                                size_30 = size30.case_Sc;
+                                                              else if
+                                                              (size30.tag == Constants_Sc_ex)
+                                                                size_30 = size30.case_Sc_ex;
+                                                              else
+                                                                size_30 =
+                                                                  KRML_EABORT(uint32_t,
+                                                                    "unreachable (pattern matches are exhaustive in F*)");
+                                                              bool b30 = 4096U % size_30 == 0U;
+                                                              if
+                                                              (
+                                                                b30
+                                                                && bytes <= size_30 - 2U
+                                                                && alignment <= size_30
+                                                              )
+                                                              {
+                                                                Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                  * (size_t)31U
+                                                                  + (size_t)30U].lock);
+                                                                uint8_t
+                                                                *r =
+                                                                  allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                    * (size_t)31U
+                                                                    + (size_t)30U].data);
+                                                                Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                  * (size_t)31U
+                                                                  + (size_t)30U].lock);
+                                                                uint8_t *ptr = r;
+                                                                uint8_t *ptr0 = ptr;
+                                                                uint32_t size31;
+                                                                if (size30.tag == Constants_Sc)
+                                                                  size31 = size30.case_Sc;
+                                                                else if
+                                                                (size30.tag == Constants_Sc_ex)
+                                                                  size31 = size30.case_Sc_ex;
+                                                                else
+                                                                  size31 =
+                                                                    KRML_EABORT(uint32_t,
+                                                                      "unreachable (pattern matches are exhaustive in F*)");
+                                                                if (!(ptr0 == NULL))
+                                                                {
+                                                                  ptr0[(size_t)(size31 - 2U)] = 42U;
+                                                                  ptr0[(size_t)(size31 - 1U)] = 23U;
+                                                                }
+                                                                return ptr0;
+                                                              }
+                                                              else
+                                                                return NULL;
+                                                            }
+                                                          }
+                                                        }
+                                                      }
                                                     }
                                                   }
                                                 }
@@ -2177,8 +3851,15 @@ static size_t slab_getsize(uint8_t *ptr)
   uint8_t *pt1 = Main_Meta_sc_all.slab_region;
   ptrdiff_t diff = pt0 - pt1;
   size_t diff_sz = (size_t)diff;
-  size_t index = diff_sz / (size_t)68719476736U;
-  uint32_t size = sizes[index];
+  size_t index = diff_sz / Main_slab_size;
+  Constants_sc_union scrut = sizes[index];
+  uint32_t size;
+  if (scrut.tag == Constants_Sc)
+    size = scrut.case_Sc;
+  else if (scrut.tag == Constants_Sc_ex)
+    size = scrut.case_Sc_ex;
+  else
+    size = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
   size_t rem_slot = diff_sz % (size_t)4096U;
   if (rem_slot % (size_t)size == (size_t)0U)
     return (size_t)(size - 2U);
@@ -2192,9 +3873,16 @@ static bool slab_free(uint8_t *ptr)
   uint8_t *pt1 = Main_Meta_sc_all.slab_region;
   ptrdiff_t diff = pt0 - pt1;
   size_t diff_sz = (size_t)diff;
-  size_t index = diff_sz / (size_t)68719476736U;
-  uint32_t size = sizes[index];
-  size_t rem_slab = diff_sz % (size_t)68719476736U;
+  size_t index = diff_sz / Main_slab_size;
+  Constants_sc_union scrut = sizes[index];
+  uint32_t size;
+  if (scrut.tag == Constants_Sc)
+    size = scrut.case_Sc;
+  else if (scrut.tag == Constants_Sc_ex)
+    size = scrut.case_Sc_ex;
+  else
+    size = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+  size_t rem_slab = diff_sz % Main_slab_size;
   size_t rem_slot = diff_sz % (size_t)4096U;
   if (rem_slot % (size_t)size == (size_t)0U)
   {
@@ -2288,7 +3976,7 @@ bool StarMalloc_free(uint8_t *ptr)
     b =
       within_bounds_ptr(Main_Meta_sc_all.slab_region,
         ptr,
-        Main_Meta_sc_all.slab_region + slab_region_size);
+        Main_Meta_sc_all.slab_region + Main_slab_region_size);
     bool b0 = b;
     if (b0)
       return slab_free(ptr);
@@ -2303,7 +3991,7 @@ size_t StarMalloc_getsize(uint8_t *ptr)
   b =
     within_bounds_ptr(Main_Meta_sc_all.slab_region,
       ptr,
-      Main_Meta_sc_all.slab_region + slab_region_size);
+      Main_Meta_sc_all.slab_region + Main_slab_region_size);
   bool b0 = b;
   if (b0)
     return slab_getsize(ptr);

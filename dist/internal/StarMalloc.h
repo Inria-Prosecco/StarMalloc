@@ -6,7 +6,16 @@
 
 #include "krmllib.h"
 
+#include "internal/Slabs2.h"
 #include "../StarMalloc.h"
+
+extern size_t Main_metadata_max_ex;
+
+extern size_t Main_slab_size;
+
+extern size_t Main_sc_slab_region_size;
+
+extern size_t Main_slab_region_size;
 
 typedef struct Impl_Trees_Types_mmap_md_slabs_s
 {
