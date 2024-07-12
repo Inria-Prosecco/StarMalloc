@@ -103,7 +103,7 @@ val sc_selection_is_exact1 (k:nat)
     k < US.v nb_size_classes
   )
   (ensures
-    US.v (sc_selection (L.index sc_list k)) == k
+    US.v (sc_selection (get_u32 (L.index sc_list k))) == k
   )
 
 val sc_selection_is_exact2 (k:nat)
@@ -112,7 +112,7 @@ val sc_selection_is_exact2 (k:nat)
     k < US.v nb_size_classes
   )
   (ensures
-    US.v (sc_selection (U32.sub (L.index sc_list k) 2ul)) == k
+    US.v (sc_selection (U32.sub (get_u32 (L.index sc_list k)) 2ul)) == k
   )
 
 /// Number of arenas

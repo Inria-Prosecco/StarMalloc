@@ -100,7 +100,7 @@ val slab_getsize (ptr: array U8.t)
         A.length ptr == US.v result
       ) /\
       (enable_sc_fast_selection ==>
-        A.length ptr == U32.v (L.index sc_list (US.v idx)))
+        A.length ptr == U32.v (get_u32 (L.index sc_list (US.v idx))))
     ))
   )
 

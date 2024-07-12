@@ -308,13 +308,13 @@ let slab_getsize ptr
   let size = get_u32 (TLA.get sizes index) in
   sizes_t_pred_elim sizes;
   let index' = G.hide (US.v index % US.v nb_size_classes) in
-  assert (size = L.index sc_list index');
+  assert (size = get_u32 (L.index sc_list index'));
   if enable_sc_fast_selection then (
     sc_selection_is_exact1 index';
     sc_selection_is_exact2 index';
     let index'' = G.hide (sc_selection size) in
     assert (L.index sc_list (G.reveal index') == L.index sc_list (US.v (G.reveal index'')));
-    assert (size = L.index sc_list (US.v (G.reveal index'')))
+    assert (size = get_u32 (L.index sc_list (US.v (G.reveal index''))))
   ) else ();
   let rem_slab = US.rem diff_sz slab_size in
   let rem_slot = US.rem diff_sz (u32_to_sz page_size) in
@@ -339,7 +339,6 @@ let slab_getsize ptr
     // invalid pointer
     return 0sz
   )
-#pop-options
 
 #restart-solver
 
