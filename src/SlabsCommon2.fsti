@@ -1012,6 +1012,7 @@ let f
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max_ex})
   (md_region_lv: Seq.lseq AL.status (US.v md_count_v))
   (i: US.t{US.v i < US.v md_count_v})
+  ///\ US.v i <> 1 /\ US.v i <> 3})
   : vprop
   =
   match Seq.index md_region_lv (US.v i) with

@@ -73,8 +73,7 @@ let sc_ex_slab_size
 
 type sc_ex = x:U32.t{
   (max_sc <= U32.v x /\ U32.v x <= max_sc_ex) /\
-  True
-  //(U32.v x % U32.v page_size == 0)
+  (U32.v x % U32.v page_size == 0)
   //// https://www.intel.com/content/dam/develop/external/us/en/documents/mpx-linux64-abi.pdf
   //// allocated arrays should have alignment of at least 16 bytes,
   //// allowing use of SSE instructions

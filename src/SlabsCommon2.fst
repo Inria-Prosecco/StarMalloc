@@ -436,9 +436,13 @@ let upd_and_pack_slab_starseq_quarantine
     (slab_array slab_region idx)
     (md_bm_array md_bm_region idx)
   in
-  //need for an analogous version of that helper
-  //Helpers.intro_empty_slab_varray size_class md_as_seq (slab_array slab_region idx);
-  sladmit ();
+  rewrite_slprop
+    (slab_vprop_aux size_class
+      (A.split_l (slab_array slab_region idx) (u32_to_sz size_class))
+      (Seq.index md_as_seq 0))
+    (A.varray
+      (A.split_l (slab_array slab_region idx) (u32_to_sz size_class)))
+    (fun _ -> admit ());
   mmap_trap_quarantine
     size_class
     (A.split_l
@@ -446,7 +450,7 @@ let upd_and_pack_slab_starseq_quarantine
         (md_bm_array md_bm_region idx,
         slab_array slab_region idx))
       (u32_to_sz size_class))
-    (US.sub slab_size (u32_to_sz size_class));
+    (u32_to_sz size_class);
   SeqUtils.init_us_refined_index (US.v md_count_v) (US.v idx);
   p_quarantine_pack size_class (md_bm_array md_bm_region idx, slab_array slab_region idx);
   change_equal_slprop

@@ -3295,7 +3295,7 @@ let init_one_arena2
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 800 --split_queries no --query_stats"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 1000 --split_queries no --query_stats"
 noextract inline_for_extraction
 val init_nth_arena_aux
   (l1:list sc)
