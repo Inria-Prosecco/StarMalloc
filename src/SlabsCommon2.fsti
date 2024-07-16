@@ -511,25 +511,30 @@ let deallocate_slot (size_class: sc_ex)
     = elim_slab_vprop size_class arr md in
   let b = A.index md 0sz in
   //assert (b);
+  let md_as_seq' : G.erased (Seq.lseq bool 1)
+    = G.hide (Seq.upd (G.reveal md_as_seq) 0 (not b)) in
   A.upd md 0sz false;
-  sladmit ();
-  //let md_as_seq' : G.erased (Seq.lseq bool 1)
-  //  = G.hide (Seq.upd (G.reveal md_as_seq) 0 false) in
-  //rewrite_slprop
-  //  (slab_vprop_aux size_class
-  //    (A.split_l arr (u32_to_sz size_class))
-  //    (Seq.index md_as_seq 0))
-  //  (slab_vprop_aux size_class
-  //    (A.split_l arr (u32_to_sz size_class))
-  //    (Seq.index md_as_seq' 0) `star`
-  //  A.varray (A.split_l arr (u32_to_sz size_class))
-  //  )
-  //  (fun _ -> admit ());
-  //intro_slab_vprop size_class arr md md_as_seq';
-  //let ptr = A.split_l arr (u32_to_sz size_class) in
+  A.ptr_base_offset_inj
+    (A.ptr_of ptr)
+    (A.ptr_of arr);
+  change_equal_slprop
+    (A.varray ptr)
+    (A.varray (A.split_l arr (u32_to_sz size_class)));
+  rewrite_slprop
+    (slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index md_as_seq 0) `star`
+    A.varray (A.split_l arr (u32_to_sz size_class)))
+    (slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index md_as_seq' 0)
+    )
+    (fun _ -> admit ());
+  intro_slab_vprop size_class arr md md_as_seq';
+  //[@inline_let] let b = true in
   //change_equal_slprop
-  //  (A.varray (A.split_l arr (u32_to_sz size_class)))
-  //  (A.varray ptr);
+  //  emp
+  //  (if b then emp else A.varray ptr);
   return true
 
 #push-options "--z3rlimit 30"
