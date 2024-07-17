@@ -437,44 +437,42 @@ let update_quarantine3_aux
     (f size_class slab_region md_bm_region md_count_v md_region_lv
       (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx)))
     (p_quarantine size_class (md_bm_array md_bm_region idx, slab_array slab_region idx));
-    p_quarantine_unpack size_class (md_bm_array md_bm_region idx, slab_array slab_region idx);
-    admit ();
-    Quarantine2.mmap_untrap_quarantine size_class
-      (A.split_l
-        (snd
-          (md_bm_array md_bm_region idx,
-          slab_array slab_region idx))
-        (u32_to_sz size_class))
-      (US.sub slab_size (u32_to_sz size_class));
-    sladmit ();
-    //rewrite_slprop
-    //  (A.varray (A.split_l (slab_array slab_region idx) (u32_to_sz page_size)) `star`
-    //  A.varray (A.split_r (slab_array slab_region idx) (u32_to_sz page_size)))
-    //  (A.varray (slab_array slab_region idx))
-    //  (fun _ -> admit ());
-    let md = gget (A.varray (md_bm_array md_bm_region idx)) in
-    intro_slab_vprop_empty size_class
-      (slab_array slab_region idx)
-      (md_bm_array md_bm_region idx);
-    pack_slab_starseq size_class
-      slab_region md_bm_region md_region md_count
-      md_count_v
-      md_region_lv
-      idx 0ul;
-    let md_region_lv' = G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul) in
-    starseq_weakening
-      #_
-      #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v
-        (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul))
-      (f size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv'))
-      (f_lemma size_class slab_region md_bm_region md_count_v
-        (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul))
-      (f_lemma size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv'))
-      (SeqUtils.init_us_refined (US.v md_count_v))
-      (SeqUtils.init_us_refined (US.v md_count_v));
-    md_region_lv'
+  p_quarantine_unpack size_class (md_bm_array md_bm_region idx, slab_array slab_region idx);
+  Quarantine2.mmap_untrap_quarantine size_class
+    (A.split_l (slab_array slab_region idx) (u32_to_sz size_class))
+    (u32_to_sz size_class);
+  let md = gget (A.varray (md_bm_array md_bm_region idx)) in
+  assert (is_empty (Seq.index md 0));
+  assert (md `Seq.equal` Seq.create 1 false);
+  rewrite_slprop
+    (A.varray (A.split_l (slab_array slab_region idx) (u32_to_sz size_class)))
+    (slab_vprop_aux size_class
+              (A.split_l (slab_array slab_region idx) (u32_to_sz size_class))
+              (Seq.index (Seq.create 1 false) 0))
+    (fun _ -> admit ());
+  intro_slab_vprop size_class
+    (slab_array slab_region idx)
+    (md_bm_array md_bm_region idx)
+    (Seq.create 1 false);
+  pack_slab_starseq size_class
+    slab_region md_bm_region md_region md_count
+    md_count_v
+    md_region_lv
+    idx 0ul;
+  let md_region_lv' = G.hide (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul) in
+  starseq_weakening
+    #_
+    #(pos:US.t{US.v pos < US.v md_count_v})
+    #(t size_class)
+    (f size_class slab_region md_bm_region md_count_v
+      (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul))
+    (f size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv'))
+    (f_lemma size_class slab_region md_bm_region md_count_v
+      (Seq.upd (G.reveal md_region_lv) (US.v idx) 0ul))
+    (f_lemma size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv'))
+    (SeqUtils.init_us_refined (US.v md_count_v))
+    (SeqUtils.init_us_refined (US.v md_count_v));
+  md_region_lv'
 
 let update_quarantine3
   (size_class: sc_ex)

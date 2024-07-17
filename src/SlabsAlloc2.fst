@@ -2561,16 +2561,7 @@ let allocate_slab_aux_4_aux2
     (f size_class slab_region md_bm_region md_count_v md_region_lv
       (Seq.index (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idxs.x)))
     (p_quarantine size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x));
-  //rewrite_slprop
-  //  (p_quarantine size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x))
-  //  (slab_vprop size_class
-  //    (slab_array slab_region idxs.x)
-  //    (md_bm_array md_bm_region idxs.x))
-  //  (fun _ -> admit ());
   p_quarantine_unpack size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x);
-  change_equal_slprop
-    (A.varray (fst (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x)))
-    (A.varray (md_bm_array md_bm_region idxs.x));
   Quarantine2.mmap_untrap_quarantine
     size_class
     (A.split_l (slab_array slab_region idxs.x) (u32_to_sz size_class))
