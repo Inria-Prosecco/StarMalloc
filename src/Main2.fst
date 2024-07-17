@@ -281,6 +281,9 @@ let u32_to_sz = Prelude.u32_to_sz
 
 open Main
 
+inline_for_extraction noextract
+let slab_size = Main.sc_slab_region_size
+
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --query_stats"
 let slab_getsize ptr
   =
@@ -397,3 +400,4 @@ let slab_free ptr
     return false
   )
 #pop-options
+
