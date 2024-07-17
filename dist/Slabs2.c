@@ -92,64 +92,25 @@ update_quarantine2(
   }
 }
 
-typedef struct __SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t_____s
-{
-  bool *fst;
-  uint8_t *snd;
-}
-__SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____;
-
-static uint8_t
-*snd__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____(
-  __SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____ x
-)
-{
-  return x.snd;
-}
-
-static void
-update_quarantine3_aux(
-  uint32_t size_class,
-  uint8_t *slab_region,
-  bool *md_bm_region,
-  tuple4 idxs
-)
+static void update_quarantine3_aux(uint32_t size_class, uint8_t *slab_region, tuple4 idxs)
 {
   size_t idx = idxs.x;
-  bool *ptr0 = md_bm_region;
-  size_t shift_size_t0 = idx;
   uint8_t *ptr = slab_region;
-  size_t shift_size_t1 = idx * SlabsCommon2_slab_size;
-  mmap_untrap(snd__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____((
-        (__SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____){
-          .fst = ptr0 + shift_size_t0,
-          .snd = ptr + shift_size_t1
-        }
-      )),
-    SlabsCommon2_slab_size - (size_t)size_class);
-  uint8_t *ptr1 = slab_region;
   size_t shift_size_t = idx * SlabsCommon2_slab_size;
-  intro_slab_vprop_empty(size_class, ptr1 + shift_size_t);
+  mmap_untrap(ptr + shift_size_t, (size_t)size_class);
 }
 
 static void
-update_quarantine3(
-  uint32_t size_class,
-  uint8_t *slab_region,
-  bool *md_bm_region,
-  size_t idx7,
-  tuple4 idxs
-)
+update_quarantine3(uint32_t size_class, uint8_t *slab_region, size_t idx7, tuple4 idxs)
 {
   if (!(idx7 < (size_t)1024U))
-    update_quarantine3_aux(size_class, slab_region, md_bm_region, idxs);
+    update_quarantine3_aux(size_class, slab_region, idxs);
 }
 
 static void
 deallocate_slab_aux_1_quarantine(
   uint32_t size_class,
   uint8_t *slab_region,
-  bool *md_bm_region,
   ArrayList_cell *md_region,
   size_t *r_idxs,
   size_t idx1,
@@ -178,12 +139,27 @@ deallocate_slab_aux_1_quarantine(
     tl_ = idxs.z;
   size_t sz_ = idxs.w + (size_t)1U;
   ArrayListGen_tuple2 idxs_ = { .x1 = tl_, .y1 = sz_ };
-  update_quarantine3(size_class, slab_region, md_bm_region, idx7, idxs);
+  update_quarantine3(size_class, slab_region, idx7, idxs);
   r_idxs[0U] = idxs.x;
   r_idxs[2U] = idx3_;
   r_idxs[4U] = pos;
   r_idxs[5U] = idxs_.x1;
   r_idxs[6U] = idxs_.y1;
+}
+
+typedef struct __SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t_____s
+{
+  bool *fst;
+  uint8_t *snd;
+}
+__SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____;
+
+static uint8_t
+*snd__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____(
+  __SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____ x
+)
+{
+  return x.snd;
 }
 
 bool
@@ -226,10 +202,9 @@ SlabsFree2_deallocate_slab(
                 .snd = ptr1 + shift_size_t
               }
             )),
-          SlabsCommon2_slab_size - (size_t)size_class);
+          (size_t)size_class);
         deallocate_slab_aux_1_quarantine(size_class,
           slab_region,
-          md_bm_region,
           md_region,
           r_idxs,
           idx1_,
@@ -344,7 +319,7 @@ allocate_slab_aux_4_aux2(uint32_t size_class, uint8_t *slab_region, bounded_tupl
 {
   uint8_t *ptr = slab_region;
   size_t shift_size_t = idxs.x * SlabsCommon2_slab_size;
-  mmap_untrap(ptr + shift_size_t, SlabsCommon2_slab_size - (size_t)size_class);
+  mmap_untrap(ptr + shift_size_t, (size_t)size_class);
 }
 
 static bounded_tuple_
