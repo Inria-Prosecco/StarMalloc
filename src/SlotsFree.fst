@@ -841,8 +841,3 @@ let deallocate_slot
     return (fst r)
   )
 #pop-options
-
-(*)
-- complications
-  - remove expected_size, add a split for each slot
-  - page_size % size_class <> 0: take it into account
