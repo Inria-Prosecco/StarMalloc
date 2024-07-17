@@ -2568,19 +2568,26 @@ let allocate_slab_aux_4_aux2
   //    (md_bm_array md_bm_region idxs.x))
   //  (fun _ -> admit ());
   p_quarantine_unpack size_class (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x);
-  admit ();
+  change_equal_slprop
+    (A.varray (fst (md_bm_array md_bm_region idxs.x, slab_array slab_region idxs.x)))
+    (A.varray (md_bm_array md_bm_region idxs.x));
   Quarantine2.mmap_untrap_quarantine
     size_class
     (A.split_l (slab_array slab_region idxs.x) (u32_to_sz size_class))
-    (US.sub slab_size (u32_to_sz size_class));
-  //Helpers.slab_to_slots size_class (slab_array slab_region idxs.x);
-  sladmit ();
-  //let md = gget (A.varray (md_bm_array md_bm_region idxs.x)) in
-  //empty_md_is_properly_zeroed size_class;
-  //intro_slab_vprop size_class
-  //  (md_bm_array md_bm_region idxs.x)
-  //  (Seq.create 4 0UL)
-  //  (slab_array slab_region idxs.x);
+    (u32_to_sz size_class);
+  let md = gget (A.varray (md_bm_array md_bm_region idxs.x)) in
+  assert (is_empty (Seq.index md 0));
+  assert (md `Seq.equal` Seq.create 1 false);
+  rewrite_slprop
+    (A.varray (A.split_l (slab_array slab_region idxs.x) (u32_to_sz size_class)))
+    (slab_vprop_aux size_class
+              (A.split_l (slab_array slab_region idxs.x) (u32_to_sz size_class))
+              (Seq.index (Seq.create 1 false) 0))
+    (fun _ -> admit ());
+  intro_slab_vprop size_class
+    (slab_array slab_region idxs.x)
+    (md_bm_array md_bm_region idxs.x)
+    (Seq.create 1 false);
   pack_slab_starseq size_class
     slab_region md_bm_region md_region md_count
     md_count_v md_region_lv
