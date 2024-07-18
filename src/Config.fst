@@ -34,14 +34,13 @@ let sc_list_sc : list sc = [
   ]
 
 let sc_list_ex : list sc_ex = [
-    5120ul; 6144ul; 7168ul;
     8192ul;
-    //10240ul; 12288ul; 14336ul;
-    //16384ul;
-  //20480ul; 24576ul; 28672ul;
-  //32768ul;
-  //65536ul;
-  //131072ul
+    12288ul;
+    16384ul;
+    20480ul;
+    24576ul;
+    28672ul;
+    32768ul
   ]
 
 let sc_list_f1 : nat -> nat = SizeClassSelection.sc_list_f
@@ -158,7 +157,7 @@ let enable_extended_size_classes = true
 let sc_selection x =
   //TODO: how pratical could this be?
   admit ();
-  let r = SizeClassSelection.inv_impl x in
+  let r = SizeClassSelection.inv_impl 32768ul 7ul x in
   assert_norm (L.length sc_list = 27);
   sc_list_lemma (U32.v r);
   US.uint32_to_sizet r

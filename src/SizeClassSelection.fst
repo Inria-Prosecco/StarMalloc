@@ -200,27 +200,44 @@ let log2u64_spec_eq_lemma (x:nat) (r: nat)
   log2u64_eq_lemma_aux x r r2
 
 noextract
-let sc_list_f_aux_2 (x y: nat)
+let sc_list_f2_aux (x y: nat)
   : nat
   =
   pow2 (x + 6) + y * pow2 (x + 4)
 
 noextract
-let sc_list_f_aux (z: nat)
+let sc_list_f2 (z: nat)
   : nat
   =
   let x = z / 4 in
   let y = z % 4 in
-  sc_list_f_aux_2 x y
+  sc_list_f2_aux x y
+
+noextract
+let sc_list_f1 (x: nat)
+  = 16 * x
+
+noextract
+let sc_list_f3 (x: nat)
+  = 4096 * x
+
+module T = FStar.Tactics
 
 noextract
 let sc_list_f
   : nat -> nat
   =
   fun x ->
-    if x <= 1
-    then 16 * (x+1)
-    else sc_list_f_aux (x - 2)
+    if x <= 1 then sc_list_f1 (x+1)
+    else if x <= 26 then sc_list_f2 (x - 2)
+    else sc_list_f3 (x - 25)
+
+let sort (x:nat)
+  : v:nat{v < 3}
+  =
+  if x <= 1 then 0
+  else if x <= 26 then 1
+  else 2
 
 open MiscArith
 
@@ -268,9 +285,7 @@ let fast_upper_div_impl
   (k: U32.t)
   : Pure U32.t
   (requires
-    U32.v x <= 4096 /\
-    U32.v y <= 4096 /\
-    //(exists (k:nat).
+    FU.fits (U32.v x + U32.v y) U32.n /\
     U32.v y == pow2 (U32.v k) /\
     U32.v k < 32
   )
@@ -287,7 +302,7 @@ module FML = FStar.Math.Lemmas
 
 #push-options "--z3rlimit 30"
 noextract
-let inv_aux_2 (x: nat)
+let inv2_aux (x: nat)
   : Pure (nat & nat)
   (requires
     64 <= x /\
@@ -295,7 +310,7 @@ let inv_aux_2 (x: nat)
   )
   (ensures fun r ->
     let y, z = r in
-    x <= sc_list_f_aux_2 y z /\
+    x <= sc_list_f2_aux y z /\
     y <= 6 /\
     z <= 4 /\
     (y = 6 ==> z = 0)
@@ -332,31 +347,51 @@ let inv_aux_2 (x: nat)
 #pop-options
 
 noextract
-let inv_aux (x: nat)
+let inv2 (x: nat)
   : Pure (nat)
   (requires
     64 <= x /\
     x <= 4096
   )
   (ensures fun r ->
-    x <= sc_list_f_aux r /\
+    x <= sc_list_f2 r /\
     r <= 24
   )
   =
-  let y, z = inv_aux_2 x in
+  let y, z = inv2_aux x in
   y * 4 + z
 
 module T = FStar.Tactics
 
 noextract
-let inv (x: nat)
-  : Pure (nat)
+let inv3 (bound_input bound_len: nat) (x: nat)
+  : Pure nat
   (requires
-    x <= 4096
+    4096 <= x /\
+    x <= bound_input /\
+    bound_input % 4096 = 0 /\
+    bound_len = (bound_input/4096)
+  )
+  (ensures fun r ->
+    x <= sc_list_f3 r /\
+    r <= bound_len
+  )
+  =
+  let r = nearest_multiple_upper_div x 4096 in
+  assert (r*4096 <= bound_input);
+  r
+
+noextract
+let inv (bound_input bound_len: nat) (x: nat)
+  : Pure nat
+  (requires
+    x <= bound_input /\
+    bound_input % 4096 = 0 /\
+    bound_len = (bound_input/4096)
   )
   (ensures fun r ->
     x <= sc_list_f r /\
-    r <= 26
+    r <= 26 + bound_len
   )
   =
   if x <= 16
@@ -373,23 +408,25 @@ let inv (x: nat)
     assert (sc_list_f 2 == 64) by T.compute();
     //TODO: fixme, 16 and 32 size classes are thus disabled
     2
+  ) else if x <= 4096 then (
+    inv2 x + 2
   ) else (
-    inv_aux x + 2
+    inv3 bound_input bound_len x + 25
   )
 
 #push-options "--z3rlimit 50"
 inline_for_extraction noextract
-let inv_impl_aux_2 (x: U32.t)
+let inv_impl2_aux (x: U32.t)
   : Pure (U32.t & U32.t)
   (requires U32.v x >= 64 /\
     U32.v x <= 4096
   )
   (ensures fun r ->
     let y, z = r in
-    let y', z' = inv_aux_2 (U32.v x) in
+    let y', z' = inv2_aux (U32.v x) in
     U32.v y = y' /\
     U32.v z = z' /\
-    U32.v x <= sc_list_f_aux_2 y' z'
+    U32.v x <= sc_list_f2_aux y' z'
   )
   =
   let x_as_u32 = x in
@@ -410,27 +447,52 @@ let inv_impl_aux_2 (x: U32.t)
 #pop-options
 
 inline_for_extraction noextract
-let inv_impl_aux (x: U32.t)
-  : Pure (U32.t)
+let inv_impl2 (x: U32.t)
+  : Pure U32.t
   (requires U32.v x >= 64 /\
     U32.v x <= 4096
   )
   (ensures fun r ->
-    let r' = inv_aux (U32.v x) in
+    let r' = inv2 (U32.v x) in
     U32.v r == r' /\
-    U32.v x <= sc_list_f_aux (U32.v r)
+    U32.v x <= sc_list_f2 (U32.v r)
   )
   =
-  let y, z = inv_impl_aux_2 x in
+  let y, z = inv_impl2_aux x in
   U32.add (U32.mul y 4ul) z
 
-let inv_impl (x: U32.t)
+inline_for_extraction noextract
+let inv_impl3 (bound_input bound_len x: U32.t)
+  : Pure U32.t
+  (requires
+    4096 <= U32.v x /\
+    FU.fits (U32.v x + 4096) U32.n /\
+    U32.v x <= U32.v bound_input /\
+    U32.v bound_input % 4096 = 0 /\
+    U32.v bound_len = U32.v bound_input/4096
+  )
+  (ensures fun r ->
+    U32.v x <= sc_list_f3 (U32.v r) /\
+    U32.v r <= U32.v bound_len
+  )
+  =
+  assert_norm (pow2 12 = 4096);
+  let r = fast_upper_div_impl x 4096ul 12ul in
+  //assert (r*4096 <= bound_input);
+  r
+
+
+
+let inv_impl (bound_input bound_len x: U32.t)
   : Pure (U32.t)
   (requires
+    U32.v x <= U32.v bound_input /\
+    U32.v bound_input % 4096 = 0 /\
+    U32.v bound_len = U32.v bound_input / 4096 /\
     U32.v x <= 4096
   )
   (ensures fun r ->
-    let r' = inv (U32.v x) in
+    let r' = inv (U32.v bound_input) (U32.v bound_len) (U32.v x) in
     U32.v r == r' /\
     U32.v x <= sc_list_f (U32.v r)
   )
@@ -441,9 +503,9 @@ let inv_impl (x: U32.t)
   then 1ul
   else if U32.lte x 64ul
   then 2ul
-  else (
-    U32.add (inv_impl_aux x) 2ul
-  )
+  else if U32.lte x 4096ul
+  then U32.add (inv_impl2 x) 2ul
+  else U32.add (inv_impl3 bound_input bound_len x) 25ul
 
 let log2u64_is_mon_increasing (x y: nat)
   : Lemma
@@ -487,8 +549,8 @@ let inv_aux_is_mon_increasing (x y: nat)
     y <= 4096
   )
   (ensures (
-    let rx = inv_aux x in
-    let ry = inv_aux y in
+    let rx = inv2 x in
+    let ry = inv2 y in
     rx <= ry
   ))
   =
@@ -508,6 +570,7 @@ let inv_aux_is_mon_increasing (x y: nat)
   ) else ()
 #pop-options
 
+(*)
 let inv_is_mon_increasing (x y: nat)
   : Lemma
   (requires

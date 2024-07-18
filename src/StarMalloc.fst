@@ -56,6 +56,7 @@ module G = FStar.Ghost
 
 //TODO: [@ CConst]
 let threshold : US.t =
+  let page_size = 32768ul in
   if enable_slab_canaries_malloc
   then US.sub (US.uint32_to_sizet page_size) 2sz
   else US.uint32_to_sizet page_size

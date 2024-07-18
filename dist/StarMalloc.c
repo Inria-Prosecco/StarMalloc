@@ -1335,7 +1335,7 @@ static size_t large_getsize(uint8_t *ptr)
 
 static const
 Constants_sc_union
-sizes[124U] =
+sizes[136U] =
   {
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
@@ -1364,10 +1364,13 @@ sizes[124U] =
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 5120U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 6144U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 7168U } }),
     ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 12288U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 20480U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 24576U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 28672U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
@@ -1395,10 +1398,13 @@ sizes[124U] =
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 5120U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 6144U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 7168U } }),
     ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 12288U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 20480U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 24576U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 28672U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
@@ -1426,10 +1432,13 @@ sizes[124U] =
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 5120U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 6144U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 7168U } }),
     ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 12288U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 20480U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 24576U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 28672U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
@@ -1457,10 +1466,13 @@ sizes[124U] =
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
     ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 5120U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 6144U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 7168U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } })
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 12288U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 20480U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 24576U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 28672U } }),
+    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } })
   };
 
 typedef struct tuple4_s
@@ -1474,10 +1486,10 @@ tuple4;
 
 static tuple4 gen_arena_sizes(void)
 {
-  size_t arena_slab_region_size = Main_sc_slab_region_size * (size_t)31U;
+  size_t arena_slab_region_size = Main_sc_slab_region_size * (size_t)34U;
   size_t arena_md_bm_region_size = (size_t)1811939328U;
-  size_t arena_md_bm_region_b_size = Main_metadata_max_ex * (size_t)4U;
-  size_t arena_md_region_size = (size_t)452984832U + Main_metadata_max_ex * (size_t)4U;
+  size_t arena_md_bm_region_b_size = Main_metadata_max_ex * (size_t)7U;
+  size_t arena_md_region_size = (size_t)452984832U + Main_metadata_max_ex * (size_t)7U;
   return
     (
       (tuple4){
@@ -1496,7 +1508,7 @@ Main_Meta_size_classes_all Main_Meta_init(void)
   uint64_t *md_bm_region = mmap_u64_init(arena_sizes.y * (size_t)4U);
   bool *md_bm_region_b = mmap_bool_init(arena_sizes.z * (size_t)4U);
   ArrayList_cell *md_region = mmap_cell_status_init(arena_sizes.w * (size_t)4U);
-  size_class *size_classes = mmap_sc_init((size_t)124U);
+  size_class *size_classes = mmap_sc_init((size_t)136U);
   size_t offset_ = (size_t)0U;
   init_size_class(offset_,
     (size_t)0U,
@@ -1715,659 +1727,743 @@ Main_Meta_size_classes_all Main_Meta_init(void)
     md_region + arena_sizes.w * (size_t)0U + (size_t)452984832U,
     size_classes + (size_t)27U,
     sizes);
-  size_t offset_0 = (size_t)31U;
+  init_size_class2(offset_ + (size_t)27U,
+    (size_t)4U,
+    slab_region + arena_sizes.x * (size_t)0U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U + (size_t)452984832U,
+    size_classes + (size_t)27U,
+    sizes);
+  init_size_class2(offset_ + (size_t)27U,
+    (size_t)5U,
+    slab_region + arena_sizes.x * (size_t)0U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U + (size_t)452984832U,
+    size_classes + (size_t)27U,
+    sizes);
+  init_size_class2(offset_ + (size_t)27U,
+    (size_t)6U,
+    slab_region + arena_sizes.x * (size_t)0U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)0U,
+    md_region + arena_sizes.w * (size_t)0U + (size_t)452984832U,
+    size_classes + (size_t)27U,
+    sizes);
+  size_t offset_0 = (size_t)34U;
   init_size_class(offset_0,
     (size_t)0U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)1U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)2U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)3U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)4U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)5U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)6U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)7U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)8U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)9U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)10U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)11U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)12U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)13U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)14U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)15U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)16U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)17U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)18U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)19U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)20U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)21U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)22U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)23U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)24U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)25U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class(offset_0,
     (size_t)26U,
     slab_region + arena_sizes.x * (size_t)1U,
     md_bm_region + arena_sizes.y * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U,
-    size_classes + (size_t)31U,
+    size_classes + (size_t)34U,
     sizes);
   init_size_class2(offset_0 + (size_t)27U,
     (size_t)0U,
     slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
-    size_classes + (size_t)31U + (size_t)27U,
+    size_classes + (size_t)34U + (size_t)27U,
     sizes);
   init_size_class2(offset_0 + (size_t)27U,
     (size_t)1U,
     slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
-    size_classes + (size_t)31U + (size_t)27U,
+    size_classes + (size_t)34U + (size_t)27U,
     sizes);
   init_size_class2(offset_0 + (size_t)27U,
     (size_t)2U,
     slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
-    size_classes + (size_t)31U + (size_t)27U,
+    size_classes + (size_t)34U + (size_t)27U,
     sizes);
   init_size_class2(offset_0 + (size_t)27U,
     (size_t)3U,
     slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)1U,
     md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
-    size_classes + (size_t)31U + (size_t)27U,
+    size_classes + (size_t)34U + (size_t)27U,
     sizes);
-  size_t offset_1 = (size_t)62U;
+  init_size_class2(offset_0 + (size_t)27U,
+    (size_t)4U,
+    slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
+    size_classes + (size_t)34U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_0 + (size_t)27U,
+    (size_t)5U,
+    slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
+    size_classes + (size_t)34U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_0 + (size_t)27U,
+    (size_t)6U,
+    slab_region + arena_sizes.x * (size_t)1U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)1U,
+    md_region + arena_sizes.w * (size_t)1U + (size_t)452984832U,
+    size_classes + (size_t)34U + (size_t)27U,
+    sizes);
+  size_t offset_1 = (size_t)68U;
   init_size_class(offset_1,
     (size_t)0U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)1U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)2U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)3U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)4U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)5U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)6U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)7U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)8U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)9U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)10U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)11U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)12U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)13U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)14U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)15U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)16U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)17U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)18U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)19U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)20U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)21U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)22U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)23U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)24U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)25U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class(offset_1,
     (size_t)26U,
     slab_region + arena_sizes.x * (size_t)2U,
     md_bm_region + arena_sizes.y * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U,
-    size_classes + (size_t)62U,
+    size_classes + (size_t)68U,
     sizes);
   init_size_class2(offset_1 + (size_t)27U,
     (size_t)0U,
     slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
-    size_classes + (size_t)62U + (size_t)27U,
+    size_classes + (size_t)68U + (size_t)27U,
     sizes);
   init_size_class2(offset_1 + (size_t)27U,
     (size_t)1U,
     slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
-    size_classes + (size_t)62U + (size_t)27U,
+    size_classes + (size_t)68U + (size_t)27U,
     sizes);
   init_size_class2(offset_1 + (size_t)27U,
     (size_t)2U,
     slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
-    size_classes + (size_t)62U + (size_t)27U,
+    size_classes + (size_t)68U + (size_t)27U,
     sizes);
   init_size_class2(offset_1 + (size_t)27U,
     (size_t)3U,
     slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)2U,
     md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
-    size_classes + (size_t)62U + (size_t)27U,
+    size_classes + (size_t)68U + (size_t)27U,
     sizes);
-  size_t offset_2 = (size_t)93U;
+  init_size_class2(offset_1 + (size_t)27U,
+    (size_t)4U,
+    slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
+    size_classes + (size_t)68U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_1 + (size_t)27U,
+    (size_t)5U,
+    slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
+    size_classes + (size_t)68U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_1 + (size_t)27U,
+    (size_t)6U,
+    slab_region + arena_sizes.x * (size_t)2U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)2U,
+    md_region + arena_sizes.w * (size_t)2U + (size_t)452984832U,
+    size_classes + (size_t)68U + (size_t)27U,
+    sizes);
+  size_t offset_2 = (size_t)102U;
   init_size_class(offset_2,
     (size_t)0U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)1U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)2U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)3U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)4U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)5U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)6U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)7U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)8U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)9U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)10U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)11U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)12U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)13U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)14U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)15U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)16U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)17U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)18U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)19U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)20U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)21U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)22U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)23U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)24U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)25U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class(offset_2,
     (size_t)26U,
     slab_region + arena_sizes.x * (size_t)3U,
     md_bm_region + arena_sizes.y * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U,
-    size_classes + (size_t)93U,
+    size_classes + (size_t)102U,
     sizes);
   init_size_class2(offset_2 + (size_t)27U,
     (size_t)0U,
     slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
-    size_classes + (size_t)93U + (size_t)27U,
+    size_classes + (size_t)102U + (size_t)27U,
     sizes);
   init_size_class2(offset_2 + (size_t)27U,
     (size_t)1U,
     slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
-    size_classes + (size_t)93U + (size_t)27U,
+    size_classes + (size_t)102U + (size_t)27U,
     sizes);
   init_size_class2(offset_2 + (size_t)27U,
     (size_t)2U,
     slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
-    size_classes + (size_t)93U + (size_t)27U,
+    size_classes + (size_t)102U + (size_t)27U,
     sizes);
   init_size_class2(offset_2 + (size_t)27U,
     (size_t)3U,
     slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
     md_bm_region_b + arena_sizes.z * (size_t)3U,
     md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
-    size_classes + (size_t)93U + (size_t)27U,
+    size_classes + (size_t)102U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_2 + (size_t)27U,
+    (size_t)4U,
+    slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
+    size_classes + (size_t)102U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_2 + (size_t)27U,
+    (size_t)5U,
+    slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
+    size_classes + (size_t)102U + (size_t)27U,
+    sizes);
+  init_size_class2(offset_2 + (size_t)27U,
+    (size_t)6U,
+    slab_region + arena_sizes.x * (size_t)3U + (size_t)16777216U * (size_t)4096U * (size_t)27U,
+    md_bm_region_b + arena_sizes.z * (size_t)3U,
+    md_region + arena_sizes.w * (size_t)3U + (size_t)452984832U,
+    size_classes + (size_t)102U + (size_t)27U,
     sizes);
   return
     ((Main_Meta_size_classes_all){ .size_classes = size_classes, .slab_region = slab_region });
@@ -2383,13 +2479,13 @@ static uint8_t *allocate_size_class(SizeClass_size_class_struct_ scs)
 
 static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
 {
-  uint32_t r0 = SizeClassSelection_inv_impl(bytes + 2U);
+  uint32_t r0 = SizeClassSelection_inv_impl(32768U, 7U, bytes + 2U);
   size_t i = (size_t)r0;
-  Constants_sc_union size = sizes[arena_id * (size_t)31U + i];
-  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + i].lock);
+  Constants_sc_union size = sizes[arena_id * (size_t)34U + i];
+  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)34U + i].lock);
   uint8_t
-  *r = allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + i].data);
-  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + i].lock);
+  *r = allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)34U + i].data);
+  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)34U + i].lock);
   uint8_t *ptr = r;
   uint8_t *ptr0 = ptr;
   uint32_t size1;
@@ -2409,7 +2505,7 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
 
 static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t bytes)
 {
-  Constants_sc_union size = sizes[arena_id * (size_t)31U + (size_t)0U];
+  Constants_sc_union size = sizes[arena_id * (size_t)34U + (size_t)0U];
   uint32_t size_;
   if (size.tag == Constants_Sc)
     size_ = size.case_Sc;
@@ -2420,11 +2516,11 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
   bool b = 4096U % size_ == 0U;
   if (b && bytes <= size_ - 2U && alignment <= size_)
   {
-    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + (size_t)0U].lock);
+    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)34U + (size_t)0U].lock);
     uint8_t
     *r =
-      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + (size_t)0U].data);
-    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + (size_t)0U].lock);
+      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)34U + (size_t)0U].data);
+    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)34U + (size_t)0U].lock);
     uint8_t *ptr = r;
     uint8_t *ptr0 = ptr;
     uint32_t size1;
@@ -2443,7 +2539,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
   }
   else
   {
-    Constants_sc_union size1 = sizes[arena_id * (size_t)31U + (size_t)1U];
+    Constants_sc_union size1 = sizes[arena_id * (size_t)34U + (size_t)1U];
     uint32_t size_1;
     if (size1.tag == Constants_Sc)
       size_1 = size1.case_Sc;
@@ -2455,13 +2551,13 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
     if (b1 && bytes <= size_1 - 2U && alignment <= size_1)
     {
       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-        * (size_t)31U
+        * (size_t)34U
         + (size_t)1U].lock);
       uint8_t
       *r =
-        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)31U + (size_t)1U].data);
+        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)34U + (size_t)1U].data);
       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-        * (size_t)31U
+        * (size_t)34U
         + (size_t)1U].lock);
       uint8_t *ptr = r;
       uint8_t *ptr0 = ptr;
@@ -2481,7 +2577,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
     }
     else
     {
-      Constants_sc_union size2 = sizes[arena_id * (size_t)31U + (size_t)2U];
+      Constants_sc_union size2 = sizes[arena_id * (size_t)34U + (size_t)2U];
       uint32_t size_2;
       if (size2.tag == Constants_Sc)
         size_2 = size2.case_Sc;
@@ -2493,15 +2589,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
       if (b2 && bytes <= size_2 - 2U && alignment <= size_2)
       {
         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-          * (size_t)31U
+          * (size_t)34U
           + (size_t)2U].lock);
         uint8_t
         *r =
           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-            * (size_t)31U
+            * (size_t)34U
             + (size_t)2U].data);
         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-          * (size_t)31U
+          * (size_t)34U
           + (size_t)2U].lock);
         uint8_t *ptr = r;
         uint8_t *ptr0 = ptr;
@@ -2521,7 +2617,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
       }
       else
       {
-        Constants_sc_union size3 = sizes[arena_id * (size_t)31U + (size_t)3U];
+        Constants_sc_union size3 = sizes[arena_id * (size_t)34U + (size_t)3U];
         uint32_t size_3;
         if (size3.tag == Constants_Sc)
           size_3 = size3.case_Sc;
@@ -2533,15 +2629,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
         if (b3 && bytes <= size_3 - 2U && alignment <= size_3)
         {
           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-            * (size_t)31U
+            * (size_t)34U
             + (size_t)3U].lock);
           uint8_t
           *r =
             allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-              * (size_t)31U
+              * (size_t)34U
               + (size_t)3U].data);
           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-            * (size_t)31U
+            * (size_t)34U
             + (size_t)3U].lock);
           uint8_t *ptr = r;
           uint8_t *ptr0 = ptr;
@@ -2561,7 +2657,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
         }
         else
         {
-          Constants_sc_union size4 = sizes[arena_id * (size_t)31U + (size_t)4U];
+          Constants_sc_union size4 = sizes[arena_id * (size_t)34U + (size_t)4U];
           uint32_t size_4;
           if (size4.tag == Constants_Sc)
             size_4 = size4.case_Sc;
@@ -2573,15 +2669,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
           if (b4 && bytes <= size_4 - 2U && alignment <= size_4)
           {
             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-              * (size_t)31U
+              * (size_t)34U
               + (size_t)4U].lock);
             uint8_t
             *r =
               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                * (size_t)31U
+                * (size_t)34U
                 + (size_t)4U].data);
             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-              * (size_t)31U
+              * (size_t)34U
               + (size_t)4U].lock);
             uint8_t *ptr = r;
             uint8_t *ptr0 = ptr;
@@ -2601,7 +2697,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
           }
           else
           {
-            Constants_sc_union size5 = sizes[arena_id * (size_t)31U + (size_t)5U];
+            Constants_sc_union size5 = sizes[arena_id * (size_t)34U + (size_t)5U];
             uint32_t size_5;
             if (size5.tag == Constants_Sc)
               size_5 = size5.case_Sc;
@@ -2613,15 +2709,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
             if (b5 && bytes <= size_5 - 2U && alignment <= size_5)
             {
               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                * (size_t)31U
+                * (size_t)34U
                 + (size_t)5U].lock);
               uint8_t
               *r =
                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                  * (size_t)31U
+                  * (size_t)34U
                   + (size_t)5U].data);
               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                * (size_t)31U
+                * (size_t)34U
                 + (size_t)5U].lock);
               uint8_t *ptr = r;
               uint8_t *ptr0 = ptr;
@@ -2641,7 +2737,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
             }
             else
             {
-              Constants_sc_union size6 = sizes[arena_id * (size_t)31U + (size_t)6U];
+              Constants_sc_union size6 = sizes[arena_id * (size_t)34U + (size_t)6U];
               uint32_t size_6;
               if (size6.tag == Constants_Sc)
                 size_6 = size6.case_Sc;
@@ -2653,15 +2749,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
               if (b6 && bytes <= size_6 - 2U && alignment <= size_6)
               {
                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                  * (size_t)31U
+                  * (size_t)34U
                   + (size_t)6U].lock);
                 uint8_t
                 *r =
                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                    * (size_t)31U
+                    * (size_t)34U
                     + (size_t)6U].data);
                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                  * (size_t)31U
+                  * (size_t)34U
                   + (size_t)6U].lock);
                 uint8_t *ptr = r;
                 uint8_t *ptr0 = ptr;
@@ -2683,7 +2779,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
               }
               else
               {
-                Constants_sc_union size7 = sizes[arena_id * (size_t)31U + (size_t)7U];
+                Constants_sc_union size7 = sizes[arena_id * (size_t)34U + (size_t)7U];
                 uint32_t size_7;
                 if (size7.tag == Constants_Sc)
                   size_7 = size7.case_Sc;
@@ -2697,15 +2793,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                 if (b7 && bytes <= size_7 - 2U && alignment <= size_7)
                 {
                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                    * (size_t)31U
+                    * (size_t)34U
                     + (size_t)7U].lock);
                   uint8_t
                   *r =
                     allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                      * (size_t)31U
+                      * (size_t)34U
                       + (size_t)7U].data);
                   Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                    * (size_t)31U
+                    * (size_t)34U
                     + (size_t)7U].lock);
                   uint8_t *ptr = r;
                   uint8_t *ptr0 = ptr;
@@ -2727,7 +2823,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                 }
                 else
                 {
-                  Constants_sc_union size8 = sizes[arena_id * (size_t)31U + (size_t)8U];
+                  Constants_sc_union size8 = sizes[arena_id * (size_t)34U + (size_t)8U];
                   uint32_t size_8;
                   if (size8.tag == Constants_Sc)
                     size_8 = size8.case_Sc;
@@ -2741,15 +2837,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                   if (b8 && bytes <= size_8 - 2U && alignment <= size_8)
                   {
                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                      * (size_t)31U
+                      * (size_t)34U
                       + (size_t)8U].lock);
                     uint8_t
                     *r =
                       allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                        * (size_t)31U
+                        * (size_t)34U
                         + (size_t)8U].data);
                     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                      * (size_t)31U
+                      * (size_t)34U
                       + (size_t)8U].lock);
                     uint8_t *ptr = r;
                     uint8_t *ptr0 = ptr;
@@ -2771,7 +2867,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                   }
                   else
                   {
-                    Constants_sc_union size9 = sizes[arena_id * (size_t)31U + (size_t)9U];
+                    Constants_sc_union size9 = sizes[arena_id * (size_t)34U + (size_t)9U];
                     uint32_t size_9;
                     if (size9.tag == Constants_Sc)
                       size_9 = size9.case_Sc;
@@ -2785,15 +2881,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                     if (b9 && bytes <= size_9 - 2U && alignment <= size_9)
                     {
                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                        * (size_t)31U
+                        * (size_t)34U
                         + (size_t)9U].lock);
                       uint8_t
                       *r =
                         allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                          * (size_t)31U
+                          * (size_t)34U
                           + (size_t)9U].data);
                       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                        * (size_t)31U
+                        * (size_t)34U
                         + (size_t)9U].lock);
                       uint8_t *ptr = r;
                       uint8_t *ptr0 = ptr;
@@ -2815,7 +2911,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                     }
                     else
                     {
-                      Constants_sc_union size10 = sizes[arena_id * (size_t)31U + (size_t)10U];
+                      Constants_sc_union size10 = sizes[arena_id * (size_t)34U + (size_t)10U];
                       uint32_t size_10;
                       if (size10.tag == Constants_Sc)
                         size_10 = size10.case_Sc;
@@ -2829,15 +2925,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                       if (b10 && bytes <= size_10 - 2U && alignment <= size_10)
                       {
                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                          * (size_t)31U
+                          * (size_t)34U
                           + (size_t)10U].lock);
                         uint8_t
                         *r =
                           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                            * (size_t)31U
+                            * (size_t)34U
                             + (size_t)10U].data);
                         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                          * (size_t)31U
+                          * (size_t)34U
                           + (size_t)10U].lock);
                         uint8_t *ptr = r;
                         uint8_t *ptr0 = ptr;
@@ -2859,7 +2955,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                       }
                       else
                       {
-                        Constants_sc_union size11 = sizes[arena_id * (size_t)31U + (size_t)11U];
+                        Constants_sc_union size11 = sizes[arena_id * (size_t)34U + (size_t)11U];
                         uint32_t size_11;
                         if (size11.tag == Constants_Sc)
                           size_11 = size11.case_Sc;
@@ -2873,15 +2969,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                         if (b11 && bytes <= size_11 - 2U && alignment <= size_11)
                         {
                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                            * (size_t)31U
+                            * (size_t)34U
                             + (size_t)11U].lock);
                           uint8_t
                           *r =
                             allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                              * (size_t)31U
+                              * (size_t)34U
                               + (size_t)11U].data);
                           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                            * (size_t)31U
+                            * (size_t)34U
                             + (size_t)11U].lock);
                           uint8_t *ptr = r;
                           uint8_t *ptr0 = ptr;
@@ -2903,7 +2999,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                         }
                         else
                         {
-                          Constants_sc_union size12 = sizes[arena_id * (size_t)31U + (size_t)12U];
+                          Constants_sc_union size12 = sizes[arena_id * (size_t)34U + (size_t)12U];
                           uint32_t size_12;
                           if (size12.tag == Constants_Sc)
                             size_12 = size12.case_Sc;
@@ -2917,15 +3013,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                           if (b12 && bytes <= size_12 - 2U && alignment <= size_12)
                           {
                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                              * (size_t)31U
+                              * (size_t)34U
                               + (size_t)12U].lock);
                             uint8_t
                             *r =
                               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                * (size_t)31U
+                                * (size_t)34U
                                 + (size_t)12U].data);
                             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                              * (size_t)31U
+                              * (size_t)34U
                               + (size_t)12U].lock);
                             uint8_t *ptr = r;
                             uint8_t *ptr0 = ptr;
@@ -2947,7 +3043,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                           }
                           else
                           {
-                            Constants_sc_union size13 = sizes[arena_id * (size_t)31U + (size_t)13U];
+                            Constants_sc_union size13 = sizes[arena_id * (size_t)34U + (size_t)13U];
                             uint32_t size_13;
                             if (size13.tag == Constants_Sc)
                               size_13 = size13.case_Sc;
@@ -2961,15 +3057,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                             if (b13 && bytes <= size_13 - 2U && alignment <= size_13)
                             {
                               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                * (size_t)31U
+                                * (size_t)34U
                                 + (size_t)13U].lock);
                               uint8_t
                               *r =
                                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                  * (size_t)31U
+                                  * (size_t)34U
                                   + (size_t)13U].data);
                               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                * (size_t)31U
+                                * (size_t)34U
                                 + (size_t)13U].lock);
                               uint8_t *ptr = r;
                               uint8_t *ptr0 = ptr;
@@ -2992,7 +3088,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                             else
                             {
                               Constants_sc_union
-                              size14 = sizes[arena_id * (size_t)31U + (size_t)14U];
+                              size14 = sizes[arena_id * (size_t)34U + (size_t)14U];
                               uint32_t size_14;
                               if (size14.tag == Constants_Sc)
                                 size_14 = size14.case_Sc;
@@ -3006,15 +3102,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                               if (b14 && bytes <= size_14 - 2U && alignment <= size_14)
                               {
                                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                  * (size_t)31U
+                                  * (size_t)34U
                                   + (size_t)14U].lock);
                                 uint8_t
                                 *r =
                                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                    * (size_t)31U
+                                    * (size_t)34U
                                     + (size_t)14U].data);
                                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                  * (size_t)31U
+                                  * (size_t)34U
                                   + (size_t)14U].lock);
                                 uint8_t *ptr = r;
                                 uint8_t *ptr0 = ptr;
@@ -3037,7 +3133,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                               else
                               {
                                 Constants_sc_union
-                                size15 = sizes[arena_id * (size_t)31U + (size_t)15U];
+                                size15 = sizes[arena_id * (size_t)34U + (size_t)15U];
                                 uint32_t size_15;
                                 if (size15.tag == Constants_Sc)
                                   size_15 = size15.case_Sc;
@@ -3051,15 +3147,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                 if (b15 && bytes <= size_15 - 2U && alignment <= size_15)
                                 {
                                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                    * (size_t)31U
+                                    * (size_t)34U
                                     + (size_t)15U].lock);
                                   uint8_t
                                   *r =
                                     allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                      * (size_t)31U
+                                      * (size_t)34U
                                       + (size_t)15U].data);
                                   Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                    * (size_t)31U
+                                    * (size_t)34U
                                     + (size_t)15U].lock);
                                   uint8_t *ptr = r;
                                   uint8_t *ptr0 = ptr;
@@ -3082,7 +3178,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                 else
                                 {
                                   Constants_sc_union
-                                  size16 = sizes[arena_id * (size_t)31U + (size_t)16U];
+                                  size16 = sizes[arena_id * (size_t)34U + (size_t)16U];
                                   uint32_t size_16;
                                   if (size16.tag == Constants_Sc)
                                     size_16 = size16.case_Sc;
@@ -3096,15 +3192,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                   if (b16 && bytes <= size_16 - 2U && alignment <= size_16)
                                   {
                                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                      * (size_t)31U
+                                      * (size_t)34U
                                       + (size_t)16U].lock);
                                     uint8_t
                                     *r =
                                       allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                        * (size_t)31U
+                                        * (size_t)34U
                                         + (size_t)16U].data);
                                     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                      * (size_t)31U
+                                      * (size_t)34U
                                       + (size_t)16U].lock);
                                     uint8_t *ptr = r;
                                     uint8_t *ptr0 = ptr;
@@ -3127,7 +3223,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                   else
                                   {
                                     Constants_sc_union
-                                    size17 = sizes[arena_id * (size_t)31U + (size_t)17U];
+                                    size17 = sizes[arena_id * (size_t)34U + (size_t)17U];
                                     uint32_t size_17;
                                     if (size17.tag == Constants_Sc)
                                       size_17 = size17.case_Sc;
@@ -3141,15 +3237,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                     if (b17 && bytes <= size_17 - 2U && alignment <= size_17)
                                     {
                                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                        * (size_t)31U
+                                        * (size_t)34U
                                         + (size_t)17U].lock);
                                       uint8_t
                                       *r =
                                         allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                          * (size_t)31U
+                                          * (size_t)34U
                                           + (size_t)17U].data);
                                       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                        * (size_t)31U
+                                        * (size_t)34U
                                         + (size_t)17U].lock);
                                       uint8_t *ptr = r;
                                       uint8_t *ptr0 = ptr;
@@ -3172,7 +3268,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                     else
                                     {
                                       Constants_sc_union
-                                      size18 = sizes[arena_id * (size_t)31U + (size_t)18U];
+                                      size18 = sizes[arena_id * (size_t)34U + (size_t)18U];
                                       uint32_t size_18;
                                       if (size18.tag == Constants_Sc)
                                         size_18 = size18.case_Sc;
@@ -3186,15 +3282,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                       if (b18 && bytes <= size_18 - 2U && alignment <= size_18)
                                       {
                                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                          * (size_t)31U
+                                          * (size_t)34U
                                           + (size_t)18U].lock);
                                         uint8_t
                                         *r =
                                           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)31U
+                                            * (size_t)34U
                                             + (size_t)18U].data);
                                         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                          * (size_t)31U
+                                          * (size_t)34U
                                           + (size_t)18U].lock);
                                         uint8_t *ptr = r;
                                         uint8_t *ptr0 = ptr;
@@ -3217,7 +3313,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                       else
                                       {
                                         Constants_sc_union
-                                        size19 = sizes[arena_id * (size_t)31U + (size_t)19U];
+                                        size19 = sizes[arena_id * (size_t)34U + (size_t)19U];
                                         uint32_t size_19;
                                         if (size19.tag == Constants_Sc)
                                           size_19 = size19.case_Sc;
@@ -3231,15 +3327,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                         if (b19 && bytes <= size_19 - 2U && alignment <= size_19)
                                         {
                                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)31U
+                                            * (size_t)34U
                                             + (size_t)19U].lock);
                                           uint8_t
                                           *r =
                                             allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)31U
+                                              * (size_t)34U
                                               + (size_t)19U].data);
                                           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)31U
+                                            * (size_t)34U
                                             + (size_t)19U].lock);
                                           uint8_t *ptr = r;
                                           uint8_t *ptr0 = ptr;
@@ -3262,7 +3358,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                         else
                                         {
                                           Constants_sc_union
-                                          size20 = sizes[arena_id * (size_t)31U + (size_t)20U];
+                                          size20 = sizes[arena_id * (size_t)34U + (size_t)20U];
                                           uint32_t size_20;
                                           if (size20.tag == Constants_Sc)
                                             size_20 = size20.case_Sc;
@@ -3276,15 +3372,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                           if (b20 && bytes <= size_20 - 2U && alignment <= size_20)
                                           {
                                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)31U
+                                              * (size_t)34U
                                               + (size_t)20U].lock);
                                             uint8_t
                                             *r =
                                               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)31U
+                                                * (size_t)34U
                                                 + (size_t)20U].data);
                                             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)31U
+                                              * (size_t)34U
                                               + (size_t)20U].lock);
                                             uint8_t *ptr = r;
                                             uint8_t *ptr0 = ptr;
@@ -3307,7 +3403,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                           else
                                           {
                                             Constants_sc_union
-                                            size21 = sizes[arena_id * (size_t)31U + (size_t)21U];
+                                            size21 = sizes[arena_id * (size_t)34U + (size_t)21U];
                                             uint32_t size_21;
                                             if (size21.tag == Constants_Sc)
                                               size_21 = size21.case_Sc;
@@ -3322,15 +3418,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                             (b21 && bytes <= size_21 - 2U && alignment <= size_21)
                                             {
                                               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)31U
+                                                * (size_t)34U
                                                 + (size_t)21U].lock);
                                               uint8_t
                                               *r =
                                                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)31U
+                                                  * (size_t)34U
                                                   + (size_t)21U].data);
                                               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)31U
+                                                * (size_t)34U
                                                 + (size_t)21U].lock);
                                               uint8_t *ptr = r;
                                               uint8_t *ptr0 = ptr;
@@ -3353,7 +3449,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                             else
                                             {
                                               Constants_sc_union
-                                              size22 = sizes[arena_id * (size_t)31U + (size_t)22U];
+                                              size22 = sizes[arena_id * (size_t)34U + (size_t)22U];
                                               uint32_t size_22;
                                               if (size22.tag == Constants_Sc)
                                                 size_22 = size22.case_Sc;
@@ -3368,15 +3464,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                               (b22 && bytes <= size_22 - 2U && alignment <= size_22)
                                               {
                                                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)31U
+                                                  * (size_t)34U
                                                   + (size_t)22U].lock);
                                                 uint8_t
                                                 *r =
                                                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)31U
+                                                    * (size_t)34U
                                                     + (size_t)22U].data);
                                                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)31U
+                                                  * (size_t)34U
                                                   + (size_t)22U].lock);
                                                 uint8_t *ptr = r;
                                                 uint8_t *ptr0 = ptr;
@@ -3399,7 +3495,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                               else
                                               {
                                                 Constants_sc_union
-                                                size23 = sizes[arena_id * (size_t)31U + (size_t)23U];
+                                                size23 = sizes[arena_id * (size_t)34U + (size_t)23U];
                                                 uint32_t size_23;
                                                 if (size23.tag == Constants_Sc)
                                                   size_23 = size23.case_Sc;
@@ -3418,15 +3514,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                 )
                                                 {
                                                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)31U
+                                                    * (size_t)34U
                                                     + (size_t)23U].lock);
                                                   uint8_t
                                                   *r =
                                                     allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)31U
+                                                      * (size_t)34U
                                                       + (size_t)23U].data);
                                                   Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)31U
+                                                    * (size_t)34U
                                                     + (size_t)23U].lock);
                                                   uint8_t *ptr = r;
                                                   uint8_t *ptr0 = ptr;
@@ -3451,7 +3547,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                   Constants_sc_union
                                                   size24 =
                                                     sizes[arena_id
-                                                    * (size_t)31U
+                                                    * (size_t)34U
                                                     + (size_t)24U];
                                                   uint32_t size_24;
                                                   if (size24.tag == Constants_Sc)
@@ -3471,15 +3567,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                   )
                                                   {
                                                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)31U
+                                                      * (size_t)34U
                                                       + (size_t)24U].lock);
                                                     uint8_t
                                                     *r =
                                                       allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)31U
+                                                        * (size_t)34U
                                                         + (size_t)24U].data);
                                                     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)31U
+                                                      * (size_t)34U
                                                       + (size_t)24U].lock);
                                                     uint8_t *ptr = r;
                                                     uint8_t *ptr0 = ptr;
@@ -3504,7 +3600,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                     Constants_sc_union
                                                     size25 =
                                                       sizes[arena_id
-                                                      * (size_t)31U
+                                                      * (size_t)34U
                                                       + (size_t)25U];
                                                     uint32_t size_25;
                                                     if (size25.tag == Constants_Sc)
@@ -3524,15 +3620,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                     )
                                                     {
                                                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)31U
+                                                        * (size_t)34U
                                                         + (size_t)25U].lock);
                                                       uint8_t
                                                       *r =
                                                         allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)31U
+                                                          * (size_t)34U
                                                           + (size_t)25U].data);
                                                       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)31U
+                                                        * (size_t)34U
                                                         + (size_t)25U].lock);
                                                       uint8_t *ptr = r;
                                                       uint8_t *ptr0 = ptr;
@@ -3557,7 +3653,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                       Constants_sc_union
                                                       size26 =
                                                         sizes[arena_id
-                                                        * (size_t)31U
+                                                        * (size_t)34U
                                                         + (size_t)26U];
                                                       uint32_t size_26;
                                                       if (size26.tag == Constants_Sc)
@@ -3577,15 +3673,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                       )
                                                       {
                                                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)31U
+                                                          * (size_t)34U
                                                           + (size_t)26U].lock);
                                                         uint8_t
                                                         *r =
                                                           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                            * (size_t)31U
+                                                            * (size_t)34U
                                                             + (size_t)26U].data);
                                                         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)31U
+                                                          * (size_t)34U
                                                           + (size_t)26U].lock);
                                                         uint8_t *ptr = r;
                                                         uint8_t *ptr0 = ptr;
@@ -3610,7 +3706,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                         Constants_sc_union
                                                         size27 =
                                                           sizes[arena_id
-                                                          * (size_t)31U
+                                                          * (size_t)34U
                                                           + (size_t)27U];
                                                         uint32_t size_27;
                                                         if (size27.tag == Constants_Sc)
@@ -3630,15 +3726,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                         )
                                                         {
                                                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                            * (size_t)31U
+                                                            * (size_t)34U
                                                             + (size_t)27U].lock);
                                                           uint8_t
                                                           *r =
                                                             allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                              * (size_t)31U
+                                                              * (size_t)34U
                                                               + (size_t)27U].data);
                                                           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                            * (size_t)31U
+                                                            * (size_t)34U
                                                             + (size_t)27U].lock);
                                                           uint8_t *ptr = r;
                                                           uint8_t *ptr0 = ptr;
@@ -3663,7 +3759,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                           Constants_sc_union
                                                           size28 =
                                                             sizes[arena_id
-                                                            * (size_t)31U
+                                                            * (size_t)34U
                                                             + (size_t)28U];
                                                           uint32_t size_28;
                                                           if (size28.tag == Constants_Sc)
@@ -3683,15 +3779,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                           )
                                                           {
                                                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                              * (size_t)31U
+                                                              * (size_t)34U
                                                               + (size_t)28U].lock);
                                                             uint8_t
                                                             *r =
                                                               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                                * (size_t)31U
+                                                                * (size_t)34U
                                                                 + (size_t)28U].data);
                                                             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                              * (size_t)31U
+                                                              * (size_t)34U
                                                               + (size_t)28U].lock);
                                                             uint8_t *ptr = r;
                                                             uint8_t *ptr0 = ptr;
@@ -3716,7 +3812,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                             Constants_sc_union
                                                             size29 =
                                                               sizes[arena_id
-                                                              * (size_t)31U
+                                                              * (size_t)34U
                                                               + (size_t)29U];
                                                             uint32_t size_29;
                                                             if (size29.tag == Constants_Sc)
@@ -3736,15 +3832,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                             )
                                                             {
                                                               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                                * (size_t)31U
+                                                                * (size_t)34U
                                                                 + (size_t)29U].lock);
                                                               uint8_t
                                                               *r =
                                                                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                                  * (size_t)31U
+                                                                  * (size_t)34U
                                                                   + (size_t)29U].data);
                                                               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                                * (size_t)31U
+                                                                * (size_t)34U
                                                                 + (size_t)29U].lock);
                                                               uint8_t *ptr = r;
                                                               uint8_t *ptr0 = ptr;
@@ -3770,7 +3866,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                               Constants_sc_union
                                                               size30 =
                                                                 sizes[arena_id
-                                                                * (size_t)31U
+                                                                * (size_t)34U
                                                                 + (size_t)30U];
                                                               uint32_t size_30;
                                                               if (size30.tag == Constants_Sc)
@@ -3791,15 +3887,15 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                               )
                                                               {
                                                                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                                  * (size_t)31U
+                                                                  * (size_t)34U
                                                                   + (size_t)30U].lock);
                                                                 uint8_t
                                                                 *r =
                                                                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                                    * (size_t)31U
+                                                                    * (size_t)34U
                                                                     + (size_t)30U].data);
                                                                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                                  * (size_t)31U
+                                                                  * (size_t)34U
                                                                   + (size_t)30U].lock);
                                                                 uint8_t *ptr = r;
                                                                 uint8_t *ptr0 = ptr;
@@ -3821,7 +3917,186 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                                 return ptr0;
                                                               }
                                                               else
-                                                                return NULL;
+                                                              {
+                                                                Constants_sc_union
+                                                                size31 =
+                                                                  sizes[arena_id
+                                                                  * (size_t)34U
+                                                                  + (size_t)31U];
+                                                                uint32_t size_31;
+                                                                if (size31.tag == Constants_Sc)
+                                                                  size_31 = size31.case_Sc;
+                                                                else if
+                                                                (size31.tag == Constants_Sc_ex)
+                                                                  size_31 = size31.case_Sc_ex;
+                                                                else
+                                                                  size_31 =
+                                                                    KRML_EABORT(uint32_t,
+                                                                      "unreachable (pattern matches are exhaustive in F*)");
+                                                                bool b31 = 4096U % size_31 == 0U;
+                                                                if
+                                                                (
+                                                                  b31
+                                                                  && bytes <= size_31 - 2U
+                                                                  && alignment <= size_31
+                                                                )
+                                                                {
+                                                                  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                    * (size_t)34U
+                                                                    + (size_t)31U].lock);
+                                                                  uint8_t
+                                                                  *r =
+                                                                    allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                      * (size_t)34U
+                                                                      + (size_t)31U].data);
+                                                                  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                    * (size_t)34U
+                                                                    + (size_t)31U].lock);
+                                                                  uint8_t *ptr = r;
+                                                                  uint8_t *ptr0 = ptr;
+                                                                  uint32_t size32;
+                                                                  if (size31.tag == Constants_Sc)
+                                                                    size32 = size31.case_Sc;
+                                                                  else if
+                                                                  (size31.tag == Constants_Sc_ex)
+                                                                    size32 = size31.case_Sc_ex;
+                                                                  else
+                                                                    size32 =
+                                                                      KRML_EABORT(uint32_t,
+                                                                        "unreachable (pattern matches are exhaustive in F*)");
+                                                                  if (!(ptr0 == NULL))
+                                                                  {
+                                                                    ptr0[(size_t)(size32 - 2U)] =
+                                                                      42U;
+                                                                    ptr0[(size_t)(size32 - 1U)] =
+                                                                      23U;
+                                                                  }
+                                                                  return ptr0;
+                                                                }
+                                                                else
+                                                                {
+                                                                  Constants_sc_union
+                                                                  size32 =
+                                                                    sizes[arena_id
+                                                                    * (size_t)34U
+                                                                    + (size_t)32U];
+                                                                  uint32_t size_32;
+                                                                  if (size32.tag == Constants_Sc)
+                                                                    size_32 = size32.case_Sc;
+                                                                  else if
+                                                                  (size32.tag == Constants_Sc_ex)
+                                                                    size_32 = size32.case_Sc_ex;
+                                                                  else
+                                                                    size_32 =
+                                                                      KRML_EABORT(uint32_t,
+                                                                        "unreachable (pattern matches are exhaustive in F*)");
+                                                                  bool b32 = 4096U % size_32 == 0U;
+                                                                  if
+                                                                  (
+                                                                    b32
+                                                                    && bytes <= size_32 - 2U
+                                                                    && alignment <= size_32
+                                                                  )
+                                                                  {
+                                                                    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                      * (size_t)34U
+                                                                      + (size_t)32U].lock);
+                                                                    uint8_t
+                                                                    *r =
+                                                                      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                        * (size_t)34U
+                                                                        + (size_t)32U].data);
+                                                                    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                      * (size_t)34U
+                                                                      + (size_t)32U].lock);
+                                                                    uint8_t *ptr = r;
+                                                                    uint8_t *ptr0 = ptr;
+                                                                    uint32_t size33;
+                                                                    if (size32.tag == Constants_Sc)
+                                                                      size33 = size32.case_Sc;
+                                                                    else if
+                                                                    (size32.tag == Constants_Sc_ex)
+                                                                      size33 = size32.case_Sc_ex;
+                                                                    else
+                                                                      size33 =
+                                                                        KRML_EABORT(uint32_t,
+                                                                          "unreachable (pattern matches are exhaustive in F*)");
+                                                                    if (!(ptr0 == NULL))
+                                                                    {
+                                                                      ptr0[(size_t)(size33 - 2U)] =
+                                                                        42U;
+                                                                      ptr0[(size_t)(size33 - 1U)] =
+                                                                        23U;
+                                                                    }
+                                                                    return ptr0;
+                                                                  }
+                                                                  else
+                                                                  {
+                                                                    Constants_sc_union
+                                                                    size33 =
+                                                                      sizes[arena_id
+                                                                      * (size_t)34U
+                                                                      + (size_t)33U];
+                                                                    uint32_t size_33;
+                                                                    if (size33.tag == Constants_Sc)
+                                                                      size_33 = size33.case_Sc;
+                                                                    else if
+                                                                    (size33.tag == Constants_Sc_ex)
+                                                                      size_33 = size33.case_Sc_ex;
+                                                                    else
+                                                                      size_33 =
+                                                                        KRML_EABORT(uint32_t,
+                                                                          "unreachable (pattern matches are exhaustive in F*)");
+                                                                    bool
+                                                                    b33 = 4096U % size_33 == 0U;
+                                                                    if
+                                                                    (
+                                                                      b33
+                                                                      && bytes <= size_33 - 2U
+                                                                      && alignment <= size_33
+                                                                    )
+                                                                    {
+                                                                      Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                        * (size_t)34U
+                                                                        + (size_t)33U].lock);
+                                                                      uint8_t
+                                                                      *r =
+                                                                        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                          * (size_t)34U
+                                                                          + (size_t)33U].data);
+                                                                      Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                        * (size_t)34U
+                                                                        + (size_t)33U].lock);
+                                                                      uint8_t *ptr = r;
+                                                                      uint8_t *ptr0 = ptr;
+                                                                      uint32_t size34;
+                                                                      if
+                                                                      (size33.tag == Constants_Sc)
+                                                                        size34 = size33.case_Sc;
+                                                                      else if
+                                                                      (
+                                                                        size33.tag
+                                                                        == Constants_Sc_ex
+                                                                      )
+                                                                        size34 = size33.case_Sc_ex;
+                                                                      else
+                                                                        size34 =
+                                                                          KRML_EABORT(uint32_t,
+                                                                            "unreachable (pattern matches are exhaustive in F*)");
+                                                                      if (!(ptr0 == NULL))
+                                                                      {
+                                                                        ptr0[(size_t)(size34 - 2U)]
+                                                                        = 42U;
+                                                                        ptr0[(size_t)(size34 - 1U)]
+                                                                        = 23U;
+                                                                      }
+                                                                      return ptr0;
+                                                                    }
+                                                                    else
+                                                                      return NULL;
+                                                                  }
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -3913,7 +4188,7 @@ static bool slab_free(uint8_t *ptr)
     return false;
 }
 
-size_t StarMalloc_threshold = (size_t)4096U - (size_t)2U;
+size_t StarMalloc_threshold;
 
 uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
 {
@@ -4050,9 +4325,9 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
     bool small_case_optim_condition;
     if (old_allocation_is_small && same_case)
     {
-      uint32_t r0 = SizeClassSelection_inv_impl((uint32_t)old_size);
+      uint32_t r0 = SizeClassSelection_inv_impl(32768U, 7U, (uint32_t)old_size);
       size_t old_sc = (size_t)r0;
-      uint32_t r = SizeClassSelection_inv_impl((uint32_t)(new_size + (size_t)2U));
+      uint32_t r = SizeClassSelection_inv_impl(32768U, 7U, (uint32_t)(new_size + (size_t)2U));
       size_t new_sc = (size_t)r;
       small_case_optim_condition = old_sc == new_sc;
     }
