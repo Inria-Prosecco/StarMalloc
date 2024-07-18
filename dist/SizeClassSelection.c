@@ -21,6 +21,13 @@ krml_checked_int_t SizeClassSelection_sort(krml_checked_int_t x)
     return (krml_checked_int_t)2;
 }
 
+uint32_t SizeClassSelection_log2u64_ceil(uint64_t x)
+{
+  uint32_t r = clz(x - 1ULL);
+  uint32_t log = 63U - r;
+  return log;
+}
+
 uint32_t SizeClassSelection_inv_impl(uint32_t bound_input, uint32_t bound_len, uint32_t x)
 {
   KRML_MAYBE_UNUSED_VAR(bound_input);
@@ -48,9 +55,9 @@ uint32_t SizeClassSelection_inv_impl(uint32_t bound_input, uint32_t bound_len, u
   }
   else
   {
-    uint32_t v = 4095U;
-    uint32_t x_ = x + v;
-    return (x_ >> 12U) + 25U;
+    uint64_t x_as_u64 = (uint64_t)x;
+    uint32_t log = SizeClassSelection_log2u64_ceil(x_as_u64);
+    return log - 12U + 27U;
   }
 }
 

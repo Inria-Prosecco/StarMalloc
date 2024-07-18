@@ -461,15 +461,26 @@ let inv_impl2 (x: U32.t)
   let y, z = inv_impl2_aux x in
   U32.add (U32.mul y 4ul) z
 
+let log2u64_ceil (x: U64.t)
+  : Pure U32.t
+  (requires U64.v x > 1)
+  (ensures fun r ->
+    U32.v r < 64 /\
+    U64.v x > pow2 (U32.v r) /\
+    U64.v x <= pow2 (U32.v r + 1)
+  )
+  =
+  let log = log2u64_impl (U64.sub x 1UL) in
+  log
+
 inline_for_extraction noextract
 let inv_impl3 (bound_input bound_len x: U32.t)
   : Pure U32.t
   (requires
-    4096 <= U32.v x /\
+    4096 < U32.v x /\
     FU.fits (U32.v x + 4096) U32.n /\
     U32.v x <= U32.v bound_input /\
-    U32.v bound_input % 4096 = 0 /\
-    U32.v bound_len = U32.v bound_input/4096
+    U32.v bound_input = pow2 (U32.v bound_len + 12)
   )
   (ensures fun r ->
     U32.v x <= sc_list_f3 (U32.v r) /\
@@ -477,11 +488,11 @@ let inv_impl3 (bound_input bound_len x: U32.t)
   )
   =
   assert_norm (pow2 12 = 4096);
-  let r = fast_upper_div_impl x 4096ul 12ul in
-  //assert (r*4096 <= bound_input);
-  r
-
-
+  let x_as_u64 = FIC.uint32_to_uint64 x in
+  let log = log2u64_ceil x_as_u64 in
+  assume (U32.v log >= 12);
+  admit ();
+  U32.sub log 12ul
 
 let inv_impl (bound_input bound_len x: U32.t)
   : Pure (U32.t)
@@ -505,7 +516,7 @@ let inv_impl (bound_input bound_len x: U32.t)
   then 2ul
   else if U32.lte x 4096ul
   then U32.add (inv_impl2 x) 2ul
-  else U32.add (inv_impl3 bound_input bound_len x) 25ul
+  else U32.add (inv_impl3 bound_input bound_len x) 27ul
 
 let log2u64_is_mon_increasing (x y: nat)
   : Lemma

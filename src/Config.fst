@@ -35,12 +35,10 @@ let sc_list_sc : list sc = [
 
 let sc_list_ex : list sc_ex = [
     8192ul;
-    12288ul;
     16384ul;
-    20480ul;
-    24576ul;
-    28672ul;
-    32768ul
+    32768ul;
+    65536ul;
+    131072ul
   ]
 
 let sc_list_f1 : nat -> nat = SizeClassSelection.sc_list_f

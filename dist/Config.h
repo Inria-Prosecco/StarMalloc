@@ -6,11 +6,11 @@
 
 #include "krmllib.h"
 
-#define CONFIG_NB_SIZE_CLASSES ((size_t)34U)
+#define CONFIG_NB_SIZE_CLASSES ((size_t)32U)
 
 #define CONFIG_NB_SIZE_CLASSES_SC ((size_t)27U)
 
-#define CONFIG_NB_SIZE_CLASSES_SC_EX ((size_t)7U)
+#define CONFIG_NB_SIZE_CLASSES_SC_EX ((size_t)5U)
 
 extern bool Config_enable_extended_size_classes;
 
