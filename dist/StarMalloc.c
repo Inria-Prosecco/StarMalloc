@@ -4038,7 +4038,7 @@ uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
 
 uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size)
 {
-  bool check = alignment > (size_t)0U && (size_t)4096U % alignment == (size_t)0U;
+  bool check = alignment > (size_t)0U && (size_t)131072U % alignment == (size_t)0U;
   if (check)
   {
     uint32_t alignment_as_u32 = (uint32_t)alignment;

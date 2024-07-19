@@ -56,7 +56,7 @@ module G = FStar.Ghost
 
 //TODO: [@ CConst]
 let threshold : US.t =
-  let page_size = 32768ul in
+  let page_size = 131072ul in
   if enable_slab_canaries_malloc
   then US.sub (US.uint32_to_sizet page_size) 2sz
   else US.uint32_to_sizet page_size
@@ -126,7 +126,7 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
 let aligned_alloc arena_id alignment size
   =
   let page_as_sz = US.uint32_to_sizet page_size in
-  let check = US.gt alignment 0sz && US.rem (US.uint32_to_sizet page_size) alignment = 0sz in
+  let check = US.gt alignment 0sz && US.rem (US.uint32_to_sizet 131072ul) alignment = 0sz in
   if check then (
     let alignment_as_u32 = US.sizet_to_uint32 alignment in
     if (US.lte size threshold) then (
