@@ -2449,7 +2449,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
     size_ = size.case_Sc_ex;
   else
     size_ = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-  bool b = 4096U % size_ == 0U;
+  bool b = 131072U % size_ == 0U;
   if (b && bytes <= size_ - 2U && alignment <= size_)
   {
     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)32U + (size_t)0U].lock);
@@ -2483,7 +2483,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
       size_1 = size1.case_Sc_ex;
     else
       size_1 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-    bool b1 = 4096U % size_1 == 0U;
+    bool b1 = 131072U % size_1 == 0U;
     if (b1 && bytes <= size_1 - 2U && alignment <= size_1)
     {
       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2521,7 +2521,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
         size_2 = size2.case_Sc_ex;
       else
         size_2 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-      bool b2 = 4096U % size_2 == 0U;
+      bool b2 = 131072U % size_2 == 0U;
       if (b2 && bytes <= size_2 - 2U && alignment <= size_2)
       {
         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2561,7 +2561,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
           size_3 = size3.case_Sc_ex;
         else
           size_3 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-        bool b3 = 4096U % size_3 == 0U;
+        bool b3 = 131072U % size_3 == 0U;
         if (b3 && bytes <= size_3 - 2U && alignment <= size_3)
         {
           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2601,7 +2601,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
             size_4 = size4.case_Sc_ex;
           else
             size_4 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-          bool b4 = 4096U % size_4 == 0U;
+          bool b4 = 131072U % size_4 == 0U;
           if (b4 && bytes <= size_4 - 2U && alignment <= size_4)
           {
             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2641,7 +2641,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
               size_5 = size5.case_Sc_ex;
             else
               size_5 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-            bool b5 = 4096U % size_5 == 0U;
+            bool b5 = 131072U % size_5 == 0U;
             if (b5 && bytes <= size_5 - 2U && alignment <= size_5)
             {
               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2681,7 +2681,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                 size_6 = size6.case_Sc_ex;
               else
                 size_6 = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
-              bool b6 = 4096U % size_6 == 0U;
+              bool b6 = 131072U % size_6 == 0U;
               if (b6 && bytes <= size_6 - 2U && alignment <= size_6)
               {
                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2725,7 +2725,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                   size_7 =
                     KRML_EABORT(uint32_t,
                       "unreachable (pattern matches are exhaustive in F*)");
-                bool b7 = 4096U % size_7 == 0U;
+                bool b7 = 131072U % size_7 == 0U;
                 if (b7 && bytes <= size_7 - 2U && alignment <= size_7)
                 {
                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2769,7 +2769,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                     size_8 =
                       KRML_EABORT(uint32_t,
                         "unreachable (pattern matches are exhaustive in F*)");
-                  bool b8 = 4096U % size_8 == 0U;
+                  bool b8 = 131072U % size_8 == 0U;
                   if (b8 && bytes <= size_8 - 2U && alignment <= size_8)
                   {
                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2813,7 +2813,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                       size_9 =
                         KRML_EABORT(uint32_t,
                           "unreachable (pattern matches are exhaustive in F*)");
-                    bool b9 = 4096U % size_9 == 0U;
+                    bool b9 = 131072U % size_9 == 0U;
                     if (b9 && bytes <= size_9 - 2U && alignment <= size_9)
                     {
                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2857,7 +2857,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                         size_10 =
                           KRML_EABORT(uint32_t,
                             "unreachable (pattern matches are exhaustive in F*)");
-                      bool b10 = 4096U % size_10 == 0U;
+                      bool b10 = 131072U % size_10 == 0U;
                       if (b10 && bytes <= size_10 - 2U && alignment <= size_10)
                       {
                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2901,7 +2901,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                           size_11 =
                             KRML_EABORT(uint32_t,
                               "unreachable (pattern matches are exhaustive in F*)");
-                        bool b11 = 4096U % size_11 == 0U;
+                        bool b11 = 131072U % size_11 == 0U;
                         if (b11 && bytes <= size_11 - 2U && alignment <= size_11)
                         {
                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2945,7 +2945,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                             size_12 =
                               KRML_EABORT(uint32_t,
                                 "unreachable (pattern matches are exhaustive in F*)");
-                          bool b12 = 4096U % size_12 == 0U;
+                          bool b12 = 131072U % size_12 == 0U;
                           if (b12 && bytes <= size_12 - 2U && alignment <= size_12)
                           {
                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -2989,7 +2989,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                               size_13 =
                                 KRML_EABORT(uint32_t,
                                   "unreachable (pattern matches are exhaustive in F*)");
-                            bool b13 = 4096U % size_13 == 0U;
+                            bool b13 = 131072U % size_13 == 0U;
                             if (b13 && bytes <= size_13 - 2U && alignment <= size_13)
                             {
                               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -3034,7 +3034,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                 size_14 =
                                   KRML_EABORT(uint32_t,
                                     "unreachable (pattern matches are exhaustive in F*)");
-                              bool b14 = 4096U % size_14 == 0U;
+                              bool b14 = 131072U % size_14 == 0U;
                               if (b14 && bytes <= size_14 - 2U && alignment <= size_14)
                               {
                                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -3079,7 +3079,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                   size_15 =
                                     KRML_EABORT(uint32_t,
                                       "unreachable (pattern matches are exhaustive in F*)");
-                                bool b15 = 4096U % size_15 == 0U;
+                                bool b15 = 131072U % size_15 == 0U;
                                 if (b15 && bytes <= size_15 - 2U && alignment <= size_15)
                                 {
                                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -3124,7 +3124,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                     size_16 =
                                       KRML_EABORT(uint32_t,
                                         "unreachable (pattern matches are exhaustive in F*)");
-                                  bool b16 = 4096U % size_16 == 0U;
+                                  bool b16 = 131072U % size_16 == 0U;
                                   if (b16 && bytes <= size_16 - 2U && alignment <= size_16)
                                   {
                                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -3169,7 +3169,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                       size_17 =
                                         KRML_EABORT(uint32_t,
                                           "unreachable (pattern matches are exhaustive in F*)");
-                                    bool b17 = 4096U % size_17 == 0U;
+                                    bool b17 = 131072U % size_17 == 0U;
                                     if (b17 && bytes <= size_17 - 2U && alignment <= size_17)
                                     {
                                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -3214,7 +3214,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                         size_18 =
                                           KRML_EABORT(uint32_t,
                                             "unreachable (pattern matches are exhaustive in F*)");
-                                      bool b18 = 4096U % size_18 == 0U;
+                                      bool b18 = 131072U % size_18 == 0U;
                                       if (b18 && bytes <= size_18 - 2U && alignment <= size_18)
                                       {
                                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -3259,7 +3259,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                           size_19 =
                                             KRML_EABORT(uint32_t,
                                               "unreachable (pattern matches are exhaustive in F*)");
-                                        bool b19 = 4096U % size_19 == 0U;
+                                        bool b19 = 131072U % size_19 == 0U;
                                         if (b19 && bytes <= size_19 - 2U && alignment <= size_19)
                                         {
                                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -3304,7 +3304,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                             size_20 =
                                               KRML_EABORT(uint32_t,
                                                 "unreachable (pattern matches are exhaustive in F*)");
-                                          bool b20 = 4096U % size_20 == 0U;
+                                          bool b20 = 131072U % size_20 == 0U;
                                           if (b20 && bytes <= size_20 - 2U && alignment <= size_20)
                                           {
                                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
@@ -3349,7 +3349,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                               size_21 =
                                                 KRML_EABORT(uint32_t,
                                                   "unreachable (pattern matches are exhaustive in F*)");
-                                            bool b21 = 4096U % size_21 == 0U;
+                                            bool b21 = 131072U % size_21 == 0U;
                                             if
                                             (b21 && bytes <= size_21 - 2U && alignment <= size_21)
                                             {
@@ -3395,7 +3395,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                 size_22 =
                                                   KRML_EABORT(uint32_t,
                                                     "unreachable (pattern matches are exhaustive in F*)");
-                                              bool b22 = 4096U % size_22 == 0U;
+                                              bool b22 = 131072U % size_22 == 0U;
                                               if
                                               (b22 && bytes <= size_22 - 2U && alignment <= size_22)
                                               {
@@ -3441,7 +3441,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                   size_23 =
                                                     KRML_EABORT(uint32_t,
                                                       "unreachable (pattern matches are exhaustive in F*)");
-                                                bool b23 = 4096U % size_23 == 0U;
+                                                bool b23 = 131072U % size_23 == 0U;
                                                 if
                                                 (
                                                   b23
@@ -3494,7 +3494,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                     size_24 =
                                                       KRML_EABORT(uint32_t,
                                                         "unreachable (pattern matches are exhaustive in F*)");
-                                                  bool b24 = 4096U % size_24 == 0U;
+                                                  bool b24 = 131072U % size_24 == 0U;
                                                   if
                                                   (
                                                     b24
@@ -3547,7 +3547,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                       size_25 =
                                                         KRML_EABORT(uint32_t,
                                                           "unreachable (pattern matches are exhaustive in F*)");
-                                                    bool b25 = 4096U % size_25 == 0U;
+                                                    bool b25 = 131072U % size_25 == 0U;
                                                     if
                                                     (
                                                       b25
@@ -3600,7 +3600,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                         size_26 =
                                                           KRML_EABORT(uint32_t,
                                                             "unreachable (pattern matches are exhaustive in F*)");
-                                                      bool b26 = 4096U % size_26 == 0U;
+                                                      bool b26 = 131072U % size_26 == 0U;
                                                       if
                                                       (
                                                         b26
@@ -3653,7 +3653,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                           size_27 =
                                                             KRML_EABORT(uint32_t,
                                                               "unreachable (pattern matches are exhaustive in F*)");
-                                                        bool b27 = 4096U % size_27 == 0U;
+                                                        bool b27 = 131072U % size_27 == 0U;
                                                         if
                                                         (
                                                           b27
@@ -3706,7 +3706,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                             size_28 =
                                                               KRML_EABORT(uint32_t,
                                                                 "unreachable (pattern matches are exhaustive in F*)");
-                                                          bool b28 = 4096U % size_28 == 0U;
+                                                          bool b28 = 131072U % size_28 == 0U;
                                                           if
                                                           (
                                                             b28
@@ -3759,7 +3759,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                               size_29 =
                                                                 KRML_EABORT(uint32_t,
                                                                   "unreachable (pattern matches are exhaustive in F*)");
-                                                            bool b29 = 4096U % size_29 == 0U;
+                                                            bool b29 = 131072U % size_29 == 0U;
                                                             if
                                                             (
                                                               b29
@@ -3814,7 +3814,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                                 size_30 =
                                                                   KRML_EABORT(uint32_t,
                                                                     "unreachable (pattern matches are exhaustive in F*)");
-                                                              bool b30 = 4096U % size_30 == 0U;
+                                                              bool b30 = 131072U % size_30 == 0U;
                                                               if
                                                               (
                                                                 b30
@@ -3869,7 +3869,7 @@ static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t
                                                                   size_31 =
                                                                     KRML_EABORT(uint32_t,
                                                                       "unreachable (pattern matches are exhaustive in F*)");
-                                                                bool b31 = 4096U % size_31 == 0U;
+                                                                bool b31 = 131072U % size_31 == 0U;
                                                                 if
                                                                 (
                                                                   b31

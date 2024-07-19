@@ -450,7 +450,7 @@ let rec slab_aligned_alloc_i
       let size' = get_u32 size in
       // TLA and sc_all are not visibly synced
       admit ();
-      let b = U32.eq (U32.rem page_size size') 0ul in
+      let b = U32.eq (U32.rem 131072ul size') 0ul in
       if b && bytes `U32.lte` size' && alignment `U32.lte` size' then (
         let r = slab_malloc_one idx bytes in
         let size_ = G.hide (get_u32 (Seq.index sc_all.g_size_classes (US.v idx)).data.size) in
@@ -503,7 +503,7 @@ let rec slab_aligned_alloc_canary_i
       let size' = get_u32 size in
       // TLA and sc_all are not visibly synced
       admit ();
-      let b = U32.eq (U32.rem page_size size') 0ul in
+      let b = U32.eq (U32.rem 131072ul size') 0ul in
       if b && bytes `U32.lte` (size' `U32.sub` 2ul) && alignment `U32.lte` size' then (
         let ptr = slab_malloc_one idx bytes in
         let size_ = G.hide (get_u32 (Seq.index sc_all.g_size_classes (US.v idx)).data.size) in
