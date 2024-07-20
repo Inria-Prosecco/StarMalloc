@@ -59,6 +59,9 @@ let lemma_partition_and_pred_implies_mem5
     Classical.move_requires (ALG.lemma_mem_implies_pred pred5 hd5 s) idx
 #pop-options
 
+open SlotsCommon
+
+//TODO
 let t (size_class: sc) : Type0 =
   dtuple2
     (x:Seq.lseq U64.t 4{slab_vprop_aux2 size_class x})
@@ -86,11 +89,10 @@ let empty_md_is_properly_zeroed
   zf_b_slice (Seq.slice bm 0 64) 0 (64 - U32.v bound2)
 #pop-options
 
+//TODO
 let empty_t size_class =
   empty_md_is_properly_zeroed size_class;
   ((| Seq.create 4 0UL, Seq.create (U32.v (nb_slots size_class)) (Ghost.hide None) |), Seq.create (U32.v page_size - US.v (rounding size_class)) U8.zero)
-
-
 
 #push-options "--z3rlimit 50 --compat_pre_typed_indexed_effects"
 let p_empty_unpack (#opened:_)

@@ -122,6 +122,7 @@ let init
   );
   let slab_region = mmap_u8_init (US.mul (US.mul metadata_max (u32_to_sz page_size)) n) in
   let md_bm_region = mmap_u64_init (US.mul (US.mul metadata_max 4sz) n) in
+  let md_bm_region_q = mmap_u64_init (US.mul (US.mul metadata_max 4sz) n) in
   let md_region = mmap_cell_status_init (US.mul metadata_max n) in
 
   Math.Lemmas.mul_zero_right_is_zero (US.v (US.mul metadata_max (u32_to_sz page_size)));
@@ -129,6 +130,7 @@ let init
   Math.Lemmas.mul_zero_right_is_zero (US.v metadata_max);
   A.ptr_shift_zero (A.ptr_of slab_region);
   A.ptr_shift_zero (A.ptr_of md_bm_region);
+  A.ptr_shift_zero (A.ptr_of md_bm_region_q);
   A.ptr_shift_zero (A.ptr_of md_region);
 
   change_equal_slprop
@@ -138,17 +140,21 @@ let init
     (A.varray md_bm_region)
     (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)));
   change_equal_slprop
+    (A.varray md_bm_region_q)
+    (A.varray (A.split_r md_bm_region_q (US.mul (US.mul metadata_max 4sz) 0sz)));
+  change_equal_slprop
     (A.varray md_region)
     (A.varray (A.split_r md_region (US.mul metadata_max 0sz)));
 
   assert (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) == US.v metadata_max * US.v (u32_to_sz page_size) * US.v n);
   assert (A.length (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
+  assert (A.length (A.split_r md_bm_region_q (US.mul (US.mul metadata_max 4sz) 0sz)) == US.v metadata_max * 4 * US.v n);
   assert (A.length (A.split_r md_region (US.mul metadata_max 0sz)) == US.v metadata_max * US.v n);
 
   let size_classes = mmap_sc_init n in
   //let sizes = mmap_sizes_init n in
 
-  init_size_classes arena_sc_list n slab_region md_bm_region md_region size_classes sizes;
+  init_size_classes arena_sc_list n slab_region md_bm_region md_bm_region_q md_region size_classes sizes;
 
   let g_size_classes = gget (varray size_classes) in
   //let g_sizes = gget (varray sizes) in
@@ -159,6 +165,8 @@ let init
   drop (A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size))
     n)));
   drop (A.varray (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz)
+    n)));
+  drop (A.varray (A.split_r md_bm_region_q (US.mul (US.mul metadata_max 4sz)
     n)));
   drop (A.varray (A.split_r md_region (US.mul metadata_max
    n)));

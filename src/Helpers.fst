@@ -1,11 +1,9 @@
 module Helpers
 
 module FU = FStar.UInt
-module FI = FStar.Int
 module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
-module U16 = FStar.UInt16
 module U8 = FStar.UInt8
 
 module G = FStar.Ghost
@@ -23,11 +21,13 @@ open Utils2
 open SteelOptUtils
 open SteelStarSeqUtils
 open FStar.Mul
-open SlotsAlloc
-
-open FStar.Mul
 
 #push-options "--fuel 0 --ifuel 0"
+
+open SlotsCommon
+
+//noextract
+//let a2bv = Bitmap4.array_to_bv2 #4
 
 #push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
 let slot_array (#a: Type)
@@ -37,7 +37,7 @@ let slot_array (#a: Type)
   (pos: U32.t{U32.v pos < U32.v max})
   : Pure (array a)
   (requires
-    (U32.v max) * (U32.v size) <= FI.max_int U32.n /\
+    (U32.v max) * (U32.v size) <= FU.max_int U32.n /\
     U32.v pos < U32.v max /\
     A.length arr = U32.v (U32.mul max size) /\
     U32.v size > 0)
@@ -49,7 +49,7 @@ let slot_array (#a: Type)
   let shift = U32.mul pos size in
   assert (U32.v shift <= U32.v (U32.mul max size));
   //assert_norm (U32.v shift <= FI.max_int U32.n);
-  assert (U32.v shift <= FI.max_int U32.n);
+  assert (U32.v shift <= FU.max_int U32.n);
   assert (U32.v shift <= (U32.v max - 1) * (U32.v size));
   assert (U32.v shift + U32.v size <= A.length arr);
   let shift_sz = US.uint32_to_sizet shift in
@@ -60,7 +60,7 @@ let slot_array (#a: Type)
 
 let slot_vprop (#a: Type)
   (size: U32.t{U32.v size > 0})
-  (max: U32.t{U32.v max * U32.v size <= FI.max_int U32.n})
+  (max: U32.t{U32.v max * U32.v size <= FU.max_int U32.n})
   (arr: array a{A.length arr = U32.v (U32.mul max size)})
   (pos: U32.t{U32.v pos < U32.v max})
   =
@@ -69,7 +69,7 @@ let slot_vprop (#a: Type)
 #push-options "--fuel 1 --ifuel 1"
 let slot_vprop_lemma (#a: Type)
   (size: U32.t{U32.v size > 0})
-  (max: U32.t{U32.v max * U32.v size <= FI.max_int U32.n})
+  (max: U32.t{U32.v max * U32.v size <= FU.max_int U32.n})
   (arr: array a{A.length arr = U32.v (U32.mul max size)})
   (pos: U32.t{U32.v pos < U32.v max})
   : Lemma
@@ -189,7 +189,7 @@ let init_u32_slice_lemma
 let rec array_to_pieces_rec (#opened:_)
   (#a: Type)
   (size: U32.t{U32.v size > 0})
-  (max: U32.t{U32.v max > 0 /\ U32.v max * U32.v size <= FI.max_int U32.n})
+  (max: U32.t{U32.v max > 0 /\ U32.v max * U32.v size <= FU.max_int U32.n})
   (arr: array a{A.length arr = U32.v (U32.mul max size)})
   : SteelGhostT unit opened
   (A.varray arr)
@@ -273,7 +273,7 @@ let rec array_to_pieces_rec (#opened:_)
 let array_to_pieces (#opened:_)
   (#a: Type)
   (size: U32.t{U32.v size > 0})
-  (max: U32.t{0 < U32.v max /\ U32.v max * U32.v size <= FI.max_int U32.n})
+  (max: U32.t{0 < U32.v max /\ U32.v max * U32.v size <= FU.max_int U32.n})
   (arr: array a{A.length arr = U32.v (U32.mul max size)})
   : SteelGhostT unit opened
   (A.varray arr)
@@ -292,7 +292,7 @@ let array_to_pieces (#opened:_)
 let rec pieces_to_array_rec (#opened:_)
   (#a: Type)
   (size: U32.t{U32.v size > 0})
-  (max: U32.t{U32.v max > 0 /\ U32.v max * U32.v size <= FI.max_int U32.n})
+  (max: U32.t{U32.v max > 0 /\ U32.v max * U32.v size <= FU.max_int U32.n})
   (arr: array a{A.length arr = U32.v (U32.mul max size)})
   : SteelGhostT unit opened
   (starseq
@@ -374,7 +374,7 @@ let rec pieces_to_array_rec (#opened:_)
 let pieces_to_array (#opened:_)
   (#a: Type)
   (size: U32.t{U32.v size > 0})
-  (max: U32.t{0 < U32.v max /\ U32.v max * U32.v size <= FI.max_int U32.n})
+  (max: U32.t{0 < U32.v max /\ U32.v max * U32.v size <= FU.max_int U32.n})
   (arr: array a{A.length arr = U32.v (U32.mul max size)})
   : SteelGhostT unit opened
   (starseq
@@ -411,18 +411,18 @@ let slab_to_slots_aux
   : Lemma
   (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos
   ==
-  some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (SlotsAlloc.slot_vprop size_class arr pos))
+  some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (SlotsCommon.slot_vprop size_class arr pos))
   =
   let bm = a2bv (Seq.create 4 0UL) in
   let idx = Bitmap5.f #4 (U32.v pos) in
   empty_md_lemma idx;
-  SlotsAlloc.starseq_upd_aux_lemma3 size_class (Seq.create 4 0UL) arr pos;
+  starseq_upd_aux_lemma3 size_class (Seq.create 4 0UL) arr pos;
   SeqUtils.init_u32_refined_index (U32.v (nb_slots size_class)) (U32.v pos);
   assert (
     (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos)
     ==
     some_as_vp #(Seq.lseq U8.t (U32.v size_class))
-      (SlotsAlloc.slot_vprop size_class arr pos)
+      (SlotsCommon.slot_vprop size_class arr pos)
   )
 #pop-options
 
@@ -452,11 +452,11 @@ let slab_to_slots (#opened:_)
     #(Seq.lseq U8.t (U32.v size_class))
     (slot_vprop size_class (nb_slots size_class)
       (A.split_l arr (rounding size_class)))
-    (SlotsAlloc.slot_vprop size_class
+    (SlotsCommon.slot_vprop size_class
       (A.split_l arr (rounding size_class)))
     (slot_vprop_lemma size_class (nb_slots size_class)
       (A.split_l arr (rounding size_class)))
-    (SlotsAlloc.slot_vprop_lemma size_class
+    (SlotsCommon.slot_vprop_lemma size_class
       (A.split_l arr (rounding size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
@@ -466,11 +466,11 @@ let slab_to_slots (#opened:_)
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
-    (SlotsAlloc.slot_vprop size_class
+    (SlotsCommon.slot_vprop size_class
       (A.split_l arr (rounding size_class)))
     (slab_vprop_aux_f size_class (Seq.create 4 0UL)
       (A.split_l arr (rounding size_class)))
-    (SlotsAlloc.slot_vprop_lemma size_class
+    (SlotsCommon.slot_vprop_lemma size_class
       (A.split_l arr (rounding size_class)))
     (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL)
       (A.split_l arr (rounding size_class)))
@@ -531,18 +531,18 @@ let slots_to_slabs (#opened:_)
   Classical.forall_intro (Classical.move_requires (empty_not_bitmap size_class md));
   assert (forall (k:nat{k < U32.v (nb_slots size_class)}).
     slab_vprop_aux_f size_class md (A.split_l arr (rounding size_class)) (Seq.index s k) ==
-    some_as_vp #((Seq.lseq U8.t (U32.v size_class))) (SlotsAlloc.slot_vprop size_class (A.split_l arr (rounding size_class)) (Seq.index s k)));
+    some_as_vp #((Seq.lseq U8.t (U32.v size_class))) (SlotsCommon.slot_vprop size_class (A.split_l arr (rounding size_class)) (Seq.index s k)));
   starseq_weakening_rel_from_some
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
     (slab_vprop_aux_f size_class md
       (A.split_l arr (rounding size_class)))
-    (SlotsAlloc.slot_vprop size_class
+    (SlotsCommon.slot_vprop size_class
       (A.split_l arr (rounding size_class)))
     (slab_vprop_aux_f_lemma size_class md
       (A.split_l arr (rounding size_class)))
-    (SlotsAlloc.slot_vprop_lemma size_class
+    (SlotsCommon.slot_vprop_lemma size_class
       (A.split_l arr (rounding size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
@@ -550,11 +550,11 @@ let slots_to_slabs (#opened:_)
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
     #(Seq.lseq U8.t (U32.v size_class))
-    (SlotsAlloc.slot_vprop size_class
+    (SlotsCommon.slot_vprop size_class
       (A.split_l arr (rounding size_class)))
     (slot_vprop size_class (nb_slots size_class)
       (A.split_l arr (rounding size_class)))
-    (SlotsAlloc.slot_vprop_lemma size_class
+    (SlotsCommon.slot_vprop_lemma size_class
       (A.split_l arr (rounding size_class)))
     (slot_vprop_lemma size_class (nb_slots size_class)
       (A.split_l arr (rounding size_class)))
