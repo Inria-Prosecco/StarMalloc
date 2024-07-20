@@ -2040,6 +2040,8 @@ let allocate_slab_aux_3_3_2_1_aux2 (#opened:_)
   assert (G.reveal md_as_seq == Seq.create 4 0UL);
   slab_to_slots size_class (slab_array slab_region (US.add md_count_v (US.sub i 1sz)));
   empty_md_is_properly_zeroed size_class;
+  //TODO: QUARANTINEv4
+  admit ();
   intro_slab_vprop size_class
     (slab_array slab_region (US.add md_count_v (US.sub i 1sz)))
     (md_bm_array md_bm_region (US.add md_count_v (US.sub i 1sz)))

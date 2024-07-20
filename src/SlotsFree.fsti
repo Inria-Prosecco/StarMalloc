@@ -17,8 +17,8 @@ open SlotsCommon
 
 val deallocate_slot
   (size_class: sc)
-  (md md_q: slab_metadata)
   (arr: array U8.t{A.length arr = U32.v page_size})
+  (md md_q: slab_metadata)
   (ptr: array U8.t)
   (diff_: US.t)
   : Steel bool
