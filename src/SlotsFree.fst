@@ -744,51 +744,13 @@ let bound2_inv2
 
 #restart-solver
 
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
-val deallocate_slot
-  (size_class: sc)
-  (md md_q: slab_metadata)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (ptr: array U8.t)
-  (diff_: US.t)
-  : Steel bool
-  (A.varray ptr `star` slab_vprop size_class arr md md_q)
-  (fun b ->
-    (if b then emp else A.varray ptr) `star`
-    slab_vprop size_class arr md md_q)
-  (requires fun h0 ->
-    let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
-    //TODO: improve spec
-    //let blob0 : t_of (slab_vprop size_class arr md))
-    //  = h0 (slab_vprop size_class arr md) in
-    //let v0 : Seq.lseq U64.t 4 = dfst blob0 in
-    //not (is_empty size_class v0))
-    same_base_array arr ptr /\
-    0 <= diff /\
-    diff < U32.v page_size /\
-    diff % U32.v size_class == 0 /\
-    US.v diff_ = diff /\
-    A.length ptr == U32.v size_class
-  )
-  (ensures fun h0 b h1 ->
-    //TODO: improve spec
-    let blob0 : t_of (slab_vprop size_class arr md md_q)
-      = h0 (slab_vprop size_class arr md md_q) in
-    let v0 : _ & Seq.lseq U64.t 4 = dfst (fst blob0) in
-    let blob1 : t_of (slab_vprop size_class arr md md_q)
-      = h1 (slab_vprop size_class arr md md_q) in
-    let v1 : _ & Seq.lseq U64.t 4 = dfst (fst blob1) in
-    (b ==> not (is_full size_class (fst v1))) /\
-    True
-    //(not b ==> v1 == v0)
-  )
-
-let deallocate_slot size_class md md_q arr ptr diff_
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 100 --compat_pre_typed_indexed_effects"
+let deallocate_slot size_class arr md md_q ptr diff_
   =
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   //TODO: fix
   let mds : G.erased (Seq.lseq U64.t 4 & Seq.lseq U64.t 4)
-    = elim_slab_vprop size_class md md_q arr in
+    = elim_slab_vprop size_class arr md md_q in
   let r = deallocate_slot' size_class md md_q (fst mds) (A.split_l arr (rounding size_class)) ptr diff_ in
   if (fst r) then (
     change_equal_slprop
@@ -820,7 +782,7 @@ let deallocate_slot size_class md md_q arr ptr diff_
     Bitmap4.get_lemma2 (G.reveal (fst mds)) (G.reveal (snd r));
     set_lemma_nonfull size_class (G.reveal (fst mds)) (Bitmap4.unset (G.reveal (fst mds)) (snd r)) (snd r);
     bound2_inv2 size_class (G.reveal (fst mds)) (snd r);
-    intro_slab_vprop size_class md md_q (G.hide (Bitmap4.unset (fst mds) (snd r))) arr;
+    intro_slab_vprop size_class arr md md_q (G.hide (Bitmap4.unset (fst mds) (snd r)));
     change_equal_slprop
       emp
       (if (fst r) then emp else A.varray ptr);
@@ -851,7 +813,7 @@ let deallocate_slot size_class md md_q arr ptr diff_
         (slab_vprop_aux_f size_class (fst mds) (A.split_l arr (rounding size_class)))
         (slab_vprop_aux_f_lemma size_class (fst mds) (A.split_l arr (rounding size_class)))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
-    intro_slab_vprop size_class md md_q (fst mds) arr;
+    intro_slab_vprop size_class arr md md_q (fst mds);
     change_equal_slprop
       (A.varray ptr)
       (if (fst r) then emp else A.varray ptr);

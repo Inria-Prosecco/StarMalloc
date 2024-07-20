@@ -270,6 +270,7 @@ let allocate_slot_aux
     size_class md_as_seq arr pos in
   return r
 
+open FStar.Mul
 let f_lemma (#n: nat)
   (q:nat{q < n})
   (r:nat{r < U64.n})
@@ -487,51 +488,12 @@ let bound2_inv
 #restart-solver
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 100"
-val allocate_slot
-  (size_class: sc)
-  (md md_q: slab_metadata)
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  : Steel (array U8.t)
-  (slab_vprop size_class arr md md_q)
-  (fun r -> A.varray r `star` slab_vprop size_class arr md md_q)
-  (requires fun h0 ->
-    let blob0 : t_of (slab_vprop size_class arr md md_q)
-      = h0 (slab_vprop size_class arr md md_q) in
-    let vs0 : _ & Seq.lseq U64.t 4 = dfst (fst blob0) in
-    let v_or0 : Seq.lseq U64.t 4 = seq_u64_or (fst vs0) (snd vs0) in
-    has_free_slot size_class v_or0)
-  (ensures fun h0 r h1 ->
-    let blob0 : t_of (slab_vprop size_class arr md md_q)
-      = h0 (slab_vprop size_class arr md md_q) in
-    let blob1 : t_of (slab_vprop size_class arr md md_q)
-      = h1 (slab_vprop size_class arr md md_q) in
-    let vs0 : _ & Seq.lseq U64.t 4 = dfst (fst blob0) in
-    let vs1 : _ & Seq.lseq U64.t 4 = dfst (fst blob1) in
-    let v_or0 : Seq.lseq U64.t 4 = seq_u64_or (fst vs0) (snd vs0) in
-    let v_or1 : Seq.lseq U64.t 4 = seq_u64_or (fst vs1) (snd vs1) in
-    not (is_empty size_class (fst vs1)) /\
-    A.length r == U32.v size_class /\
-    same_base_array r arr /\
-    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) >= 0 /\
-    A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) < U32.v page_size /\
-    (A.offset (A.ptr_of r) - A.offset (A.ptr_of arr)) % (U32.v size_class) == 0
-  )
-
-(*)
-    //U32.v (G.reveal (snd r)) < U64.n * 4 /\
-    //v1 == Bitmap4.set v0 (G.reveal (snd r)))
-    //TODO: is it worth having such a precise spec?
-    //requires having pos as ghost in returned value
-    //considering the case of multiple consecutive allocations
-    //probably for testing slab filling
-*)
-
-let allocate_slot size_class md md_q arr
+let allocate_slot size_class arr md md_q
   =
   admit ();
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let mds : G.erased (Seq.lseq U64.t 4 & Seq.lseq U64.t 4)
-    = elim_slab_vprop size_class md md_q arr in
+    = elim_slab_vprop size_class arr md md_q in
   let md_or : G.erased (Seq.lseq U64.t 4)
     = G.hide (seq_u64_or (fst mds) (snd mds)) in
   assume (has_free_slot size_class (G.reveal md_or));
@@ -554,6 +516,6 @@ let allocate_slot size_class md md_q arr
     (slab_vprop_aux
       size_class (A.split_l arr (rounding size_class))
       md_as_seq');
-  intro_slab_vprop size_class md md_q md_as_seq' arr;
+  intro_slab_vprop size_class arr md md_q md_as_seq';
   return r
 #pop-options

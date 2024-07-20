@@ -42,3 +42,9 @@ val allocate_slot
     A.offset (A.ptr_of r) - A.offset (A.ptr_of arr) < U32.v page_size /\
     (A.offset (A.ptr_of r) - A.offset (A.ptr_of arr)) % (U32.v size_class) == 0
   )
+    //U32.v (G.reveal (snd r)) < U64.n * 4 /\
+    //v1 == Bitmap4.set v0 (G.reveal (snd r)))
+    //TODO: is it worth having such a precise spec?
+    //requires having pos as ghost in returned value
+    //considering the case of multiple consecutive allocations
+    //probably for testing slab filling
