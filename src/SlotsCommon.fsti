@@ -18,6 +18,7 @@ open Utils2
 
 #push-options "--fuel 0 --ifuel 0"
 
+noextract
 let seq_u64_or
   (s1 s2: Seq.lseq U64.t 4)
   : Seq.lseq U64.t 4
