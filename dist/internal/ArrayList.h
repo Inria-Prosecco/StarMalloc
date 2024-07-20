@@ -16,6 +16,13 @@ typedef struct ArrayListGen_tuple3_s
 }
 ArrayListGen_tuple3;
 
+typedef struct ArrayListGen_tuple2_s
+{
+  size_t x1;
+  size_t y1;
+}
+ArrayListGen_tuple2;
+
 uint32_t ArrayList_read_in_place(ArrayList_cell *r, size_t idx);
 
 size_t ArrayList_remove(ArrayList_cell *r, size_t hd1, size_t idx);
