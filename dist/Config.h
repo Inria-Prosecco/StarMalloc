@@ -20,6 +20,8 @@ extern size_t Config_guard_pages_interval;
 
 extern bool Config_enable_quarantine;
 
+extern bool Config_enable_quarantine_slot;
+
 extern bool Config_enable_quarantine_trap;
 
 extern bool Config_enable_quarantine_strict_trap;

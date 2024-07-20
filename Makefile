@@ -67,7 +67,7 @@ extract: $(ALL_KRML_FILES)
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 	  -bundle 'StarMalloc=Mman2,FatalError,Map.\*,Impl.\*,Spec.\*,Main,Main2,Main.Meta,LargeAlloc'[rename=StarMalloc] \
 	  -bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
-	  -bundle 'SlotsFree,SlotsAlloc'[rename=Slots] \
+	  -bundle 'SlotsFree,SlotsAlloc,SlotsCommon'[rename=Slots] \
 	  -bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
 	  -no-prefix LargeAlloc \
 	  -no-prefix Mman \
