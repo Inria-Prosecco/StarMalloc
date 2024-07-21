@@ -2,7 +2,7 @@
   description = "StarMalloc";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
       url = "github:FStarLang/FStar";
       inputs.nixpkgs.follows = "nixpkgs";
