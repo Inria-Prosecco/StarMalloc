@@ -29,13 +29,19 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap, uint64_t *b
     bound2 = nb_slots_v_rem;
   uint64_t full = Utils2_full_n(bound2);
   uint64_t x1 = bitmap[0U];
-  if (x1 == full && bound > 1U)
+  uint64_t x1_q = bitmap_q[0U];
+  uint64_t x1_xor = x1 | x1_q;
+  if (x1_xor == full && bound > 1U)
   {
     uint64_t x2 = bitmap[1U];
-    if (x2 == 18446744073709551615ULL && bound > 2U)
+    uint64_t x2_q = bitmap_q[1U];
+    uint64_t x2_xor = x2 | x2_q;
+    if (x2_xor == 18446744073709551615ULL && bound > 2U)
     {
       uint64_t x3 = bitmap[2U];
-      if (x3 == 18446744073709551615ULL && bound > 3U)
+      uint64_t x3_q = bitmap_q[2U];
+      uint64_t x3_xor = x3 | x3_q;
+      if (x3_xor == 18446744073709551615ULL && bound > 3U)
       {
         size_t i2 = (size_t)3U;
         uint64_t x = bitmap[i2];

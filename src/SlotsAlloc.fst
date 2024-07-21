@@ -436,11 +436,17 @@ let get_free_slot (size_class: sc)
   let full = full_n bound2 in
   assert (U32.v bound == U32.v (nb_slots size_class) / 64);
   let x1 = A.index bitmap 0sz in
-  if (U64.eq x1 full && U32.gt bound 1ul) then (
+  let x1_q = A.index bitmap_q 0sz in
+  let x1_xor = U64.logor x1 x1_q in
+  if (U64.eq x1_xor full && U32.gt bound 1ul) then (
     let x2 = A.index bitmap 1sz in
-    if (U64.eq x2 max64 && U32.gt bound 2ul) then (
+    let x2_q = A.index bitmap_q 1sz in
+    let x2_xor = U64.logor x2 x2_q in
+    if (U64.eq x2_xor max64 && U32.gt bound 2ul) then (
       let x3 = A.index bitmap 2sz in
-      if (U64.eq x3 max64 && U32.gt bound 3ul) then (
+      let x3_q = A.index bitmap_q 2sz in
+      let x3_xor = U64.logor x3 x3_q in
+      if (U64.eq x3_xor max64 && U32.gt bound 3ul) then (
         get_free_slot_aux size_class bitmap bitmap_q 3ul
       ) else (
         get_free_slot_aux size_class bitmap bitmap_q 2ul
