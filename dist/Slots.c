@@ -17,7 +17,7 @@ static uint8_t *get_slot_as_returned_value(uint32_t size_class, uint8_t *arr, ui
   return r;
 }
 
-static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
+static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap, uint64_t *bitmap_q)
 {
   uint32_t nb_slots_v = Utils2_nb_slots(size_class);
   uint32_t bound = nb_slots_v / 64U;
@@ -39,7 +39,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
       {
         size_t i2 = (size_t)3U;
         uint64_t x = bitmap[i2];
-        uint64_t x_q = bitmap[i2];
+        uint64_t x_q = bitmap_q[i2];
         uint64_t x_xor = x | x_q;
         uint32_t r = ffs64(x_xor);
         uint32_t r_ = 192U;
@@ -49,7 +49,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
       {
         size_t i2 = (size_t)2U;
         uint64_t x = bitmap[i2];
-        uint64_t x_q = bitmap[i2];
+        uint64_t x_q = bitmap_q[i2];
         uint64_t x_xor = x | x_q;
         uint32_t r = ffs64(x_xor);
         uint32_t r_ = 128U;
@@ -60,7 +60,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
     {
       size_t i2 = (size_t)1U;
       uint64_t x = bitmap[i2];
-      uint64_t x_q = bitmap[i2];
+      uint64_t x_q = bitmap_q[i2];
       uint64_t x_xor = x | x_q;
       uint32_t r = ffs64(x_xor);
       uint32_t r_ = 64U;
@@ -70,7 +70,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
   else
   {
     uint64_t x = bitmap[0U];
-    uint64_t x_q = bitmap[0U];
+    uint64_t x_q = bitmap_q[0U];
     uint64_t x_xor = x | x_q;
     uint32_t r = ffs64(x_xor);
     return r;
@@ -80,8 +80,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
 uint8_t
 *SlotsAlloc_allocate_slot(uint32_t size_class, uint8_t *arr, uint64_t *md, uint64_t *md_q)
 {
-  KRML_MAYBE_UNUSED_VAR(md_q);
-  uint32_t pos = get_free_slot(size_class, md);
+  uint32_t pos = get_free_slot(size_class, md, md_q);
   Bitmap5_bm_set(md, pos);
   uint8_t *r = get_slot_as_returned_value(size_class, arr, pos);
   uint8_t *r0 = r;

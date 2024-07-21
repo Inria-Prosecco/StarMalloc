@@ -318,7 +318,7 @@ let get_free_slot_aux
   assert_norm (3 <= FU.max_int U32.n);
   let i2 = US.uint32_to_sizet i in
   let x = A.index bitmap i2 in
-  let x_q = A.index bitmap i2 in
+  let x_q = A.index bitmap_q i2 in
   let x_xor = U64.logor x x_q in
   assume (x_xor <> max64);
   max64_lemma x_xor;
@@ -378,7 +378,7 @@ let get_free_slot_aux2
   =
   let h0 = get () in
   let x = A.index bitmap 0sz in
-  let x_q = A.index bitmap 0sz in
+  let x_q = A.index bitmap_q 0sz in
   let x_xor = U64.logor x x_q in
   let bound2 = G.hide (bound2_gen (nb_slots size_class) (G.hide size_class)) in
   assume (x_xor <> full_n bound2);
