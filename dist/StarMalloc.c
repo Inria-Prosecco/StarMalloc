@@ -153,8 +153,6 @@ extern Impl_Trees_Cast_M_node
 
 extern void FatalError_die_from_avl_node_free_failure(uint8_t *ptr);
 
-extern void FatalError_die_from_malloc_zeroing_check_failure(uint8_t *ptr);
-
 extern void FatalError_die_from_realloc_invalid_previous_alloc(uint8_t *ptr);
 
 extern void FatalError_die_from_realloc_free_failure(uint8_t *ptr);
@@ -1337,134 +1335,82 @@ static const
 Constants_sc_union
 sizes[128U] =
   {
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 80U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 96U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 112U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 128U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 160U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 192U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 224U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 256U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 320U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 384U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 448U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 512U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 640U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 768U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 896U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1024U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1280U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1536U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1792U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2048U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2560U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 65536U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 131072U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 80U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 96U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 112U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 128U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 160U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 192U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 224U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 256U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 320U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 384U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 448U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 512U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 640U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 768U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 896U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1024U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1280U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1536U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1792U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2048U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2560U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 65536U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 131072U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 80U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 96U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 112U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 128U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 160U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 192U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 224U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 256U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 320U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 384U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 448U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 512U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 640U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 768U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 896U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1024U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1280U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1536U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1792U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2048U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2560U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 65536U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 131072U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 16U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 32U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 64U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 80U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 96U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 112U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 128U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 160U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 192U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 224U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 256U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 320U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 384U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 448U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 512U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 640U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 768U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 896U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1024U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1280U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1536U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 1792U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2048U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 2560U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3072U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 3584U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc, { .case_Sc = 4096U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 65536U } }),
-    ((Constants_sc_union){ .tag = Constants_Sc_ex, { .case_Sc_ex = 131072U } })
+    { .tag = Constants_Sc, { .case_Sc = 16U } }, { .tag = Constants_Sc, { .case_Sc = 32U } },
+    { .tag = Constants_Sc, { .case_Sc = 64U } }, { .tag = Constants_Sc, { .case_Sc = 80U } },
+    { .tag = Constants_Sc, { .case_Sc = 96U } }, { .tag = Constants_Sc, { .case_Sc = 112U } },
+    { .tag = Constants_Sc, { .case_Sc = 128U } }, { .tag = Constants_Sc, { .case_Sc = 160U } },
+    { .tag = Constants_Sc, { .case_Sc = 192U } }, { .tag = Constants_Sc, { .case_Sc = 224U } },
+    { .tag = Constants_Sc, { .case_Sc = 256U } }, { .tag = Constants_Sc, { .case_Sc = 320U } },
+    { .tag = Constants_Sc, { .case_Sc = 384U } }, { .tag = Constants_Sc, { .case_Sc = 448U } },
+    { .tag = Constants_Sc, { .case_Sc = 512U } }, { .tag = Constants_Sc, { .case_Sc = 640U } },
+    { .tag = Constants_Sc, { .case_Sc = 768U } }, { .tag = Constants_Sc, { .case_Sc = 896U } },
+    { .tag = Constants_Sc, { .case_Sc = 1024U } }, { .tag = Constants_Sc, { .case_Sc = 1280U } },
+    { .tag = Constants_Sc, { .case_Sc = 1536U } }, { .tag = Constants_Sc, { .case_Sc = 1792U } },
+    { .tag = Constants_Sc, { .case_Sc = 2048U } }, { .tag = Constants_Sc, { .case_Sc = 2560U } },
+    { .tag = Constants_Sc, { .case_Sc = 3072U } }, { .tag = Constants_Sc, { .case_Sc = 3584U } },
+    { .tag = Constants_Sc, { .case_Sc = 4096U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 65536U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 131072U } },
+    { .tag = Constants_Sc, { .case_Sc = 16U } }, { .tag = Constants_Sc, { .case_Sc = 32U } },
+    { .tag = Constants_Sc, { .case_Sc = 64U } }, { .tag = Constants_Sc, { .case_Sc = 80U } },
+    { .tag = Constants_Sc, { .case_Sc = 96U } }, { .tag = Constants_Sc, { .case_Sc = 112U } },
+    { .tag = Constants_Sc, { .case_Sc = 128U } }, { .tag = Constants_Sc, { .case_Sc = 160U } },
+    { .tag = Constants_Sc, { .case_Sc = 192U } }, { .tag = Constants_Sc, { .case_Sc = 224U } },
+    { .tag = Constants_Sc, { .case_Sc = 256U } }, { .tag = Constants_Sc, { .case_Sc = 320U } },
+    { .tag = Constants_Sc, { .case_Sc = 384U } }, { .tag = Constants_Sc, { .case_Sc = 448U } },
+    { .tag = Constants_Sc, { .case_Sc = 512U } }, { .tag = Constants_Sc, { .case_Sc = 640U } },
+    { .tag = Constants_Sc, { .case_Sc = 768U } }, { .tag = Constants_Sc, { .case_Sc = 896U } },
+    { .tag = Constants_Sc, { .case_Sc = 1024U } }, { .tag = Constants_Sc, { .case_Sc = 1280U } },
+    { .tag = Constants_Sc, { .case_Sc = 1536U } }, { .tag = Constants_Sc, { .case_Sc = 1792U } },
+    { .tag = Constants_Sc, { .case_Sc = 2048U } }, { .tag = Constants_Sc, { .case_Sc = 2560U } },
+    { .tag = Constants_Sc, { .case_Sc = 3072U } }, { .tag = Constants_Sc, { .case_Sc = 3584U } },
+    { .tag = Constants_Sc, { .case_Sc = 4096U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 65536U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 131072U } },
+    { .tag = Constants_Sc, { .case_Sc = 16U } }, { .tag = Constants_Sc, { .case_Sc = 32U } },
+    { .tag = Constants_Sc, { .case_Sc = 64U } }, { .tag = Constants_Sc, { .case_Sc = 80U } },
+    { .tag = Constants_Sc, { .case_Sc = 96U } }, { .tag = Constants_Sc, { .case_Sc = 112U } },
+    { .tag = Constants_Sc, { .case_Sc = 128U } }, { .tag = Constants_Sc, { .case_Sc = 160U } },
+    { .tag = Constants_Sc, { .case_Sc = 192U } }, { .tag = Constants_Sc, { .case_Sc = 224U } },
+    { .tag = Constants_Sc, { .case_Sc = 256U } }, { .tag = Constants_Sc, { .case_Sc = 320U } },
+    { .tag = Constants_Sc, { .case_Sc = 384U } }, { .tag = Constants_Sc, { .case_Sc = 448U } },
+    { .tag = Constants_Sc, { .case_Sc = 512U } }, { .tag = Constants_Sc, { .case_Sc = 640U } },
+    { .tag = Constants_Sc, { .case_Sc = 768U } }, { .tag = Constants_Sc, { .case_Sc = 896U } },
+    { .tag = Constants_Sc, { .case_Sc = 1024U } }, { .tag = Constants_Sc, { .case_Sc = 1280U } },
+    { .tag = Constants_Sc, { .case_Sc = 1536U } }, { .tag = Constants_Sc, { .case_Sc = 1792U } },
+    { .tag = Constants_Sc, { .case_Sc = 2048U } }, { .tag = Constants_Sc, { .case_Sc = 2560U } },
+    { .tag = Constants_Sc, { .case_Sc = 3072U } }, { .tag = Constants_Sc, { .case_Sc = 3584U } },
+    { .tag = Constants_Sc, { .case_Sc = 4096U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 65536U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 131072U } },
+    { .tag = Constants_Sc, { .case_Sc = 16U } }, { .tag = Constants_Sc, { .case_Sc = 32U } },
+    { .tag = Constants_Sc, { .case_Sc = 64U } }, { .tag = Constants_Sc, { .case_Sc = 80U } },
+    { .tag = Constants_Sc, { .case_Sc = 96U } }, { .tag = Constants_Sc, { .case_Sc = 112U } },
+    { .tag = Constants_Sc, { .case_Sc = 128U } }, { .tag = Constants_Sc, { .case_Sc = 160U } },
+    { .tag = Constants_Sc, { .case_Sc = 192U } }, { .tag = Constants_Sc, { .case_Sc = 224U } },
+    { .tag = Constants_Sc, { .case_Sc = 256U } }, { .tag = Constants_Sc, { .case_Sc = 320U } },
+    { .tag = Constants_Sc, { .case_Sc = 384U } }, { .tag = Constants_Sc, { .case_Sc = 448U } },
+    { .tag = Constants_Sc, { .case_Sc = 512U } }, { .tag = Constants_Sc, { .case_Sc = 640U } },
+    { .tag = Constants_Sc, { .case_Sc = 768U } }, { .tag = Constants_Sc, { .case_Sc = 896U } },
+    { .tag = Constants_Sc, { .case_Sc = 1024U } }, { .tag = Constants_Sc, { .case_Sc = 1280U } },
+    { .tag = Constants_Sc, { .case_Sc = 1536U } }, { .tag = Constants_Sc, { .case_Sc = 1792U } },
+    { .tag = Constants_Sc, { .case_Sc = 2048U } }, { .tag = Constants_Sc, { .case_Sc = 2560U } },
+    { .tag = Constants_Sc, { .case_Sc = 3072U } }, { .tag = Constants_Sc, { .case_Sc = 3584U } },
+    { .tag = Constants_Sc, { .case_Sc = 4096U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 8192U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 16384U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 32768U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 65536U } },
+    { .tag = Constants_Sc_ex, { .case_Sc_ex = 131072U } }
   };
 
 typedef struct tuple4_s
@@ -4010,19 +3956,7 @@ uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
   if (size <= StarMalloc_threshold)
   {
     uint8_t *ptr = slab_malloc(arena_id, (uint32_t)size);
-    if (ptr == NULL || false)
-      return ptr;
-    else
-    {
-      bool b = check_zeroing_u8(ptr, size);
-      if (b)
-        return ptr;
-      else
-      {
-        FatalError_die_from_malloc_zeroing_check_failure(ptr);
-        return NULL;
-      }
-    }
+    return ptr;
   }
   else
   {
@@ -4045,19 +3979,7 @@ uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size
     if (size <= StarMalloc_threshold)
     {
       uint8_t *ptr = slab_aligned_alloc(arena_id, alignment_as_u32, (uint32_t)size);
-      if (ptr == NULL || false)
-        return ptr;
-      else
-      {
-        bool b = check_zeroing_u8(ptr, size);
-        if (b)
-          return ptr;
-        else
-        {
-          FatalError_die_from_malloc_zeroing_check_failure(ptr);
-          return NULL;
-        }
-      }
+      return ptr;
     }
     else
     {
@@ -4190,6 +4112,9 @@ uint8_t *StarMalloc_calloc(size_t arena_id, size_t size1, size_t size2)
   if (ptr == NULL)
     return ptr;
   else
+  {
+    apply_zeroing_u8(ptr, size);
     return ptr;
+  }
 }
 
