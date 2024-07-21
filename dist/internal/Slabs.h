@@ -10,6 +10,7 @@
 #include "internal/ArrayList.h"
 #include "Utils2.h"
 #include "MemoryTrap.h"
+#include "Constants.h"
 #include "ArrayList.h"
 
 bool
@@ -18,6 +19,7 @@ SlabsFree_deallocate_slab(
   uint32_t size_class,
   uint8_t *slab_region,
   uint64_t *md_bm_region,
+  uint64_t *md_bm_region_q,
   ArrayList_cell *md_region,
   size_t *md_count,
   size_t *r_idxs,
@@ -29,6 +31,7 @@ uint8_t
   uint32_t size_class,
   uint8_t *slab_region,
   uint64_t *md_bm_region,
+  uint64_t *md_bm_region_q,
   ArrayList_cell *md_region,
   size_t *md_count,
   size_t *r_idxs

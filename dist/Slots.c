@@ -17,9 +17,9 @@ static uint8_t *get_slot_as_returned_value(uint32_t size_class, uint8_t *arr, ui
   return r;
 }
 
-static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
+static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap, uint64_t *bitmap_q)
 {
-  uint32_t nb_slots_v = Utils2_nb_slots(size_class);
+  uint32_t nb_slots_v = Constants_nb_slots(size_class);
   uint32_t bound = nb_slots_v / 64U;
   uint32_t nb_slots_v_rem = nb_slots_v % 64U;
   uint32_t bound2;
@@ -29,17 +29,25 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
     bound2 = nb_slots_v_rem;
   uint64_t full = Utils2_full_n(bound2);
   uint64_t x1 = bitmap[0U];
-  if (x1 == full && bound > 1U)
+  uint64_t x1_q = bitmap_q[0U];
+  uint64_t x1_xor = x1 | x1_q;
+  if (x1_xor == full && bound > 1U)
   {
     uint64_t x2 = bitmap[1U];
-    if (x2 == 18446744073709551615ULL && bound > 2U)
+    uint64_t x2_q = bitmap_q[1U];
+    uint64_t x2_xor = x2 | x2_q;
+    if (x2_xor == 18446744073709551615ULL && bound > 2U)
     {
       uint64_t x3 = bitmap[2U];
-      if (x3 == 18446744073709551615ULL && bound > 3U)
+      uint64_t x3_q = bitmap_q[2U];
+      uint64_t x3_xor = x3 | x3_q;
+      if (x3_xor == 18446744073709551615ULL && bound > 3U)
       {
         size_t i2 = (size_t)3U;
         uint64_t x = bitmap[i2];
-        uint32_t r = ffs64(x);
+        uint64_t x_q = bitmap_q[i2];
+        uint64_t x_xor = x | x_q;
+        uint32_t r = ffs64(x_xor);
         uint32_t r_ = 192U;
         return r + r_;
       }
@@ -47,7 +55,9 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
       {
         size_t i2 = (size_t)2U;
         uint64_t x = bitmap[i2];
-        uint32_t r = ffs64(x);
+        uint64_t x_q = bitmap_q[i2];
+        uint64_t x_xor = x | x_q;
+        uint32_t r = ffs64(x_xor);
         uint32_t r_ = 128U;
         return r + r_;
       }
@@ -56,7 +66,9 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
     {
       size_t i2 = (size_t)1U;
       uint64_t x = bitmap[i2];
-      uint32_t r = ffs64(x);
+      uint64_t x_q = bitmap_q[i2];
+      uint64_t x_xor = x | x_q;
+      uint32_t r = ffs64(x_xor);
       uint32_t r_ = 64U;
       return r + r_;
     }
@@ -64,14 +76,17 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
   else
   {
     uint64_t x = bitmap[0U];
-    uint32_t r = ffs64(x);
+    uint64_t x_q = bitmap_q[0U];
+    uint64_t x_xor = x | x_q;
+    uint32_t r = ffs64(x_xor);
     return r;
   }
 }
 
-uint8_t *SlotsAlloc_allocate_slot(uint32_t size_class, uint64_t *md, uint8_t *arr)
+uint8_t
+*SlotsAlloc_allocate_slot(uint32_t size_class, uint8_t *arr, uint64_t *md, uint64_t *md_q)
 {
-  uint32_t pos = get_free_slot(size_class, md);
+  uint32_t pos = get_free_slot(size_class, md, md_q);
   Bitmap5_bm_set(md, pos);
   uint8_t *r = get_slot_as_returned_value(size_class, arr, pos);
   uint8_t *r0 = r;
@@ -94,7 +109,8 @@ static void deallocate_zeroing(uint32_t size_class, uint8_t *ptr)
   apply_zeroing_u8(ptr, (size_t)size_class);
 }
 
-static bool deallocate_slot_(uint32_t size_class, uint64_t *md, uint8_t *ptr, size_t diff_)
+static bool
+deallocate_slot_(uint32_t size_class, uint64_t *md, uint64_t *md_q, uint8_t *ptr, size_t diff_)
 {
   uint32_t diff_u32 = (uint32_t)diff_;
   bool b = deallocate_slot_aux0(size_class, diff_u32);
@@ -102,9 +118,11 @@ static bool deallocate_slot_(uint32_t size_class, uint64_t *md, uint8_t *ptr, si
   {
     uint32_t pos = deallocate_slot_aux1(size_class, diff_u32);
     bool b1 = Bitmap5_bm_get(md, pos);
-    if (b1)
+    bool b2 = Bitmap5_bm_get(md_q, pos);
+    if (b1 && !b2)
     {
       Bitmap5_bm_unset(md, pos);
+      Bitmap5_bm_set(md_q, pos);
       deallocate_zeroing(size_class, ptr);
       return true;
     }
@@ -123,14 +141,15 @@ static bool fst__bool___(bool x)
 bool
 SlotsFree_deallocate_slot(
   uint32_t size_class,
-  uint64_t *md,
   uint8_t *arr,
+  uint64_t *md,
+  uint64_t *md_q,
   uint8_t *ptr,
   size_t diff_
 )
 {
   KRML_MAYBE_UNUSED_VAR(arr);
-  bool r = deallocate_slot_(size_class, md, ptr, diff_);
+  bool r = deallocate_slot_(size_class, md, md_q, ptr, diff_);
   if (fst__bool___(r))
     return fst__bool___(r);
   else

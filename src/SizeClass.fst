@@ -33,6 +33,7 @@ type size_class_struct' = {
   md_count: ref US.t;
   slab_region: array U8.t;
   md_bm_region: array U64.t;
+  md_bm_region_q: array U64.t;
   md_region: array AL.cell;
 }
 
@@ -47,6 +48,7 @@ type size_class_struct = s:size_class_struct'{
   A.length s.slab_region == US.v slab_size /\
   array_u8_alignment s.slab_region page_size /\
   A.length s.md_bm_region == US.v metadata_max * 4 /\
+  A.length s.md_bm_region_q == US.v metadata_max * 4 /\
   A.length s.md_region == US.v metadata_max /\
   A.length s.slabs_idxs == 7
 }
@@ -61,7 +63,7 @@ let size_class_vprop
     (vptr scs.md_count)
     vrefinedep_prop
     (size_class_vprop_aux scs.size
-      scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+      scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs)
 
 let allocate_size_class_sl_lemma1
   (scs: size_class_struct)
@@ -76,7 +78,7 @@ let allocate_size_class_sl_lemma1
         (vptr scs.md_count)
         vrefinedep_prop
         (size_class_vprop_aux scs.size
-          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+          scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs)
     )) m /\
     sel_of (size_class_vprop scs) m
     ==
@@ -85,7 +87,7 @@ let allocate_size_class_sl_lemma1
         (vptr scs.md_count)
         vrefinedep_prop
         (size_class_vprop_aux scs.size
-          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+          scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs)
     ) m
   )
   = ()
@@ -100,7 +102,7 @@ let allocate_size_class_sl_lemma2
         (vptr scs.md_count)
         vrefinedep_prop
         (size_class_vprop_aux scs.size
-          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+          scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs)
     )) m
   )
   (ensures
@@ -112,7 +114,7 @@ let allocate_size_class_sl_lemma2
         (vptr scs.md_count)
         vrefinedep_prop
         (size_class_vprop_aux scs.size
-          scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
+          scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs)
     ) m
   )
   = ()
@@ -218,19 +220,19 @@ let allocate_size_class
       (vptr scs.md_count)
       vrefinedep_prop
       (size_class_vprop_aux scs.size
-        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+        scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   let result = allocate_slab
     scs.size
-    scs.slab_region scs.md_bm_region scs.md_region
+    scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region
     scs.md_count scs.slabs_idxs in
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
       vrefinedep_prop
       (size_class_vprop_aux scs.size
-        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+        scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs))
     (size_class_vprop scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);
@@ -268,19 +270,19 @@ let deallocate_size_class
       (vptr scs.md_count)
       vrefinedep_prop
       (size_class_vprop_aux scs.size
-        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+        scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs))
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma1 scs m);
   let b = deallocate_slab ptr
     scs.size
-    scs.slab_region scs.md_bm_region scs.md_region
+    scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region
     scs.md_count scs.slabs_idxs diff in
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
       vrefinedep_prop
       (size_class_vprop_aux scs.size
-        scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
+        scs.slab_region scs.md_bm_region scs.md_bm_region_q scs.md_region scs.slabs_idxs))
     (size_class_vprop scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2 scs m);

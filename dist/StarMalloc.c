@@ -29,6 +29,7 @@ init_size_class(
   size_t k,
   uint8_t *slab_region,
   uint64_t *md_bm_region,
+  uint64_t *md_bm_region_q,
   ArrayList_cell *md_region,
   size_class *size_classes,
   const uint32_t *sizes
@@ -38,6 +39,7 @@ init_size_class(
   static_assert(UINT32_MAX <= SIZE_MAX);
   uint8_t *slab_region_ = slab_region + (size_t)16777216U * (size_t)4096U * k;
   uint64_t *md_bm_region_ = md_bm_region + (size_t)67108864U * k;
+  uint64_t *md_bm_region_q_ = md_bm_region_q + (size_t)67108864U * k;
   ArrayList_cell *md_region_ = md_region + (size_t)16777216U * k;
   size_t *r_idxs = mmap_array_us_init((size_t)7U);
   init_idxs(r_idxs);
@@ -47,7 +49,7 @@ init_size_class(
   scs =
     {
       .size = size, .slabs_idxs = r_idxs, .md_count = md_count, .slab_region = slab_region_,
-      .md_bm_region = md_bm_region_, .md_region = md_region_
+      .md_bm_region = md_bm_region_, .md_bm_region_q = md_bm_region_q_, .md_region = md_region_
     };
   SizeClass_size_class_struct_ data = scs;
   Steel_SpinLock_new_lock(&size_classes[k].lock);
@@ -61,6 +63,7 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
   size_t md_bm_region_size = (size_t)67108864U;
   size_t md_region_size = (size_t)16777216U;
   uint64_t *md_bm_region = mmap_u64_init(md_bm_region_size);
+  uint64_t *md_bm_region_q = mmap_u64_init(md_bm_region_size);
   ArrayList_cell *md_region = mmap_cell_status_init(md_region_size);
   size_t *r_idxs = mmap_array_us_init((size_t)7U);
   init_idxs(r_idxs);
@@ -70,7 +73,7 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
   scs =
     {
       .size = avl_data_size, .slabs_idxs = r_idxs, .md_count = md_count, .slab_region = slab_region,
-      .md_bm_region = md_bm_region, .md_region = md_region
+      .md_bm_region = md_bm_region, .md_bm_region_q = md_bm_region_q, .md_region = md_region
     };
   SizeClass_size_class_struct_ scs0 = scs;
   Steel_SpinLock_new_lock(&ret->lock);
@@ -1283,116 +1286,765 @@ Main_Meta_size_classes_all Main_Meta_init(void)
 {
   uint8_t *slab_region = mmap_u8_init((size_t)16777216U * (size_t)4096U * (size_t)108U);
   uint64_t *md_bm_region = mmap_u64_init((size_t)7247757312U);
+  uint64_t *md_bm_region_q = mmap_u64_init((size_t)7247757312U);
   ArrayList_cell *md_region = mmap_cell_status_init((size_t)1811939328U);
   size_class *size_classes = mmap_sc_init((size_t)108U);
-  init_size_class((size_t)0U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)1U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)2U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)3U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)4U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)5U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)6U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)7U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)8U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)9U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)10U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)11U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)12U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)13U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)14U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)15U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)16U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)17U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)18U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)19U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)20U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)21U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)22U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)23U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)24U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)25U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)26U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)27U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)28U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)29U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)30U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)31U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)32U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)33U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)34U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)35U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)36U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)37U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)38U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)39U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)40U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)41U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)42U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)43U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)44U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)45U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)46U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)47U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)48U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)49U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)50U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)51U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)52U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)53U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)54U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)55U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)56U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)57U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)58U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)59U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)60U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)61U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)62U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)63U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)64U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)65U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)66U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)67U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)68U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)69U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)70U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)71U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)72U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)73U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)74U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)75U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)76U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)77U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)78U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)79U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)80U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)81U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)82U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)83U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)84U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)85U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)86U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)87U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)88U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)89U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)90U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)91U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)92U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)93U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)94U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)95U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)96U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)97U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)98U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)99U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)100U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)101U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)102U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)103U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)104U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)105U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)106U, slab_region, md_bm_region, md_region, size_classes, sizes);
-  init_size_class((size_t)107U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)0U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)1U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)2U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)3U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)4U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)5U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)6U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)7U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)8U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)9U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)10U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)11U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)12U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)13U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)14U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)15U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)16U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)17U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)18U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)19U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)20U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)21U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)22U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)23U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)24U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)25U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)26U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)27U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)28U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)29U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)30U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)31U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)32U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)33U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)34U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)35U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)36U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)37U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)38U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)39U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)40U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)41U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)42U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)43U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)44U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)45U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)46U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)47U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)48U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)49U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)50U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)51U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)52U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)53U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)54U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)55U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)56U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)57U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)58U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)59U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)60U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)61U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)62U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)63U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)64U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)65U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)66U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)67U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)68U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)69U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)70U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)71U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)72U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)73U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)74U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)75U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)76U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)77U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)78U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)79U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)80U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)81U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)82U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)83U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)84U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)85U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)86U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)87U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)88U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)89U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)90U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)91U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)92U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)93U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)94U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)95U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)96U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)97U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)98U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)99U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)100U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)101U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)102U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)103U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)104U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)105U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)106U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
+  init_size_class((size_t)107U,
+    slab_region,
+    md_bm_region,
+    md_bm_region_q,
+    md_region,
+    size_classes,
+    sizes);
   return
     ((Main_Meta_size_classes_all){ .size_classes = size_classes, .slab_region = slab_region });
 }

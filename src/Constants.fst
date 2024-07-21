@@ -34,3 +34,16 @@ let sc = x:U32.t{
   // allowing use of SSE instructions
   (U32.v x % 16 == 0)
 }
+
+#push-options "--z3rlimit 30"
+let nb_slots (size_class: sc)
+  : Pure U32.t
+  (requires True)
+  (ensures fun r ->
+    U32.v r >= 1 /\
+    U32.v r <= 256
+  )
+  =
+  //TODO: stabilize
+  U32.div page_size size_class
+#pop-options

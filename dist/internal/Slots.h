@@ -8,15 +8,18 @@
 
 #include "Utils2.h"
 #include "ExternUtils.h"
+#include "Constants.h"
 #include "Bitmap5.h"
 
-uint8_t *SlotsAlloc_allocate_slot(uint32_t size_class, uint64_t *md, uint8_t *arr);
+uint8_t
+*SlotsAlloc_allocate_slot(uint32_t size_class, uint8_t *arr, uint64_t *md, uint64_t *md_q);
 
 bool
 SlotsFree_deallocate_slot(
   uint32_t size_class,
-  uint64_t *md,
   uint8_t *arr,
+  uint64_t *md,
+  uint64_t *md_q,
   uint8_t *ptr,
   size_t diff_
 );

@@ -15,6 +15,7 @@ typedef struct SizeClass_size_class_struct__s
   size_t *md_count;
   uint8_t *slab_region;
   uint64_t *md_bm_region;
+  uint64_t *md_bm_region_q;
   ArrayList_cell *md_region;
 }
 SizeClass_size_class_struct_;

@@ -1,10 +1,9 @@
 module Bitmap5
 
-module FI = FStar.Int
+module FU = FStar.UInt
 module US = FStar.SizeT
 module U64 = FStar.UInt64
 module U32 = FStar.UInt32
-module U16 = FStar.UInt16
 
 module Seq = FStar.Seq
 module FBV = FStar.BitVector
@@ -47,7 +46,7 @@ let f_lemma (#n: nat) (k:nat{k < n * U64.n})
 
 noextract
 let bm_get_aux
-  (#n: G.erased nat{n < FI.max_int U16.n})
+  (#n: G.erased nat{n < FU.max_int U32.n})
   (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel bool
@@ -67,7 +66,7 @@ let bm_get_aux
   return r
 
 let bm_get
-  (#n: G.erased nat{n < FI.max_int U16.n})
+  (#n: G.erased nat{n < FU.max_int U32.n})
   (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel bool
@@ -96,7 +95,7 @@ let bm_get
 
 noextract
 let bm_set_aux
-  (#n: G.erased nat{n < FI.max_int U16.n})
+  (#n: G.erased nat{n < FU.max_int U32.n})
   (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
@@ -115,7 +114,7 @@ let bm_set_aux
   A.upd arr k_index r
 
 let bm_set
-  (#n: G.erased nat{n < FI.max_int U16.n})
+  (#n: G.erased nat{n < FU.max_int U32.n})
   (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
@@ -147,7 +146,7 @@ let bm_set
 
 noextract
 let bm_unset_aux
-  (#n: nat{n < FI.max_int U16.n})
+  (#n: nat{n < FU.max_int U32.n})
   (arr: array U64.t{A.length arr = n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
@@ -166,7 +165,7 @@ let bm_unset_aux
   A.upd arr k_index r
 
 let bm_unset
-  (#n: G.erased nat{n < FI.max_int U16.n})
+  (#n: G.erased nat{n < FU.max_int U32.n})
   (arr: array U64.t{A.length arr = G.reveal n})
   (k: U32.t{U32.v k < U64.n * n})
   : Steel unit
