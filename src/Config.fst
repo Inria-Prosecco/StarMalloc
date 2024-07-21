@@ -150,7 +150,7 @@ let guard_pages_interval = 2sz
 
 // quarantine
 let enable_quarantine = true
-let enable_quarantine_slot = false
+let enable_quarantine_slot = true
 let enable_quarantine_trap = true
 let enable_quarantine_strict_trap = false
 let quarantine_queue_length = 1024sz

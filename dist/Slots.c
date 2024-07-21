@@ -117,6 +117,7 @@ deallocate_slot_(uint32_t size_class, uint64_t *md, uint64_t *md_q, uint8_t *ptr
     if (b1 && !b2)
     {
       Bitmap5_bm_unset(md, pos);
+      Bitmap5_bm_set(md_q, pos);
       deallocate_zeroing(size_class, ptr);
       return true;
     }

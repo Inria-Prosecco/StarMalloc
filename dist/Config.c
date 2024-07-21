@@ -13,7 +13,7 @@ size_t Config_guard_pages_interval = (size_t)2U;
 
 bool Config_enable_quarantine = true;
 
-bool Config_enable_quarantine_slot = false;
+bool Config_enable_quarantine_slot = true;
 
 bool Config_enable_quarantine_trap = true;
 

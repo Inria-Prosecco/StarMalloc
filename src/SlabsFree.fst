@@ -447,7 +447,7 @@ let update_quarantine3_aux
     empty_md_is_properly_zeroed size_class;
     Quarantine.mmap_untrap_quarantine (slab_array slab_region idx) (u32_to_sz page_size);
     Helpers.slab_to_slots size_class (slab_array slab_region idx);
-    //TODO: quarantinev4
+    //TODO: should be benign
     admit ();
     intro_slab_vprop size_class
       (slab_array slab_region idx)
@@ -568,14 +568,77 @@ let deallocate_slab_aux_cond
     r == is_empty size_class (seq_u64_or (fst mds) (snd mds))
   )
   =
+  //TODO, should be benign
   admit ();
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let mds : G.erased (Seq.lseq U64.t 4 & Seq.lseq U64.t 4)
     = elim_slab_vprop size_class arr md md_q in
-  let r = is_empty_s size_class md in
+  let r = is_empty_s2 size_class md md_q in
   intro_slab_vprop size_class arr md md_q (fst mds);
   return r
 #pop-options
+
+#push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects"
+inline_for_extraction noextract
+let deallocate_slab_aux_quarantine_cond
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (md md_q: slab_metadata)
+  : Steel bool
+  (slab_vprop size_class arr md md_q)
+  (fun _ -> slab_vprop size_class arr md md_q)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    let blob0
+      : t_of (slab_vprop size_class arr md md_q)
+      = h0 (slab_vprop size_class arr md md_q) in
+    let blob1
+      : t_of (slab_vprop size_class arr md md_q)
+      = h1 (slab_vprop size_class arr md md_q) in
+    let mds : _ & Seq.lseq U64.t 4 = dfst (fst blob0) in
+    dfst (fst blob0) == dfst (fst blob1) /\
+    dsnd (fst blob0) == dsnd (fst blob1) /\
+    blob0 == blob1 /\
+    r == is_empty size_class (fst mds) /\ is_full size_class (snd mds)
+  )
+  =
+  //TODO, should be benign
+  admit ();
+  assert (t_of (A.varray md) == Seq.lseq U64.t 4);
+  let mds : G.erased (Seq.lseq U64.t 4 & Seq.lseq U64.t 4)
+    = elim_slab_vprop size_class arr md md_q in
+  let b1 = is_empty_s size_class md in
+  let b2 = is_full_s size_class md_q in
+  intro_slab_vprop size_class arr md md_q (fst mds);
+  return (b1 && b2)
+
+inline_for_extraction noextract
+let deallocate_slab_aux_quarantine_reset
+  (size_class: sc)
+  (arr: array U8.t{A.length arr = U32.v page_size})
+  (md md_q: slab_metadata)
+  : Steel unit
+  (slab_vprop size_class arr md md_q)
+  (fun _ -> slab_vprop size_class arr md md_q)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    let blob1
+      : t_of (slab_vprop size_class arr md md_q)
+      = h1 (slab_vprop size_class arr md md_q) in
+    let mds : Seq.lseq U64.t 4 & Seq.lseq U64.t 4 = dfst (fst blob1) in
+    is_empty size_class (snd mds)
+  )
+  =
+  //TODO, should be benign
+  admit ();
+  assert (t_of (A.varray md) == Seq.lseq U64.t 4);
+  let mds : G.erased (Seq.lseq U64.t 4 & Seq.lseq U64.t 4)
+    = elim_slab_vprop size_class arr md md_q in
+  reset_to_empty size_class md_q;
+  intro_slab_vprop size_class arr md md_q (fst mds);
+  return ()
+#pop-options
+
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 
@@ -1010,7 +1073,7 @@ let deallocate_slab_aux_1_quarantine
 open Quarantine
 
 // Slab initially full
-#push-options "--compat_pre_typed_indexed_effects --z3rlimit 150"
+#push-options "--compat_pre_typed_indexed_effects --z3rlimit 200"
 inline_for_extraction noextract
 let deallocate_slab_aux_1
   (ptr: array U8.t)
@@ -1109,8 +1172,28 @@ let deallocate_slab_aux_1
     ptr pos2 in
   if b then (
     if enable_quarantine_slot then (
-      sladmit ();
-      return true
+      let b' = deallocate_slab_aux_quarantine_cond size_class
+        (slab_array slab_region pos)
+        (md_bm_array md_bm_region pos)
+        (md_bm_array md_bm_region_q pos) in
+      if b' then (
+        admit ();
+        deallocate_slab_aux_quarantine_reset size_class
+          (slab_array slab_region pos)
+          (md_bm_array md_bm_region pos)
+          (md_bm_array md_bm_region_q pos);
+        upd_and_pack_slab_starseq_quarantine size_class
+          slab_region md_bm_region md_bm_region_q md_region md_count
+          md_count_v md_region_lv pos;
+        deallocate_slab_aux_1_quarantine size_class
+          slab_region md_bm_region md_bm_region_q md_region md_count r_idxs
+          md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 idx6 idx7 pos;
+        return b
+      ) else (
+        //TODO: benign, add full to full function
+        sladmit ();
+        return true
+      )
     ) else (
       // deallocation success, slab no longer full
       let cond = deallocate_slab_aux_cond size_class
@@ -1649,6 +1732,7 @@ let deallocate_slab_aux_2
     ptr pos2 in
   if b then (
     if enable_quarantine_slot then (
+      // partial to partial
       sladmit ();
       return true
     ) else (

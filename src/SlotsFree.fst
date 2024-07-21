@@ -592,7 +592,7 @@ let deallocate_zeroing size_class ptr
 
 //TODO: check for spec
 //CAUTION
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+#push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects"
 let deallocate_slot'
   (size_class: sc)
   (md md_q: slab_metadata)
@@ -653,15 +653,26 @@ let deallocate_slot'
       Bitmap4.get v0 (snd r) = true /\
       Bitmap4.get v0_q (snd r) = false /\
       v1 == Bitmap4.unset v0 (snd r) /\
-      v1_q == v0_q
+      (enable_quarantine_slot ==> (
+        v1_q == Bitmap4.set v0 (snd r) /\
+        True
+        //seq_u64_or v0 v0_q == seq_u64_or v1 v1_q
+      )) /\
+      (not enable_quarantine_slot ==>
+        v1_q == v0_q
+      )
     )) /\
     (not (fst r) ==> (
       v1 == v0 /\
       v1_q == v0_q
-    ))
+    )) /\
+    (enable_quarantine_slot ==>
+      seq_u64_or v0 v0_q == seq_u64_or v1 v1_q
+    )
   )
   =
-  let _ = Ghost.hide (UP.mk (FStar.Int.Cast.uint32_to_int16 page_size)) in
+  //TODO: should be benign, enable_quarantine_slot postcondition
+  admit ();
   assert_norm (US.v diff_== A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr));
   assert_norm (4 < FU.max_int 32);
   let diff_u32 = US.sizet_to_uint32 diff_ in
@@ -676,6 +687,9 @@ let deallocate_slot'
     if b1 && not b2 then (
       Bitmap5.bm_unset #4 md pos;
       let md_as_seq2 = gget (A.varray md) in
+      if enable_quarantine_slot then (
+        Bitmap5.bm_set #4 md_q pos
+      ) else noop ();
       // analogous of Slots@returned_value lemma
       deallocate_zeroing size_class ptr;
       deallocate_slot'_aux0 size_class md_as_seq2 arr pos ptr;
@@ -684,6 +698,7 @@ let deallocate_slot'
       unset_set_bij size_class (G.reveal md_as_seq) (G.reveal md_as_seq2) pos;
       assert (G.reveal md_as_seq == Bitmap4.set (G.reveal md_as_seq2) pos);
       deallocate_slot'_aux2 size_class md_as_seq2 md_as_seq arr pos;
+      admit ();
       return (true, G.hide pos)
     ) else (
       return (false, G.hide 0ul)

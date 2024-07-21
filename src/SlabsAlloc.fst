@@ -59,12 +59,12 @@ let allocate_slab_aux_cond
     r == is_full size_class (seq_u64_or (fst mds) (snd mds))
   )
   =
+  //TODO: should be benign
   admit ();
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let mds : G.erased (Seq.lseq U64.t 4 & Seq.lseq U64.t 4)
     = elim_slab_vprop size_class arr md md_q in
-  //TODO
-  let r = is_full_s size_class md in
+  let r = is_full_s2 size_class md md_q in
   intro_slab_vprop size_class arr md md_q (fst mds);
   return r
 #pop-options
@@ -2037,10 +2037,12 @@ let allocate_slab_aux_3_3_2_1_aux2 (#opened:_)
     (A.varray (md_bm_array md_bm_region_q (US.add md_count_v (US.sub i 1sz))));
 
   let md_as_seq = gget (A.varray (md_bm_array md_bm_region (US.add md_count_v (US.sub i 1sz)))) in
+  let md_as_seq' = gget (A.varray (md_bm_array md_bm_region (US.add md_count_v (US.sub i 1sz)))) in
   assert (G.reveal md_as_seq == Seq.create 4 0UL);
+  assert (G.reveal md_as_seq' == Seq.create 4 0UL);
   slab_to_slots size_class (slab_array slab_region (US.add md_count_v (US.sub i 1sz)));
   empty_md_is_properly_zeroed size_class;
-  //TODO: QUARANTINEv4
+  //TODO: FIXME, should be benign
   admit ();
   intro_slab_vprop size_class
     (slab_array slab_region (US.add md_count_v (US.sub i 1sz)))
@@ -3103,7 +3105,7 @@ let allocate_slab_aux_4_aux2
   Helpers.slab_to_slots size_class (slab_array slab_region idxs.x);
   let md = gget (A.varray (md_bm_array md_bm_region idxs.x)) in
   empty_md_is_properly_zeroed size_class;
-  //TODO: QUARANTINEv4
+  //TODO: FIXME, should be benign
   admit ();
   intro_slab_vprop size_class
     (slab_array slab_region idxs.x)

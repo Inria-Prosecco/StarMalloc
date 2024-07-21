@@ -97,7 +97,6 @@ SlabsFree_deallocate_slab(
 {
   size_t md_count_v_ = *md_count;
   size_t idx1_ = r_idxs[0U];
-  size_t idx2_ = r_idxs[1U];
   size_t idx3_ = r_idxs[2U];
   size_t idx5_ = r_idxs[4U];
   size_t idx6_ = r_idxs[5U];
@@ -126,16 +125,22 @@ SlabsFree_deallocate_slab(
           pos2);
       if (b)
       {
-        uint64_t *ptr1 = md_bm_region;
-        size_t shift_size_t = pos * (size_t)4U;
-        bool r1 = Utils2_is_empty_s(size_class, ptr1 + shift_size_t);
-        bool cond = r1;
-        if (cond)
+        uint64_t *ptr10 = md_bm_region;
+        size_t shift_size_t0 = pos * (size_t)4U;
+        bool b1 = Utils2_is_empty_s(size_class, ptr10 + shift_size_t0);
+        uint64_t *ptr1 = md_bm_region_q;
+        size_t shift_size_t1 = pos * (size_t)4U;
+        bool b2 = Utils2_is_full_s(size_class, ptr1 + shift_size_t1);
+        bool b_ = b1 && b2;
+        if (b_)
         {
-          uint8_t *ptr1 = slab_region;
+          uint64_t *ptr1 = md_bm_region_q;
+          size_t shift_size_t = pos * (size_t)4U;
+          Utils2_reset_to_empty(size_class, ptr1 + shift_size_t);
+          uint8_t *ptr10 = slab_region;
           size_t page_size_t = (size_t)4096U;
-          size_t shift_size_t = pos * page_size_t;
-          mmap_trap(ptr1 + shift_size_t, (size_t)4096U);
+          size_t shift_size_t0 = pos * page_size_t;
+          mmap_trap(ptr10 + shift_size_t0, (size_t)4096U);
           tuple4 idxs = update_quarantine2(md_region, idx1_, idx5_, idx6_, idx7_);
           size_t v = ArrayList_remove(md_region, idx3_, pos);
           size_t idx3_ = v;
@@ -163,14 +168,7 @@ SlabsFree_deallocate_slab(
           return b;
         }
         else
-        {
-          size_t v = ArrayList_remove(md_region, idx3_, pos);
-          size_t idx3_ = v;
-          ArrayList_insert(md_region, idx2_, pos, 1U);
-          r_idxs[2U] = idx3_;
-          r_idxs[1U] = pos;
-          return b;
-        }
+          return true;
       }
       else
         return b;
@@ -178,61 +176,22 @@ SlabsFree_deallocate_slab(
     else if (status1 == 1U)
     {
       uint8_t *ptr10 = slab_region;
-      size_t page_size_t0 = (size_t)4096U;
-      size_t shift_size_t0 = pos * page_size_t0;
+      size_t page_size_t = (size_t)4096U;
+      size_t shift_size_t0 = pos * page_size_t;
       uint64_t *ptr11 = md_bm_region;
       size_t shift_size_t1 = pos * (size_t)4U;
-      uint64_t *ptr12 = md_bm_region_q;
-      size_t shift_size_t2 = pos * (size_t)4U;
+      uint64_t *ptr1 = md_bm_region_q;
+      size_t shift_size_t = pos * (size_t)4U;
       bool
       b =
         SlotsFree_deallocate_slot(size_class,
           ptr10 + shift_size_t0,
           ptr11 + shift_size_t1,
-          ptr12 + shift_size_t2,
+          ptr1 + shift_size_t,
           ptr,
           pos2);
       if (b)
-      {
-        uint64_t *ptr1 = md_bm_region;
-        size_t shift_size_t = pos * (size_t)4U;
-        bool r1 = Utils2_is_empty_s(size_class, ptr1 + shift_size_t);
-        bool cond = r1;
-        if (cond)
-        {
-          uint8_t *ptr1 = slab_region;
-          size_t page_size_t = (size_t)4096U;
-          size_t shift_size_t = pos * page_size_t;
-          mmap_trap(ptr1 + shift_size_t, (size_t)4096U);
-          tuple4 idxs = update_quarantine2(md_region, idx1_, idx5_, idx6_, idx7_);
-          size_t v = ArrayList_remove(md_region, idx2_, pos);
-          size_t idx2_ = v;
-          ArrayList_cell cell = { .prev = (size_t)16777217U, .next = idxs.y, .data = 4U };
-          md_region[pos] = cell;
-          if (idxs.y != (size_t)16777217U)
-          {
-            ArrayList_cell cell1 = md_region[idxs.y];
-            ArrayList_cell cell2 = { .prev = pos, .next = cell1.next, .data = cell1.data };
-            md_region[idxs.y] = cell2;
-          }
-          size_t tl_;
-          if (idxs.y == (size_t)16777217U)
-            tl_ = pos;
-          else
-            tl_ = idxs.z;
-          size_t sz_ = idxs.w + (size_t)1U;
-          ArrayListGen_tuple2 idxs_ = { .x1 = tl_, .y1 = sz_ };
-          update_quarantine3(slab_region, idx7_, idxs);
-          r_idxs[0U] = idxs.x;
-          r_idxs[1U] = idx2_;
-          r_idxs[4U] = pos;
-          r_idxs[5U] = idxs_.x1;
-          r_idxs[6U] = idxs_.y1;
-          return b;
-        }
-        else
-          return b;
-      }
+        return true;
       else
         return b;
     }
@@ -366,9 +325,11 @@ uint8_t
         ptr0 + shift_size_t0,
         ptr1 + shift_size_t1,
         ptr2 + shift_size_t2);
-    uint64_t *ptr = md_bm_region;
+    uint64_t *ptr3 = md_bm_region;
+    size_t shift_size_t3 = idx2_ * (size_t)4U;
+    uint64_t *ptr = md_bm_region_q;
     size_t shift_size_t = idx2_ * (size_t)4U;
-    bool r1 = Utils2_is_full_s(size_class, ptr + shift_size_t);
+    bool r1 = Utils2_is_full_s2(size_class, ptr3 + shift_size_t3, ptr + shift_size_t);
     bool cond = r1;
     if (cond)
     {
@@ -396,9 +357,11 @@ uint8_t
         ptr0 + shift_size_t0,
         ptr1 + shift_size_t1,
         ptr2 + shift_size_t2);
-    uint64_t *ptr = md_bm_region;
+    uint64_t *ptr3 = md_bm_region;
+    size_t shift_size_t3 = idx1_ * (size_t)4U;
+    uint64_t *ptr = md_bm_region_q;
     size_t shift_size_t = idx1_ * (size_t)4U;
-    bool r1 = Utils2_is_full_s(size_class, ptr + shift_size_t);
+    bool r1 = Utils2_is_full_s2(size_class, ptr3 + shift_size_t3, ptr + shift_size_t);
     bool cond = r1;
     if (cond)
     {
@@ -437,9 +400,11 @@ uint8_t
           ptr0 + shift_size_t0,
           ptr1 + shift_size_t1,
           ptr2 + shift_size_t2);
-      uint64_t *ptr = md_bm_region;
+      uint64_t *ptr3 = md_bm_region;
+      size_t shift_size_t3 = idxs.x * (size_t)4U;
+      uint64_t *ptr = md_bm_region_q;
       size_t shift_size_t = idxs.x * (size_t)4U;
-      bool r1 = Utils2_is_full_s(size_class, ptr + shift_size_t);
+      bool r1 = Utils2_is_full_s2(size_class, ptr3 + shift_size_t3, ptr + shift_size_t);
       bool cond = r1;
       if (cond)
       {
@@ -495,9 +460,11 @@ uint8_t
             ptr0 + shift_size_t0,
             ptr1 + shift_size_t1,
             ptr2 + shift_size_t2);
-        uint64_t *ptr = md_bm_region;
+        uint64_t *ptr3 = md_bm_region;
+        size_t shift_size_t3 = (md_count_v_ + (size_t)2U - (size_t)2U) * (size_t)4U;
+        uint64_t *ptr = md_bm_region_q;
         size_t shift_size_t = (md_count_v_ + (size_t)2U - (size_t)2U) * (size_t)4U;
-        bool r1 = Utils2_is_full_s(size_class, ptr + shift_size_t);
+        bool r1 = Utils2_is_full_s2(size_class, ptr3 + shift_size_t3, ptr + shift_size_t);
         bool cond = r1;
         if (cond)
         {

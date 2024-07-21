@@ -361,6 +361,92 @@ let bound2_gen (v: U32.t) (size_class: G.erased sc)
   else nb_slots_v_rem
 
 noextract
+let is_empty
+  (size_class: sc)
+  (s: Seq.lseq U64.t 4)
+  : bool
+  =
+  let max = FStar.Int.max_int U64.n in
+  let bound = U32.v (nb_slots size_class) / 64 in
+  (U64.v (Seq.index s 0) = 0) &&
+  (bound <= 1 || (U64.v (Seq.index s 1) = 0)) &&
+  (bound <= 2 || (U64.v (Seq.index s 2) = 0)) &&
+  (bound <= 3 || (U64.v (Seq.index s 3) = 0))
+
+let is_empty_s
+  (size_class: sc)
+  (md: slab_metadata)
+  : Steel bool
+  (A.varray md) (fun _ -> A.varray md)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == A.asel md h0 /\
+    r == is_empty size_class (A.asel md h0)
+  )
+  =
+  let bound = U32.div (nb_slots size_class) 64ul in
+  let v0 = A.index md 0sz in
+  let v1 = A.index md 1sz in
+  let v2 = A.index md 2sz in
+  let v3 = A.index md 3sz in
+  (U64.eq v0 0UL) &&
+  (U32.lte bound 1ul || (U64.eq v1 0UL)) &&
+  (U32.lte bound 2ul || (U64.eq v2 0UL)) &&
+  (U32.lte bound 3ul || (U64.eq v3 0UL))
+
+noextract
+let seq_u64_or
+  (s1 s2: Seq.lseq U64.t 4)
+  : Seq.lseq U64.t 4
+  =
+  Seq2.map_seq2_len (fun x y -> U64.logor x y) s1 s2;
+  Seq2.map_seq2 (fun x y -> U64.logor x y) s1 s2
+
+let seq_u64_or_index
+  (s1 s2: Seq.lseq U64.t 4)
+  (i: nat{i < 4})
+  : Lemma
+  (let r = seq_u64_or s1 s2 in
+  Seq.index r i == U64.logor (Seq.index s1 i) (Seq.index s2 i))
+  =
+  Seq2.map_seq2_len (fun x y -> U64.logor x y) s1 s2;
+  Seq2.map_seq2_index (fun x y -> U64.logor x y) s1 s2 i
+
+let is_empty_s2
+  (size_class: sc)
+  (md md_q: slab_metadata)
+  : Steel bool
+  (A.varray md `star` A.varray md_q)
+  (fun _ -> A.varray md `star` A.varray md_q)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == A.asel md h0 /\
+    A.asel md_q h1 == A.asel md_q h0 /\
+    r == is_empty size_class (seq_u64_or (A.asel md h0) (A.asel md_q h0))
+  )
+  =
+  let h0 = get () in
+  let s0 = G.hide (A.asel md h0) in
+  let s1 = G.hide (A.asel md_q h0) in
+  seq_u64_or_index s0 s1 0;
+  seq_u64_or_index s0 s1 1;
+  seq_u64_or_index s0 s1 2;
+  seq_u64_or_index s0 s1 3;
+  let bound = U32.div (nb_slots size_class) 64ul in
+  let v0 = A.index md 0sz in
+  let v1 = A.index md 1sz in
+  let v2 = A.index md 2sz in
+  let v3 = A.index md 3sz in
+  let v0q = A.index md_q 0sz in
+  let v1q = A.index md_q 1sz in
+  let v2q = A.index md_q 2sz in
+  let v3q = A.index md_q 3sz in
+  (U64.eq (U64.logor v0 v0q) 0UL) &&
+  (U32.lte bound 1ul || (U64.eq (U64.logor v1 v1q) 0UL)) &&
+  (U32.lte bound 2ul || (U64.eq (U64.logor v2 v2q) 0UL)) &&
+  (U32.lte bound 3ul || (U64.eq (U64.logor v3 v3q) 0UL))
+
+noextract
 let has_free_slot
   (size_class: sc)
   (s: Seq.lseq U64.t 4)
@@ -402,39 +488,42 @@ let has_free_slot_s
   (U32.gt bound 2ul && (not (U64.eq v2 max64))) ||
   (U32.gt bound 3ul && (not (U64.eq v3 max64)))
 
-noextract
-let is_empty
+let has_free_slot_s2
   (size_class: sc)
-  (s: Seq.lseq U64.t 4)
-  : bool
-  =
-  let max = FStar.Int.max_int U64.n in
-  let bound = U32.v (nb_slots size_class) / 64 in
-  (U64.v (Seq.index s 0) = 0) &&
-  (bound <= 1 || (U64.v (Seq.index s 1) = 0)) &&
-  (bound <= 2 || (U64.v (Seq.index s 2) = 0)) &&
-  (bound <= 3 || (U64.v (Seq.index s 3) = 0))
-
-let is_empty_s
-  (size_class: sc)
-  (md: slab_metadata)
+  (md md_q: slab_metadata)
   : Steel bool
-  (A.varray md) (fun _ -> A.varray md)
+  (A.varray md `star` A.varray md_q)
+  (fun _ -> A.varray md `star` A.varray md_q)
   (requires fun _ -> True)
   (ensures fun h0 r h1 ->
     A.asel md h1 == A.asel md h0 /\
-    r == is_empty size_class (A.asel md h0)
+    A.asel md_q h1 == A.asel md_q h0 /\
+    r == has_free_slot size_class (seq_u64_or (A.asel md h0) (A.asel md_q h0))
   )
   =
-  let bound = U32.div (nb_slots size_class) 64ul in
+  let h0 = get () in
+  let s0 = G.hide (A.asel md h0) in
+  let s1 = G.hide (A.asel md_q h0) in
+  seq_u64_or_index s0 s1 0;
+  seq_u64_or_index s0 s1 1;
+  seq_u64_or_index s0 s1 2;
+  seq_u64_or_index s0 s1 3;
+  let nb_slots_v = nb_slots size_class in
+  let bound = U32.div nb_slots_v 64ul in
+  let bound2 = bound2_gen nb_slots_v (G.hide size_class) in
+  let full = full_n bound2 in
   let v0 = A.index md 0sz in
   let v1 = A.index md 1sz in
   let v2 = A.index md 2sz in
   let v3 = A.index md 3sz in
-  (U64.eq v0 0UL) &&
-  (U32.lte bound 1ul || (U64.eq v1 0UL)) &&
-  (U32.lte bound 2ul || (U64.eq v2 0UL)) &&
-  (U32.lte bound 3ul || (U64.eq v3 0UL))
+  let v0q = A.index md_q 0sz in
+  let v1q = A.index md_q 1sz in
+  let v2q = A.index md_q 2sz in
+  let v3q = A.index md_q 3sz in
+  (not (U64.eq (U64.logor v0 v0q) full)) ||
+  (U32.gt bound 1ul && (not (U64.eq (U64.logor v1 v1q) max64))) ||
+  (U32.gt bound 2ul && (not (U64.eq (U64.logor v2 v2q) max64))) ||
+  (U32.gt bound 3ul && (not (U64.eq (U64.logor v3 v3q) max64)))
 
 noextract
 let is_partial
@@ -459,6 +548,23 @@ let is_partial_s
   let b2 = is_empty_s size_class md in
   b1 && not b2
 
+let is_partial_s2
+  (size_class: sc)
+  (md md_q: slab_metadata)
+  : Steel bool
+  (A.varray md `star` A.varray md_q)
+  (fun _ -> A.varray md `star` A.varray md_q)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == A.asel md h0 /\
+    A.asel md_q h1 == A.asel md_q h0 /\
+    r == is_partial size_class (seq_u64_or (A.asel md h0) (A.asel md_q h0))
+  )
+  =
+  let b1 = has_free_slot_s2 size_class md md_q in
+  let b2 = is_empty_s2 size_class md md_q in
+  b1 && not b2
+
 noextract
 let is_full
   (size_class: sc)
@@ -480,6 +586,40 @@ let is_full_s
   =
   let b = has_free_slot_s size_class md in
   not b
+
+let is_full_s2
+  (size_class: sc)
+  (md md_q: slab_metadata)
+  : Steel bool
+  (A.varray md `star` A.varray md_q)
+  (fun _ -> A.varray md `star` A.varray md_q)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == A.asel md h0 /\
+    A.asel md_q h1 == A.asel md_q h0 /\
+    r == is_full size_class (seq_u64_or (A.asel md h0) (A.asel md_q h0))
+  )
+  =
+  let b = has_free_slot_s2 size_class md md_q in
+  not b
+
+let reset_to_empty
+  (size_class: sc)
+  (md: slab_metadata)
+  : Steel unit
+  (A.varray md) (fun _ -> A.varray md)
+  (requires fun _ -> True)
+  (ensures fun h0 r h1 ->
+    A.asel md h1 == Seq.create 4 0UL /\
+    is_empty size_class (A.asel md h1)
+  )
+  =
+  //TODO: move empty_md_is_properly_zeroed or remove postcond
+  admit ();
+  A.upd md 0sz 0UL;
+  A.upd md 1sz 0UL;
+  A.upd md 2sz 0UL;
+  A.upd md 3sz 0UL
 
 noextract
 let zeroes_impl_empty

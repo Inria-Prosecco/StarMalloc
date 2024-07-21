@@ -49,6 +49,7 @@ val deallocate_slot
     //  = h1 (slab_vprop size_class arr md md_q) in
     //let v1 : _ & Seq.lseq U64.t 4 = dfst (fst blob1) in
     //(b ==> not (is_full size_class (fst v1))) /\
+    //enable_quarantine_slot ==> seq_u64_or v0 v0_q == seq_u64_or v1 v1_q
     True
     //(not b ==> v1 == v0)
   )

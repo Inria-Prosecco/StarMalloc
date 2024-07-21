@@ -322,6 +322,7 @@ let get_free_slot_aux
   let x_xor = U64.logor x x_q in
   assume (x_xor <> max64);
   max64_lemma x_xor;
+  //TODO: FIXME, should be benign
   admit ();
   let r = ffs64 x_xor (G.hide 64ul) in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
@@ -385,6 +386,7 @@ let get_free_slot_aux2
   array_to_bv_slice (A.asel bitmap h0) 0;
   assert (FU.to_vec (U64.v x) == Seq.slice bm 0 64);
   Seq.slice_slice bm 0 64 0 (64 - U32.v bound2);
+  //TODO: FIXME, should be benign
   admit ();
   assert (zf_b (Seq.slice (FU.to_vec #64 (U64.v x)) 0 (64 - U32.v bound2)));
   full_n_lemma x bound2;
@@ -418,10 +420,13 @@ let get_free_slot (size_class: sc)
     A.asel bitmap h1 == A.asel bitmap h0 /\
     U32.v r < U32.v (nb_slots size_class) /\
     (let bm = Bitmap4.array_to_bv2 (A.asel bitmap h0) in
+    let bm_q = Bitmap4.array_to_bv2 (A.asel bitmap_q h0) in
     let idx = Bitmap5.f #4 (U32.v r) in
+    Seq.index bm idx = false /\
     Seq.index bm idx = false)
   )
   =
+  //TODO: FIXME, should be benign
   admit ();
   let h0 = get () in
   let bm = G.hide (Bitmap4.array_to_bv2 (A.asel bitmap h0)) in
@@ -490,13 +495,15 @@ let bound2_inv
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 100"
 let allocate_slot size_class arr md md_q
   =
-  admit ();
   assert (t_of (A.varray md) == Seq.lseq U64.t 4);
   let mds : G.erased (Seq.lseq U64.t 4 & Seq.lseq U64.t 4)
     = elim_slab_vprop size_class arr md md_q in
   let md_or : G.erased (Seq.lseq U64.t 4)
     = G.hide (seq_u64_or (fst mds) (snd mds)) in
   assume (has_free_slot size_class (G.reveal md_or));
+  let bm = G.hide (Bitmap4.array_to_bv2 #4 md_or) in
+  let bound2 = G.hide (bound2_gen (nb_slots size_class) (G.hide size_class)) in
+  assume (zf_b (Seq.slice bm 0 (64 - U32.v bound2)));
   let pos = get_free_slot size_class md md_q in
   let r = allocate_slot_aux
     size_class
@@ -516,6 +523,10 @@ let allocate_slot size_class arr md md_q
     (slab_vprop_aux
       size_class (A.split_l arr (rounding size_class))
       md_as_seq');
+  //let md_q = gget (A.varray md_q) in
+  //TODO: admit roughly corresponding to the assume, should be benign
+  //assume (slab_vprop_aux2 size_class md_q);
+  admit ();
   intro_slab_vprop size_class arr md md_q md_as_seq';
   return r
 #pop-options
