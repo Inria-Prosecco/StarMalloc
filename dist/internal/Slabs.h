@@ -10,6 +10,7 @@
 #include "internal/ArrayList.h"
 #include "Utils2.h"
 #include "MemoryTrap.h"
+#include "Constants.h"
 #include "ArrayList.h"
 
 bool

@@ -19,7 +19,7 @@ static uint8_t *get_slot_as_returned_value(uint32_t size_class, uint8_t *arr, ui
 
 static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap, uint64_t *bitmap_q)
 {
-  uint32_t nb_slots_v = Utils2_nb_slots(size_class);
+  uint32_t nb_slots_v = Constants_nb_slots(size_class);
   uint32_t bound = nb_slots_v / 64U;
   uint32_t nb_slots_v_rem = nb_slots_v % 64U;
   uint32_t bound2;

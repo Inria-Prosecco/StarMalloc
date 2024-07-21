@@ -153,8 +153,9 @@ let enable_quarantine = true
 let enable_quarantine_slot = true
 let enable_quarantine_trap = true
 let enable_quarantine_strict_trap = false
-let quarantine_queue_length = 1024sz
-let quarantine_queue_threshold = 256sz
+let quarantine_queue_length = 4096sz
+
+let quarantine_queue_threshold sc = US.mul (US.uint32_to_sizet (nb_slots sc)) 4sz
 let enable_quarantine_lemma _ = ()
 
 // zeroing

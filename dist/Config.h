@@ -28,8 +28,6 @@ extern bool Config_enable_quarantine_strict_trap;
 
 extern size_t Config_quarantine_queue_length;
 
-extern size_t Config_quarantine_queue_threshold;
-
 extern bool Config_enable_zeroing_malloc;
 
 extern bool Config_enable_zeroing_free;

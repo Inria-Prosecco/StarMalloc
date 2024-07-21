@@ -6,7 +6,7 @@
 
 #include "krmllib.h"
 
-uint32_t Utils2_nb_slots(uint32_t size_class);
+#include "Constants.h"
 
 size_t Utils2_rounding(uint32_t size_class);
 

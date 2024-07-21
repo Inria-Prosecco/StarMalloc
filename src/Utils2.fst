@@ -30,19 +30,6 @@ unfold let slab_metadata = r:array U64.t{A.length r = 4}
 let array_u8_alignment = ArrayAlignment.array_u8_alignment
 let array_u8_alignment_lemma = ArrayAlignment.array_u8_alignment_lemma
 
-#push-options "--z3rlimit 30"
-let nb_slots (size_class: sc)
-  : Pure U32.t
-  (requires True)
-  (ensures fun r ->
-    U32.v r >= 1 /\
-    U32.v r <= 256
-  )
-  =
-  //TODO: stabilize
-  U32.div page_size size_class
-#pop-options
-
 open FStar.Mul
 
 open Prelude

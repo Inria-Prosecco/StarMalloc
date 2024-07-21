@@ -93,6 +93,7 @@ FILES = \
   dist/Slots.c \
   dist/Bitmap5.c \
   dist/Utils2.c \
+  dist/Constants.c \
   dist/SizeClass.c \
   dist/SizeClassSelection.c \
   dist/PtrdiffWrapper.c \

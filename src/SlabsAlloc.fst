@@ -3357,8 +3357,10 @@ let allocate_slab'
       (if (A.is_null r) then emp else A.varray r);
     return r
   ) else (
-    let b = US.gte idx7 quarantine_queue_threshold in
+    let b = US.gte idx7 (quarantine_queue_threshold size_class) in
+    //let b = US.gte idx7 (US.mul (US.uint32_to_sizet (nb_slots size_class)) 4sz) in
     if enable_quarantine && b then (
+      assume (idx7 <> 0sz);
       let idxs = allocate_slab_aux_4 size_class
         slab_region md_bm_region md_bm_region_q md_region md_count r_idxs
         md_count_v md_region_lv

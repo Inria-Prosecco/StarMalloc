@@ -107,8 +107,10 @@ inline_for_extraction
 val enable_quarantine_strict_trap: bool
 inline_for_extraction
 val quarantine_queue_length: v:US.t{0 < US.v v /\ US.v v <= US.v metadata_max}
-inline_for_extraction
-val quarantine_queue_threshold: v:US.t{0 < US.v v /\ US.v v < US.v quarantine_queue_length}
+//: v:US.t{0 < US.v v /\ US.v v < US.v quarantine_queue_length}
+noextract inline_for_extraction
+val quarantine_queue_threshold (size_class: sc) : (v:US.t{0 < US.v v})
+
 // required
 val enable_quarantine_lemma (_:unit)
   : Lemma

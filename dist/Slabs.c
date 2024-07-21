@@ -58,7 +58,7 @@ update_quarantine2(
   size_t idx7
 )
 {
-  if (idx7 < (size_t)1024U)
+  if (idx7 < (size_t)4096U)
     return ((tuple4){ .x = idx1, .y = idx5, .z = idx6, .w = idx7 });
   else
   {
@@ -78,7 +78,7 @@ static void update_quarantine3_aux(uint8_t *slab_region, tuple4 idxs)
 
 static void update_quarantine3(uint8_t *slab_region, size_t idx7, tuple4 idxs)
 {
-  if (!(idx7 < (size_t)1024U))
+  if (!(idx7 < (size_t)4096U))
     update_quarantine3_aux(slab_region, idxs);
 }
 
@@ -382,7 +382,7 @@ uint8_t
   }
   else
   {
-    bool b = idx7_ >= (size_t)256U;
+    bool b = idx7_ >= (size_t)Constants_nb_slots(size_class) * (size_t)4U;
     if (b)
     {
       bounded_tuple_

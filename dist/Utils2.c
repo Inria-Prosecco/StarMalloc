@@ -3,14 +3,9 @@
 
 #include "Utils2.h"
 
-uint32_t Utils2_nb_slots(uint32_t size_class)
-{
-  return 4096U / size_class;
-}
-
 size_t Utils2_rounding(uint32_t size_class)
 {
-  return (size_t)(Utils2_nb_slots(size_class) * size_class);
+  return (size_t)(Constants_nb_slots(size_class) * size_class);
 }
 
 uint64_t Utils2_full_n_aux(uint32_t bound)
@@ -32,7 +27,7 @@ uint64_t Utils2_full_n(uint32_t bound)
 
 bool Utils2_is_empty_s(uint32_t size_class, uint64_t *md)
 {
-  uint32_t bound = Utils2_nb_slots(size_class) / 64U;
+  uint32_t bound = Constants_nb_slots(size_class) / 64U;
   uint64_t v0 = md[0U];
   uint64_t v1 = md[1U];
   uint64_t v2 = md[2U];
@@ -47,7 +42,7 @@ bool Utils2_is_empty_s(uint32_t size_class, uint64_t *md)
 
 bool Utils2_is_empty_s2(uint32_t size_class, uint64_t *md, uint64_t *md_q)
 {
-  uint32_t bound = Utils2_nb_slots(size_class) / 64U;
+  uint32_t bound = Constants_nb_slots(size_class) / 64U;
   uint64_t v0 = md[0U];
   uint64_t v1 = md[1U];
   uint64_t v2 = md[2U];
@@ -66,7 +61,7 @@ bool Utils2_is_empty_s2(uint32_t size_class, uint64_t *md, uint64_t *md_q)
 
 bool Utils2_has_free_slot_s(uint32_t size_class, uint64_t *md)
 {
-  uint32_t nb_slots_v = Utils2_nb_slots(size_class);
+  uint32_t nb_slots_v = Constants_nb_slots(size_class);
   uint32_t bound = nb_slots_v / 64U;
   uint32_t nb_slots_v_rem = nb_slots_v % 64U;
   uint32_t bound2;
@@ -88,7 +83,7 @@ bool Utils2_has_free_slot_s(uint32_t size_class, uint64_t *md)
 
 bool Utils2_has_free_slot_s2(uint32_t size_class, uint64_t *md, uint64_t *md_q)
 {
-  uint32_t nb_slots_v = Utils2_nb_slots(size_class);
+  uint32_t nb_slots_v = Constants_nb_slots(size_class);
   uint32_t bound = nb_slots_v / 64U;
   uint32_t nb_slots_v_rem = nb_slots_v % 64U;
   uint32_t bound2;
