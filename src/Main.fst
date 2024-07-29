@@ -3537,6 +3537,7 @@ val init_nth_arena_aux_split_split
     //A.varray (A.split_l (A.split_r size_classes (US.mul n k)) n)
   )
   (requires fun h0 ->
+    US.v k' == US.v k + 1 /\
     zf_u8 (A.asel (A.split_r (A.split_r slab_region (US.mul arena_slab_region_size k)) arena_slab_region_size) h0) /\
     zf_u64 (A.asel (A.split_r (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)) arena_md_bm_region_size) h0) /\
     zf_b (A.asel (A.split_r (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)) arena_md_bm_region_b_size) h0)
@@ -3573,29 +3574,10 @@ let init_nth_arena_aux_split_split
   md_bm_region_b
   md_region
   =
-  //TODO: SMT fix
-  sladmit ()
-
-  //split_r_r_mul
-  //  arena_slab_region_size
-  //  k
-  //  k'
-  //  slab_region;
-  //split_r_r_mul
-  //  arena_md_bm_region_size
-  //  k
-  //  k'
-  //  md_bm_region;
-  //split_r_r_mul
-  //  arena_md_bm_region_b_size
-  //  k
-  //  k'
-  //  md_bm_region_b;
-  //split_r_r_mul
-  //  arena_md_region_size
-  //  k
-  //  k'
-  //  md_region
+  split_r_r_mul arena_slab_region_size k k' slab_region;
+  split_r_r_mul arena_md_bm_region_size k k' md_bm_region;
+  split_r_r_mul arena_md_bm_region_b_size k k' md_bm_region_b;
+  split_r_r_mul arena_md_region_size k k' md_region
 
 #restart-solver
 
