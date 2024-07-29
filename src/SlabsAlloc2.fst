@@ -1298,6 +1298,7 @@ let fs_subset_elim
   )
   = ()
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let allocate_slab_aux_3_2_list_partition
   (md_count_v: US.t{US.v md_count_v + 1 <= US.v metadata_max_ex})
   (s1 s2: Seq.lseq AL.cell (US.v md_count_v + 1))
@@ -1335,27 +1336,35 @@ let allocate_slab_aux_3_2_list_partition
       (US.v idx5)
   )
   =
+  let s1' = Seq.slice s1 0 (US.v md_count_v) in
+  let ps1 = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) s1 in
+  let ps1' = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) s1' in
+  let ps2 = ALG.ptrs_all (US.v md_count_v) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) s2 in
   ALG.lemma_extend_dlist_subset_slice_all
     pred1 pred2 pred3 pred4 pred5
     (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)
     s1
     (US.v md_count_v);
-  let s1' = Seq.slice s1 0 (US.v md_count_v) in
-  let ps1' = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) s1' in
-  let ps1 = ALG.ptrs_all (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) s1 in
-  let ps2 = ALG.ptrs_all (US.v md_count_v) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) s1 in
   assert (FS.subset ps1' ps1);
+  assert (not (FS.mem (US.v md_count_v) ps1));
   assert (forall (i:nat{i < US.v md_count_v}).
     FS.mem i ps1
   );
-  assume (FS.subset ps1 ps2);
+
+  assert (FS.subset (ALG.ptrs_in (US.v idx1) s1) (ALG.ptrs_in (US.v md_count_v) s2));
+  assert (ALG.ptrs_in (US.v idx2) s1 == ALG.ptrs_in (US.v idx2) s1);
+  assert (ALG.ptrs_in (US.v idx3) s1 == ALG.ptrs_in (US.v idx3) s1);
+  assert (ALG.ptrs_in (US.v idx4) s1 == ALG.ptrs_in (US.v idx4) s1);
+  assert (ALG.ptrs_in (US.v idx5) s1 == ALG.ptrs_in (US.v idx5) s1);
+
+  assert (FS.subset ps1 ps2);
   fs_subset_elim (fun i -> i < US.v md_count_v) ps1 ps2;
   assert (FS.mem (US.v md_count_v) (ALG.ptrs_in (US.v md_count_v) s2));
-  assume (FS.mem (US.v md_count_v) ps2);
+  assert (FS.mem (US.v md_count_v) ps2);
   assert (forall (i:nat{i < US.v md_count_v + 1}).
     FS.mem i ps2
   );
-  admit ();
+  assert (ALG.partition s2 (US.v md_count_v) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5));
   ()
 
 #restart-solver

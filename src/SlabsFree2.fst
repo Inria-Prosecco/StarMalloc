@@ -1076,11 +1076,6 @@ let deallocate_slab_aux_1
   (**) p_full_unpack size_class
     (md_bm_array md_bm_region pos, slab_array slab_region pos)
     (md_bm_array md_bm_region pos, slab_array slab_region pos);
-  //let b = true in
-  //rewrite_slprop
-  //  (A.varray ptr)
-  //  (if b then emp else A.varray ptr)
-  //  (fun _ -> admit ());
 
   let b = deallocate_slot size_class
     (slab_array slab_region pos)
@@ -1096,7 +1091,6 @@ let deallocate_slab_aux_1
           md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 idx6 idx7 pos;
         return b
     ) else (
-      //admit ();
       pack_slab_starseq size_class
         slab_region md_bm_region md_region md_count
         md_count_v md_region_lv pos 0ul;
@@ -1764,7 +1758,7 @@ let deallocate_slab'
     Seq.index idxs0 5 == idx6 /\
     Seq.index idxs0 6 == idx7 /\
     0 <= diff' /\
-    (diff' % U32.v page_size) % U32.v size_class == 0 /\
+    diff' % US.v slab_size == 0 /\
     //UP.v diff < US.v metadata_max * U32.v page_size /\
     US.v diff == diff' /\
     same_base_array ptr slab_region /\
@@ -1774,17 +1768,12 @@ let deallocate_slab'
   )
   (ensures fun _ _ _ -> True)
   =
-  //let diff_sz = UP.ptrdifft_to_sizet diff in
-  admit ();
   assert_norm (4 < FI.max_int 16);
   let pos = US.div diff slab_size in
   // check diff/page_size < md_count
   if US.lt pos md_count_v then (
     A.ptr_shift_zero (A.ptr_of slab_region);
     let r = slab_array slab_region pos in
-    assert (same_base_array ptr (slab_array slab_region pos));
-    assume (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array slab_region pos)) >= 0);
-    assert (A.offset (A.ptr_of ptr) - A.offset (A.ptr_of (slab_array slab_region pos)) < US.v slab_size);
     // selector equality propagation
     let gs0 = gget (AL.varraylist pred1 pred2 pred3 pred4 pred5
       (A.split_l md_region md_count_v)
@@ -1803,16 +1792,11 @@ let deallocate_slab'
         r_idxs md_count_v;
       return b
     ) else if (U32.eq status1 1ul) then (
-      //failwith
-      sladmit ();
-      //let b = deallocate_slab_aux_2 ptr size_class
-      //  slab_region md_bm_region md_region
-      //  md_count r_idxs
-      //  md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 idx6 idx7 pos pos2 in
-      //pack_right_and_refactor_vrefine_dep
-      //  size_class slab_region md_bm_region md_region md_count
-      //  r_idxs md_count_v;
-      return false
+      //TODO: refine varraylist
+      deallocate_slab_fail ptr size_class
+        slab_region md_bm_region md_region
+        md_count r_idxs
+        md_count_v md_region_lv idx1 idx2 idx3 idx4 idx5 idx6 idx7
     ) else (
       deallocate_slab_fail ptr size_class
         slab_region md_bm_region md_region
@@ -1856,7 +1840,7 @@ let deallocate_slab
   (requires fun _ ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
-    (diff' % U32.v page_size) % U32.v size_class == 0 /\
+    diff' % US.v slab_size == 0 /\
     US.v diff_ == diff' /\
     same_base_array ptr slab_region /\
     A.length ptr == U32.v size_class)
