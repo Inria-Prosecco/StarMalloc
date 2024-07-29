@@ -2032,15 +2032,14 @@ val synced_sizes_join_lemma''
     UInt.size (US.v n) U32.n /\
     US.fits (US.v offset + US.v n)
   })
-  (size_classes: Seq.lseq size_class (US.v n))
+  (size_classes: Seq.seq size_class)
   (sizes: TLA.t sc_union)
   (n1 n2: US.t)
   (i:US.t{US.v i < US.v n})
   : Lemma
   (requires (
     US.v n1 + US.v n2 == US.v n /\
-    US.v n1 > 0 /\
-    US.v n2 > 0 /\
+    Seq.length size_classes >= US.v n /\
     (let scs1, scs2 = Seq.split size_classes (US.v n1) in
     TLA.length sizes >= US.v n + US.v offset /\
     synced_sizes2 offset scs1 sizes (US.v n1) /\
@@ -2084,15 +2083,14 @@ let synced_sizes_join_lemma'
     UInt.size (US.v n) U32.n /\
     US.fits (US.v offset + US.v n)
   })
-  (size_classes: Seq.lseq size_class (US.v n))
+  (size_classes: Seq.seq size_class)
   (sizes: TLA.t sc_union)
   (n1 n2: US.t)
   (i:nat{i < US.v n})
   : Lemma
   (requires (
     US.v n1 + US.v n2 == US.v n /\
-    US.v n1 > 0 /\
-    US.v n2 > 0 /\
+    Seq.length size_classes >= US.v n /\
     (let scs1, scs2 = Seq.split size_classes (US.v n1) in
     TLA.length sizes >= US.v n + US.v offset /\
     synced_sizes2 offset scs1 sizes (US.v n1) /\
@@ -2113,14 +2111,13 @@ let synced_sizes_join_lemma
     UInt.size (US.v n) U32.n /\
     US.fits (US.v offset + US.v n)
   })
-  (size_classes: Seq.lseq size_class (US.v n))
+  (size_classes: Seq.seq size_class)
   (sizes: TLA.t sc_union)
   (n1 n2: US.t)
   : Lemma
   (requires
     US.v n1 + US.v n2 == US.v n /\
-    US.v n1 > 0 /\
-    US.v n2 > 0 /\
+    Seq.length size_classes >= US.v n /\
     (let scs1, scs2 = Seq.split size_classes (US.v n1) in
     TLA.length sizes >= US.v n + US.v offset /\
     synced_sizes2 offset scs1 sizes (US.v n1) /\
@@ -3195,8 +3192,6 @@ let synced_sizes_arena_lemma
     synced_sizes_arena n offset size_classes sizes k
   )
   =
-  //TODO: low-level proof work
-  admit ();
   assert (US.v n * k + US.v (US.mul n offset) <= TLA.length sizes);
   reveal_opaque (`%synced_sizes_arena) synced_sizes_arena
 
@@ -4098,7 +4093,7 @@ val init_nth_arena_inv
     True
   )
 
-
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let synced_sizes_arena_join_lemma
   (n: US.t)
   (nb_arenas: US.t{US.v nb_arenas > 0})
@@ -4113,6 +4108,7 @@ let synced_sizes_arena_join_lemma
     Seq.length scs2 >= US.v n /\
     synced_sizes_arena n 0sz scs1 sizes (US.v k) /\
     synced_sizes_arena n k scs2 sizes 1 /\
+    US.v k' == US.v k + 1 /\
     True
   ))
   (ensures
@@ -4120,8 +4116,21 @@ let synced_sizes_arena_join_lemma
     synced_sizes_arena n 0sz size_classes sizes (US.v k')
   )
   =
-  //TODO: remaining proof work
-  admit ()
+  let scs1, scs2 = Seq.split size_classes (US.v n * US.v k) in
+  reveal_opaque (`%synced_sizes_arena) synced_sizes_arena;
+  assert (synced_sizes2 (US.mul n 0sz) scs1 sizes (US.v n * US.v k));
+  assert (synced_sizes2 (US.mul n k) scs2 sizes (US.v n * 1));
+
+  let offset' = US.mul n 0sz in
+  let n1' = US.mul n k in
+  let n2' = US.mul n 1sz in
+  let n' = US.mul n k' in
+  assume (UInt.size (US.v n') U32.n);
+  assume (US.fits (US.v offset' + US.v n'));
+
+  assert (synced_sizes2 offset' scs1 sizes (US.v n1'));
+  assert (synced_sizes2 (US.add offset' n1') scs2 sizes (US.v n2'));
+  synced_sizes_join_lemma offset' n' size_classes sizes n1' n2'
 
 val synced_sizes_arena_join
   (#opened:_)
@@ -4150,6 +4159,7 @@ val synced_sizes_arena_join
     A.varray size_classes
   )
   (requires fun h0 ->
+    US.v k' == US.v k + 1 /\
     A.length (A.split_r size_classes (US.mul n k)) >= US.v n * 1 /\
     synced_sizes_arena n 0sz
       (asel (A.split_l size_classes (US.mul n k)) h0)
@@ -4455,17 +4465,9 @@ let init_n_first_arenas_lemma2 (#opened:_)
   (ctr: nat{US.v k == ctr}) // Cannot reduce pattern-matching on USize, use a nat just for this purpose
   : SteelGhost unit opened
   (
-    //A.varray (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) `star`
-    //A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size 0sz)) `star`
-    //A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 0sz)) `star`
-    //A.varray (A.split_r md_region (US.mul arena_md_region_size 0sz))
     A.varray size_classes
   )
   (fun _ ->
-    //A.varray (A.split_r slab_region (US.mul arena_slab_region_size k)) `star`
-    //A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)) `star`
-    //A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)) `star`
-    //A.varray (A.split_r md_region (US.mul arena_md_region_size k))
     A.varray size_classes
   )
   (requires fun h0 -> k = 0sz /\
@@ -4483,7 +4485,10 @@ let init_n_first_arenas_lemma2 (#opened:_)
     True
   )
   =
-  admit ();
+  reveal_opaque (`%synced_sizes_arena) synced_sizes_arena;
+  reveal_opaque (`%synced_sizes2) synced_sizes2;
+  reveal_opaque (`%size_class_preds_arena) size_class_preds_arena;
+  reveal_opaque (`%size_class_preds) size_class_preds;
   noop ()
 
 let init_n_first_arenas_lemma3 (#opened:_)
@@ -4877,18 +4882,15 @@ let split_r_zero (#opened:_) (#a: Type)
     A.asel ptr h0
   )
   =
-  admit ();
-  assert (
-    A.length ptr
-    ==
-    A.length (A.split_r ptr (US.mul coeff 0sz))
-  );
-  let s : G.erased (Seq.lseq a (A.length ptr)) = gget (A.varray ptr) in
-  change_slprop_rel
+  let s0 = gget (A.varray ptr) in
+  A.ptr_base_offset_inj
+    (A.ptr_of ptr)
+    (A.ptr_of (A.split_r ptr (US.mul coeff 0sz)));
+  change_equal_slprop
     (A.varray ptr)
-    (A.varray (A.split_r ptr (US.mul coeff 0sz)))
-    (fun x y -> x == y)
-    (fun _ -> admit ())
+    (A.varray (A.split_r ptr (US.mul coeff 0sz)));
+  let s1 = gget (A.varray (A.split_r ptr (US.mul coeff 0sz))) in
+  assert (s1 `Seq.equal` s0)
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 500 --split_queries no"
 let init_all_arenas_lemma (#opened:_)
