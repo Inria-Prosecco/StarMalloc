@@ -4203,6 +4203,7 @@ let synced_sizes_arena_join
   Seq.lemma_append_inj s1 s2 s1' s2';
   synced_sizes_arena_join_lemma n nb_arenas k k' s sizes
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 500 --query_stats"
 let init_nth_arena_inv
   l1 l2 n1 n2 n
   arena_slab_region_size
@@ -4218,7 +4219,17 @@ let init_nth_arena_inv
   size_classes
   sizes
   =
+  let s0 = gget (A.varray size_classes) in
   A.ghost_split size_classes (US.mul n k);
+  let s01 = G.hide (fst (Seq.split (G.reveal s0) (US.v (US.mul n k)))) in
+  //TODO: corresponding "internal framing" lemmas
+  assume (synced_sizes_arena n 0sz s01 sizes (US.v k));
+  assume (size_class_preds_arena n arena_slab_region_size s01 (US.v k) slab_region);
+  let s02 = G.hide (snd (Seq.split (G.reveal s0) (US.v (US.mul n k)))) in
+  let s11 = gget (A.varray (A.split_l size_classes (US.mul n k))) in
+  let s12 = gget (A.varray (A.split_r size_classes (US.mul n k))) in
+  assert (s11 `Seq.equal` G.reveal s01);
+  assert (s12 `Seq.equal` G.reveal s02);
   init_nth_arena
     l1 l2 n1 n2 n
     arena_slab_region_size
@@ -4233,10 +4244,16 @@ let init_nth_arena_inv
     md_region
     size_classes
     sizes;
-  //TODO: remaining proof work
-  sladmit ()
-  //synced_sizes_arena_join
-  //  n nb_arenas k k' size_classes sizes ();
+  let s21 = gget (A.varray (A.split_l size_classes (US.mul n k))) in
+  let s22 = gget (A.varray (A.split_r size_classes (US.mul n k))) in
+  assert (s21 `Seq.equal` s11);
+  assert (synced_sizes_arena n 0sz s21 sizes (US.v k));
+  assert (synced_sizes_arena n k s22 sizes 1);
+  synced_sizes_arena_join
+    n nb_arenas k k' size_classes sizes ();
+  //TODO: corresponding lemma
+  let s3 = gget (A.varray size_classes) in
+  assume (size_class_preds_arena n arena_slab_region_size s3 (US.v k') slab_region)
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
 [@@ reduce_attr]
@@ -4342,7 +4359,241 @@ val init_n_first_arenas
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 600 --split_queries no --query_stats"
+let init_n_first_arenas_lemma1 (#opened:_)
+  (n: US.t{
+    US.v n > 0 /\
+    UInt.size (US.v n) U32.n /\
+    True
+  })
+  (arena_slab_region_size
+   arena_md_region_size
+   arena_md_bm_region_size
+   arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
+  (nb_arenas: US.t{US.v nb_arenas > 0 /\
+    US.fits (US.v n * US.v nb_arenas) /\
+    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_region_size * US.v nb_arenas) /\
+    True
+  })
+  (k: US.t{US.v k <= US.v nb_arenas /\
+    US.fits (US.v n * US.v k) /\
+    US.fits (US.v arena_slab_region_size * US.v k) /\
+    US.fits (US.v arena_md_bm_region_size * US.v k) /\
+    US.fits (US.v arena_md_bm_region_b_size * US.v k) /\
+    US.fits (US.v arena_md_region_size * US.v k)
+  })
+  (slab_region: array U8.t{
+    A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas /\
+    A.length slab_region >= US.v arena_slab_region_size * US.v k
+  })
+  (md_bm_region: array U64.t{
+    A.length md_bm_region == US.v arena_md_bm_region_size * US.v nb_arenas /\
+    A.length md_bm_region >= US.v arena_md_bm_region_size * US.v k
+  })
+  (md_bm_region_b: array bool{
+    A.length md_bm_region_b == US.v arena_md_bm_region_b_size * US.v nb_arenas /\
+    A.length md_bm_region_b >= US.v arena_md_bm_region_b_size * US.v k
+  })
+  (md_region: array AL.cell{
+    A.length md_region == US.v arena_md_region_size * US.v nb_arenas /\
+    A.length md_region >= US.v arena_md_region_size * US.v k
+  })
+  (ctr: nat{US.v k == ctr}) // Cannot reduce pattern-matching on USize, use a nat just for this purpose
+  : SteelGhost unit opened
+  (
+    A.varray (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) `star`
+    A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size 0sz)) `star`
+    A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 0sz)) `star`
+    A.varray (A.split_r md_region (US.mul arena_md_region_size 0sz))
+  )
+  (fun _ ->
+    A.varray (A.split_r slab_region (US.mul arena_slab_region_size k)) `star`
+    A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)) `star`
+    A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)) `star`
+    A.varray (A.split_r md_region (US.mul arena_md_region_size k))
+  )
+  (requires fun h0 -> k = 0sz /\
+    zf_u8 (A.asel (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) h0) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (US.mul arena_md_bm_region_size 0sz)) h0) /\
+    zf_b (A.asel (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 0sz)) h0) /\
+    hidden_pred2 n arena_slab_region_size /\
+    True
+  )
+  (ensures fun h0 _ h1 ->
+    zf_u8 (A.asel (A.split_r slab_region (US.mul arena_slab_region_size k)) h1) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)) h1) /\
+    zf_b (A.asel (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)) h1) /\
+    A.asel (A.split_r md_region (US.mul arena_md_region_size k)) h1
+    `Seq.equal`
+    A.asel (A.split_r md_region (US.mul arena_md_region_size 0sz)) h0 /\
+    hidden_pred2 n arena_slab_region_size /\
+    True
+  )
+  =
+  change_equal_slprop
+    (A.varray (A.split_r slab_region (US.mul arena_slab_region_size 0sz)))
+    (A.varray (A.split_r slab_region (US.mul arena_slab_region_size k)));
+  change_equal_slprop
+    (A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size 0sz)))
+    (A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)));
+  change_equal_slprop
+    (A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 0sz)))
+    (A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)));
+  let s0 = gget (A.varray (A.split_r md_region (US.mul arena_md_region_size 0sz))) in
+  change_equal_slprop
+    (A.varray (A.split_r md_region (US.mul arena_md_region_size 0sz)))
+    (A.varray (A.split_r md_region (US.mul arena_md_region_size k)));
+  let s1 = gget (A.varray (A.split_r md_region (US.mul arena_md_region_size k))) in
+  assert (s0 `Seq.equal` s1)
+
+let init_n_first_arenas_lemma2 (#opened:_)
+  (l1:list sc)
+  (l2:list sc_ex)
+  (n1 n2: US.t)
+  (n: US.t{
+    US.v n > 0 /\
+    UInt.size (US.v n) U32.n /\
+    True
+  })
+  (arena_slab_region_size: (v:US.t{US.v v > 0}))
+  (k: US.t{
+    US.fits (US.v n * US.v k)
+  })
+  (slab_region: array U8.t{
+    A.length slab_region >= US.v arena_slab_region_size * US.v k
+  })
+  (size_classes: array size_class{
+    A.length size_classes >= US.v n * US.v k
+  })
+  (sizes: TLA.t sc_union{
+    TLA.length sizes >= US.v n * US.v k
+  })
+  (ctr: nat{US.v k == ctr}) // Cannot reduce pattern-matching on USize, use a nat just for this purpose
+  : SteelGhost unit opened
+  (
+    //A.varray (A.split_r slab_region (US.mul arena_slab_region_size 0sz)) `star`
+    //A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size 0sz)) `star`
+    //A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 0sz)) `star`
+    //A.varray (A.split_r md_region (US.mul arena_md_region_size 0sz))
+    A.varray size_classes
+  )
+  (fun _ ->
+    //A.varray (A.split_r slab_region (US.mul arena_slab_region_size k)) `star`
+    //A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)) `star`
+    //A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)) `star`
+    //A.varray (A.split_r md_region (US.mul arena_md_region_size k))
+    A.varray size_classes
+  )
+  (requires fun h0 -> k = 0sz /\
+    hidden_pred2 n arena_slab_region_size /\
+    True
+  )
+  (ensures fun h0 _ h1 ->
+    let scs = A.asel size_classes h1 in
+    synced_sizes_arena n
+      0sz scs sizes (US.v k) /\
+    hidden_pred2 n arena_slab_region_size /\
+    size_class_preds_arena n arena_slab_region_size
+      scs (US.v k)
+      slab_region /\
+    True
+  )
+  =
+  admit ();
+  noop ()
+
+let init_n_first_arenas_lemma3 (#opened:_)
+  (n: US.t{
+    US.v n > 0 /\
+    UInt.size (US.v n) U32.n /\
+    True
+  })
+  (arena_slab_region_size
+   arena_md_region_size
+   arena_md_bm_region_size
+   arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
+  (nb_arenas: US.t{US.v nb_arenas > 0 /\
+    US.fits (US.v n * US.v nb_arenas) /\
+    US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
+    US.fits (US.v arena_md_region_size * US.v nb_arenas) /\
+    True
+  })
+  (k: US.t{US.v k <= US.v nb_arenas /\
+    US.fits (US.v n * US.v k) /\
+    US.fits (US.v arena_slab_region_size * US.v k) /\
+    US.fits (US.v arena_md_bm_region_size * US.v k) /\
+    US.fits (US.v arena_md_bm_region_b_size * US.v k) /\
+    US.fits (US.v arena_md_region_size * US.v k)
+  })
+  (slab_region: array U8.t{
+    A.length slab_region == US.v arena_slab_region_size * US.v nb_arenas /\
+    A.length slab_region >= US.v arena_slab_region_size * US.v k
+  })
+  (md_bm_region: array U64.t{
+    A.length md_bm_region == US.v arena_md_bm_region_size * US.v nb_arenas /\
+    A.length md_bm_region >= US.v arena_md_bm_region_size * US.v k
+  })
+  (md_bm_region_b: array bool{
+    A.length md_bm_region_b == US.v arena_md_bm_region_b_size * US.v nb_arenas /\
+    A.length md_bm_region_b >= US.v arena_md_bm_region_b_size * US.v k
+  })
+  (md_region: array AL.cell{
+    A.length md_region == US.v arena_md_region_size * US.v nb_arenas /\
+    A.length md_region >= US.v arena_md_region_size * US.v k
+  })
+  (ctr: nat{US.v k == ctr}) // Cannot reduce pattern-matching on USize, use a nat just for this purpose
+  : SteelGhost unit opened
+  (
+    A.varray (A.split_r slab_region (US.mul arena_slab_region_size 1sz)) `star`
+    A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size 1sz)) `star`
+    A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 1sz)) `star`
+    A.varray (A.split_r md_region (US.mul arena_md_region_size 1sz))
+  )
+  (fun _ ->
+    A.varray (A.split_r slab_region (US.mul arena_slab_region_size k)) `star`
+    A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)) `star`
+    A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)) `star`
+    A.varray (A.split_r md_region (US.mul arena_md_region_size k))
+  )
+  (requires fun h0 -> k = 1sz /\
+    zf_u8 (A.asel (A.split_r slab_region (US.mul arena_slab_region_size 1sz)) h0) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (US.mul arena_md_bm_region_size 1sz)) h0) /\
+    zf_b (A.asel (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 1sz)) h0) /\
+    hidden_pred2 n arena_slab_region_size /\
+    True
+  )
+  (ensures fun h0 _ h1 ->
+    zf_u8 (A.asel (A.split_r slab_region (US.mul arena_slab_region_size k)) h1) /\
+    zf_u64 (A.asel (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)) h1) /\
+    zf_b (A.asel (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)) h1) /\
+    A.asel (A.split_r md_region (US.mul arena_md_region_size k)) h1
+    `Seq.equal`
+    A.asel (A.split_r md_region (US.mul arena_md_region_size 1sz)) h0 /\
+    hidden_pred2 n arena_slab_region_size /\
+    True
+  )
+  =
+  change_equal_slprop
+    (A.varray (A.split_r slab_region (US.mul arena_slab_region_size 1sz)))
+    (A.varray (A.split_r slab_region (US.mul arena_slab_region_size k)));
+  change_equal_slprop
+    (A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size 1sz)))
+    (A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)));
+  change_equal_slprop
+    (A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 1sz)))
+    (A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)));
+  let s0 = gget (A.varray (A.split_r md_region (US.mul arena_md_region_size 1sz))) in
+  change_equal_slprop
+    (A.varray (A.split_r md_region (US.mul arena_md_region_size 1sz)))
+    (A.varray (A.split_r md_region (US.mul arena_md_region_size k)));
+  let s1 = gget (A.varray (A.split_r md_region (US.mul arena_md_region_size k))) in
+  assert (s0 `Seq.equal` s1)
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 700 --split_queries no --query_stats"
 [@@ reduce_attr]
 noextract
 let rec init_n_first_arenas
@@ -4359,7 +4610,7 @@ let rec init_n_first_arenas
    arena_md_region_size
    arena_md_bm_region_size
    arena_md_bm_region_b_size: (v:US.t{US.v v > 0}))
-  (nb_arenas: US.t{US.v nb_arenas > 0})
+  nb_arenas
   k
   ctr
   slab_region
@@ -4370,23 +4621,36 @@ let rec init_n_first_arenas
   sizes
   = match ctr with
   | 0 ->
-      //TODO: remaining proof work, dedicated lemma
-      sladmit ()
-      //change_equal_slprop
-      //  (A.varray (A.split_r slab_region (US.mul arena_slab_region_size 0sz)))
-      //  (A.varray (A.split_r slab_region (US.mul arena_slab_region_size k)));
-      //change_equal_slprop
-      //  (A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size 0sz)))
-      //  (A.varray (A.split_r md_bm_region (US.mul arena_md_bm_region_size k)));
-      //change_equal_slprop
-      //  (A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size 0sz)))
-      //  (A.varray (A.split_r md_bm_region_b (US.mul arena_md_bm_region_b_size k)));
-      //change_equal_slprop
-      //  (A.varray (A.split_r md_region (US.mul arena_md_region_size 0sz)))
-      //  (A.varray (A.split_r md_region (US.mul arena_md_region_size k)))
+      init_n_first_arenas_lemma1
+        n
+        arena_slab_region_size
+        arena_md_region_size
+        arena_md_bm_region_size
+        arena_md_bm_region_b_size
+        nb_arenas
+        k
+        slab_region
+        md_bm_region
+        md_bm_region_b
+        md_region
+        ctr;
+      init_n_first_arenas_lemma2
+        l1 l2 n1 n2 n
+        arena_slab_region_size
+        k
+        slab_region
+        size_classes
+        sizes
+        ctr
   | 1 ->
-      //TODO: remaining proof work, dedicated lemma
-      admit ();
+      init_n_first_arenas_lemma2
+        l1 l2 n1 n2 n
+        arena_slab_region_size
+        0sz
+        slab_region
+        size_classes
+        sizes
+        0;
       init_nth_arena_inv
         l1 l2 n1 n2 n
         arena_slab_region_size
@@ -4402,10 +4666,29 @@ let rec init_n_first_arenas
         md_region
         size_classes
         sizes;
-      //TODO: remaining proof work, dedicated lemma
-      sladmit ()
+      init_n_first_arenas_lemma3
+        n
+        arena_slab_region_size
+        arena_md_region_size
+        arena_md_bm_region_size
+        arena_md_bm_region_b_size
+        nb_arenas
+        k
+        slab_region
+        md_bm_region
+        md_bm_region_b
+        md_region
+        ctr
   | _ ->
-      //TODO: remaining proof work, dedicated lemma
+      //init_n_first_arenas_lemma2
+      //  l1 l2 n1 n2 n
+      //  arena_slab_region_size
+      //  0sz
+      //  slab_region
+      //  size_classes
+      //  sizes
+      //  0;
+      //admit ();
       admit ();
       init_n_first_arenas
         l1 l2 n1 n2 n
@@ -4436,9 +4719,7 @@ let rec init_n_first_arenas
         md_bm_region_b
         md_region
         size_classes
-        sizes;
-      //TODO: remaining proof work, dedicated lemma
-      sladmit ()
+        sizes
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
 noextract inline_for_extraction
