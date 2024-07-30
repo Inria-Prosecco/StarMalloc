@@ -746,7 +746,7 @@ let init_struct2
   )
   (ensures fun _ r h1 ->
     r.size == Sc_ex sc /\
-    //array_u8_alignment (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size))) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size))) page_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul metadata_max_ex slab_size)) h1) /\
     zf_b (A.asel (A.split_r md_bm_region metadata_max_ex) h1) /\
     A.ptr_of r.slab_region == A.ptr_of slab_region /\
@@ -979,8 +979,7 @@ let init_wrapper sc n k k' slab_region md_bm_region md_region
     k
     k'
     md_region;
-  // TODO: dedicated lemma
-  assume (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
+  assert (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
   size_class_vprop_reveal data;
   change_equal_slprop
     (size_class_vprop_sc data)
@@ -1087,10 +1086,7 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
     k
     k'
     md_region;
-  // TODO: dedicated lemma
-  assume (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
-  // TODO: dedicated lemma
-  assume (array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k')) page_size);
+  assert (A.offset (A.ptr_of data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k);
   size_class_vprop_reveal data;
   change_equal_slprop
     (size_class_vprop_sc_ex data)
@@ -1149,7 +1145,6 @@ val init_size_class
   (offset: US.t)
   //(size_c: sc)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
     US.fits (US.v metadata_max * US.v n)
@@ -1191,6 +1186,7 @@ val init_size_class
     //A.varray sizes
   )
   (requires fun h0 ->
+    US.fits (US.v offset + US.v k) /\
     US.v k' == US.v k + 1 /\
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) page_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
@@ -1219,12 +1215,10 @@ val init_size_class
 let init_size_class
   offset n k k' slab_region md_bm_region md_region size_classes sizes
   =
-  //TODO: missing hypothesis
-  assume (US.fits (US.v offset + US.v k));
   let idx = US.add offset k in
   let size = TLA.get sizes idx in
   (**) let g0 = gget (varray size_classes) in
-  //TODO: missing hypothesis
+  //TODO: sc/sc_ex pattern
   assume (Sc? size);
   let Sc size = size in
   //(**) let g_sizes0 = gget (varray sizes) in
@@ -1245,7 +1239,6 @@ val init_size_class2
   (offset: US.t)
   //(size_c: sc)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v metadata_max_ex * US.v slab_size * US.v n) /\
     US.fits (US.v metadata_max_ex * US.v n)
   })
@@ -1286,6 +1279,7 @@ val init_size_class2
     //A.varray sizes
   )
   (requires fun h0 ->
+    US.fits (US.v offset + US.v k) /\
     US.v k' == US.v k + 1 /\
     array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k)) page_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max_ex slab_size) k)) h0) /\
@@ -1311,11 +1305,9 @@ val init_size_class2
 let init_size_class2
   offset n k k' slab_region md_bm_region md_region size_classes sizes
   =
-  //TODO: missing hypothesis
-  assume (US.fits (US.v offset + US.v k));
   let idx = US.add offset k in
   let size = TLA.get sizes idx in
-  //TODO: missing hypothesis
+  //TODO: sc/sc_ex pattern
   assume (Sc_ex? size);
   let Sc_ex size = size in
   (**) let g0 = gget (varray size_classes) in
@@ -1335,7 +1327,6 @@ noextract inline_for_extraction
 val init_size_classes_aux (l:list sc)
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
@@ -1381,6 +1372,7 @@ val init_size_classes_aux (l:list sc)
   (requires fun h0 ->
     // Invariant needed to link the list against the size classes
     // allocated in previous iterations
+    US.fits (US.v offset + US.v n) /\
     US.v k + List.length l == US.v n /\
     Cons? l /\
 
@@ -1437,7 +1429,6 @@ noextract inline_for_extraction
 val init_size_classes_aux2 (l:list sc_ex)
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
     US.fits (US.v metadata_max_ex * US.v slab_size * US.v n) /\
     US.fits (US.v metadata_max_ex * US.v n)
@@ -1482,6 +1473,7 @@ val init_size_classes_aux2 (l:list sc_ex)
   (requires fun h0 ->
     // Invariant needed to link the list against the size classes
     // allocated in previous iterations
+    US.fits (US.v offset + US.v n) /\
     US.v k + List.length l == US.v n /\
     Cons? l /\
 
@@ -1542,7 +1534,6 @@ inline_for_extraction noextract
 val init_size_classes (l:list sc)
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
@@ -1586,6 +1577,7 @@ val init_size_classes (l:list sc)
   (requires fun h0 ->
     // Invariant needed to link the list against the size classes
     // allocated in previous iterations
+    US.fits (US.v offset + US.v n) /\
     List.length l == US.v n /\
     Cons? l /\
 
@@ -1620,7 +1612,6 @@ inline_for_extraction noextract
 val init_size_classes2 (l:list sc_ex)
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
     US.fits (US.v metadata_max_ex * US.v slab_size * US.v n) /\
     US.fits (US.v metadata_max_ex * US.v n)
@@ -1664,6 +1655,7 @@ val init_size_classes2 (l:list sc_ex)
   (requires fun h0 ->
     // Invariant needed to link the list against the size classes
     // allocated in previous iterations
+    US.fits (US.v offset + US.v n) /\
     List.length l == US.v n /\
     Cons? l /\
 
@@ -1696,7 +1688,6 @@ noextract inline_for_extraction
 val init_all_size_classes1 (l:list sc)
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
@@ -1731,6 +1722,7 @@ val init_all_size_classes1 (l:list sc)
   (requires fun h0 ->
     // Invariant needed to link the list against the size classes
     // allocated in previous iterations
+    US.fits (US.v offset + US.v n) /\
     List.length l == US.v n /\
     Cons? l /\
 
@@ -1767,7 +1759,6 @@ noextract inline_for_extraction
 val init_all_size_classes2 (l:list sc_ex)
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
     US.fits (US.v metadata_max_ex * US.v slab_size * US.v n) /\
     US.fits (US.v metadata_max_ex * US.v n)
@@ -1802,6 +1793,7 @@ val init_all_size_classes2 (l:list sc_ex)
   (requires fun h0 ->
     // Invariant needed to link the list against the size classes
     // allocated in previous iterations
+    US.fits (US.v offset + US.v n) /\
     List.length l == US.v n /\
     Cons? l /\
 
@@ -1861,7 +1853,6 @@ noextract inline_for_extraction
 val init_all_size_classes_wrapper1 (l:list sc)
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
@@ -1896,6 +1887,7 @@ val init_all_size_classes_wrapper1 (l:list sc)
   (requires fun h0 ->
     // Invariant needed to link the list against the size classes
     // allocated in previous iterations
+    US.fits (US.v offset + US.v n) /\
     List.length l == US.v n /\
     Cons? l /\
 
@@ -1946,7 +1938,6 @@ noextract inline_for_extraction
 val init_all_size_classes_wrapper2 (l:list sc_ex)
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
     US.fits (US.v metadata_max_ex * US.v slab_size * US.v n) /\
     US.fits (US.v metadata_max_ex * US.v n)
@@ -1981,6 +1972,7 @@ val init_all_size_classes_wrapper2 (l:list sc_ex)
   (requires fun h0 ->
     // Invariant needed to link the list against the size classes
     // allocated in previous iterations
+    US.fits (US.v offset + US.v n) /\
     List.length l == US.v n /\
     Cons? l /\
 
@@ -2029,7 +2021,6 @@ let init_all_size_classes_wrapper2
 val synced_sizes_join_lemma''
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v offset + US.v n)
   })
   (size_classes: Seq.seq size_class)
@@ -2080,7 +2071,6 @@ let synced_sizes_join_lemma''
 let synced_sizes_join_lemma'
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v offset + US.v n)
   })
   (size_classes: Seq.seq size_class)
@@ -2108,7 +2098,6 @@ let synced_sizes_join_lemma'
 let synced_sizes_join_lemma
   (offset: US.t)
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v offset + US.v n)
   })
   (size_classes: Seq.seq size_class)
@@ -2139,7 +2128,6 @@ val synced_sizes_join
   (n1: US.t{US.v n1 > 0})
   (n2: US.t{US.v n2 > 0})
   (n: US.t{
-    UInt.size (US.v n) U32.n /\
     US.v n == US.v n1 + US.v n2 /\
     US.fits (US.v offset + US.v n)
   })
@@ -2327,7 +2315,6 @@ val init_all_size_classes'
   (n2: US.t{US.v n2 > 0})
   (n: US.t{
     US.v n == US.v n1 + US.v n2 /\
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v sc_slab_region_size * US.v n) /\
     //US.fits (US.v sc_slab_region_size * US.v n1) /\
     //US.fits (US.v sc_slab_region_size * US.v n2) /\
@@ -2369,6 +2356,7 @@ val init_all_size_classes'
     //)
   )
   (ensures fun _ _ h1 ->
+    US.fits (US.v offset + US.v n) /\
     TLA.length sizes >= US.v n + US.v offset /\
     synced_sizes2 offset (asel size_classes h1) sizes (US.v n) /\
     size_class_preds (asel size_classes h1) (US.v n) slab_region
@@ -2412,7 +2400,6 @@ val init_all_size_classes
   (offset: US.t)
   (n: US.t{
     US.v n == List.length l1 + List.length l2 /\
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n + US.v offset) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
@@ -2459,6 +2446,7 @@ val init_all_size_classes
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) h0) /\
     zf_u64 (A.asel md_bm_region h0) /\
     zf_b (A.asel md_bm_region_b h0) /\
+    US.fits (US.v offset + US.v n) /\
     TLA.length sizes >= US.v n + US.v offset /\
     //(forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel (A.split_l size_classes n1) h0) i).data.size) /\
     //(forall (i:nat{i < US.v n2}) . Sc_ex? (Seq.index (asel (A.split_r size_classes n1) h0) i).data.size) /\
@@ -2474,6 +2462,44 @@ val init_all_size_classes
 #restart-solver
 
 #restart-solver
+
+let split_r_mul_3_offset (#a: Type)
+  (ptr: array a)
+  (x1 x2 n1 n2 n: US.t)
+  : Lemma
+  (requires
+    US.fits (US.v x1 * US.v x2) /\
+    US.fits (US.v (US.mul x1 x2) * US.v n) /\
+    A.length ptr == US.v (US.mul (US.mul x1 x2) n) /\
+    US.v n1 + US.v n2 == US.v n
+  )
+  (ensures (
+    let ptr' = A.split_r ptr (US.mul (US.mul x1 x2) n1) in
+    A.offset (A.ptr_of ptr') - A.offset (A.ptr_of ptr) = US.v x1 * US.v x2 * US.v n2
+  ))
+  =
+  FML.lemma_mult_le_right (US.v (US.mul x1 x2)) (US.v n1) (US.v n);
+  assume (US.v x1 * US.v x2 * US.v n - US.v x1 * US.v x2 * US.v n1 == US.v x1 * US.v x2 * US.v n2);
+  admit ()
+
+let split_r_add_mul_2_offset (#a: Type)
+  (ptr: array a)
+  (x1 x2 n1 n2 n: US.t)
+  : Lemma
+  (requires
+    US.fits (US.v x1 * US.v n) /\
+    A.length ptr == US.v x1 * US.v n1 + US.v x2 * US.v n2 /\
+    US.v n1 + US.v n2 == US.v n
+  )
+  (ensures
+    US.fits (US.v x1 * US.v n1) /\
+    (let ptr' = A.split_r ptr (US.mul x1 n1) in
+    A.offset (A.ptr_of ptr') - A.offset (A.ptr_of ptr) = US.v x2 * US.v n2
+  ))
+  =
+  FML.lemma_mult_le_right (US.v x1) (US.v n1) (US.v n);
+  admit ();
+  ()
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 500"
 let init_all_size_classes
@@ -2493,16 +2519,15 @@ let init_all_size_classes
     (A.split_l md_region (US.mul metadata_max n1))
     (A.split_l size_classes n1)
     sizes;
-  //TODO: dedicated lemma
-  assume (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1))
+  split_r_mul_3_offset slab_region metadata_max (u32_to_sz page_size) n1 n2 n;
+  assert (A.length (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1))
   ==
   US.v metadata_max_ex * US.v slab_size * US.v n2);
-  //TODO: dedicated lemma
-  assume (A.length (A.split_r md_region (US.mul metadata_max n1))
+  split_r_add_mul_2_offset md_region metadata_max metadata_max_ex n1 n2 n;
+  assert (A.length (A.split_r md_region (US.mul metadata_max n1))
   ==
   US.v metadata_max_ex * US.v n2);
-  //TODO: dedicated lemma
-  assume (A.length (A.split_r size_classes n1) == US.v n2);
+  assert (A.length (A.split_r size_classes n1) == US.v n2);
   init_all_size_classes_wrapper2 l2 (US.add offset n1) n2
     (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1))
     md_bm_region_b
@@ -2524,7 +2549,6 @@ val init_all_size_classes_wrapper
   (offset: US.t)
   (n: US.t{
     US.v n == List.length l1 + List.length l2 /\
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n + US.v offset) /\
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
@@ -2566,6 +2590,7 @@ val init_all_size_classes_wrapper
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0) /\
     zf_b (A.asel md_bm_region_b h0) /\
+    US.fits (US.v offset + US.v n) /\
     TLA.length sizes >= US.v n + US.v offset /\
     //(forall (i:nat{i < US.v n1}) . Sc? (Seq.index (asel size_classes h0) i).data.size) /\
     //(forall (i:nat{i >= US.v n1 /\ i < US.v n}) . Sc_ex? (Seq.index (asel size_classes h0) i).data.size) /\
@@ -2580,7 +2605,7 @@ val init_all_size_classes_wrapper
 
 #restart-solver
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 500"
 let init_all_size_classes_wrapper
   l1 l2
   offset
@@ -2606,6 +2631,7 @@ let init_all_size_classes_wrapper
   assume (array_u8_alignment (A.split_l slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) page_size);
   //TODO: dedicated lemma
   assume (array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) page_size);
+  //admit ();
   let size_classes1_s0 = gget (A.varray (A.split_l size_classes n1)) in
   let size_classes2_s0 = gget (A.varray (A.split_r size_classes n1)) in
   init_all_size_classes
@@ -2666,7 +2692,6 @@ val init_one_arena'
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n + US.v offset)
   })
   (arena_slab_region_size
@@ -2705,6 +2730,7 @@ val init_one_arena'
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0) /\
     zf_b (A.asel md_bm_region_b h0) /\
+    US.fits (US.v offset + US.v n) /\
     TLA.length sizes >= US.v n + US.v offset /\
     US.v arena_slab_region_size == US.v sc_slab_region_size * US.v n /\
     hidden_pred l1 l2 n n1 n2
@@ -2814,7 +2840,6 @@ val init_one_arena
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n + US.v offset)
   })
   (nb_arenas: US.t{US.v nb_arenas > 0})
@@ -2866,6 +2891,7 @@ val init_one_arena
       arena_md_bm_region_b_size
       arena_md_region_size /\
     //US.v n1 + US.v n2 == US.v n /\
+    US.fits (US.v offset + US.v n) /\
     TLA.length sizes >= US.v n + US.v offset /\
     A.length size_classes >= US.v n /\
     //sc_list_layout1 n1 n2 n
@@ -2896,6 +2922,35 @@ val init_one_arena
 
 #restart-solver
 
+let seq_slice_equal_forall_index (#a: Type)
+  (s1 s2: Seq.seq a)
+  (i j: nat)
+  : Lemma
+  (requires
+    0 <= i /\
+    i <= j /\
+    j <= Seq.length s1 /\
+    j <= Seq.length s2 /\
+    Seq.slice s1 i j == Seq.slice s2 i j
+  )
+  (ensures
+    forall (k:nat{i <= k /\ k < j}). (
+      Seq.index s1 k
+      ==
+      Seq.index s2 k
+    )
+  )
+  =
+  introduce
+    forall (k:nat{i <= k /\ k < j}). (
+      Seq.index s1 k
+      ==
+      Seq.index s2 k
+    )
+    with
+      (SeqUtils.lemma_index_slice s1 i j (k - i);
+      SeqUtils.lemma_index_slice s2 i j (k - i))
+
 let synced_sizes2_extend_lemma
   (offset: US.t)
   (size_classes1 size_classes2:Seq.seq size_class)
@@ -2916,10 +2971,8 @@ let synced_sizes2_extend_lemma
     synced_sizes2 offset size_classes2 sizes k
   )
   =
-  Classical.forall_intro (SeqUtils.lemma_index_slice size_classes1 0 k);
-  Classical.forall_intro (SeqUtils.lemma_index_slice size_classes2 0 k);
-  //TODO: low-level proof work
-  assume (forall (i:nat{i < k}).
+  seq_slice_equal_forall_index size_classes1 size_classes2 0 k;
+  assert (forall (i:nat{i < k}).
     Seq.index size_classes1 i
     ==
     Seq.index size_classes2 i
@@ -2948,8 +3001,8 @@ let size_class_preds_extend_lemma
     size_class_preds size_classes2 k slab_region2
   )
   =
-  //TODO: low-level proof work
-  assume (forall (i:nat{i < k}).
+  seq_slice_equal_forall_index size_classes1 size_classes2 0 k;
+  assert (forall (i:nat{i < k}).
     Seq.index size_classes1 i
     ==
     Seq.index size_classes2 i
@@ -3087,7 +3140,6 @@ val init_one_arena2
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     US.fits (US.v n * (US.v offset + 1))
   })
   (nb_arenas: US.t{US.v nb_arenas > 0})
@@ -3298,7 +3350,6 @@ val init_nth_arena_aux
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -3442,7 +3493,6 @@ val init_nth_arena_aux_split_split
   (#opened:_)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -3616,7 +3666,6 @@ val init_nth_arena'
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -3794,7 +3843,6 @@ val init_nth_arena
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -3963,7 +4011,6 @@ val init_nth_arena_inv
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -4125,7 +4172,6 @@ let synced_sizes_arena_join_lemma
   let n1' = US.mul n k in
   let n2' = US.mul n 1sz in
   let n' = US.mul n k' in
-  assume (UInt.size (US.v n') U32.n);
   assume (US.fits (US.v offset' + US.v n'));
 
   assert (synced_sizes2 offset' scs1 sizes (US.v n1'));
@@ -4256,7 +4302,6 @@ val init_n_first_arenas
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -4354,7 +4399,6 @@ val init_n_first_arenas
 let init_n_first_arenas_lemma1 (#opened:_)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
   })
   (arena_slab_region_size
@@ -4446,7 +4490,6 @@ let init_n_first_arenas_lemma2 (#opened:_)
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
   })
   (arena_slab_region_size: (v:US.t{US.v v > 0}))
@@ -4494,7 +4537,6 @@ let init_n_first_arenas_lemma2 (#opened:_)
 let init_n_first_arenas_lemma3 (#opened:_)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
   })
   (arena_slab_region_size
@@ -4591,7 +4633,6 @@ let rec init_n_first_arenas
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -4735,7 +4776,6 @@ val init_all_arenas'
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -4812,7 +4852,6 @@ let init_all_arenas'
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -4899,7 +4938,6 @@ let init_all_arenas_lemma (#opened:_)
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
@@ -4980,7 +5018,6 @@ let init_all_arenas
   (n1 n2: US.t)
   (n: US.t{
     US.v n > 0 /\
-    UInt.size (US.v n) U32.n /\
     True
     //US.fits (US.v n)
   })
