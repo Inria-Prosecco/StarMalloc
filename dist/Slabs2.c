@@ -196,7 +196,7 @@ SlabsFree2_deallocate_slab(
         size_t shift_size_t0 = pos;
         uint8_t *ptr1 = slab_region;
         size_t shift_size_t = pos * SlabsCommon2_slab_size;
-        mmap_trap(snd__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____((
+        apply_zeroing_u8(snd__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____((
               (__SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____){
                 .fst = ptr10 + shift_size_t0,
                 .snd = ptr1 + shift_size_t

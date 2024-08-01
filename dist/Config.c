@@ -23,7 +23,7 @@ size_t Config_quarantine_queue_length = (size_t)1024U;
 
 size_t Config_quarantine_queue_threshold = (size_t)256U;
 
-bool Config_enable_zeroing_malloc = false;
+bool Config_enable_zeroing_malloc = true;
 
 bool Config_enable_zeroing_free = true;
 

@@ -221,7 +221,7 @@ let quarantine_queue_length = 1024sz
 let quarantine_queue_threshold = 256sz
 
 // zeroing
-let enable_zeroing_malloc = false
+let enable_zeroing_malloc = true
 let enable_zeroing_free = true
 let enable_zeroing_lemma () = ()
 

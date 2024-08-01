@@ -8,6 +8,7 @@
 
 #include "internal/ArrayList.h"
 #include "MemoryTrap.h"
+#include "ExternUtils.h"
 #include "ArrayList.h"
 
 extern size_t SlabsCommon2_slab_region_size;
