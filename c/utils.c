@@ -22,12 +22,23 @@ size_t builtin_mul_overflow(size_t x, size_t y) {
   return z;
 }
 
+static inline size_t align(size_t size, size_t align) {
+    size_t mask = align - 1;
+    return (size + mask) & ~mask;
+}
+
+
+size_t f(size_t size, uint32_t alignment, uint8_t* ptr) {
+  size_t lead_size = align((uintptr_t)ptr, alignment) - (uintptr_t)ptr;
+  return lead_size;
+}
+
 // required comparison using uintptr_t
 uint64_t Impl_Trees_Cast_M_cmp(
-  Impl_Trees_Cast_M_data x,
-  Impl_Trees_Cast_M_data y) {
-  uintptr_t x_cast = (uintptr_t) x.fst;
-  uintptr_t y_cast = (uintptr_t) y.fst;
+  Impl_Trees_Cast_M_data_ x,
+  Impl_Trees_Cast_M_data_ y) {
+  uintptr_t x_cast = (uintptr_t) x.user_ptr;
+  uintptr_t y_cast = (uintptr_t) y.user_ptr;
   if (x_cast == y_cast) {
     return 0L;
   } else if (x_cast < y_cast) {
@@ -61,7 +72,7 @@ bool check_zeroing_u8(uint8_t* ptr, size_t len) {
 // required casts
 Impl_Trees_Cast_M_node* Impl_Trees_Cast_M_array_u8__to__ref_node(uint8_t* arr) {
   // see lib_avl_mono/Impl.Trees.Types.fst
-  static_assert(sizeof(Impl_Trees_Cast_M_node) <= 64);
+  static_assert(sizeof(Impl_Trees_Cast_M_node) <= 128);
   return (Impl_Trees_Cast_M_node*) arr;
 }
 uint8_t* Impl_Trees_Cast_M_ref_node__to__array_u8(Impl_Trees_Cast_M_node* r) {

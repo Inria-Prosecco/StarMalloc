@@ -5,7 +5,9 @@ open Steel.Effect
 
 open Constants
 
+module A = Steel.Array
 module US = FStar.SizeT
+module U8 = FStar.UInt8
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module I64 = FStar.Int64
@@ -65,13 +67,13 @@ inline_for_extraction noextract
 let cardinal
   (ptr: t)
   : Steel (U64.t)
-  (linked_tree p ptr)
-  (fun _ -> linked_tree p ptr)
+  (linked_tree pred p ptr)
+  (fun _ -> linked_tree pred p ptr)
   (requires fun _ -> True)
   (ensures fun h0 s h1 ->
-    v_linked_tree p ptr h0 == v_linked_tree p ptr h1 /\
-    U64.v s == Spec.sot_wds (v_linked_tree p ptr h0) /\
-    U64.v s == Spec.size_of_tree (v_linked_tree p ptr h0))
+    v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1 /\
+    U64.v s == Spec.sot_wds (v_linked_tree pred p ptr h0) /\
+    U64.v s == Spec.size_of_tree (v_linked_tree pred p ptr h0))
   =
   Impl.Mono.sot_wds ptr
 
@@ -80,15 +82,15 @@ let mem
   (ptr: t)
   (v: data)
   : Steel bool
-  (linked_tree p ptr)
-  (fun _ -> linked_tree p ptr)
+  (linked_tree pred p ptr)
+  (fun _ -> linked_tree pred p ptr)
   (requires fun h0 ->
-    Spec.is_bst (spec_convert cmp) (v_linked_tree p ptr h0))
+    Spec.is_bst (spec_convert cmp) (v_linked_tree pred p ptr h0))
   (ensures fun h0 b h1 ->
-    v_linked_tree p ptr h0 == v_linked_tree p ptr h1 /\
-    Spec.is_bst (convert cmp) (v_linked_tree p ptr h0) /\
-    (Spec.mem (convert cmp) (v_linked_tree p ptr h0) v <==> b) /\
-    (Spec.memopt (convert cmp) (v_linked_tree p ptr h0) v <==> b)
+    v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1 /\
+    Spec.is_bst (convert cmp) (v_linked_tree pred p ptr h0) /\
+    (Spec.mem (convert cmp) (v_linked_tree pred p ptr h0) v <==> b) /\
+    (Spec.memopt (convert cmp) (v_linked_tree pred p ptr h0) v <==> b)
   )
   =
   Impl.Mono.member ptr v
@@ -103,66 +105,75 @@ module A = Steel.Array
 
 open Config
 
+inline_for_extraction noextract
+let null_data = Impl.Trees.Types.null_data
+
+open Utils2
+
 let rec find
   (ptr: t)
   (v: data)
-  : Steel (option US.t)
-  (linked_tree p ptr)
-  (fun _ -> linked_tree p ptr)
+  : Steel data
+  (linked_tree pred p ptr)
+  (fun r -> linked_tree pred p ptr)
   (requires fun h0 ->
-    Spec.is_avl (spec_convert cmp) (v_linked_tree p ptr h0) /\
+    Spec.is_avl (spec_convert cmp) (v_linked_tree pred p ptr h0) /\
     Spec.forall_keys
-      (v_linked_tree p ptr h0)
-      (fun x -> US.v (snd x) <> 0)
+      (v_linked_tree pred p ptr h0)
+      (fun x -> US.v x.size <> 0)
   )
   (ensures fun h0 r h1 ->
-    v_linked_tree p ptr h1 == v_linked_tree p ptr h0 /\
+    v_linked_tree pred p ptr h1 == v_linked_tree pred p ptr h0 /\
     //h1 (linked_tree p ptr)
     //==
     //h0 (linked_tree p ptr) /\
-    Spec.is_avl (spec_convert cmp) (v_linked_tree p ptr h0) /\
-    (Some? r == Spec.mem (spec_convert cmp) (v_linked_tree p ptr h0) v) /\
-    (Some? r == Spec.memopt (spec_convert cmp) (v_linked_tree p ptr h0) v) /\
-    (Some? r ==> (
-      let size = Some?.v r in
-      A.length (fst v) == US.v size /\
+    Spec.is_avl (spec_convert cmp) (v_linked_tree pred p ptr h0) /\
+    (not (A.is_null r.ptr) ==> Spec.mem (spec_convert cmp) (v_linked_tree pred p ptr h0) v) /\
+    (not (A.is_null r.ptr) == Spec.memopt (spec_convert cmp) (v_linked_tree pred p ptr h0) v) /\
+    (not (A.is_null r.ptr) ==> (
+      let user_ptr = r.user_ptr in
+      let ptr = r.ptr in
+      let size = r.size in
+      let offset = r.shift in
+      let alignment = r.alignment in
+      US.v size > 0 /\
       US.v size > U32.v page_size /\
-      A.is_full_array (fst v) /\
-      Spec.mem (spec_convert cmp) (v_linked_tree p ptr h0)
-        (fst v, Some?.v r)
+      A.length ptr == US.v size /\
+      A.is_full_array ptr /\
+      US.v offset < US.v size /\
+      user_ptr == A.split_r ptr offset /\
+      (alignment = 0ul \/
+      array_u8_alignment (A.split_r ptr offset) alignment)
     ))
   )
   =
   let h = get () in
-  Spec.equivmem (spec_convert cmp) (v_linked_tree p ptr h) v;
+  Spec.equivmem (spec_convert cmp) (v_linked_tree pred p ptr h) v;
   if is_null_t ptr then (
-    null_is_leaf p ptr;
-    return None
+    null_is_leaf pred p ptr;
+    return null_data
   ) else (
     let h0 = get () in
-    let node = unpack_tree p ptr in
+    let node = unpack_tree pred p ptr in
     let h1 = get () in
     let delta = cmp v (get_data node) in
     if I64.eq delta szero then (
-      pack_tree p ptr
+      pack_tree pred p ptr
         (get_left node) (get_right node)
-        (get_size node) (get_height node);
-      let d : data = get_data node in
-      let r = snd (get_data node) in
-      assert (r <> 0sz);
-      return (Some r)
+        (get_size node) (get_height node) (get_data node);
+      return (get_data node)
     ) else (
       if I64.lt delta szero then (
         let r = find (get_left node) v in
-        pack_tree p ptr
+        pack_tree pred p ptr
           (get_left node) (get_right node)
-          (get_size node) (get_height node);
+          (get_size node) (get_height node) (get_data node);
         return r
       ) else (
         let r = find (get_right node) v in
-        pack_tree p ptr
+        pack_tree pred p ptr
           (get_left node) (get_right node)
-          (get_size node) (get_height node);
+          (get_size node) (get_height node) (get_data node);
         return r
       )
     )

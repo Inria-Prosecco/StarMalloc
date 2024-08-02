@@ -12,6 +12,8 @@
 
 uint8_t *SlotsAlloc_allocate_slot(uint32_t size_class, uint64_t *md, uint8_t *arr);
 
+bool FStar_Pervasives_Native_fst__bool___(bool x);
+
 bool
 SlotsFree_deallocate_slot(
   uint32_t size_class,

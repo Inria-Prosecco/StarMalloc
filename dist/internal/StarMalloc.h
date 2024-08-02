@@ -6,14 +6,18 @@
 
 #include "krmllib.h"
 
+#include "internal/Slots.h"
 #include "../StarMalloc.h"
 
-typedef struct Impl_Trees_Cast_M_data_s
+typedef struct Impl_Trees_Cast_M_data__s
 {
-  uint8_t *fst;
-  size_t snd;
+  uint8_t *user_ptr;
+  uint8_t *ptr;
+  size_t size;
+  size_t shift;
+  uint32_t alignment;
 }
-Impl_Trees_Cast_M_data;
+Impl_Trees_Cast_M_data_;
 
 typedef struct Impl_Trees_Cast_M_node_s Impl_Trees_Cast_M_node;
 
@@ -21,7 +25,7 @@ typedef struct Impl_Trees_Cast_M_node_s Impl_Trees_Cast_M_node;
 
 typedef struct Impl_Trees_Cast_M_node_s
 {
-  Impl_Trees_Cast_M_data data;
+  Impl_Trees_Cast_M_data_ data;
   Impl_Trees_Cast_M_node *left;
   Impl_Trees_Cast_M_node *right;
   uint64_t size;
@@ -41,7 +45,7 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret);
 
 extern Impl_Trees_Types_mmap_md_slabs Impl_Trees_Types_metadata_slabs;
 
-bool Impl_BST_M_member(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v);
+bool Impl_BST_M_member(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data_ v);
 
 Impl_Trees_Cast_M_node
 *Impl_AVL_M_insert_avl(
@@ -49,13 +53,13 @@ Impl_Trees_Cast_M_node
   void (*f2)(Impl_Trees_Cast_M_node *x0),
   bool r,
   Impl_Trees_Cast_M_node *ptr,
-  Impl_Trees_Cast_M_data new_data
+  Impl_Trees_Cast_M_data_ new_data
 );
 
 typedef struct Impl_AVL_M_result_s
 {
   Impl_Trees_Cast_M_node *ptr;
-  Impl_Trees_Cast_M_data data;
+  Impl_Trees_Cast_M_data_ data;
 }
 Impl_AVL_M_result;
 
@@ -66,28 +70,15 @@ Impl_AVL_M_remove_leftmost_avl(
   Impl_Trees_Cast_M_node *ptr
 );
 
-Impl_Trees_Cast_M_node
-*Impl_AVL_M_delete_avl(
+Impl_AVL_M_result
+Impl_AVL_M_delete_avl(
   Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
   void (*f2)(Impl_Trees_Cast_M_node *x0),
   Impl_Trees_Cast_M_node *ptr,
-  Impl_Trees_Cast_M_data data_to_rm
+  Impl_Trees_Cast_M_data_ data_to_rm
 );
 
-#define FStar_Pervasives_Native_None 0
-#define FStar_Pervasives_Native_Some 1
-
-typedef uint8_t FStar_Pervasives_Native_option__size_t_tags;
-
-typedef struct FStar_Pervasives_Native_option__size_t_s
-{
-  FStar_Pervasives_Native_option__size_t_tags tag;
-  size_t v;
-}
-FStar_Pervasives_Native_option__size_t;
-
-FStar_Pervasives_Native_option__size_t
-Map_M_find(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v);
+Impl_Trees_Cast_M_data_ Map_M_find(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data_ v);
 
 typedef struct mmap_md_s
 {

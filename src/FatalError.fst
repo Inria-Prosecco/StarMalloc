@@ -28,7 +28,7 @@ assume val die_from_avl_node_malloc_failure (x: node) (ptr: array U8.t)
   (ensures fun _ r h1 ->
     R.sel r h1 == x /\
     not (R.is_null r) /\
-    (G.reveal p) r
+    (G.reveal pred) r
   )
 
 // caller: LargeAlloc.trees_free2_aux

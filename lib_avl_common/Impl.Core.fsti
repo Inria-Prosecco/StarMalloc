@@ -76,163 +76,173 @@ val is_null_t (#a: Type0) (r: t a) : (b:bool{b <==> r == null_t})
 
 
 (** The separation logic proposition representing the memory layout of the tree *)
-val tree_sl (#a: Type0) (p: hpred a) (ptr: t a) : slprop u#1
+val tree_sl (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
+  : slprop u#1
 
 (** Selector retrieving the contents of a tree in memory *)
-val tree_sel (#a: Type0) (p: hpred a) (ptr: t a) : selector (wdm a) (tree_sl p ptr)
+val tree_sel (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
+  : selector (wdm a) (tree_sl pred p ptr)
 
 [@@__steel_reduce__]
-let linked_tree' (#a: Type0) (p: hpred a) (ptr: t a) : vprop' = {
-  hp = tree_sl p ptr;
+let linked_tree' (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
+  : vprop' = {
+  hp = tree_sl pred p ptr;
   t = wdm a;
-  sel = tree_sel p ptr
+  sel = tree_sel pred p ptr
 }
 
 (** The view proposition encapsulating the separation logic proposition and the selector *)
-unfold let linked_tree (#a: Type0) (p: hpred a) (ptr: t a) : vprop = VUnit (linked_tree' p ptr)
+unfold let linked_tree (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
+  : vprop
+  = VUnit (linked_tree' pred p ptr)
 
 (** This convenience helper retrieves the contents of a tree from an [rmem] *)
 [@@ __steel_reduce__]
 let v_linked_tree
   (#a:Type0)
   (#vp:vprop)
-  (p: hpred a)
+  (pred: hpred a)
+  (p: a -> vprop)
   (ptr:t a)
   (h:rmem vp{
-    FStar.Tactics.with_tactic selector_tactic (can_be_split vp (linked_tree p ptr) /\ True)
+    FStar.Tactics.with_tactic selector_tactic (can_be_split vp (linked_tree pred p ptr) /\ True)
   })
     : GTot (wdm a)
-  = h (linked_tree p ptr)
+  = h (linked_tree pred p ptr)
 
 (*** Operations *)
 
 (**** Low-level operations on trees *)
 
-val intro_linked_tree_leaf (#opened:inames) (#a: Type0) (p: hpred a) (_: unit)
+val intro_linked_tree_leaf (#opened:inames) (#a: Type0) (pred: hpred a) (p: a -> vprop) (_: unit)
   : SteelGhost unit opened
   emp
-  (fun _ -> emp `star` linked_tree p (null_t #a))
+  (fun _ -> emp `star` linked_tree pred p (null_t #a))
   (requires fun _ -> True)
   (ensures fun _ _ h1 ->
-    v_linked_tree #a p null_t h1 == Spec.Leaf
+    v_linked_tree #a pred p null_t h1 == Spec.Leaf
   )
 
-val elim_linked_tree_leaf (#opened:inames) (#a: Type0) (p: hpred a) (ptr: t a)
+val elim_linked_tree_leaf (#opened:inames) (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
   : SteelGhost unit opened
-  (linked_tree p ptr)
+  (linked_tree pred p ptr)
   (fun _ -> emp)
   (requires fun _ -> is_null_t ptr)
   (ensures fun h0 _ h1 ->
-    v_linked_tree p ptr h0 == Spec.Leaf
+    v_linked_tree pred p ptr h0 == Spec.Leaf
   )
 
-val null_is_leaf (#opened:inames) (#a: Type0) (p: hpred a) (ptr: t a)
+val null_is_leaf (#opened:inames) (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
   : SteelGhost unit opened
-  (linked_tree p ptr)
-  (fun _ -> linked_tree p ptr)
+  (linked_tree pred p ptr)
+  (fun _ -> linked_tree pred p ptr)
   (requires fun _ -> is_null_t ptr)
   (ensures fun h0 _ h1 ->
-    Spec.Leaf? (v_linked_tree p ptr h0) /\
-    v_linked_tree p ptr h0 == v_linked_tree p ptr h1
+    Spec.Leaf? (v_linked_tree pred p ptr h0) /\
+    v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1
   )
 
-val leaf_is_null (#opened:inames) (#a: Type0) (p: hpred a) (ptr: t a)
+val leaf_is_null (#opened:inames) (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
   : SteelGhost unit opened
-  (linked_tree p ptr)
-  (fun _ -> linked_tree p ptr)
-  (requires fun h0 -> Spec.Leaf? (v_linked_tree p ptr h0))
+  (linked_tree pred p ptr)
+  (fun _ -> linked_tree pred p ptr)
+  (requires fun h0 -> Spec.Leaf? (v_linked_tree pred p ptr h0))
   (ensures fun h0 _ h1 ->
     is_null_t ptr /\
-    v_linked_tree p ptr h0 == v_linked_tree p ptr h1
+    v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1
   )
 
-val node_is_not_null (#opened:inames) (#a: Type0) (p: hpred a) (ptr: t a)
+val node_is_not_null (#opened:inames) (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
   : SteelGhost unit opened
-  (linked_tree p ptr)
-  (fun _ -> linked_tree p ptr)
-  (requires fun h0 -> Spec.Node? (v_linked_tree p ptr h0))
+  (linked_tree pred p ptr)
+  (fun _ -> linked_tree pred p ptr)
+  (requires fun h0 -> Spec.Node? (v_linked_tree pred p ptr h0))
   (ensures fun h0 _ h1 ->
      not (is_null_t ptr) /\
-     v_linked_tree p ptr h0 == v_linked_tree p ptr h1
+     v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1
   )
 
-val not_null_is_node (#opened:inames) (#a: Type0) (p: hpred a) (ptr: t a)
+val not_null_is_node (#opened:inames) (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
   : SteelGhost unit opened
-  (linked_tree p ptr)
-  (fun _ -> linked_tree p ptr)
+  (linked_tree pred p ptr)
+  (fun _ -> linked_tree pred p ptr)
   (requires fun _ -> not (is_null_t ptr))
   (ensures fun h0 _ h1 ->
-    Spec.Node? (v_linked_tree p ptr h0) /\
-    v_linked_tree p ptr h0 == v_linked_tree p ptr h1
+    Spec.Node? (v_linked_tree pred p ptr h0) /\
+    v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1
   )
 
-val extract_pred (#opened:inames) (#a: Type0) (p: hpred a) (ptr: t a)
+val extract_pred (#opened:inames) (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
   : SteelGhost unit opened
-  (linked_tree p ptr)
-  (fun _ -> linked_tree p ptr)
+  (linked_tree pred p ptr)
+  (fun _ -> linked_tree pred p ptr)
   (requires fun _ -> True)
   (ensures fun h0 _ h1 ->
-    (G.reveal p) ptr /\
-    h1 (linked_tree p ptr) == h0 (linked_tree p ptr)
+    (G.reveal pred) ptr /\
+    h1 (linked_tree pred p ptr) == h0 (linked_tree pred p ptr)
   )
 
-val pack_tree (#opened:inames) (#a: Type0) (p: hpred a)
+val pack_tree (#opened:inames) (#a: Type0) (pred: hpred a) (p: a -> vprop)
   (ptr: t a) (left right: t a) (sr hr: U.t)
+  (v: a)
   : SteelGhost unit opened
   (vptr ptr `star`
-  linked_tree p left `star`
-  linked_tree p right)
-  (fun _ -> linked_tree p ptr)
+  linked_tree pred p left `star`
+  linked_tree pred p right `star`
+  p v)
+  (fun _ -> linked_tree pred p ptr)
   (requires fun h0 ->
+    v == get_data (sel ptr h0) /\
     get_left (sel ptr h0) == left /\
     get_right (sel ptr h0) == right /\
     get_size (sel ptr h0) == sr /\
     get_height (sel ptr h0) == hr /\
-    U.v sr == Spec.size_of_tree (v_linked_tree p left h0) +
-              Spec.size_of_tree (v_linked_tree p right h0) +
+    U.v sr == Spec.size_of_tree (v_linked_tree pred p left h0) +
+              Spec.size_of_tree (v_linked_tree pred p right h0) +
               1 /\
     U.v hr == M.max
-      (Spec.height_of_tree (v_linked_tree p left h0))
-      (Spec.height_of_tree (v_linked_tree p right h0))
+      (Spec.height_of_tree (v_linked_tree pred p left h0))
+      (Spec.height_of_tree (v_linked_tree pred p right h0))
       + 1 /\
     U.v sr <= c /\
-    (G.reveal p) ptr
+    (G.reveal pred) ptr
   )
   (ensures fun h0 _ h1 ->
     let x = get_data (sel ptr h0) in
-    let l = v_linked_tree p left h0 in
-    let r = v_linked_tree p right h0 in
-    v_linked_tree p ptr h1 == Spec.Node x l r (U.v sr) (U.v hr)
+    let l = v_linked_tree pred p left h0 in
+    let r = v_linked_tree pred p right h0 in
+    v_linked_tree pred p ptr h1 == Spec.Node x l r (U.v sr) (U.v hr)
   )
 
 inline_for_extraction noextract
-val unpack_tree (#a: Type0) (p: hpred a) (ptr: t a)
+val unpack_tree (#a: Type0) (pred: hpred a) (p: a -> vprop) (ptr: t a)
   : Steel (node a)
-  (linked_tree p ptr)
+  (linked_tree pred p ptr)
   (fun node ->
     vptr ptr `star`
-    linked_tree p (get_left node) `star`
-    linked_tree p (get_right node))
+    linked_tree pred p (get_left node) `star`
+    linked_tree pred p (get_right node) `star`
+    p (get_data node))
   (requires fun h0 -> not (is_null_t ptr))
   (ensures fun h0 node h1 ->
-    v_linked_tree p ptr h0 == Spec.Node
+    v_linked_tree pred p ptr h0 == Spec.Node
       (get_data (sel ptr h1))
-      (v_linked_tree p (get_left node) h1)
-      (v_linked_tree p (get_right node) h1)
+      (v_linked_tree pred p (get_left node) h1)
+      (v_linked_tree pred p (get_right node) h1)
       (U.v (get_size node))
       (U.v (get_height node))
     /\
     sel ptr h1 == node /\
     U.v (get_size node)
-    == Spec.size_of_tree (v_linked_tree p (get_left node) h1)
-     + Spec.size_of_tree (v_linked_tree p (get_right node) h1) + 1 /\
+    == Spec.size_of_tree (v_linked_tree pred p (get_left node) h1)
+     + Spec.size_of_tree (v_linked_tree pred p (get_right node) h1) + 1 /\
     U.v (get_height node)
-    == M.max (Spec.height_of_tree (v_linked_tree p (get_left node) h1))
-             (Spec.height_of_tree (v_linked_tree p (get_right node) h1)) + 1 /\
+    == M.max (Spec.height_of_tree (v_linked_tree pred p (get_left node) h1))
+             (Spec.height_of_tree (v_linked_tree pred p (get_right node) h1)) + 1 /\
     U.v (get_size node) <= c /\
     U.v (get_height node) <= c /\
-    (G.reveal p) ptr /\
+    (G.reveal pred) ptr /\
     // extract_pred could be used manually, adding this postcondition makes verification easier
-    (G.reveal p) (get_left node) /\
-    (G.reveal p) (get_right node)
+    (G.reveal pred) (get_left node) /\
+    (G.reveal pred) (get_right node)
   )

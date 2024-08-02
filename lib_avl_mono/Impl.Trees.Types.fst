@@ -25,6 +25,8 @@ open Main
 open Impl.Trees.Cast.M
 
 inline_for_extraction noextract
+let data' = data'
+inline_for_extraction noextract
 let data = data
 
 inline_for_extraction noextract
@@ -110,7 +112,7 @@ module G = FStar.Ghost
 module UP = FStar.PtrdiffT
 
 #push-options "--fuel 0 --ifuel 0"
-let p : hpred data
+let pred : hpred data
   =
   G.hide (fun (x: ref node) ->
     is_null x \/
@@ -124,7 +126,29 @@ let p : hpred data
   )
 #pop-options
 
-let t = x:(t data){(G.reveal p) x}
+let p_nonzero (x: data{x.size <> 0sz /\ x.alignment <> 0ul}) : vprop
+  =
+  A.varray (A.split_l x.ptr x.shift)
+
+let p (x: data) : vprop
+  =
+  if x.size = 0sz || x.alignment = 0ul then emp else p_nonzero x
+
+let t = x:(t data){(G.reveal pred) x}
+
+inline_for_extraction noextract
+let is_data = is_data
+
+inline_for_extraction noextract
+let null_data : data
+  =
+  {
+    user_ptr = A.null #U8.t;
+    ptr = A.null #U8.t;
+    size = 0sz;
+    shift = 0sz;
+    alignment = 0ul;
+  }
 
 unfold type f_malloc
   = (x: node) -> Steel (ref node)
@@ -133,7 +157,7 @@ unfold type f_malloc
   (ensures fun _ r h1 ->
     sel r h1 == x /\
     not (is_null r) /\
-    (G.reveal p) r
+    (G.reveal pred) r
   )
 
 unfold type f_free
@@ -141,6 +165,6 @@ unfold type f_free
   (vptr r)
   (fun _ -> emp)
   (requires fun _ ->
-    (G.reveal p) r
+    (G.reveal pred) r
   )
   (ensures fun _ _ _-> True)

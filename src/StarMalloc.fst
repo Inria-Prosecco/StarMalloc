@@ -99,6 +99,8 @@ let malloc arena_id size =
   )
 #pop-options
 
+module FU = FStar.UInt
+
 #push-options "--fuel 1 --ifuel 1"
 val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.t) (size: US.t)
   : Steel (array U8.t)
@@ -112,7 +114,8 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       0 < US.v alignment /\
-      US.v alignment <= U32.v page_size /\
+      //US.v alignment <= U32.v page_size /\
+      FU.size (US.v alignment) U32.n /\
       A.length r >= US.v size /\
       array_u8_alignment r 16ul /\
       array_u8_alignment r (US.sizet_to_uint32 alignment) /\
@@ -166,9 +169,16 @@ let aligned_alloc arena_id alignment size
       return ptr
     )
   ) else (
-    // TODO: add some warning, failure
-    let r = intro_null_null_or_varray #U8.t in
-    return r
+    if (US.gt size threshold && US.lt alignment (US.of_u32 4294967295ul)) then (
+      admit ();
+      let ptr = large_aligned_alloc size (US.sizet_to_uint32 alignment) in
+      sladmit ();
+      return ptr
+    ) else (
+      // TODO: add some warning, failure
+      let r = intro_null_null_or_varray #U8.t in
+      return r
+    )
   )
 #pop-options
 

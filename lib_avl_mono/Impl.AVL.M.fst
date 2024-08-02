@@ -24,30 +24,30 @@ open Impl.BST.M
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rec is_balanced_global (ptr: t)
-  : Steel bool (linked_tree p ptr) (fun _ -> linked_tree p ptr)
+  : Steel bool (linked_tree pred p ptr) (fun _ -> linked_tree pred p ptr)
   (requires fun h0 -> True)
   (ensures (fun h0 b h1 ->
-      v_linked_tree p ptr h0 == v_linked_tree p ptr h1 /\
-      Spec.is_balanced_global (v_linked_tree p ptr h0) == b))
+      v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1 /\
+      Spec.is_balanced_global (v_linked_tree pred p ptr h0) == b))
   =
   let h = get () in
-  let t = G.hide (v_linked_tree p ptr h) in
+  let t = G.hide (v_linked_tree pred p ptr h) in
   if is_null_t ptr then (
-    (**) null_is_leaf p ptr;
+    (**) null_is_leaf pred p ptr;
     return true
   ) else (
     let h = get () in
-    let s = G.hide (Spec.size_of_tree (v_linked_tree p ptr h)) in
-    Spec.height_lte_size (v_linked_tree p ptr h);
-    (**) let node = unpack_tree p ptr in
+    let s = G.hide (Spec.size_of_tree (v_linked_tree pred p ptr h)) in
+    Spec.height_lte_size (v_linked_tree pred p ptr h);
+    (**) let node = unpack_tree pred p ptr in
     let lh = hot_wdh (get_left node) in
     let rh = hot_wdh (get_right node) in
 
     let lbal = is_balanced_global (get_left node) in
     let rbal = is_balanced_global (get_right node) in
 
-    (**) pack_tree p ptr (get_left node) (get_right node)
-      (get_size node) (get_height node);
+    (**) pack_tree pred p ptr (get_left node) (get_right node)
+      (get_size node) (get_height node) (get_data node);
     //rh + 1 >= lh
     //lh + 1 >= rh
     //TODO: will fail when c is set to MAX_UINT64 - 1
@@ -61,24 +61,24 @@ let rec is_balanced_global (ptr: t)
 
 #push-options "--fuel 1 --ifuel 1"
 let is_balanced_local (ptr: t)
-  : Steel bool (linked_tree p ptr) (fun _ -> linked_tree p ptr)
+  : Steel bool (linked_tree pred p ptr) (fun _ -> linked_tree pred p ptr)
   (requires fun h0 -> True)
   (ensures (fun h0 b h1 ->
-      v_linked_tree p ptr h0 == v_linked_tree p ptr h1 /\
-      Spec.is_balanced_local (v_linked_tree p ptr h0) == b))
+      v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1 /\
+      Spec.is_balanced_local (v_linked_tree pred p ptr h0) == b))
   =
   if is_null_t ptr then (
-    (**) null_is_leaf p ptr;
+    (**) null_is_leaf pred p ptr;
     return true
   ) else (
     let h = get () in
-    Spec.height_lte_size (v_linked_tree p ptr h);
-    (**) let node = unpack_tree p ptr in
+    Spec.height_lte_size (v_linked_tree pred p ptr h);
+    (**) let node = unpack_tree pred p ptr in
     let lh = hot_wdh (get_left node) in
     let rh = hot_wdh (get_right node) in
 
-    (**) pack_tree p ptr (get_left node) (get_right node)
-      (get_size node) (get_height node);
+    (**) pack_tree pred p ptr (get_left node) (get_right node)
+      (get_size node) (get_height node) (get_data node);
     //rh + 1 >= lh
     //lh + 1 >= rh
     //TODO: will fail when c is set to MAX_UINT64 - 1
@@ -93,14 +93,14 @@ let is_balanced_local (ptr: t)
 //@AVL
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let rebalance_avl (ptr: t)
-  : Steel t (linked_tree p ptr) (fun ptr' -> linked_tree p ptr')
+  : Steel t (linked_tree pred p ptr) (fun ptr' -> linked_tree pred p ptr')
   (requires fun h0 ->
-    Spec.Node? (v_linked_tree p ptr h0)
+    Spec.Node? (v_linked_tree pred p ptr h0)
     ==>
-    Spec.is_avl (convert cmp) (Spec.cleft (v_linked_tree p ptr h0)) /\
-    Spec.is_avl (convert cmp) (Spec.cright (v_linked_tree p ptr h0)))
+    Spec.is_avl (convert cmp) (Spec.cleft (v_linked_tree pred p ptr h0)) /\
+    Spec.is_avl (convert cmp) (Spec.cright (v_linked_tree pred p ptr h0)))
   (ensures fun h0 ptr' h1 ->
-    Spec.rebalance_avl (v_linked_tree p ptr h0) == v_linked_tree p ptr' h1)
+    Spec.rebalance_avl (v_linked_tree pred p ptr h0) == v_linked_tree pred p ptr' h1)
     //Spec.is_avl (convert cmp) (v_linked_tree ptr' h1))
   =
   let h0 = get () in
@@ -108,94 +108,94 @@ let rebalance_avl (ptr: t)
     // TODO : fails without the assertion, why?
     // any additional line (h0, h1 or both and the assert) is enough for everything to work
     let h1 = get () in
-    assert (v_linked_tree p ptr h0 == v_linked_tree p ptr h1);
+    assert (v_linked_tree pred p ptr h0 == v_linked_tree pred p ptr h1);
     return ptr
   ) else (
-    Spec.not_balanced_is_not_null (v_linked_tree p ptr h0);
-    assert (Spec.Node? (v_linked_tree p ptr h0));
-    (**) node_is_not_null p ptr;
-    (**) let node = unpack_tree p ptr in
-    Spec.height_lte_size (v_linked_tree p ptr h0);
+    Spec.not_balanced_is_not_null (v_linked_tree pred p ptr h0);
+    assert (Spec.Node? (v_linked_tree pred p ptr h0));
+    (**) node_is_not_null pred p ptr;
+    (**) let node = unpack_tree pred p ptr in
+    Spec.height_lte_size (v_linked_tree pred p ptr h0);
 
     let lh = hot_wdh (get_left node) in
     let rh = hot_wdh (get_right node) in
 
     if U.gt lh (U.add rh one) then (
 
-      (**) node_is_not_null p (get_left node);
-      (**) let l_node = unpack_tree p (get_left node) in
+      (**) node_is_not_null pred p (get_left node);
+      (**) let l_node = unpack_tree pred p (get_left node) in
 
       let llh = hot_wdh (get_left l_node) in
       let lrh = hot_wdh (get_right l_node) in
 
-      (**) pack_tree p (get_left node) (get_left l_node) (get_right l_node)
-        (get_size l_node) (get_height l_node);
-      (**) pack_tree p ptr (get_left node) (get_right node)
-        (get_size node) (get_height node);
+      (**) pack_tree pred p (get_left node) (get_left l_node) (get_right l_node)
+        (get_size l_node) (get_height l_node) (get_data l_node);
+      (**) pack_tree pred p ptr (get_left node) (get_right node)
+        (get_size node) (get_height node) (get_data node);
       let h = get () in
-      assert (v_linked_tree p ptr h == v_linked_tree p ptr h0);
-      assert (Spec.is_wdm (v_linked_tree p ptr h0));
-      assert (Spec.is_wdm (Spec.cleft (v_linked_tree p ptr h0)));
-      assert (Spec.is_wdm (Spec.cleft (Spec.cleft (v_linked_tree p ptr h0))));
-      assert (Spec.is_wdm (Spec.cright (Spec.cleft (v_linked_tree p ptr h0))));
-      assert (Spec.is_wdm (Spec.cright (v_linked_tree p ptr h0)));
-      assert (U.v llh = Spec.hot_wdh (Spec.cleft (Spec.cleft (v_linked_tree p ptr h0))));
-      assert (U.v lrh = Spec.hot_wdh (Spec.cright (Spec.cleft (v_linked_tree p ptr h0))));
-      assert (U.v rh = Spec.hot_wdh (Spec.cright (v_linked_tree p ptr h0)));
+      assert (v_linked_tree pred p ptr h == v_linked_tree pred p ptr h0);
+      assert (Spec.is_wdm (v_linked_tree pred p ptr h0));
+      assert (Spec.is_wdm (Spec.cleft (v_linked_tree pred p ptr h0)));
+      assert (Spec.is_wdm (Spec.cleft (Spec.cleft (v_linked_tree pred p ptr h0))));
+      assert (Spec.is_wdm (Spec.cright (Spec.cleft (v_linked_tree pred p ptr h0))));
+      assert (Spec.is_wdm (Spec.cright (v_linked_tree pred p ptr h0)));
+      assert (U.v llh = Spec.hot_wdh (Spec.cleft (Spec.cleft (v_linked_tree pred p ptr h0))));
+      assert (U.v lrh = Spec.hot_wdh (Spec.cright (Spec.cleft (v_linked_tree pred p ptr h0))));
+      assert (U.v rh = Spec.hot_wdh (Spec.cright (v_linked_tree pred p ptr h0)));
       assert (lh = U.add (umax llh lrh) one);
       assert (U.gt (umax llh lrh) rh);
 
       if U.gt lrh llh then (
         assert (U.gt lrh rh);
         assert (U.gte llh rh);
-        Spec.rotate_left_right_height (v_linked_tree p ptr h0);
+        Spec.rotate_left_right_height (v_linked_tree pred p ptr h0);
         rotate_left_right ptr
 
       ) else (
         assert (U.gt llh rh);
-        Spec.rotate_right_height (v_linked_tree p ptr h0);
+        Spec.rotate_right_height (v_linked_tree pred p ptr h0);
         rotate_right ptr
       )
 
     ) else //(
     if U.gt rh (U.add lh one) then (
 
-      (**) node_is_not_null p (get_right node);
-      (**) let r_node = unpack_tree p (get_right node) in
+      (**) node_is_not_null pred p (get_right node);
+      (**) let r_node = unpack_tree pred p (get_right node) in
 
       let rlh = hot_wdh (get_left r_node) in
       let rrh = hot_wdh (get_right r_node) in
 
-      (**) pack_tree p (get_right node) (get_left r_node) (get_right r_node)
-        (get_size r_node) (get_height r_node);
-      (**) pack_tree p ptr (get_left node) (get_right node)
-        (get_size node) (get_height node);
+      (**) pack_tree pred p (get_right node) (get_left r_node) (get_right r_node)
+        (get_size r_node) (get_height r_node) (get_data r_node);
+      (**) pack_tree pred p ptr (get_left node) (get_right node)
+        (get_size node) (get_height node) (get_data node);
       let h = get () in
-      assert (v_linked_tree p ptr h == v_linked_tree p ptr h0);
-      assert (Spec.is_wdm (Spec.cright (v_linked_tree p ptr h0)));
-      assert (Spec.is_wdm (Spec.cleft (Spec.cright (v_linked_tree p ptr h0))));
-      assert (Spec.is_wdm (Spec.cright (Spec.cright (v_linked_tree p ptr h0))));
-      assert (Spec.is_wdm (Spec.cleft (v_linked_tree p ptr h0)));
-      assert (U.v rlh = Spec.hot_wdh (Spec.cleft (Spec.cright (v_linked_tree p ptr h0))));
-      assert (U.v rrh = Spec.hot_wdh (Spec.cright (Spec.cright (v_linked_tree p ptr h0))));
-      assert (U.v lh = Spec.hot_wdh (Spec.cleft (v_linked_tree p ptr h0)));
+      assert (v_linked_tree pred p ptr h == v_linked_tree pred p ptr h0);
+      assert (Spec.is_wdm (Spec.cright (v_linked_tree pred p ptr h0)));
+      assert (Spec.is_wdm (Spec.cleft (Spec.cright (v_linked_tree pred p ptr h0))));
+      assert (Spec.is_wdm (Spec.cright (Spec.cright (v_linked_tree pred p ptr h0))));
+      assert (Spec.is_wdm (Spec.cleft (v_linked_tree pred p ptr h0)));
+      assert (U.v rlh = Spec.hot_wdh (Spec.cleft (Spec.cright (v_linked_tree pred p ptr h0))));
+      assert (U.v rrh = Spec.hot_wdh (Spec.cright (Spec.cright (v_linked_tree pred p ptr h0))));
+      assert (U.v lh = Spec.hot_wdh (Spec.cleft (v_linked_tree pred p ptr h0)));
       assert (rh = U.add (umax rlh rrh) one);
       assert (U.gt (umax rlh rrh) lh);
 
       if U.gt rlh rrh then (
         assert (U.gt rlh lh);
         assert (U.gte rrh lh);
-        Spec.rotate_right_left_height (v_linked_tree p ptr h0);
+        Spec.rotate_right_left_height (v_linked_tree pred p ptr h0);
         rotate_right_left ptr
       ) else (
         assert (U.gt rrh lh);
-        Spec.rotate_left_height (v_linked_tree p ptr h0);
+        Spec.rotate_left_height (v_linked_tree pred p ptr h0);
         rotate_left ptr
       )
 
     ) else (
-      (**) pack_tree p ptr (get_left node) (get_right node)
-        (get_size node) (get_height node);
+      (**) pack_tree pred p ptr (get_left node) (get_right node)
+        (get_size node) (get_height node) (get_data node);
       return ptr
     )
   )
@@ -206,19 +206,19 @@ let rebalance_avl (ptr: t)
 let rec insert_avl
   (f1: f_malloc) (f2: f_free)
   (r:bool) (ptr: t) (new_data: data)
-  : Steel t (linked_tree p ptr) (fun ptr' -> linked_tree p ptr')
+  : Steel t (linked_tree pred p ptr `star` p new_data) (fun ptr' -> linked_tree pred p ptr')
   (requires fun h0 ->
-    Spec.size_of_tree (v_linked_tree p ptr h0) < c /\
-    Spec.height_of_tree (v_linked_tree p ptr h0) < c /\
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0))
+    Spec.size_of_tree (v_linked_tree pred p ptr h0) < c /\
+    Spec.height_of_tree (v_linked_tree pred p ptr h0) < c /\
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0))
 
   (ensures fun h0 ptr' h1 ->
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0) /\
-    Spec.insert_avl r (convert cmp) (v_linked_tree p ptr h0) new_data
-    == v_linked_tree p ptr' h1)
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0) /\
+    Spec.insert_avl r (convert cmp) (v_linked_tree pred p ptr h0) new_data
+    == v_linked_tree pred p ptr' h1)
   =
   let h = get () in
-  let t = G.hide (v_linked_tree p ptr h) in
+  let t = G.hide (v_linked_tree pred p ptr h) in
   assert (Spec.size_of_tree (G.reveal t) < c);
   //Spec.height_lte_size (v_linked_tree ptr h0);
   //let height_tree = hide (Spec.height_of_tree (reveal t1)) in
@@ -233,41 +233,45 @@ let rec insert_avl
   //  <= Spec.height_of_tree t1 + 1);
 
   if is_null_t ptr then (
-    (**) null_is_leaf p ptr;
-    elim_linked_tree_leaf p ptr;
+    (**) null_is_leaf pred p ptr;
+    elim_linked_tree_leaf pred p ptr;
     create_tree f1 f2 new_data
   ) else (
-    (**) let node = unpack_tree p ptr in
+    (**) let node = unpack_tree pred p ptr in
     let delta = cmp (get_data node) new_data in
     if I.eq delta szero then (
       if r then (
+        // TODO: add a fatal_error?
+        drop (p (get_data node));
         let new_node = mk_node new_data
           (get_left node) (get_right node)
           (get_size node) (get_height node) in
         write ptr new_node;
-        pack_tree p ptr
+        pack_tree pred p ptr
           (get_left node) (get_right node)
-          (get_size node) (get_height node);
+          (get_size node) (get_height node) new_data;
         return ptr
       ) else (
-        pack_tree p ptr
+        // TODO: add a fatal_error?
+        drop (p new_data);
+        pack_tree pred p ptr
           (get_left node) (get_right node)
-          (get_size node) (get_height node);
+          (get_size node) (get_height node) (get_data node);
         return ptr
       )
     ) else if I.gt delta szero then (
       let h0 = get () in
       let new_left = insert_avl f1 f2 r (get_left node) new_data in
       let h1 = get () in
-      assert (v_linked_tree p new_left h1
+      assert (v_linked_tree pred p new_left h1
       == Spec.insert_avl r (convert cmp)
-        (v_linked_tree p (get_left node) h0) new_data);
+        (v_linked_tree pred p (get_left node) h0) new_data);
       Spec.insert_lemma r (convert cmp)
-        (v_linked_tree p (get_left node) h0) new_data;
-      assert (Spec.size_of_tree (v_linked_tree p new_left h1)
-      <= Spec.size_of_tree (v_linked_tree p (get_left node) h0) + 1);
-      assert (Spec.height_of_tree (v_linked_tree p new_left h1)
-      <= Spec.height_of_tree (v_linked_tree p (get_left node) h0) + 1);
+        (v_linked_tree pred p (get_left node) h0) new_data;
+      assert (Spec.size_of_tree (v_linked_tree pred p new_left h1)
+      <= Spec.size_of_tree (v_linked_tree pred p (get_left node) h0) + 1);
+      assert (Spec.height_of_tree (v_linked_tree pred p new_left h1)
+      <= Spec.height_of_tree (v_linked_tree pred p (get_left node) h0) + 1);
       let new_ptr = merge_tree_no_alloc
         (get_data node) new_left (get_right node)
         ptr in
@@ -276,15 +280,15 @@ let rec insert_avl
       let h0 = get () in
       let new_right = insert_avl f1 f2 r (get_right node) new_data in
       let h1 = get () in
-      assert (v_linked_tree p new_right h1
+      assert (v_linked_tree pred p new_right h1
       == Spec.insert_avl r (convert cmp)
-        (v_linked_tree p (get_right node) h0) new_data);
+        (v_linked_tree pred p (get_right node) h0) new_data);
       Spec.insert_lemma r (convert cmp)
-        (v_linked_tree p (get_right node) h0) new_data;
-      assert (Spec.size_of_tree (v_linked_tree p new_right h1)
-      <= Spec.size_of_tree (v_linked_tree p (get_right node) h0) + 1);
-      assert (Spec.height_of_tree (v_linked_tree p new_right h1)
-      <= Spec.height_of_tree (v_linked_tree p (get_right node) h0) + 1);
+        (v_linked_tree pred p (get_right node) h0) new_data;
+      assert (Spec.size_of_tree (v_linked_tree pred p new_right h1)
+      <= Spec.size_of_tree (v_linked_tree pred p (get_right node) h0) + 1);
+      assert (Spec.height_of_tree (v_linked_tree pred p new_right h1)
+      <= Spec.height_of_tree (v_linked_tree pred p (get_right node) h0) + 1);
       let new_ptr = merge_tree_no_alloc
         (get_data node) (get_left node) new_right
         ptr in
@@ -302,40 +306,47 @@ let rec remove_leftmost_avl
   (f1: f_malloc) (f2: f_free)
   (ptr: t)
   : Steel result
-  (linked_tree p ptr)
-  (fun r -> linked_tree p r.ptr)
+  (linked_tree pred p ptr)
+  (fun r -> linked_tree pred p r.ptr `star` p r.data)
   (requires fun h0 ->
-    Spec.Node? (v_linked_tree p ptr h0) /\
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0))
+    Spec.Node? (v_linked_tree pred p ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0))
   (ensures fun h0 r h1 ->
-    Spec.Node? (v_linked_tree p ptr h0) /\
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0) /\
-    v_linked_tree p r.ptr h1
+    Spec.Node? (v_linked_tree pred p ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0) /\
+    v_linked_tree pred p r.ptr h1
     == fst (Spec.remove_leftmost_avl
-      (convert cmp) (v_linked_tree p ptr h0)) /\
+      (convert cmp) (v_linked_tree pred p ptr h0)) /\
     r.data == snd (Spec.remove_leftmost_avl
-      (convert cmp) (v_linked_tree p ptr h0)) /\
-    Spec.size_of_tree (v_linked_tree p r.ptr h1)
-    == Spec.size_of_tree (v_linked_tree p ptr h0) - 1 /\
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0))
+      (convert cmp) (v_linked_tree pred p ptr h0)) /\
+    Spec.size_of_tree (v_linked_tree pred p r.ptr h1)
+    == Spec.size_of_tree (v_linked_tree pred p ptr h0) - 1 /\
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0))
   =
   let h = get () in
-  let t = G.hide (v_linked_tree p ptr h) in
-  (**) node_is_not_null p ptr;
-  (**) let node = unpack_tree p ptr in
+  let t = G.hide (v_linked_tree pred p ptr h) in
+  (**) node_is_not_null pred p ptr;
+  (**) let node = unpack_tree pred p ptr in
   if is_null_t (get_left node) then (
     let data = get_data node in
-    elim_linked_tree_leaf p (get_left node);
+    elim_linked_tree_leaf pred p (get_left node);
     f2 ptr;
-    return {ptr = get_right node; data}
+    [@inline_let] let r = {ptr = get_right node; data} in
+    change_equal_slprop
+      (linked_tree pred p (get_right node))
+      (linked_tree pred p r.ptr);
+    change_equal_slprop
+      (p (get_data node))
+      (p r.data);
+    return r
   ) else (
-    (**) not_null_is_node p (get_left node);
+    (**) not_null_is_node pred p (get_left node);
     let r0 = remove_leftmost_avl f1 f2 (get_left node) in
     let new_ptr = merge_tree_no_alloc
       (get_data node) r0.ptr (get_right node)
       ptr in
     let new_ptr = rebalance_avl new_ptr in
-    return {ptr = new_ptr; data=r0.data}
+    return {ptr = new_ptr; data = r0.data}
   )
 #pop-options
 
@@ -350,104 +361,155 @@ inline_for_extraction noextract
 let delete_avl_aux0
   (f1: f_malloc) (f2: f_free)
   (ptr: t) (data_to_rm: data)
-  : Steel t
-  (linked_tree p ptr)
-  (fun ptr' -> linked_tree p ptr')
+  : Steel result
+  (linked_tree pred p ptr)
+  (fun r -> linked_tree pred p r.ptr `star` p r.data)
   (requires fun h0 ->
-    Spec.Node? (v_linked_tree p ptr h0) /\
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0) /\
-    (convert cmp) (Spec.cdata (v_linked_tree p ptr h0)) data_to_rm = 0)
-  (ensures fun h0 ptr' h1 ->
-    Spec.Node? (v_linked_tree p ptr h0) /\
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0) /\
-    (convert cmp) (Spec.cdata (v_linked_tree p ptr h0)) data_to_rm = 0 /\
-    v_linked_tree p ptr' h1
+    Spec.Node? (v_linked_tree pred p ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0) /\
+    (convert cmp) (Spec.cdata (v_linked_tree pred p ptr h0)) data_to_rm = 0)
+  (ensures fun h0 r h1 ->
+    Spec.Node? (v_linked_tree pred p ptr h0) /\
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0) /\
+    (convert cmp) (Spec.cdata (v_linked_tree pred p ptr h0)) data_to_rm = 0 /\
+    v_linked_tree pred p r.ptr h1
     == Spec.delete_avl_aux0
-      (convert cmp) (v_linked_tree p ptr h0) data_to_rm)
+      (convert cmp) (v_linked_tree pred p ptr h0) data_to_rm)
   =
   let h = get () in
-  let t = G.hide (v_linked_tree p ptr h) in
-  (**) node_is_not_null p ptr;
-  (**) let node = unpack_tree p ptr in
+  let t = G.hide (v_linked_tree pred p ptr h) in
+  (**) node_is_not_null pred p ptr;
+  (**) let node = unpack_tree pred p ptr in
   if is_null_t (get_right node) then (
-    elim_linked_tree_leaf p (get_right node);
+    elim_linked_tree_leaf pred p (get_right node);
     f2 ptr;
-    return (get_left node)
+    [@inline_let] let data = get_data node in
+    [@inline_let] let r = {ptr = get_left node; data} in
+    change_equal_slprop
+      (linked_tree pred p (get_left node))
+      (linked_tree pred p r.ptr);
+    change_equal_slprop
+      (p (get_data node))
+      (p r.data);
+    return r
   ) else if is_null_t (get_left node) then (
-    elim_linked_tree_leaf p (get_left node);
+    elim_linked_tree_leaf pred p (get_left node);
     f2 ptr;
-    return (get_right node)
+    [@inline_let] let data = get_data node in
+    [@inline_let] let r = {ptr = get_right node; data} in
+    change_equal_slprop
+      (linked_tree pred p (get_right node))
+      (linked_tree pred p r.ptr);
+    change_equal_slprop
+      (p (get_data node))
+      (p r.data);
+    return r
   ) else (
-    not_null_is_node p (get_right node);
+    not_null_is_node pred p (get_right node);
     let r0 = remove_leftmost_avl f1 f2 (get_right node) in
     let new_ptr = merge_tree_no_alloc r0.data
       (get_left node) r0.ptr
       ptr in
     let new_ptr = rebalance_avl new_ptr in
-    return new_ptr
+    [@inline_let] let data = get_data node in
+    [@inline_let] let r = {ptr = new_ptr; data} in
+    change_equal_slprop
+      (linked_tree pred p new_ptr)
+      (linked_tree pred p r.ptr);
+    change_equal_slprop
+      (p (get_data node))
+      (p r.data);
+    return r
   )
 #pop-options
 
 #restart-solver
 
+inline_for_extraction noextract
+let null_data = Impl.Trees.Types.null_data
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 150"
 let rec delete_avl
   (f1: f_malloc) (f2: f_free)
   (ptr: t) (data_to_rm: data)
-  : Steel t (linked_tree p ptr) (fun ptr' -> linked_tree p ptr')
+  : Steel result (linked_tree pred p ptr) (fun r -> linked_tree pred p r.ptr `star` p r.data)
   (requires fun h0 ->
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0))
-  (ensures fun h0 ptr' h1 ->
-    Spec.is_avl (convert cmp) (v_linked_tree p ptr h0) /\
-    Spec.delete_avl (convert cmp) (v_linked_tree p ptr h0) data_to_rm
-    == v_linked_tree p ptr' h1)
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0))
+  (ensures fun h0 r h1 ->
+    Spec.is_avl (convert cmp) (v_linked_tree pred p ptr h0) /\
+    Spec.delete_avl (convert cmp) (v_linked_tree pred p ptr h0) data_to_rm
+    == v_linked_tree pred p r.ptr h1)
   =
   let h = get () in
-  let t = G.hide (v_linked_tree p ptr h) in
+  let t = G.hide (v_linked_tree pred p ptr h) in
   if is_null_t ptr then (
-    (**) null_is_leaf p ptr;
-    return ptr
+    (**) null_is_leaf pred p ptr;
+    [@inline_let] let r = { ptr; data = null_data } in
+    change_equal_slprop
+      (linked_tree pred p ptr)
+      (linked_tree pred p r.ptr);
+    change_equal_slprop
+      (emp)
+      (p r.data);
+    return r
   ) else (
-    (**) let node = unpack_tree p ptr in
+    (**) let node = unpack_tree pred p ptr in
     let delta = cmp data_to_rm (get_data node) in
   if I.eq delta szero then (
-    pack_tree p ptr
+    pack_tree pred p ptr
       (get_left node) (get_right node)
-      (get_size node) (get_height node);
+      (get_size node) (get_height node) (get_data node);
     let ptr = delete_avl_aux0 f1 f2 ptr data_to_rm in
     return ptr
   ) else if I.lt delta szero then (
     let h0 = get () in
-    let new_left = delete_avl f1 f2 (get_left node) data_to_rm in
+    let new_left_r = delete_avl f1 f2 (get_left node) data_to_rm in
     let h1 = get () in
-    assert (v_linked_tree p new_left h1
+    assert (v_linked_tree pred p new_left_r.ptr h1
     == Spec.delete_avl (convert cmp)
-      (v_linked_tree p (get_left node) h0) data_to_rm);
+      (v_linked_tree pred p (get_left node) h0) data_to_rm);
     Spec.delete_lemma (convert cmp)
-      (v_linked_tree p (get_left node) h0) data_to_rm;
-    assert (Spec.size_of_tree (v_linked_tree p new_left h1)
-    <= Spec.size_of_tree (v_linked_tree p (get_left node) h0));
-    assert (Spec.height_of_tree (v_linked_tree p new_left h1)
-    <= Spec.height_of_tree (v_linked_tree p (get_left node) h0));
+      (v_linked_tree pred p (get_left node) h0) data_to_rm;
+    assert (Spec.size_of_tree (v_linked_tree pred p new_left_r.ptr h1)
+    <= Spec.size_of_tree (v_linked_tree pred p (get_left node) h0));
+    assert (Spec.height_of_tree (v_linked_tree pred p new_left_r.ptr h1)
+    <= Spec.height_of_tree (v_linked_tree pred p (get_left node) h0));
     let new_ptr = merge_tree_no_alloc
-      (get_data node) new_left (get_right node)
+      (get_data node) new_left_r.ptr (get_right node)
       ptr in
-    rebalance_avl new_ptr
+    let new_ptr = rebalance_avl new_ptr in
+    [@inline_let] let r = {ptr = new_ptr; data = new_left_r.data} in
+    change_equal_slprop
+      (linked_tree pred p new_ptr)
+      (linked_tree pred p r.ptr);
+    change_equal_slprop
+      (p new_left_r.data)
+      (p r.data);
+    return r
   ) else (
     let h0 = get () in
-    let new_right = delete_avl f1 f2 (get_right node) data_to_rm in
+    let new_right_r = delete_avl f1 f2 (get_right node) data_to_rm in
     let h1 = get () in
-    assert (v_linked_tree p new_right h1
+    assert (v_linked_tree pred p new_right_r.ptr h1
     == Spec.delete_avl (convert cmp)
-      (v_linked_tree p (get_right node) h0) data_to_rm);
+      (v_linked_tree pred p (get_right node) h0) data_to_rm);
     Spec.delete_lemma (convert cmp)
-      (v_linked_tree p (get_right node) h0) data_to_rm;
-    assert (Spec.size_of_tree (v_linked_tree p new_right h1)
-    <= Spec.size_of_tree (v_linked_tree p (get_right node) h0));
-    assert (Spec.height_of_tree (v_linked_tree p new_right h1)
-    <= Spec.height_of_tree (v_linked_tree p (get_right node) h0));
+      (v_linked_tree pred p (get_right node) h0) data_to_rm;
+    assert (Spec.size_of_tree (v_linked_tree pred p new_right_r.ptr h1)
+    <= Spec.size_of_tree (v_linked_tree pred p (get_right node) h0));
+    assert (Spec.height_of_tree (v_linked_tree pred p new_right_r.ptr h1)
+    <= Spec.height_of_tree (v_linked_tree pred p (get_right node) h0));
     let new_ptr = merge_tree_no_alloc
-      (get_data node) (get_left node) new_right
+      (get_data node) (get_left node) new_right_r.ptr
       ptr in
-    rebalance_avl new_ptr
+    let new_ptr = rebalance_avl new_ptr in
+    [@inline_let] let r = {ptr = new_ptr; data = new_right_r.data} in
+    change_equal_slprop
+      (linked_tree pred p new_ptr)
+      (linked_tree pred p r.ptr);
+    change_equal_slprop
+      (p new_right_r.data)
+      (p r.data);
+    return r
   ))
+#pop-options

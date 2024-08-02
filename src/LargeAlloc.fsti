@@ -37,6 +37,28 @@ val large_malloc (size: US.t)
     ))
   )
 
+val large_aligned_alloc (size: US.t) (alignment: U32.t)
+  : Steel (array U8.t)
+  emp
+  (fun ptr -> null_or_varray ptr)
+  (requires fun _ ->
+    US.v size > 0 /\
+    US.v size > U32.v page_size /\
+    U32.v alignment > 0 /\
+    US.fits (US.v size + U32.v page_size + U32.v alignment) /\
+    U32.v alignment % U32.v page_size = 0
+  )
+  (ensures fun _ ptr h1 ->
+    let s : (t_of (null_or_varray ptr))
+      = h1 (null_or_varray ptr) in
+    not (A.is_null ptr) ==> (
+      U32.v alignment > 0 /\
+      A.length ptr >= US.v size /\
+      array_u8_alignment ptr alignment /\
+      zf_u8 s
+    )
+  )
+
 val large_free (ptr: array U8.t)
   : Steel bool
   (A.varray ptr)

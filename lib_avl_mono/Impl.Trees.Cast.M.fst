@@ -4,6 +4,7 @@ module US = FStar.SizeT
 module U32 = FStar.UInt32
 module U8 = FStar.UInt8
 module I64 = FStar.Int64
+module FU = FStar.UInt
 
 module R = Steel.Reference
 module A = Steel.Array
@@ -18,20 +19,40 @@ open Utils2
 /// lib_avl_mono/Impl.Trees.Cast.M.fst contains axiomatization that is required to reuse the slab allocator for the allocation of the large allocation metadata AVL tree's nodes. In particular, it consists mostly of corresponding casts.
 
 // this is a compilation-time assert, see c/utils.c static_assert usage
-assume val avl_data_size_aux : v:U32.t{U32.v v <= 64}
+assume val avl_data_size_aux : v:U32.t{U32.v v <= 128}
 
-let avl_data_size : v:sc{U32.v avl_data_size_aux <= U32.v v} = 64ul
+let avl_data_size : v:sc{U32.v avl_data_size_aux <= U32.v v} = 128ul
 
-type data = x: (array U8.t * US.t){
+noeq
+type data' = {
+  //user_ptr = ptr + shift
+  //if alignment > 0, then user_ptr is alignment-bytes aligned
+  //size of ptr = size, thus size of user_ptr can be < size
+  user_ptr: array U8.t;
+  ptr: array U8.t;
+  size: US.t;
+  shift: US.t;
+  alignment: U32.t;
+}
+
+let is_data (x: data')
+  =
   (
-    US.v (snd x) > 0 /\
-    US.v (snd x) > U32.v page_size /\
-    A.length (fst x) == US.v (snd x) /\
-    A.is_full_array (fst x)
+    US.v x.size > 0 /\
+    US.v x.size > U32.v page_size /\
+    A.length x.ptr == US.v x.size /\
+    A.is_full_array x.ptr /\
+    US.v x.shift < US.v x.size /\
+    x.user_ptr == A.split_r x.ptr x.shift /\
+    (
+      x.alignment = 0ul \/
+      array_u8_alignment x.user_ptr x.alignment
+    )
   )
   \/
-  US.v (snd x) == 0
-}
+  x.size = 0sz
+
+type data = x:data'{is_data x}
 
 open Impl.Core
 let node = node data
@@ -46,7 +67,7 @@ let node = node data
 // is part of the model
 assume val cmp
   : f:Impl.Common.cmp data{
-    forall (x y: data). I64.v (f x y) == 0 ==> fst x == fst y
+    forall (x y: data). I64.v (f x y) == 0 ==> x.user_ptr == y.user_ptr
   }
 
 assume val ref_node__to__array_u8_tot

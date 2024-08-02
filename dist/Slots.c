@@ -115,7 +115,7 @@ static bool deallocate_slot_(uint32_t size_class, uint64_t *md, uint8_t *ptr, si
     return false;
 }
 
-static bool fst__bool___(bool x)
+bool FStar_Pervasives_Native_fst__bool___(bool x)
 {
   return x;
 }
@@ -131,9 +131,9 @@ SlotsFree_deallocate_slot(
 {
   KRML_MAYBE_UNUSED_VAR(arr);
   bool r = deallocate_slot_(size_class, md, ptr, diff_);
-  if (fst__bool___(r))
-    return fst__bool___(r);
+  if (FStar_Pervasives_Native_fst__bool___(r))
+    return FStar_Pervasives_Native_fst__bool___(r);
   else
-    return fst__bool___(r);
+    return FStar_Pervasives_Native_fst__bool___(r);
 }
 

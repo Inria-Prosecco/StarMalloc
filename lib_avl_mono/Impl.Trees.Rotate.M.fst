@@ -17,28 +17,34 @@ open Impl.Trees.M
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 25"
 let rotate_left (ptr: t)
   : Steel t
-  (linked_tree p ptr)
-  (fun ptr' -> linked_tree p ptr')
+  (linked_tree pred p ptr)
+  (fun ptr' -> linked_tree pred p ptr')
   (requires (fun h0 ->
-    let t = v_linked_tree p ptr h0 in
+    let t = v_linked_tree pred p ptr h0 in
     let r = rotate_left t in
     Some? r /\
     height_of_tree (Some?.v r) <= height_of_tree t
   ))
   (ensures (fun h0 ptr' h1 ->
-    rotate_left (v_linked_tree p ptr h0)
-    == Some (v_linked_tree p ptr' h1)
+    rotate_left (v_linked_tree pred p ptr h0)
+    == Some (v_linked_tree pred p ptr' h1)
   ))
   =
   let h = get () in
-  assert (size_of_tree (v_linked_tree p ptr h) <= c);
-  rotate_left_size (v_linked_tree p ptr h);
-  (**) node_is_not_null p ptr;
-  (**) let x_node = unpack_tree p ptr in
+  assert (size_of_tree (v_linked_tree pred p ptr h) <= c);
+  rotate_left_size (v_linked_tree pred p ptr h);
+  (**) node_is_not_null pred p ptr;
+  (**) let x_node = unpack_tree pred p ptr in
   let x = get_data x_node in
-  (**) node_is_not_null p (get_right x_node);
-  (**) let z_node = unpack_tree p (get_right x_node) in
+  change_equal_slprop
+    (p (get_data x_node))
+    (p x);
+  (**) node_is_not_null pred p (get_right x_node);
+  (**) let z_node = unpack_tree pred p (get_right x_node) in
   let z = get_data z_node in
+  change_equal_slprop
+    (p (get_data z_node))
+    (p z);
 
   let new_subnode = merge_tree_no_alloc x
     (get_left x_node) (get_left z_node)
@@ -52,28 +58,34 @@ let rotate_left (ptr: t)
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 25"
 let rotate_right (ptr: t)
   : Steel t
-  (linked_tree p ptr)
-  (fun ptr' -> linked_tree p ptr')
+  (linked_tree pred p ptr)
+  (fun ptr' -> linked_tree pred p ptr')
   (requires (fun h0 ->
-    let t = v_linked_tree p ptr h0 in
+    let t = v_linked_tree pred p ptr h0 in
     let r = rotate_right t in
     Some? r /\
     height_of_tree (Some?.v r) <= height_of_tree t
   ))
   (ensures (fun h0 ptr' h1 ->
-    rotate_right (v_linked_tree p ptr h0)
-    == Some (v_linked_tree p ptr' h1)
+    rotate_right (v_linked_tree pred p ptr h0)
+    == Some (v_linked_tree pred p ptr' h1)
   ))
   =
   let h = get () in
-  assert (size_of_tree (v_linked_tree p ptr h) <= c);
-  rotate_right_size (v_linked_tree p ptr h);
-  (**) node_is_not_null p ptr;
-  (**) let x_node = unpack_tree p ptr in
+  assert (size_of_tree (v_linked_tree pred p ptr h) <= c);
+  rotate_right_size (v_linked_tree pred p ptr h);
+  (**) node_is_not_null pred p ptr;
+  (**) let x_node = unpack_tree pred p ptr in
   let x = get_data x_node in
-  (**) node_is_not_null p (get_left x_node);
-  let z_node = unpack_tree p (get_left x_node) in
+  change_equal_slprop
+    (p (get_data x_node))
+    (p x);
+  (**) node_is_not_null pred p (get_left x_node);
+  let z_node = unpack_tree pred p (get_left x_node) in
   let z = get_data z_node in
+  change_equal_slprop
+    (p (get_data z_node))
+    (p z);
 
   let new_subnode = merge_tree_no_alloc x
     (get_right z_node) (get_right x_node)
