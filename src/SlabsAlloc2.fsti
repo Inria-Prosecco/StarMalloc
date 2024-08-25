@@ -47,7 +47,6 @@ val allocate_slab
       A.length r == U32.v size_class /\
       same_base_array r slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
-      True
-      //((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % US.v slab_size) == 0
     )
   )

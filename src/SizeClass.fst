@@ -391,7 +391,7 @@ val allocate_size_class_sc_ex
       A.length r == U32.v sc_size /\
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
-      //((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v (get_u32 scs.size)) == 0 /\
+      (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v slab_size == 0 /\
       array_u8_alignment r 16ul /\
       True
       //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
@@ -422,7 +422,9 @@ let allocate_size_class_sc_ex scs
     (size_class_vprop_sc_ex scs)
     (fun x y -> x == y)
     (fun m -> allocate_size_class_sl_lemma2_ex scs m);
-  //allocate_size_class_sc_aux scs result;
+  //assume (array_u8_alignment scs.slab_region (US.))
+  //array_u8_alignment_lemma scs.slab_region result
+  //TODO: array_u8_alignment: use size_t
   assume (array_u8_alignment result 16ul);
   return result
 
@@ -440,7 +442,7 @@ val deallocate_size_class_sc_ex
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
     0 <= diff' /\
     US.v diff = diff' /\
-    (diff' % U32.v page_size) % U32.v (get_u32 scs.size) == 0 /\
+    diff' % US.v slab_size == 0 /\
     A.length ptr == U32.v (get_u32 scs.size) /\
     same_base_array ptr scs.slab_region)
   (ensures fun h0 _ h1 -> True)

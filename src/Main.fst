@@ -2475,12 +2475,11 @@ let split_r_mul_3_offset (#a: Type)
   )
   (ensures (
     let ptr' = A.split_r ptr (US.mul (US.mul x1 x2) n1) in
-    A.offset (A.ptr_of ptr') - A.offset (A.ptr_of ptr) = US.v x1 * US.v x2 * US.v n2
+    A.offset (A.ptr_of ptr') - A.offset (A.ptr_of ptr) = US.v x1 * US.v x2 * US.v n1 /\
+    A.length ptr' == US.v x1 * US.v x2 * US.v n2
   ))
   =
-  FML.lemma_mult_le_right (US.v (US.mul x1 x2)) (US.v n1) (US.v n);
-  assume (US.v x1 * US.v x2 * US.v n - US.v x1 * US.v x2 * US.v n1 == US.v x1 * US.v x2 * US.v n2);
-  admit ()
+  ()
 
 let split_r_add_mul_2_offset (#a: Type)
   (ptr: array a)
@@ -2494,11 +2493,10 @@ let split_r_add_mul_2_offset (#a: Type)
   (ensures
     US.fits (US.v x1 * US.v n1) /\
     (let ptr' = A.split_r ptr (US.mul x1 n1) in
-    A.offset (A.ptr_of ptr') - A.offset (A.ptr_of ptr) = US.v x2 * US.v n2
+    A.offset (A.ptr_of ptr') - A.offset (A.ptr_of ptr) = US.v x1 * US.v n1 /\
+    A.length ptr' == US.v x2 * US.v n2
   ))
   =
-  FML.lemma_mult_le_right (US.v x1) (US.v n1) (US.v n);
-  admit ();
   ()
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 500"
@@ -2631,7 +2629,6 @@ let init_all_size_classes_wrapper
   assume (array_u8_alignment (A.split_l slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) page_size);
   //TODO: dedicated lemma
   assume (array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n1)) page_size);
-  //admit ();
   let size_classes1_s0 = gget (A.varray (A.split_l size_classes n1)) in
   let size_classes2_s0 = gget (A.varray (A.split_r size_classes n1)) in
   init_all_size_classes
@@ -2829,7 +2826,6 @@ let init_one_arena'
 //  (ensures (
 //    let sizes1, sizes2 = TLAO.split sizes (US.v n) in
 //    sc_list_layout1 n1 n2 n sizes1))
-//  = admit ()
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 300"
 noextract inline_for_extraction
@@ -5075,11 +5071,11 @@ let return_null ()
   =
   intro_null_null_or_varray #U8.t
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let allocate_size_class scs =
-  //TODO: fix proof
-  admit ();
   let r = SizeClass.allocate_size_class scs in
   intro_vrewrite
     (if A.is_null r then emp else A.varray r)
     (null_or_varray_f r);
   return r
+#pop-options

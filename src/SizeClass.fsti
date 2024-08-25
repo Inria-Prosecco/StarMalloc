@@ -154,12 +154,17 @@ val allocate_size_class
       A.length r == U32.v sc_size /\
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
-      //not scs.is_extended ==> ...
-      //scs.is_extended ==> ...
-      //((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v scs.size) == 0 /\
-      array_u8_alignment r 16ul /\
-      True
-      //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
+      (scs.is_extended ==> (
+        (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v slab_size == 0 /\
+        //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
+        True
+      )) /\
+      (not scs.is_extended ==> (
+        ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v (get_u32 scs.size)) == 0 /\
+        True
+        //array_u8_alignment r slab_size
+      )) /\
+      array_u8_alignment r 16ul
     )
   )
 
@@ -177,10 +182,12 @@ val deallocate_size_class
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
     0 <= diff' /\
     US.v diff = diff' /\
-    //not scs.is_extended ==> ...
-    //scs.is_extended ==> ...
-    //TODO: to be refined
-    (diff' % U32.v page_size) % U32.v (get_u32 scs.size) == 0 /\
+    (scs.is_extended ==> (
+      diff' % US.v slab_size == 0
+    )) /\
+    (not scs.is_extended ==> (
+      (diff' % U32.v page_size) % U32.v (get_u32 scs.size) == 0
+    )) /\
     A.length ptr == U32.v (get_u32 scs.size) /\
     same_base_array ptr scs.slab_region)
   (ensures fun h0 _ h1 -> True)

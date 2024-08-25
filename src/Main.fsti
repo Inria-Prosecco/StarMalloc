@@ -28,7 +28,7 @@ module AL = ArrayList
 
 val metadata_max_ex: US.t
 val slab_size: US.t
-val sc_slab_region_size: US.t
+val sc_slab_region_size: v:US.t{US.v v > 0}
 
 open Constants
 open Config
@@ -199,8 +199,18 @@ val allocate_size_class
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
     not (A.is_null r) ==> (
+      A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
       A.length r == U32.v (get_u32 scs.size) /\
       array_u8_alignment r 16ul /\
-      ((U32.v (get_u32 scs.size) > 0 /\ (U32.v page_size) % (U32.v (get_u32 scs.size)) == 0) ==> array_u8_alignment r (get_u32 scs.size))
+      (scs.is_extended ==> (
+        (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v slab_size == 0 /\
+        //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
+        True
+      )) /\
+      (not scs.is_extended ==> (
+        ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v (get_u32 scs.size)) == 0 /\
+        True
+        //array_u8_alignment r slab_size
+      ))
     )
   )
