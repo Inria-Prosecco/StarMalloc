@@ -164,11 +164,11 @@ val init_all_arenas
       arena_md_bm_region_b_size
       arena_md_region_size /\
     hidden_pred2 n arena_slab_region_size /\
+    US.v arena_slab_region_size % U32.v page_size == 0 /\
     US.fits (US.v n * US.v nb_arenas) /\
     True
   )
   (ensures fun _ _ h1 ->
-    hidden_pred2 n arena_slab_region_size /\
     US.fits (US.v n * US.v nb_arenas) /\
     synced_sizes 0sz
       (A.asel size_classes h1) sizes (US.v nb_arenas * US.v n) /\
