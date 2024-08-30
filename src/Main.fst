@@ -4329,7 +4329,16 @@ let synced_sizes2_le_lemma
   (requires synced_sizes2 offset s1 sizes k)
   (ensures synced_sizes2 offset s2 sizes k')
   =
-  assume (forall (i:nat{i < k'}). (
+  introduce
+    forall (i:nat{i < k'}). (
+      Seq.index s1 i
+      ==
+      Seq.index s2 i
+    )
+    with
+      (SeqUtils.lemma_index_slice s1 0 k' i;
+      SeqUtils.lemma_index_slice s2 0 k' i);
+  assert (forall (i:nat{i < k'}). (
     Seq.index s1 i == Seq.index s2 i
   ));
   reveal_opaque (`%synced_sizes2) synced_sizes2
@@ -4377,7 +4386,16 @@ let size_class_preds_le_lemma
     size_class_preds s2 k' slab_region
   )
   =
-  assume (forall (i:nat{i < k'}). (
+  introduce
+    forall (i:nat{i < k'}). (
+      Seq.index s1 i
+      ==
+      Seq.index s2 i
+    )
+    with
+      (SeqUtils.lemma_index_slice s1 0 k' i;
+      SeqUtils.lemma_index_slice s2 0 k' i);
+  assert (forall (i:nat{i < k'}). (
     Seq.index s1 i == Seq.index s2 i
   ));
   reveal_opaque (`%size_class_preds) size_class_preds

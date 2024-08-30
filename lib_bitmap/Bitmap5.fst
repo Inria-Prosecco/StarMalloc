@@ -13,7 +13,7 @@ open Steel.Effect.Atomic
 open Steel.Effect
 module A = Steel.Array
 
-let array = Steel.ST.Array.array
+let array (a: Type) = Steel.ST.Array.array a
 
 module FU = FStar.UInt
 open FStar.Mul
