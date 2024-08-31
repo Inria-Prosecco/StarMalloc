@@ -4284,11 +4284,15 @@ val synced_sizes_arena_join
       (asel (A.split_r size_classes (US.mul n k)) h0)
       sizes 1
   )
-  (ensures fun _ _ h1 ->
+  (ensures fun h0 _ h1 ->
+    let s01 = asel (A.split_l size_classes (US.mul n k)) h0 in
+    let s02 = asel (A.split_r size_classes (US.mul n k)) h0 in
+    let s1 = asel size_classes h1 in
+    s1 `Seq.equal` Seq.append s01 s02 /\
     A.length size_classes >= US.v n * US.v k' /\
-    Seq.length (asel size_classes h1) >= US.v n * US.v k' /\
+    Seq.length s1 >= US.v n * US.v k' /\
     synced_sizes_arena n 0sz
-      (asel size_classes h1)
+      s1
       sizes (US.v k')
   )
 
@@ -4307,6 +4311,7 @@ let synced_sizes_arena_join
      (A.split_r size_classes (US.mul n k))))
    (A.varray size_classes);
   let s = gget (A.varray size_classes) in
+  assert (s `Seq.equal` Seq.append s1 s2);
   let s1', s2' = Seq.split s (US.v n * US.v k) in
   Seq.lemma_append_inj s1 s2 s1' s2';
   synced_sizes_arena_join_lemma n nb_arenas k k' s sizes
@@ -4498,6 +4503,7 @@ let init_nth_arena_inv_lemma2
     US.fits (US.v arena_slab_region_size * US.v k)
   })
   (k': US.t{US.v k' <= US.v nb_arenas /\
+    US.v k' == US.v k + 1 /\
     US.fits (US.v n * US.v k') /\
     US.fits (US.v arena_slab_region_size * US.v k')
   })
@@ -4512,23 +4518,31 @@ let init_nth_arena_inv_lemma2
     Seq.length s1 >= US.v n * US.v k /\
     Seq.length s1 >= US.v n * US.v k'
   })
-  (s2: Seq.seq size_class{
-    Seq.length s2 >= US.v n * 1
+  (s11: Seq.seq size_class{
+    Seq.length s11 == US.v n * US.v k
+  })
+  (s12: Seq.seq size_class{
+    Seq.length s12 >= US.v n * 1
   })
   : Lemma
   (requires
+    s1 `Seq.equal` Seq.append s11 s12 /\
     hidden_pred2 n arena_slab_region_size /\
     size_class_preds_arena n arena_slab_region_size
-      s1 (US.v k) slab_region /\
+      s11 (US.v k) slab_region /\
     size_class_preds_arena n arena_slab_region_size
-      s2 1 slab_region /\
-    s2 == Seq.slice s1 (US.v n * US.v k) (Seq.length s1)
+      s12 1 (A.split_r slab_region (US.mul arena_slab_region_size k))
   )
   (ensures
     size_class_preds_arena n arena_slab_region_size
       s1 (US.v k') slab_region
   )
-  = admit ()
+  =
+  reveal_opaque (`%size_class_preds_arena) size_class_preds_arena;
+  reveal_opaque (`%hidden_pred2) hidden_pred2;
+  assert (size_class_preds s11 (US.v n * US.v k) slab_region);
+  assert (size_class_preds s12 (US.v n * 1) (A.split_r slab_region (US.mul arena_slab_region_size k)));
+  reveal_opaque (`%size_class_preds) size_class_preds
 
 let init_nth_arena_inv
   l1 l2 n1 n2 n
@@ -4582,15 +4596,19 @@ let init_nth_arena_inv
   synced_sizes_arena_join
     n nb_arenas k k' size_classes sizes ();
   let s3 = gget (A.varray size_classes) in
-  //init_nth_arena_inv_lemma2
-  //  n
-  //  arena_slab_region_size
-  //  nb_arenas
-  //  k k'
-  //  slab_region
-  //  s3
-  //  s22;
-  assume (size_class_preds_arena n arena_slab_region_size s3 (US.v k') slab_region)
+  assert (s3 `Seq.equal` Seq.append s21 s22);
+  assert (size_class_preds_arena n arena_slab_region_size s21 (US.v k) slab_region);
+  assert (size_class_preds_arena n arena_slab_region_size s22 1 (A.split_r slab_region (US.mul arena_slab_region_size k)));
+  init_nth_arena_inv_lemma2
+    n
+    arena_slab_region_size
+    nb_arenas
+    k k'
+    slab_region
+    s3
+    s21
+    s22;
+  assert (size_class_preds_arena n arena_slab_region_size s3 (US.v k') slab_region)
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 400 --split_queries no --query_stats"
 [@@ reduce_attr]
