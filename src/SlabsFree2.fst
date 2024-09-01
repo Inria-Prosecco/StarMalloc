@@ -116,7 +116,7 @@ module FS = FStar.FiniteSet.Base
 // - idxs.w is the new sz of quarantine list
 let update_quarantine2_aux
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -283,7 +283,7 @@ let lemma_head1_implies_pred1 (#opened:_)
 
 let update_quarantine2
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -386,7 +386,7 @@ let update_quarantine2
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100 --compat_pre_typed_indexed_effects"
 let update_quarantine3_aux
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -476,7 +476,7 @@ let update_quarantine3_aux
 
 let update_quarantine3
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -547,7 +547,7 @@ let update_quarantine3
 //let deallocate_slab_aux_cond
 //  (size_class: sc)
 //  (md: slab_metadata)
-//  (arr: array U8.t{A.length arr = US.v slab_size})
+//  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
 //  : Steel bool
 //  (slab_vprop size_class arr md)
 //  (fun _ -> slab_vprop size_class arr md)
@@ -674,7 +674,7 @@ module FS = FStar.FiniteSet.Base
 inline_for_extraction noextract
 let deallocate_slab_aux_1_empty
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -770,7 +770,7 @@ inline_for_extraction noextract
 let deallocate_slab_aux_1_fail
   (#opened:_)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -869,7 +869,7 @@ let deallocate_slab_aux_1_fail
 //inline_for_extraction noextract
 let deallocate_slab_aux_1_quarantine
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -998,7 +998,7 @@ inline_for_extraction noextract
 let deallocate_slab_aux_1
   (ptr: array U8.t)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -1113,7 +1113,7 @@ let _ = ()
 //inline_for_extraction noextract
 //let deallocate_slab_aux_2_empty
 //  (size_class: sc_ex)
-//  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+//  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
 //  (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
 //  (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
 //  (md_count: ref US.t)
@@ -1641,7 +1641,7 @@ inline_for_extraction noextract
 let deallocate_slab_fail
   (ptr: array U8.t)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -1710,7 +1710,7 @@ inline_for_extraction noextract
 let deallocate_slab'
   (ptr: array U8.t)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -1758,7 +1758,7 @@ let deallocate_slab'
     Seq.index idxs0 5 == idx6 /\
     Seq.index idxs0 6 == idx7 /\
     0 <= diff' /\
-    diff' % US.v slab_size == 0 /\
+    diff' % US.v sc_ex_slab_size == 0 /\
     //UP.v diff < US.v metadata_max * U32.v page_size /\
     US.v diff == diff' /\
     same_base_array ptr slab_region /\
@@ -1769,7 +1769,7 @@ let deallocate_slab'
   (ensures fun _ _ _ -> True)
   =
   assert_norm (4 < FI.max_int 16);
-  let pos = US.div diff slab_size in
+  let pos = US.div diff sc_ex_slab_size in
   // check diff/page_size < md_count
   if US.lt pos md_count_v then (
     A.ptr_shift_zero (A.ptr_of slab_region);
@@ -1816,7 +1816,7 @@ let deallocate_slab'
 let deallocate_slab
   (ptr: array U8.t)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -1840,7 +1840,7 @@ let deallocate_slab
   (requires fun _ ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     0 <= diff' /\
-    diff' % US.v slab_size == 0 /\
+    diff' % US.v sc_ex_slab_size == 0 /\
     US.v diff_ == diff' /\
     same_base_array ptr slab_region /\
     A.length ptr == U32.v size_class)

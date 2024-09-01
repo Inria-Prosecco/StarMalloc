@@ -37,7 +37,7 @@ inline_for_extraction noextract
 let allocate_slab_aux_cond
   (size_class: sc_ex)
   (md: slab_metadata)
-  (arr: array U8.t{A.length arr = US.v slab_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
   : Steel bool
   (slab_vprop size_class arr md)
   (fun _ -> slab_vprop size_class arr md)
@@ -265,7 +265,7 @@ open SteelVRefineDep
 inline_for_extraction noextract
 let allocate_slab_aux_1_full
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -359,7 +359,7 @@ let allocate_slab_aux_1_full
 inline_for_extraction noextract
 let allocate_slab_aux_1
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -417,7 +417,7 @@ let allocate_slab_aux_1
     A.length r == U32.v size_class /\
     same_base_array r slab_region /\
     A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
-    (A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % US.v slab_size == 0
+    (A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % US.v sc_ex_slab_size == 0
     //((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
   )
   =
@@ -900,7 +900,7 @@ let alloc_metadata_sl2
 #restart-solver
 
 let right_vprop_sl_lemma1
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (v: US.t{US.v v + 1 <= US.v metadata_max_ex})
@@ -910,14 +910,14 @@ let right_vprop_sl_lemma1
     right_vprop slab_region md_bm_region md_region v
   )) m)
   (ensures SM.interp (hp_of (
-    (A.varray (A.split_r slab_region (US.mul v slab_size))
+    (A.varray (A.split_r slab_region (US.mul v sc_ex_slab_size))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region v)
       `vrefine` zf_b) `star`
     A.varray (A.split_r md_region v)
   )) m /\
   sel_of (
-    (A.varray (A.split_r slab_region (US.mul v slab_size))
+    (A.varray (A.split_r slab_region (US.mul v sc_ex_slab_size))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region v)
       `vrefine` zf_b) `star`
@@ -929,14 +929,14 @@ let right_vprop_sl_lemma1
   = ()
 
 let right_vprop_sl_lemma2
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (v: US.t{US.v v <= US.v metadata_max_ex})
   (m: SM.mem)
   : Lemma
   (requires SM.interp (hp_of (
-    (A.varray (A.split_r slab_region (US.mul v slab_size))
+    (A.varray (A.split_r slab_region (US.mul v sc_ex_slab_size))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region v)
       `vrefine` zf_b) `star`
@@ -946,7 +946,7 @@ let right_vprop_sl_lemma2
     right_vprop slab_region md_bm_region md_region v
   )) m /\
   sel_of (
-    (A.varray (A.split_r slab_region (US.mul v slab_size))
+    (A.varray (A.split_r slab_region (US.mul v sc_ex_slab_size))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region v)
       `vrefine` zf_b) `star`
@@ -1067,19 +1067,19 @@ let split_r_r_mul (#opened:_) (#a: Type)
 #push-options "--z3rlimit 75 --compat_pre_typed_indexed_effects --query_stats --fuel 1 --ifuel 1"
 let allocate_slab_aux_3_1_right_aux
   (#opened: _)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v + 1 <= US.v metadata_max_ex})
   : SteelGhost unit opened
   (
-    A.varray (A.split_r slab_region (US.mul md_count_v slab_size)) `star`
+    A.varray (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size)) `star`
     A.varray (A.split_r md_bm_region md_count_v) `star`
     A.varray (A.split_r md_region md_count_v)
   )
   (fun _ ->
     ((A.varray (A.split_r slab_region
-      (US.mul (US.add md_count_v 1sz) slab_size))
+      (US.mul (US.add md_count_v 1sz) sc_ex_slab_size))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region
       (US.add md_count_v 1sz))
@@ -1087,8 +1087,8 @@ let allocate_slab_aux_3_1_right_aux
     A.varray (A.split_r md_region
       (US.add md_count_v 1sz))) `star`
     A.varray (A.split_l
-      (A.split_r slab_region (US.mul md_count_v slab_size))
-        slab_size) `star`
+      (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+        sc_ex_slab_size) `star`
     A.varray (A.split_l
       (A.split_r md_bm_region md_count_v)
       1sz) `star`
@@ -1098,7 +1098,7 @@ let allocate_slab_aux_3_1_right_aux
   )
   (requires fun h0 ->
     zf_u8 (A.asel
-      (A.split_r slab_region (US.mul md_count_v slab_size))
+      (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
       h0
     ) /\
     zf_b (A.asel
@@ -1111,30 +1111,30 @@ let allocate_slab_aux_3_1_right_aux
       (A.split_l (A.split_r md_bm_region md_count_v) 1sz) h1)
   )
   =
-  let slab_region0 = gget (A.varray (A.split_r slab_region (US.mul md_count_v slab_size))) in
+  let slab_region0 = gget (A.varray (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))) in
   let md_bm_region0 = gget (A.varray (A.split_r md_bm_region md_count_v)) in
-  zf_u8_split slab_region0 (US.v slab_size);
+  zf_u8_split slab_region0 (US.v sc_ex_slab_size);
   zf_b_split md_bm_region0 (US.v 1sz);
   A.ghost_split
-    (A.split_r slab_region (US.mul md_count_v slab_size))
-    slab_size;
+    (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+    sc_ex_slab_size;
   change_equal_slprop
-    (A.varray (A.split_r (A.split_r slab_region (US.mul md_count_v slab_size))
-      slab_size))
-    (A.varray (A.split_r (A.split_r slab_region (US.mul md_count_v slab_size))
-      (US.mul 1sz slab_size)));
+    (A.varray (A.split_r (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+      sc_ex_slab_size))
+    (A.varray (A.split_r (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+      (US.mul 1sz sc_ex_slab_size)));
   A.ghost_split
     (A.split_r md_bm_region md_count_v)
     1sz;
   A.ghost_split
     (A.split_r md_region md_count_v)
     1sz;
-  split_r_r_mul md_count_v 1sz slab_size slab_region;
+  split_r_r_mul md_count_v 1sz sc_ex_slab_size slab_region;
   split_r_r md_count_v 1sz md_bm_region;
   split_r_r md_count_v 1sz md_region;
   intro_vrefine
     (A.varray (A.split_r slab_region
-      (US.mul (US.add md_count_v 1sz) slab_size)))
+      (US.mul (US.add md_count_v 1sz) sc_ex_slab_size)))
     zf_u8;
   intro_vrefine
     (A.varray (A.split_r md_bm_region
@@ -1143,7 +1143,7 @@ let allocate_slab_aux_3_1_right_aux
 
 let allocate_slab_aux_3_1_right
   (#opened: _)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v + 1 <= US.v metadata_max_ex})
@@ -1154,8 +1154,8 @@ let allocate_slab_aux_3_1_right
   (fun _ ->
     right_vprop slab_region md_bm_region md_region (md_count_v `US.add` 1sz) `star`
     A.varray (A.split_l
-      (A.split_r slab_region (US.mul md_count_v slab_size))
-      slab_size) `star`
+      (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+      sc_ex_slab_size) `star`
     A.varray (A.split_l
       (A.split_r md_bm_region md_count_v)
       1sz) `star`
@@ -1173,7 +1173,7 @@ let allocate_slab_aux_3_1_right
   =
   change_slprop_rel
     (right_vprop slab_region md_bm_region md_region md_count_v)
-    ((A.varray (A.split_r slab_region (US.mul md_count_v slab_size))
+    ((A.varray (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
      `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region md_count_v)
      `vrefine` zf_b) `star`
@@ -1181,7 +1181,7 @@ let allocate_slab_aux_3_1_right
     (fun x y -> x == y)
     (fun m -> right_vprop_sl_lemma1 slab_region md_bm_region md_region md_count_v m);
   elim_vrefine
-    (A.varray (A.split_r slab_region (US.mul md_count_v slab_size)))
+    (A.varray (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size)))
     zf_u8;
   elim_vrefine
     (A.varray (A.split_r md_bm_region md_count_v))
@@ -1189,7 +1189,7 @@ let allocate_slab_aux_3_1_right
   allocate_slab_aux_3_1_right_aux
     slab_region md_bm_region md_region md_count_v;
   change_slprop_rel
-    ((A.varray (A.split_r slab_region (US.mul (US.add md_count_v 1sz) slab_size))
+    ((A.varray (A.split_r slab_region (US.mul (US.add md_count_v 1sz) sc_ex_slab_size))
      `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region (US.add md_count_v 1sz))
      `vrefine` zf_b) `star`
@@ -1202,7 +1202,7 @@ let allocate_slab_aux_3_1_right
 inline_for_extraction noextract
 let allocate_slab_aux_3_1
   (#opened: _)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v + 1 <= US.v metadata_max_ex})
@@ -1220,8 +1220,8 @@ let allocate_slab_aux_3_1
       (A.split_l md_region (md_count_v `US.add` 1sz))
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     A.varray (A.split_l
-      (A.split_r slab_region (US.mul md_count_v slab_size))
-      slab_size) `star`
+      (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+      sc_ex_slab_size) `star`
     A.varray (A.split_l
       (A.split_r md_bm_region md_count_v)
       1sz)
@@ -1437,7 +1437,7 @@ let allocate_slab_aux_3_2
 
 let lemma_slab_aux_3_3_1
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v + 1 <= US.v metadata_max_ex})
@@ -1466,7 +1466,7 @@ let lemma_slab_aux_3_3_1
 
 let allocate_slab_aux_3_3_1 (#opened:_)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v + 1 <= US.v metadata_max_ex})
@@ -2084,7 +2084,7 @@ let split_l_l_mul (#opened:_) (#a: Type)
 
 let allocate_slab_aux_3_3_2
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v + 1 <= US.v metadata_max_ex})
@@ -2092,8 +2092,8 @@ let allocate_slab_aux_3_3_2
   : Steel unit
   (
     A.varray (A.split_l
-      (A.split_r slab_region (US.mul md_count_v slab_size))
-      slab_size) `star`
+      (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+      sc_ex_slab_size) `star`
     A.varray (A.split_l
       (A.split_r md_bm_region md_count_v)
       1sz)
@@ -2122,8 +2122,8 @@ let allocate_slab_aux_3_3_2
   =
   A.ptr_base_offset_inj
     (A.ptr_of (A.split_l
-      (A.split_r slab_region (US.mul md_count_v slab_size))
-      slab_size))
+      (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+      sc_ex_slab_size))
     (A.ptr_of (slab_array slab_region md_count_v));
   A.ptr_base_offset_inj
     (A.ptr_of (A.split_l
@@ -2132,8 +2132,8 @@ let allocate_slab_aux_3_3_2
     (A.ptr_of (md_bm_array md_bm_region md_count_v));
   change_equal_slprop
     (A.varray (A.split_l
-      (A.split_r slab_region (US.mul md_count_v slab_size))
-      slab_size))
+      (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+      sc_ex_slab_size))
     (A.varray (slab_array slab_region md_count_v));
   change_equal_slprop
     (A.varray (A.split_l
@@ -2181,7 +2181,7 @@ let allocate_slab_aux_3_3_2
 
 let allocate_slab_aux_3_3
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v + 1 <= US.v metadata_max_ex})
@@ -2189,8 +2189,8 @@ let allocate_slab_aux_3_3
   : Steel unit
   (
     A.varray (A.split_l
-      (A.split_r slab_region (US.mul md_count_v slab_size))
-        slab_size) `star`
+      (A.split_r slab_region (US.mul md_count_v sc_ex_slab_size))
+        sc_ex_slab_size) `star`
     A.varray (A.split_l
       (A.split_r md_bm_region md_count_v)
         1sz) `star`
@@ -2272,7 +2272,7 @@ let allocate_slab_aux_3_3
 //inline_for_extraction noextract
 let allocate_slab_aux_3
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -2410,7 +2410,7 @@ let bounded_tuple (up: US.t) = s:bounded_tuple'{
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 100 --query_stats --compat_pre_typed_indexed_effects"
 let allocate_slab_aux_4_aux1
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -2525,7 +2525,7 @@ let allocate_slab_aux_4_aux1
 
 let allocate_slab_aux_4_aux2
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -2596,7 +2596,7 @@ let allocate_slab_aux_4_aux2
 //inline_for_extraction noextract
 val allocate_slab_aux_4
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -2735,7 +2735,7 @@ let allocate_slab_aux_4
 inline_for_extraction noextract
 let allocate_slab'
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -2787,7 +2787,7 @@ let allocate_slab'
       A.length r == U32.v size_class /\
       same_base_array r slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
-      (A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % US.v slab_size == 0 /\
+      (A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % US.v sc_ex_slab_size == 0 /\
       True
     )
   )

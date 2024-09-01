@@ -59,7 +59,7 @@ let lemma_partition_and_pred_implies_mem5
 
 let empty_t size_class =
   (|Seq.create 1 false, None|),
-    Seq.create (US.v slab_size - U32.v size_class) U8.zero
+    Seq.create (US.v sc_ex_slab_size - U32.v size_class) U8.zero
 
 #restart-solver
 
@@ -165,15 +165,15 @@ let slab_array
   md_count
   =
   let ptr = A.ptr_of slab_region in
-  let shift_size_t = US.mul md_count slab_size in
+  let shift_size_t = US.mul md_count sc_ex_slab_size in
   let ptr_shifted = A.ptr_shift ptr shift_size_t in
-  (|ptr_shifted, G.hide (US.v slab_size)|)
+  (|ptr_shifted, G.hide (US.v sc_ex_slab_size)|)
 
 let pack_slab_array
   slab_region
   md_count
   = change_equal_slprop
-    (A.varray (A.split_l (A.split_r slab_region (US.mul md_count slab_size)) slab_size))
+    (A.varray (A.split_l (A.split_r slab_region (US.mul md_count sc_ex_slab_size)) sc_ex_slab_size))
     (A.varray (slab_array slab_region md_count))
 
 let pack_md_bm_array

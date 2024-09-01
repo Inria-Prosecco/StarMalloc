@@ -13,7 +13,7 @@ module U32 = FStar.UInt32
 module U8 = FStar.UInt8
 
 noextract inline_for_extraction
-let array = Steel.ST.Array.array
+let array (a: Type) = Steel.ST.Array.array a
 
 open Constants
 open Config
@@ -84,8 +84,7 @@ type mmap_md_slabs =
 let init_mmap_md_slabs (_:unit)
   : SteelTop mmap_md_slabs false (fun _ -> emp) (fun _ _ _ -> True)
   =
-  let slab_region_size = US.mul metadata_max (US.uint32_to_sizet page_size) in
-  let slab_region = mmap_u8_init slab_region_size in
+  let slab_region = mmap_u8_init sc_slab_region_size in
   A.ghost_split slab_region 0sz;
   A.ptr_shift_zero (A.ptr_of slab_region);
   A.ptr_base_offset_inj

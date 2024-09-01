@@ -24,7 +24,7 @@ include SlabsCommon2
 val deallocate_slab
   (ptr: array U8.t)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -50,7 +50,7 @@ val deallocate_slab
     same_base_array ptr slab_region /\
     US.v diff_ = diff' /\
     0 <= diff' /\
-    diff' % US.v slab_size == 0 /\
+    diff' % US.v sc_ex_slab_size == 0 /\
     A.length ptr == U32.v size_class
   )
   (ensures fun _ _ _ -> True)

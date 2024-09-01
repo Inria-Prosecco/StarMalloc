@@ -22,7 +22,7 @@ include SlabsCommon2
 
 val allocate_slab
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -47,6 +47,6 @@ val allocate_slab
       A.length r == U32.v size_class /\
       same_base_array r slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
-      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % US.v slab_size) == 0
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % US.v sc_ex_slab_size) == 0
     )
   )

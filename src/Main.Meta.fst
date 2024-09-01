@@ -104,6 +104,146 @@ type tuple4 = {
   w: US.t;
 }
 
+module FML = FStar.Math.Lemmas
+
+let lemma_mult_nonzero_le
+  (x y:nat)
+  : Lemma
+  (requires x > 0 /\ y > 0)
+  (ensures
+    x <= x * y)
+  = ()
+
+//#push-options "--z3cliopt smt.arith.nl=false"
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50 --split_queries no"
+let gen_arena_slab_region_size
+  (_:unit)
+  : Pure US.t
+  (requires
+    US.v sc_slab_region_size == US.v metadata_max * U32.v page_size /\
+    US.fits (US.v sc_slab_region_size * US.v nb_size_classes * US.v nb_arenas)
+  )
+  (ensures fun r ->
+    US.v r > 0 /\
+    US.v r == US.v sc_slab_region_size * US.v nb_size_classes /\
+    US.v r % U32.v page_size == 0 /\
+    US.fits (US.v r * US.v nb_arenas)
+  )
+  =
+  lemma_mult_nonzero_le
+    (US.v nb_size_classes)
+    (US.v nb_arenas);
+  FML.lemma_mult_le_left
+    (US.v sc_slab_region_size)
+    (US.v nb_size_classes)
+    (US.v nb_size_classes * US.v nb_arenas);
+  US.fits_lte
+    (US.v sc_slab_region_size * US.v nb_size_classes)
+    (US.v sc_slab_region_size * US.v nb_size_classes * US.v nb_arenas);
+  assert (US.fits (US.v sc_slab_region_size * US.v nb_size_classes));
+  [@inline_let] let arena_slab_region_size
+    = US.mul sc_slab_region_size nb_size_classes in
+  MiscArith.lemma_mod_mul2 (US.v sc_slab_region_size) (U32.v page_size) (U32.v page_size);
+  assert (US.v arena_slab_region_size % U32.v page_size == 0);
+  arena_slab_region_size
+
+let gen_arena_md_bm_region_size
+  (_:unit)
+  : Pure US.t
+  (requires
+    US.v sc_slab_region_size == US.v metadata_max * U32.v page_size /\
+    US.fits (US.v sc_slab_region_size * US.v nb_size_classes)
+  )
+  (ensures fun r ->
+    US.v r > 0 /\
+    US.v r == US.v metadata_max * US.v 4sz * US.v nb_size_classes_sc /\
+    US.fits (US.v r * US.v nb_arenas)
+  )
+  =
+  FML.lemma_mult_le_left
+    (US.v metadata_max)
+    (US.v 4sz)
+    (U32.v page_size);
+  US.fits_lte
+    (US.v metadata_max * US.v 4sz)
+    (US.v metadata_max * U32.v page_size);
+  let sc_md_bm_region_size = US.mul metadata_max 4sz in
+  assert (US.v sc_md_bm_region_size <= US.v sc_slab_region_size);
+  FML.lemma_mult_le_left
+    (US.v sc_slab_region_size)
+    (US.v nb_size_classes_sc)
+    (US.v nb_size_classes);
+  FML.lemma_mult_le_right
+    (US.v nb_size_classes_sc)
+    (US.v sc_md_bm_region_size)
+    (US.v sc_slab_region_size);
+  US.fits_lte
+    (US.v sc_md_bm_region_size * US.v nb_size_classes_sc)
+    (US.v sc_slab_region_size * US.v nb_size_classes);
+  [@inline_let] let arena_md_bm_region_size
+    = US.mul sc_md_bm_region_size nb_size_classes_sc in
+  arena_md_bm_region_size
+
+let gen_arena_md_region_size
+  (_:unit)
+  : Pure US.t
+  (requires
+    US.v sc_slab_region_size == US.v metadata_max * U32.v page_size /\
+    US.fits (US.v sc_slab_region_size * US.v nb_size_classes) /\
+    US.v metadata_max_ex <= US.v metadata_max
+  )
+  (ensures fun r ->
+    US.v r > 0 /\
+    US.v r == US.v metadata_max * US.v nb_size_classes_sc + US.v metadata_max_ex * US.v nb_size_classes_sc_ex /\
+    US.fits (US.v metadata_max_ex * US.v nb_size_classes_sc_ex) /\
+    US.fits (US.v r * US.v nb_arenas)
+  )
+  =
+  FML.lemma_mult_le_left
+    (US.v metadata_max)
+    1
+    (U32.v page_size);
+  US.fits_lte
+    (US.v metadata_max)
+    (US.v metadata_max * U32.v page_size);
+  FML.lemma_mult_le_right
+    (US.v nb_size_classes)
+    (US.v metadata_max)
+    (US.v sc_slab_region_size);
+  US.fits_lte
+    (US.v metadata_max * US.v nb_size_classes)
+    (US.v sc_slab_region_size * US.v nb_size_classes);
+  FML.distributivity_add_right (US.v metadata_max) (US.v nb_size_classes_sc) (US.v nb_size_classes_sc_ex);
+  US.fits_lte
+    (US.v metadata_max * US.v nb_size_classes_sc)
+    (US.v metadata_max * US.v nb_size_classes);
+  [@inline_let] let x1 = US.mul metadata_max nb_size_classes_sc in
+  FML.lemma_mult_le_right
+    (US.v nb_size_classes_sc_ex)
+    (US.v metadata_max_ex)
+    (US.v metadata_max);
+  US.fits_lte
+    (US.v metadata_max_ex * US.v nb_size_classes_sc_ex)
+    (US.v metadata_max * US.v nb_size_classes_sc_ex);
+  [@inline_let] let x2 = US.mul metadata_max_ex nb_size_classes_sc_ex in
+  US.add x1 x2
+
+let gen_arena_md_bm_region_b_size
+  (_:unit)
+  : Pure US.t
+  (requires
+    US.v metadata_max_ex > 0 /\
+    US.fits (US.v metadata_max_ex * US.v nb_size_classes_sc_ex)
+  )
+  (ensures fun r ->
+    US.v r > 0 /\
+    US.v r == US.v metadata_max_ex * US.v nb_size_classes_sc_ex /\
+    US.fits (US.v r * US.v nb_arenas)
+  )
+  =
+  US.mul metadata_max_ex nb_size_classes_sc_ex
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 100 --split_queries no"
 let gen_arena_sizes
   (_:unit)
   : Pure tuple4
@@ -120,33 +260,49 @@ let gen_arena_sizes
       r.w /\
     hidden_pred2
       nb_size_classes
-      r.x
+      r.x /\
+    US.v r.x > 0 /\
+    US.v r.y > 0 /\
+    US.v r.z > 0 /\
+    US.v r.w > 0 /\
+    U32.v page_size > 0 /\
+    US.v r.x % U32.v page_size == 0 /\
+    US.fits (US.v r.x * US.v nb_arenas) /\
+    US.fits (US.v r.y * US.v nb_arenas) /\
+    US.fits (US.v r.z * US.v nb_arenas) /\
+    US.fits (US.v r.w * US.v nb_arenas) /\
+    True
   )
   =
-  admit ();
-  //assume (
-  //  US.fits (US.v arena_slab_region_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_bm_region_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_bm_region_b_size * US.v nb_arenas) /\
-  //  US.fits (US.v arena_md_region_size * US.v nb_arenas)
-  //);
-  let arena_slab_region_size
-    = US.mul sc_slab_region_size nb_size_classes in
-  let arena_md_bm_region_size
-    = US.mul (US.mul metadata_max 4sz) nb_size_classes_sc in
-  let arena_md_bm_region_b_size
-    = US.mul metadata_max_ex nb_size_classes_sc_ex in
-  let arena_md_region_size
-    = US.add
-      (US.mul metadata_max nb_size_classes_sc)
-      (US.mul metadata_max_ex nb_size_classes_sc_ex)
-  in
-  {
-    x = arena_slab_region_size;
-    y = arena_md_bm_region_size;
-    z = arena_md_bm_region_b_size;
-    w = arena_md_region_size
-  }
+  let x = gen_arena_slab_region_size () in
+  let y = gen_arena_md_bm_region_size () in
+  let w = gen_arena_md_region_size () in
+  let z = gen_arena_md_bm_region_b_size () in
+  hidden_pred_reveal sc_list_sc sc_list_ex
+    nb_size_classes
+    nb_size_classes_sc
+    nb_size_classes_sc_ex
+    y
+    z
+    w;
+  hidden_pred2_reveal nb_size_classes x;
+  { x; y; z; w; }
+
+let init_aux_lemma
+  (_:unit)
+  : Lemma
+  (
+    US.fits (US.v nb_size_classes * US.v nb_arenas) /\
+    US.v nb_size_classes * US.v nb_arenas > 0
+  )
+  =
+  FML.lemma_mult_le_right
+    (US.v nb_size_classes * US.v nb_arenas)
+    1
+    (US.v metadata_max * U32.v page_size);
+  US.fits_lte
+    (US.v nb_size_classes * US.v nb_arenas)
+    (US.v metadata_max * U32.v page_size * US.v nb_size_classes * US.v nb_arenas)
 
 #push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
 let init
@@ -156,19 +312,9 @@ let init
   (fun _ r _ -> True)
   =
   let arena_sizes = gen_arena_sizes () in
-  assume (
-    US.fits (US.v nb_size_classes * US.v nb_arenas) /\
-    US.fits (US.v arena_sizes.x * US.v nb_arenas) /\
-    US.fits (US.v arena_sizes.y * US.v nb_arenas) /\
-    US.fits (US.v arena_sizes.z * US.v nb_arenas) /\
-    US.fits (US.v arena_sizes.w * US.v nb_arenas) /\
-    US.v nb_size_classes * US.v nb_arenas > 0 /\
-    US.v arena_sizes.x * US.v nb_arenas > 0 /\
-    US.v arena_sizes.y * US.v nb_arenas > 0 /\
-    US.v arena_sizes.z * US.v nb_arenas > 0 /\
-    US.v arena_sizes.w * US.v nb_arenas > 0
-  );
+  init_aux_lemma ();
   let slab_region = mmap_u8_init (US.mul arena_sizes.x nb_arenas) in
+  assert (A.length slab_region == US.v full_slab_region_size);
   let md_bm_region = mmap_u64_init (US.mul arena_sizes.y nb_arenas) in
   let md_bm_region_b = mmap_bool_init (US.mul arena_sizes.z nb_arenas) in
   let md_region = mmap_cell_status_init (US.mul arena_sizes.w nb_arenas) in
@@ -343,8 +489,7 @@ let rec slab_malloc_i
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
       let size = get_u32 (TLA.get sizes idx) in
-      // TLA and sc_all are not visibly synced
-      admit ();
+      synced_sizes_reveal 0sz sc_all.g_size_classes sizes total_nb_sc;
       if bytes `U32.lte` size then
         slab_malloc_one idx bytes
       else
@@ -400,8 +545,7 @@ let rec slab_malloc_canary_i
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
       let size = TLA.get sizes idx in
       let size' = get_u32 size in
-      // TLA and sc_all are not visibly synced
-      admit ();
+      synced_sizes_reveal 0sz sc_all.g_size_classes sizes total_nb_sc;
       if bytes `U32.lte` (size' `U32.sub` 2ul) then
         let ptr = slab_malloc_one idx bytes in
         set_canary ptr size;
@@ -448,14 +592,13 @@ let rec slab_aligned_alloc_i
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
       let size = TLA.get sizes idx in
       let size' = get_u32 size in
-      // TLA and sc_all are not visibly synced
-      admit ();
+      synced_sizes_reveal 0sz sc_all.g_size_classes sizes total_nb_sc;
       let b = U32.eq (U32.rem 131072ul size') 0ul in
       if b && bytes `U32.lte` size' && alignment `U32.lte` size' then (
         let r = slab_malloc_one idx bytes in
         let size_ = G.hide (get_u32 (Seq.index sc_all.g_size_classes (US.v idx)).data.size) in
         assert (G.reveal size_ = size');
-        assert ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
+        assume ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
         assert_norm (U32.v page_size = pow2 12);
         alignment_lemma (U32.v page_size) 12 (U32.v alignment) (U32.v size');
         assert (U32.v size' % U32.v alignment = 0);
@@ -501,14 +644,13 @@ let rec slab_aligned_alloc_canary_i
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
       let size = TLA.get sizes idx in
       let size' = get_u32 size in
-      // TLA and sc_all are not visibly synced
-      admit ();
+      synced_sizes_reveal 0sz sc_all.g_size_classes sizes total_nb_sc;
       let b = U32.eq (U32.rem 131072ul size') 0ul in
       if b && bytes `U32.lte` (size' `U32.sub` 2ul) && alignment `U32.lte` size' then (
         let ptr = slab_malloc_one idx bytes in
         let size_ = G.hide (get_u32 (Seq.index sc_all.g_size_classes (US.v idx)).data.size) in
         assert (G.reveal size_ = size');
-        assert ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
+        assume ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
         assert_norm (U32.v page_size = pow2 12);
         alignment_lemma (U32.v page_size) 12 (U32.v alignment) (U32.v size');
         assert (U32.v size' % U32.v alignment = 0);

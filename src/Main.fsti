@@ -26,9 +26,9 @@ module AL = ArrayList
 //open Utils2
 //open Mman
 
-val metadata_max_ex: US.t
-val slab_size: US.t
-val sc_slab_region_size: v:US.t{US.v v > 0}
+//val metadata_max_ex: US.t
+//val slab_size: US.t
+//val sc_slab_region_size: v:US.t{US.v v > 0}
 
 open Constants
 open Config
@@ -93,15 +93,67 @@ val synced_sizes
   })
   : prop
 
+val synced_sizes_reveal
+  (offset: US.t)
+  (size_classes: Seq.seq size_class)
+  (sizes:TLA.t sc_union)
+  (k:nat{
+    k <= Seq.length size_classes /\
+    k + US.v offset <= TLA.length sizes
+  })
+  : Lemma
+  (requires synced_sizes offset size_classes sizes k)
+  (ensures
+    forall (i:US.t{US.v i < k}). (
+      US.fits (US.v offset + US.v i) /\
+      TLA.get sizes (US.add offset i)
+      == (Seq.index size_classes (US.v i)).data.size
+    )
+  )
+
 val hidden_pred
   (l1: list sc)
   (l2: list sc_ex)
   (n n1 n2 s1 s2 s3: US.t)
   : prop
 
+val hidden_pred_reveal
+  (l1: list sc)
+  (l2: list sc_ex)
+  (n n1 n2 s1 s2 s3: US.t)
+  : Lemma
+  (requires
+    US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
+    US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
+    US.fits (US.v metadata_max * US.v n) /\
+    US.v n1 == List.length l1 /\ US.v n1 > 0 /\
+    US.v n2 == List.length l2 /\ US.v n2 > 0 /\
+    US.v n == US.v n1 + US.v n2 /\
+    Cons? l1 /\
+    Cons? l2 /\
+    US.v n == List.length l1 + List.length l2 /\
+    // arena md_bm_region size
+    US.v s1 == US.v metadata_max * US.v 4sz * US.v n1 /\
+    // arena md_bm_region_b size
+    US.v s2 == US.v metadata_max_ex * US.v n2 /\
+    // arena md_region size
+    US.v s3 == US.v metadata_max * US.v n1 + US.v metadata_max_ex * US.v n2
+  )
+  (ensures hidden_pred l1 l2 n n1 n2 s1 s2 s3)
+
 val hidden_pred2
   (n s1: US.t)
   : prop
+
+val hidden_pred2_reveal
+  (n s1: US.t)
+  : Lemma
+  (requires
+    US.v n > 0 /\
+    US.v s1 > 0 /\
+    US.v s1 == US.v sc_slab_region_size * US.v n
+  )
+  (ensures hidden_pred2 n s1)
 
 noextract inline_for_extraction
 val init_all_arenas
@@ -203,14 +255,14 @@ val allocate_size_class
       A.length r == U32.v (get_u32 scs.size) /\
       array_u8_alignment r 16ul /\
       (scs.is_extended ==> (
-        (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v slab_size == 0 /\
+        (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v sc_ex_slab_size == 0 /\
         //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
         True
       )) /\
       (not scs.is_extended ==> (
         ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v (get_u32 scs.size)) == 0 /\
         True
-        //array_u8_alignment r slab_size
+        //array_u8_alignment r sc_ex_slab_size
       ))
     )
   )

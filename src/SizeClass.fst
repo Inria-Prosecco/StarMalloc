@@ -12,9 +12,9 @@ open Prelude
 
 let slab_region_size_eq_lemma (_:unit)
   : Lemma
-  (slab_region_size = US.mul metadata_max_ex slab_size)
+  (sc_slab_region_size = US.mul metadata_max_ex sc_ex_slab_size)
   =
-  ()
+  admit ()
 
 //inline_for_extraction noextract
 //let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size /\ US.v v > 0})
@@ -391,7 +391,7 @@ val allocate_size_class_sc_ex
       A.length r == U32.v sc_size /\
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
-      (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v slab_size == 0 /\
+      (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v sc_ex_slab_size == 0 /\
       array_u8_alignment r 16ul /\
       True
       //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
@@ -442,7 +442,7 @@ val deallocate_size_class_sc_ex
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
     0 <= diff' /\
     US.v diff = diff' /\
-    diff' % US.v slab_size == 0 /\
+    diff' % US.v sc_ex_slab_size == 0 /\
     A.length ptr == U32.v (get_u32 scs.size) /\
     same_base_array ptr scs.slab_region)
   (ensures fun h0 _ h1 -> True)

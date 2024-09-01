@@ -201,6 +201,16 @@ let metadata_max =
   US.of_u64 metadata_max'
 
 //DO NOT EDIT
+let sc_slab_region_size = US.mul metadata_max (US.uint32_to_sizet page_size)
+
+//DO NOT EDIT
+let full_slab_region_size = US.mul sc_slab_region_size (US.mul nb_size_classes nb_arenas)
+
+//DO NOT EDIT
+let metadata_max_ex
+  = US.div metadata_max (US.mul max_sc_coef 2sz)
+
+//DO NOT EDIT
 let metadata_max_up_fits _ =
   metadata_max_fits_lemma ()
 

@@ -113,27 +113,19 @@ val lemma_partition_and_pred_implies_mem5
 //  //Math.Lemmas.div_exact_r (U32.v sc) (U32.v page_size);
 //  x
 
-let slab_region_size
-  : v:US.t{
-    0 < US.v v /\
-    US.v v == US.v metadata_max * U32.v page_size
-  }
-  = US.mul metadata_max (US.of_u32 page_size)
+//TODO: remove
+//let slab_region_size
+//  : v:US.t{
+//    0 < US.v v /\
+//    US.v v == US.v metadata_max * U32.v page_size
+//  }
+//  = US.mul metadata_max (US.of_u32 page_size)
 
-let slab_size
-  : v:US.t{0 < US.v v}
-  =
-  US.mul (u32_to_sz page_size) (US.mul max_sc_coef 2sz)
-
-let metadata_max_ex
-  : v:US.t{
-    0 < US.v v /\
-    US.v v * US.v max_sc_coef * 2 == US.v metadata_max /\
-    slab_region_size = US.mul v slab_size /\
-    US.fits (US.v v * US.v slab_size)
-  }
-  =
-  US.div metadata_max (US.mul max_sc_coef 2sz)
+//TODO: remove
+//let slab_size
+//  : v:US.t{0 < US.v v}
+//  =
+//  US.mul (u32_to_sz page_size) (US.mul max_sc_coef 2sz)
 
 #pop-options
 #pop-options
@@ -165,7 +157,7 @@ unfold
 let blob (size_class: sc_ex)
   : Type0
   = slab_metadata &
-    (arr:array U8.t{A.length arr = US.v slab_size})
+    (arr:array U8.t{A.length arr = US.v sc_ex_slab_size})
 
 let t (size_class: sc_ex) : Type0
   =
@@ -173,7 +165,7 @@ let t (size_class: sc_ex) : Type0
     (Seq.lseq bool 1)
     (fun _ -> option (Seq.lseq U8.t (U32.v size_class)))
   &
-  Seq.lseq U8.t (US.v slab_size - U32.v size_class)
+  Seq.lseq U8.t (US.v sc_ex_slab_size - U32.v size_class)
 
 /// A trivial, non-informative selector for quarantined and guard pages
 inline_for_extraction noextract
@@ -205,7 +197,7 @@ let slab_vprop_aux_lemma (size_class: sc_ex)
 
 
 let slab_vprop (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
   (arr_md: slab_metadata)
   : vprop
   =
@@ -220,7 +212,7 @@ let slab_vprop (size_class: sc_ex)
 
 #push-options "--z3rlimit 30"
 let slab_vprop_lemma (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
   (arr_md: slab_metadata)
   : Lemma
   (t_of (slab_vprop size_class arr arr_md)
@@ -255,7 +247,7 @@ let slab_vprop_lemma (size_class: sc_ex)
 
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects --fuel 1 --ifuel 1"
 let intro_slab_vprop (#opened:_) (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
   (arr_md: slab_metadata)
   (md: G.erased (Seq.lseq bool 1))
   : SteelGhost unit opened
@@ -330,7 +322,7 @@ let intro_slab_vprop (#opened:_) (size_class: sc_ex)
   )
 
 let elim_slab_vprop (#opened:_) (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
   (arr_md: slab_metadata)
   : SteelGhost (G.erased (Seq.lseq bool 1)) opened
   (slab_vprop size_class arr arr_md)
@@ -419,7 +411,7 @@ let is_full (b:bool)
   b
 
 let allocate_slot (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
   (md: slab_metadata)
   : Steel (array U8.t)
   (slab_vprop size_class arr md)
@@ -470,7 +462,7 @@ let allocate_slot (size_class: sc_ex)
   return ptr
 
 let deallocate_slot (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
   (md: slab_metadata)
   (ptr: array U8.t)
   //(diff_: US.t)
@@ -711,7 +703,7 @@ val p_quarantine_unpack (#opened:_)
   )
 
 let intro_slab_vprop_empty (size_class: sc_ex)
-  (arr: array U8.t{A.length arr = US.v slab_size})
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
   (arr_md: slab_metadata)
   : Steel unit
   (
@@ -754,7 +746,7 @@ let intro_slab_vprop_empty (size_class: sc_ex)
   mmap_trap_guard
     size_class
     (A.split_r arr (u32_to_sz size_class))
-    (US.sub slab_size (u32_to_sz size_class));
+    (US.sub sc_ex_slab_size (u32_to_sz size_class));
   intro_slab_vprop size_class
     arr
     arr_md
@@ -938,24 +930,24 @@ val slab_array
   (md_count: US.t)
   : Pure (array U8.t)
   (requires
-    A.length slab_region = US.v metadata_max_ex * US.v slab_size /\
+    A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size /\
     US.v md_count < US.v metadata_max_ex
   )
   (ensures fun r ->
-    A.length r = US.v slab_size /\
+    A.length r = US.v sc_ex_slab_size /\
     same_base_array r slab_region /\
-    A.offset (A.ptr_of r) == A.offset (A.ptr_of slab_region) + US.v md_count * US.v slab_size
+    A.offset (A.ptr_of r) == A.offset (A.ptr_of slab_region) + US.v md_count * US.v sc_ex_slab_size
   )
 
 val pack_slab_array (#opened:_)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_count: US.t{US.v md_count < US.v metadata_max_ex})
   : SteelGhost unit opened
-    (A.varray (A.split_l (A.split_r slab_region (US.mul md_count slab_size)) slab_size))
+    (A.varray (A.split_l (A.split_r slab_region (US.mul md_count sc_ex_slab_size)) sc_ex_slab_size))
     (fun _ -> A.varray (slab_array slab_region md_count))
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
-      A.asel (A.split_l (A.split_r slab_region (US.mul md_count slab_size)) slab_size) h0 ==
+      A.asel (A.split_l (A.split_r slab_region (US.mul md_count sc_ex_slab_size)) sc_ex_slab_size) h0 ==
       A.asel (slab_array slab_region md_count) h1)
 
 val pack_md_bm_array (#opened:_)
@@ -1012,7 +1004,7 @@ val unpack_md_array (#opened:_)
 
 let f
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max_ex})
   (md_region_lv: Seq.lseq AL.status (US.v md_count_v))
@@ -1029,7 +1021,7 @@ let f
 
 val f_lemma
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max_ex})
   (md_region_lv: Seq.lseq AL.status (US.v md_count_v))
@@ -1123,7 +1115,7 @@ let left_vprop1
 
 let left_vprop2_aux
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_count_v: US.t{US.v md_count_v <= US.v metadata_max_ex})
   (x: Seq.lseq AL.status (US.v md_count_v))
@@ -1138,7 +1130,7 @@ let left_vprop2_aux
 
 let left_vprop2
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (r_idxs: A.array US.t{A.length r_idxs = 7})
@@ -1154,7 +1146,7 @@ let left_vprop2
 
 let left_vprop
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (r_idxs: A.array US.t{A.length r_idxs = 7})
@@ -1170,13 +1162,13 @@ let vrefinedep_prop (x:US.t) : prop =
   US.v x <> AL.null
 
 let right_vprop
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (v: US.t{US.v v <= US.v metadata_max_ex})
   : vprop
   =
-  (A.varray (A.split_r slab_region (US.mul v slab_size))
+  (A.varray (A.split_r slab_region (US.mul v sc_ex_slab_size))
     `vrefine` zf_u8) `star`
   (A.varray (A.split_r md_bm_region v)
     `vrefine` zf_b) `star`
@@ -1184,7 +1176,7 @@ let right_vprop
 
 let size_class_vprop_aux
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (r_idxs: array US.t{A.length r_idxs = 7})
@@ -1202,7 +1194,7 @@ open SteelVRefineDep
 val pack_3
   (#opened:_)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -1260,7 +1252,7 @@ val pack_3
 val pack_slab_starseq
   (#opened:_)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -1315,7 +1307,7 @@ val pack_slab_starseq
 inline_for_extraction noextract
 val upd_and_pack_slab_starseq_quarantine
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)
@@ -1363,7 +1355,7 @@ val upd_and_pack_slab_starseq_quarantine
 val pack_right_and_refactor_vrefine_dep
   (#opened:_)
   (size_class: sc_ex)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v slab_size})
+  (slab_region: array U8.t{A.length slab_region = US.v metadata_max_ex * US.v sc_ex_slab_size})
   (md_bm_region: array bool{A.length md_bm_region = US.v metadata_max_ex})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max_ex})
   (md_count: ref US.t)

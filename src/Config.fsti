@@ -128,6 +128,40 @@ val metadata_max: v:US.t{
   (US.v v) % (US.v max_sc_coef * 2) == 0
 }
 
+val sc_slab_region_size
+  : v:US.t{
+    0 < US.v v /\
+    US.v v == US.v metadata_max * U32.v page_size
+  }
+
+val full_slab_region_size
+  : v:US.t{
+    0 < US.v v /\
+    US.v v == US.v metadata_max * U32.v page_size * US.v nb_size_classes * US.v nb_arenas
+  }
+
+inline_for_extraction
+val metadata_max_ex: v:US.t{
+  US.v v > 0 /\
+  US.v v <= US.v metadata_max /\
+  US.fits (US.v v * US.v sc_ex_slab_size)
+}
+
+//let slab_size
+//  : v:US.t{0 < US.v v}
+//  =
+//  US.mul (u32_to_sz page_size) (US.mul max_sc_coef 2sz)
+
+//let metadata_max_ex
+//  : v:US.t{
+//    0 < US.v v /\
+//    US.v v * US.v max_sc_coef * 2 == US.v metadata_max /\
+//    slab_region_size = US.mul v slab_size /\
+//    US.fits (US.v v * US.v slab_size)
+//  }
+//  =
+//  US.div metadata_max (US.mul max_sc_coef 2sz)
+
 val metadata_max_up_fits (_:unit)
   : Lemma
   (UP.fits ((US.v metadata_max * U32.v page_size) * US.v nb_size_classes * US.v nb_arenas))

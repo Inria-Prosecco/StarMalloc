@@ -28,19 +28,11 @@ type size_class_struct' = {
   md_region: array AL.cell;
 }
 
-inline_for_extraction noextract
-let slab_region_size = SlabsCommon2.slab_region_size
-
-inline_for_extraction noextract
-let metadata_max_ex = SlabsCommon2.metadata_max_ex
-
-inline_for_extraction noextract
-let slab_size = SlabsCommon2.slab_size
-
 open FStar.Mul
 type size_class_struct = s:size_class_struct'{
   array_u8_alignment s.slab_region page_size /\
-  A.length s.slab_region == US.v slab_region_size /\
+  A.length s.slab_region == US.v sc_slab_region_size /\
+  US.v sc_slab_region_size = US.v metadata_max_ex * US.v sc_ex_slab_size /\
   A.length s.slabs_idxs == 7 /\
   // prove equivalence
   (s.is_extended ==> (
@@ -155,14 +147,14 @@ val allocate_size_class
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
       (scs.is_extended ==> (
-        (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v slab_size == 0 /\
+        (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v sc_ex_slab_size == 0 /\
         //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
         True
       )) /\
       (not scs.is_extended ==> (
         ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v (get_u32 scs.size)) == 0 /\
         True
-        //array_u8_alignment r slab_size
+        //array_u8_alignment r sc_ex_slab_size
       )) /\
       array_u8_alignment r 16ul
     )
@@ -183,7 +175,7 @@ val deallocate_size_class
     0 <= diff' /\
     US.v diff = diff' /\
     (scs.is_extended ==> (
-      diff' % US.v slab_size == 0
+      diff' % US.v sc_ex_slab_size == 0
     )) /\
     (not scs.is_extended ==> (
       (diff' % U32.v page_size) % U32.v (get_u32 scs.size) == 0
