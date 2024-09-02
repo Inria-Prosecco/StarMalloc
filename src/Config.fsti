@@ -144,7 +144,8 @@ inline_for_extraction
 val metadata_max_ex: v:US.t{
   US.v v > 0 /\
   US.v v <= US.v metadata_max /\
-  US.fits (US.v v * US.v sc_ex_slab_size)
+  US.fits (US.v v * US.v sc_ex_slab_size) /\
+  US.v v * US.v sc_ex_slab_size == US.v sc_slab_region_size
 }
 
 //let slab_size

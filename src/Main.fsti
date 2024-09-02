@@ -256,11 +256,11 @@ val allocate_size_class
       array_u8_alignment r 16ul /\
       (scs.is_extended ==> (
         (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % US.v sc_ex_slab_size == 0 /\
-        //((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
         True
       )) /\
       (not scs.is_extended ==> (
         ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v (get_u32 scs.size)) == 0 /\
+        (U32.v page_size) % (U32.v (get_u32 scs.size)) == 0 ==> array_u8_alignment r (get_u32 scs.size) /\
         True
         //array_u8_alignment r sc_ex_slab_size
       ))

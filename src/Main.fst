@@ -482,7 +482,6 @@ let init_struct_aux
       r_idxs 0sz `star`
      right_vprop slab_region md_bm_region md_region 0sz);
 
-  assume (US.v sc_slab_region_size == US.v metadata_max_ex * US.v sc_ex_slab_size);
   [@inline_let]
   let scs = {
     size = Sc sc;
@@ -584,7 +583,6 @@ let init_struct_aux2
       r_idxs 0sz `star`
      right_vprop slab_region md_bm_region md_region 0sz);
 
-  assume (US.v sc_slab_region_size == US.v metadata_max_ex * US.v sc_ex_slab_size);
   [@inline_let]
   let scs = {
     size = Sc_ex sc;
@@ -3255,7 +3253,7 @@ val init_one_arena2
     US.v arena_slab_region_size % U32.v page_size == 0 /\
     US.fits (US.v n * (US.v offset + 1)) /\
     TLA.length sizes >= US.v n * (US.v offset + 1) /\
-    US.v n == US.v n1 + US.v n2 /\
+    //US.v n == US.v n1 + US.v n2 /\
     //(forall (i:US.t{US.v i < US.v n1}). Sc? (TLA.get sizes (US.add offset i))) /\
     //(forall (i:US.t{US.v i < US.v n2}). Sc_ex? (TLA.get sizes (US.add (US.add offset n1) i))) /\
     A.length size_classes >= US.v n /\
@@ -4488,6 +4486,8 @@ let init_nth_arena_inv_lemma1 (#opened:_)
   synced_sizes_arena_le_lemma n 0sz s0 s01 sizes (US.v k) (US.v k);
   size_class_preds_arena_le_lemma n arena_slab_region_size s0 s01 (US.v k) slab_region (US.v k)
 
+#restart-solver
+
 let init_nth_arena_inv_lemma2
   (n: US.t{US.v n > 0 /\
     True
@@ -4543,6 +4543,8 @@ let init_nth_arena_inv_lemma2
   assert (size_class_preds s11 (US.v n * US.v k) slab_region);
   assert (size_class_preds s12 (US.v n * 1) (A.split_r slab_region (US.mul arena_slab_region_size k)));
   reveal_opaque (`%size_class_preds) size_class_preds
+
+#restart-solver
 
 let init_nth_arena_inv
   l1 l2 n1 n2 n

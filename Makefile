@@ -87,6 +87,8 @@ EXT_VENDOR_FILES = vendor/steel/src/c/steel_spinlock.c
 # TODO: improve this
 #dist/Mman.c leads to issue, moving non-extern code apart
 FILES = \
+  dist/Config.c \
+  dist/Constants.c \
   dist/ArrayList.c \
   dist/krmlinit.c \
   dist/StarMalloc.c \

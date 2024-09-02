@@ -58,6 +58,7 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
     U32.v alignment > 0 /\
+    //TODO s/page_size/slab_size
     (U32.v page_size) % (U32.v alignment) = 0 /\
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
@@ -89,10 +90,9 @@ val slab_getsize (ptr: array U8.t)
   )
   (ensures fun h0 result h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
-    US.v result <= U32.v page_size /\
+    US.v result <= max_sc_ex /\
+    (let idx = sc_selection (US.sizet_to_uint32 result) in
     (result <> 0sz ==> (
-      let idx = sc_selection (US.sizet_to_uint32 result) in
-      A.length ptr <= U32.v page_size /\
       (enable_slab_canaries_malloc ==>
         A.length ptr == US.v result + 2
       ) /\
@@ -100,7 +100,8 @@ val slab_getsize (ptr: array U8.t)
         A.length ptr == US.v result
       ) /\
       (enable_sc_fast_selection ==>
-        A.length ptr == U32.v (get_u32 (L.index sc_list (US.v idx))))
+        A.length ptr == U32.v (get_u32 (L.index sc_list (US.v idx)))
+      ))
     ))
   )
 

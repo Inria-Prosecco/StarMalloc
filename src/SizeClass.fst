@@ -14,7 +14,7 @@ let slab_region_size_eq_lemma (_:unit)
   : Lemma
   (sc_slab_region_size = US.mul metadata_max_ex sc_ex_slab_size)
   =
-  admit ()
+  ()
 
 //inline_for_extraction noextract
 //let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size /\ US.v v > 0})

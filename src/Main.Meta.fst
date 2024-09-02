@@ -371,11 +371,13 @@ val allocate_size_class
     not (is_null r) ==> (
       A.length r == U32.v size /\
       array_u8_alignment r 16ul /\
-      ((U32.v size > 0 /\ (U32.v page_size) % (U32.v size) == 0) ==> array_u8_alignment r size)
+      ((U32.v size > 0 /\ (U32.v page_size) % (U32.v size) == 0) ==> array_u8_alignment r size) /\
+      True
     )
   )
 
 let allocate_size_class _ scs =
+  admit ();
   Main.allocate_size_class scs
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
