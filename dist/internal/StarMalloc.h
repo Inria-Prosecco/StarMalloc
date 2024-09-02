@@ -6,7 +6,6 @@
 
 #include "krmllib.h"
 
-#include "internal/Slabs2.h"
 #include "../StarMalloc.h"
 
 typedef struct Impl_Trees_Cast_M_data_s
@@ -29,10 +28,6 @@ typedef struct Impl_Trees_Cast_M_node_s
   uint64_t height;
 }
 Impl_Trees_Cast_M_node;
-
-extern size_t Main_metadata_max_ex;
-
-extern size_t Main_sc_slab_region_size;
 
 extern size_t Main_slab_region_size;
 

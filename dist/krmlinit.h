@@ -7,6 +7,7 @@
 #include "krmllib.h"
 
 #include "StarMalloc.h"
+#include "Config.h"
 
 #if defined(__GNUC__) && !(defined(_WIN32) || defined(_WIN64))
 __attribute__ ((visibility ("hidden")))

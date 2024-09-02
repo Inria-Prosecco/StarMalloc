@@ -11,12 +11,6 @@
 #include "ExternUtils.h"
 #include "ArrayList.h"
 
-extern size_t SlabsCommon2_slab_region_size;
-
-extern size_t SlabsCommon2_slab_size;
-
-extern size_t SlabsCommon2_metadata_max_ex;
-
 bool
 SlabsFree2_deallocate_slab(
   uint8_t *ptr,

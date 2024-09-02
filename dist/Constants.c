@@ -5,9 +5,9 @@
 
 uint32_t Constants_page_size = 4096U;
 
-size_t Constants_max_sc_coef = 32U;
+size_t Constants_max_sc_coef = (size_t)32U;
 
-size_t Constants_sc_ex_slab_size = (size_t)4096U * 64U;
+size_t Constants_sc_ex_slab_size = (size_t)4096U * (size_t)64U;
 
 bool Constants_uu___is_Sc(Constants_sc_union projectee)
 {

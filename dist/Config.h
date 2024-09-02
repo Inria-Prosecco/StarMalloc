@@ -6,19 +6,25 @@
 
 #include "krmllib.h"
 
-#define CONFIG_NB_SIZE_CLASSES (32U)
+#define CONFIG_NB_SIZE_CLASSES ((size_t)32U)
 
-#define CONFIG_NB_SIZE_CLASSES_SC (27U)
+#define CONFIG_NB_SIZE_CLASSES_SC ((size_t)27U)
 
-#define CONFIG_NB_SIZE_CLASSES_SC_EX (5U)
+#define CONFIG_NB_SIZE_CLASSES_SC_EX ((size_t)5U)
 
 extern bool Config_enable_extended_size_classes;
 
 extern bool Config_enable_sc_fast_selection;
 
-#define CONFIG_NB_ARENAS (4U)
+#define CONFIG_NB_ARENAS ((size_t)4U)
 
 extern size_t Config_metadata_max;
+
+extern size_t Config_sc_slab_region_size;
+
+extern size_t Config_full_slab_region_size;
+
+extern size_t Config_metadata_max_ex;
 
 extern bool Config_enable_guard_pages;
 

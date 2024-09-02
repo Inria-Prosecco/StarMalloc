@@ -5,12 +5,6 @@
 
 #include "internal/ArrayList.h"
 
-size_t SlabsCommon2_slab_region_size = 68719476736U;
-
-size_t SlabsCommon2_slab_size = (size_t)4096U * 64U;
-
-size_t SlabsCommon2_metadata_max_ex = 262144U;
-
 typedef bool *slab_metadata;
 
 static uint8_t *allocate_slot(uint8_t *arr, bool *md)
@@ -28,7 +22,7 @@ static bool deallocate_slot(bool *md)
 
 static void intro_slab_vprop_empty(uint32_t size_class, uint8_t *arr)
 {
-  mmap_strict_trap(arr + (size_t)size_class, SlabsCommon2_slab_size - (size_t)size_class);
+  mmap_strict_trap(arr + (size_t)size_class, (size_t)4096U * (size_t)64U - (size_t)size_class);
 }
 
 typedef struct tuple4_s
@@ -50,14 +44,14 @@ update_quarantine2_aux(
 )
 {
   ArrayList_cell cell = md_region[idx6];
-  if (cell.next != 16777217U)
+  if (cell.next != (size_t)16777217U)
   {
     ArrayList_cell next = md_region[cell.next];
     ArrayList_cell next1 = { .prev = cell.prev, .next = next.next, .data = next.data };
     md_region[cell.next] = next1;
   }
   size_t tl_ = cell.prev;
-  if (cell.prev != 16777217U)
+  if (cell.prev != (size_t)16777217U)
   {
     ArrayList_cell prev = md_region[cell.prev];
     ArrayList_cell prev1 = { .prev = prev.prev, .next = cell.next, .data = prev.data };
@@ -68,7 +62,7 @@ update_quarantine2_aux(
     hd_ = cell.next;
   else
     hd_ = idx5;
-  size_t sz_ = idx7 - 1U;
+  size_t sz_ = idx7 - (size_t)1U;
   ArrayListGen_tuple3 idxs = { .x = hd_, .y = tl_, .z = sz_ };
   ArrayList_insert(md_region, idx1, idx6, 0U);
   return ((tuple4){ .x = idx6, .y = idxs.x, .z = idxs.y, .w = idxs.z });
@@ -83,7 +77,7 @@ update_quarantine2(
   size_t idx7
 )
 {
-  if (idx7 < 1024U)
+  if (idx7 < (size_t)1024U)
     return ((tuple4){ .x = idx1, .y = idx5, .z = idx6, .w = idx7 });
   else
   {
@@ -96,14 +90,14 @@ static void update_quarantine3_aux(uint32_t size_class, uint8_t *slab_region, tu
 {
   size_t idx = idxs.x;
   uint8_t *ptr = slab_region;
-  size_t shift_size_t = idx * SlabsCommon2_slab_size;
+  size_t shift_size_t = idx * ((size_t)4096U * (size_t)64U);
   mmap_untrap(ptr + shift_size_t, (size_t)size_class);
 }
 
 static void
 update_quarantine3(uint32_t size_class, uint8_t *slab_region, size_t idx7, tuple4 idxs)
 {
-  if (!(idx7 < 1024U))
+  if (!(idx7 < (size_t)1024U))
     update_quarantine3_aux(size_class, slab_region, idxs);
 }
 
@@ -124,20 +118,20 @@ deallocate_slab_aux_1_quarantine(
   tuple4 idxs = update_quarantine2(md_region, idx1, idx5, idx6, idx7);
   size_t v = ArrayList_remove(md_region, idx3, pos);
   size_t idx3_ = v;
-  ArrayList_cell cell = { .prev = 16777217U, .next = idxs.y, .data = 4U };
+  ArrayList_cell cell = { .prev = (size_t)16777217U, .next = idxs.y, .data = 4U };
   md_region[pos] = cell;
-  if (idxs.y != 16777217U)
+  if (idxs.y != (size_t)16777217U)
   {
     ArrayList_cell cell1 = md_region[idxs.y];
     ArrayList_cell cell2 = { .prev = pos, .next = cell1.next, .data = cell1.data };
     md_region[idxs.y] = cell2;
   }
   size_t tl_;
-  if (idxs.y == 16777217U)
+  if (idxs.y == (size_t)16777217U)
     tl_ = pos;
   else
     tl_ = idxs.z;
-  size_t sz_ = idxs.w + 1U;
+  size_t sz_ = idxs.w + (size_t)1U;
   ArrayListGen_tuple2 idxs_ = { .x1 = tl_, .y1 = sz_ };
   update_quarantine3(size_class, slab_region, idx7, idxs);
   r_idxs[0U] = idxs.x;
@@ -147,16 +141,16 @@ deallocate_slab_aux_1_quarantine(
   r_idxs[6U] = idxs_.y1;
 }
 
-typedef struct __SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t_____s
+typedef struct __Prims_dtuple2__bool_____Prims_dtuple2__uint8_t_____s
 {
   bool *fst;
   uint8_t *snd;
 }
-__SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____;
+__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____;
 
 static uint8_t
 *snd__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____(
-  __SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____ x
+  __Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____ x
 )
 {
   return x.snd;
@@ -181,7 +175,7 @@ SlabsFree2_deallocate_slab(
   size_t idx5_ = r_idxs[4U];
   size_t idx6_ = r_idxs[5U];
   size_t idx7_ = r_idxs[6U];
-  size_t pos = diff_ / SlabsCommon2_slab_size;
+  size_t pos = diff_ / ((size_t)4096U * (size_t)64U);
   if (pos < md_count_v_)
   {
     uint32_t status1 = ArrayList_read_in_place(md_region, pos);
@@ -195,9 +189,9 @@ SlabsFree2_deallocate_slab(
         bool *ptr10 = md_bm_region;
         size_t shift_size_t0 = pos;
         uint8_t *ptr1 = slab_region;
-        size_t shift_size_t = pos * SlabsCommon2_slab_size;
+        size_t shift_size_t = pos * ((size_t)4096U * (size_t)64U);
         apply_zeroing_u8(snd__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____((
-              (__SlabsCommon2_slab_metadata_Prims_dtuple2___uint8_t____){
+              (__Prims_dtuple2__bool_____Prims_dtuple2__uint8_t____){
                 .fst = ptr10 + shift_size_t0,
                 .snd = ptr1 + shift_size_t
               }
@@ -237,7 +231,7 @@ allocate_slab_aux_3_3_2(
 {
   KRML_MAYBE_UNUSED_VAR(md_bm_region);
   uint8_t *ptr = slab_region;
-  size_t shift_size_t = md_count_v * SlabsCommon2_slab_size;
+  size_t shift_size_t = md_count_v * ((size_t)4096U * (size_t)64U);
   intro_slab_vprop_empty(size_class, ptr + shift_size_t);
 }
 
@@ -267,7 +261,7 @@ allocate_slab_aux_3(
   ArrayList_insert(md_region, idx1, md_count_v, 0U);
   allocate_slab_aux_3_3(size_class, slab_region, md_bm_region, md_count_v);
   size_t v = *md_count;
-  *md_count = v + 1U;
+  *md_count = v + (size_t)1U;
   r_idxs[0U] = md_count_v;
 }
 
@@ -290,14 +284,14 @@ allocate_slab_aux_4_aux1(
 )
 {
   ArrayList_cell cell = md_region[idx6];
-  if (cell.next != 16777217U)
+  if (cell.next != (size_t)16777217U)
   {
     ArrayList_cell next = md_region[cell.next];
     ArrayList_cell next1 = { .prev = cell.prev, .next = next.next, .data = next.data };
     md_region[cell.next] = next1;
   }
   size_t tl_ = cell.prev;
-  if (cell.prev != 16777217U)
+  if (cell.prev != (size_t)16777217U)
   {
     ArrayList_cell prev = md_region[cell.prev];
     ArrayList_cell prev1 = { .prev = prev.prev, .next = cell.next, .data = prev.data };
@@ -308,7 +302,7 @@ allocate_slab_aux_4_aux1(
     hd_ = cell.next;
   else
     hd_ = idx5;
-  size_t sz_ = idx7 - 1U;
+  size_t sz_ = idx7 - (size_t)1U;
   ArrayListGen_tuple3 idxs = { .x = hd_, .y = tl_, .z = sz_ };
   ArrayList_insert(md_region, idx1, idx6, 0U);
   return ((bounded_tuple_){ .x = idx6, .y = idxs.x, .z = idxs.y, .w = idxs.z });
@@ -318,7 +312,7 @@ static void
 allocate_slab_aux_4_aux2(uint32_t size_class, uint8_t *slab_region, bounded_tuple_ idxs)
 {
   uint8_t *ptr = slab_region;
-  size_t shift_size_t = idxs.x * SlabsCommon2_slab_size;
+  size_t shift_size_t = idxs.x * ((size_t)4096U * (size_t)64U);
   mmap_untrap(ptr + shift_size_t, (size_t)size_class);
 }
 
@@ -359,10 +353,10 @@ uint8_t
   size_t idx5_ = r_idxs[4U];
   size_t idx6_ = r_idxs[5U];
   size_t idx7_ = r_idxs[6U];
-  if (idx1_ != 16777217U)
+  if (idx1_ != (size_t)16777217U)
   {
     uint8_t *ptr0 = slab_region;
-    size_t shift_size_t0 = idx1_ * SlabsCommon2_slab_size;
+    size_t shift_size_t0 = idx1_ * ((size_t)4096U * (size_t)64U);
     bool *ptr = md_bm_region;
     size_t shift_size_t = idx1_;
     uint8_t *r = allocate_slot(ptr0 + shift_size_t0, ptr + shift_size_t);
@@ -375,7 +369,7 @@ uint8_t
   }
   else
   {
-    bool b = idx7_ >= 256U;
+    bool b = idx7_ >= (size_t)256U;
     if (b)
     {
       bounded_tuple_
@@ -389,7 +383,7 @@ uint8_t
           idx6_,
           idx7_);
       uint8_t *ptr0 = slab_region;
-      size_t shift_size_t0 = idxs.x * SlabsCommon2_slab_size;
+      size_t shift_size_t0 = idxs.x * ((size_t)4096U * (size_t)64U);
       bool *ptr = md_bm_region;
       size_t shift_size_t = idxs.x;
       uint8_t *r = allocate_slot(ptr0 + shift_size_t0, ptr + shift_size_t);
@@ -403,7 +397,7 @@ uint8_t
     else
     {
       size_t md_count_v_0 = *md_count;
-      bool b1 = md_count_v_0 + 1U <= SlabsCommon2_metadata_max_ex;
+      bool b1 = md_count_v_0 + (size_t)1U <= (size_t)262144U;
       if (b1)
       {
         allocate_slab_aux_3(size_class,
@@ -415,7 +409,7 @@ uint8_t
           md_count_v_,
           idx1_);
         uint8_t *ptr0 = slab_region;
-        size_t shift_size_t0 = md_count_v_ * SlabsCommon2_slab_size;
+        size_t shift_size_t0 = md_count_v_ * ((size_t)4096U * (size_t)64U);
         bool *ptr = md_bm_region;
         size_t shift_size_t = md_count_v_;
         uint8_t *r = allocate_slot(ptr0 + shift_size_t0, ptr + shift_size_t);
