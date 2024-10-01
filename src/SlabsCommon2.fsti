@@ -245,6 +245,66 @@ let slab_vprop_lemma (size_class: sc_ex)
   //  (Seq.lseq bool (A.length arr_md))
   //  (Seq.lseq bool 1)
 
+let slab_vprop_equality (size_class: sc_ex)
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
+  (arr_md: slab_metadata)
+  : Lemma
+  (slab_vprop size_class arr arr_md
+  ==
+  vdep
+    (A.varray arr_md)
+    (fun b -> slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index b 0))
+  `star`
+  guard_slab size_class (A.split_r arr (u32_to_sz size_class))
+  )
+  = ()
+
+let slab_vprop_impl (size_class: sc_ex)
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
+  (arr_md: slab_metadata)
+  (md: G.erased (Seq.lseq bool 1))
+  : Lemma
+  (
+    can_be_split
+      (
+        slab_vprop_aux size_class
+          (A.split_l arr (u32_to_sz size_class))
+          (Seq.index (G.reveal md) 0) `star`
+        (
+          A.varray arr_md `star`
+          guard_slab size_class (A.split_r arr (u32_to_sz size_class))
+        )
+      )
+      (guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
+  )
+  =
+  let q1 = slab_vprop_aux size_class
+    (A.split_l arr (u32_to_sz size_class))
+    (Seq.index (G.reveal md) 0) in
+  let q2 = A.varray arr_md in
+  let p = guard_slab size_class (A.split_r arr (u32_to_sz size_class)) in
+  let q = q1 `star` (q2 `star` p) in
+  equiv_refl q;
+  assert (q `equiv` q);
+  star_commutative q1 (q2 `star` p);
+  assert (q `equiv` ((q2 `star` p) `star` q1));
+  equiv_refl q1;
+  star_commutative q2 p;
+  star_congruence
+    (q2 `star` p) q1
+    (p `star` q2) q1;
+  equiv_trans q
+    ((q2 `star` p) `star` q1)
+    ((p `star` q2) `star` q1);
+  star_associative p q2 q1;
+  equiv_trans q
+    ((p `star` q2) `star` q1)
+    (p `star` (q2 `star` q1));
+  assert (q `equiv` (p `star` (q2 `star` q1)));
+  intro_can_be_split_frame p q (q2 `star` q1)
+
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects --fuel 1 --ifuel 1"
 let intro_slab_vprop (#opened:_) (size_class: sc_ex)
   (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
@@ -306,20 +366,8 @@ let intro_slab_vprop (#opened:_) (size_class: sc_ex)
     guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
     (slab_vprop size_class arr arr_md)
     (fun x y -> x == y)
-    (fun _ -> admit ());
-  assume (
-    can_be_split
-      (
-        slab_vprop_aux size_class
-          (A.split_l arr (u32_to_sz size_class))
-          (Seq.index (G.reveal md) 0) `star`
-        (
-          A.varray arr_md `star`
-          guard_slab size_class (A.split_r arr (u32_to_sz size_class))
-        )
-      )
-      (guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
-  )
+    (fun _ -> slab_vprop_equality size_class arr arr_md);
+  slab_vprop_impl size_class arr arr_md md
 
 let elim_slab_vprop (#opened:_) (size_class: sc_ex)
   (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
@@ -371,7 +419,7 @@ let elim_slab_vprop (#opened:_) (size_class: sc_ex)
     `star`
     guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
     (fun x y -> x == y)
-    (fun _ -> admit ());
+    (fun _ -> slab_vprop_equality size_class arr arr_md);
   let md = elim_vdep
     (A.varray arr_md)
     (fun b -> slab_vprop_aux size_class
@@ -381,23 +429,10 @@ let elim_slab_vprop (#opened:_) (size_class: sc_ex)
   let b
     : G.erased (Seq.lseq bool 1)
     = G.hide (G.reveal md <: Seq.lseq bool 1) in
-  sladmit ();
-  //change_equal_slprop
-  //  (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index (G.reveal md) 0))
-  //  (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index (G.reveal b) 0));
-  //assume (
-  //  can_be_split
-  //    (
-  //      slab_vprop_aux size_class
-  //        (A.split_l arr (u32_to_sz size_class))
-  //        (Seq.index (G.reveal b) 0) `star`
-  //      (
-  //        A.varray arr_md `star`
-  //        guard_slab size_class (A.split_r arr (u32_to_sz size_class))
-  //      )
-  //    )
-  //    (guard_slab size_class (A.split_r arr (u32_to_sz size_class)))
-  //);
+  slab_vprop_impl size_class arr arr_md md;
+  change_equal_slprop
+    (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index (G.reveal md) 0))
+    (slab_vprop_aux size_class (A.split_l arr (u32_to_sz size_class)) (Seq.index b 0));
   b
 
 let is_empty (b:bool)
@@ -409,6 +444,57 @@ let is_full (b:bool)
   : bool
   =
   b
+
+let slab_vprop_empty_equiv_lemma (size_class: sc_ex)
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
+  (md: slab_metadata)
+  (md_as_seq: Seq.lseq bool 1)
+  : Lemma
+  (requires Seq.index md_as_seq 0 = true)
+  (ensures
+    slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index md_as_seq 0)
+    `equiv`
+    emp
+  )
+  =
+  let t = Seq.lseq U8.t (U32.v size_class) in
+  let p = slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index md_as_seq 0)
+  in
+  assert (p == none_as_emp #t);
+  equiv_refl p;
+  assert (p `equiv` none_as_emp #t);
+  none_as_emp_equiv #t;
+  equiv_sym emp (none_as_emp #t);
+  equiv_trans p (none_as_emp #t) emp
+
+let allocate_slot_from_emp_lemma (size_class: sc_ex)
+  (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
+  (md: slab_metadata)
+  (md_as_seq: Seq.lseq bool 1)
+  (m: SM.mem)
+  : Lemma
+  (requires
+    Seq.index md_as_seq 0 = true /\
+    SM.interp (hp_of emp) m
+  )
+  (ensures
+    SM.interp (hp_of (slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index md_as_seq 0))) m
+  )
+  =
+  slab_vprop_empty_equiv_lemma size_class arr md md_as_seq;
+  let p = slab_vprop_aux size_class
+      (A.split_l arr (u32_to_sz size_class))
+      (Seq.index md_as_seq 0) in
+  equiv_sym p emp;
+  assert (emp `equiv` p);
+  SM.reveal_equiv (hp_of emp) (hp_of p);
+  reveal_equiv emp p
 
 let allocate_slot (size_class: sc_ex)
   (arr: array U8.t{A.length arr = US.v sc_ex_slab_size})
@@ -444,16 +530,31 @@ let allocate_slot (size_class: sc_ex)
   A.upd md 0sz (not b);
   let md_as_seq' : G.erased (Seq.lseq bool 1)
     = G.hide (Seq.upd (G.reveal md_as_seq) 0 (not b)) in
-  rewrite_slprop
+  change_equal_slprop
     (slab_vprop_aux size_class
       (A.split_l arr (u32_to_sz size_class))
       (Seq.index md_as_seq 0))
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class))
+      (A.varray (A.split_l arr (u32_to_sz size_class))));
+  change_slprop_rel
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class))
+      (A.varray (A.split_l arr (u32_to_sz size_class))))
+    (A.varray (A.split_l arr (u32_to_sz size_class)))
+    (fun
+      (x: t_of (some_as_vp #(Seq.lseq U8.t (U32.v size_class))
+        (A.varray (A.split_l arr (u32_to_sz size_class)))))
+      (y: t_of (A.varray (A.split_l arr (u32_to_sz size_class)))) ->
+      let x' : option (Seq.lseq U8.t (U32.v size_class)) = x in
+      let y' : Seq.lseq U8.t (U32.v size_class) = y in
+      x' == Some y'
+      )
+    (fun m -> ());
+  rewrite_slprop
+    emp
     (slab_vprop_aux size_class
       (A.split_l arr (u32_to_sz size_class))
-      (Seq.index md_as_seq' 0) `star`
-    A.varray (A.split_l arr (u32_to_sz size_class))
-    )
-    (fun _ -> admit ());
+      (Seq.index md_as_seq' 0))
+    (fun m -> allocate_slot_from_emp_lemma size_class arr md md_as_seq' m);
   intro_slab_vprop size_class arr md md_as_seq';
   let ptr = A.split_l arr (u32_to_sz size_class) in
   change_equal_slprop
@@ -495,14 +596,13 @@ let deallocate_slot (size_class: sc_ex)
     let v1 : Seq.lseq bool 1 = dfst (fst blob1) in
     is_empty (Seq.index v1 0) /\
     b
-  )
     //(not b ==> v1 == v0))
+  )
   =
   assert (t_of (A.varray md) == Seq.lseq bool 1);
   let md_as_seq : G.erased (Seq.lseq bool 1)
     = elim_slab_vprop size_class arr md in
   let b = A.index md 0sz in
-  //assert (b);
   let md_as_seq' : G.erased (Seq.lseq bool 1)
     = G.hide (Seq.upd (G.reveal md_as_seq) 0 (not b)) in
   A.upd md 0sz false;
@@ -512,21 +612,30 @@ let deallocate_slot (size_class: sc_ex)
   change_equal_slprop
     (A.varray ptr)
     (A.varray (A.split_l arr (u32_to_sz size_class)));
-  rewrite_slprop
-    (slab_vprop_aux size_class
+  drop (slab_vprop_aux size_class
       (A.split_l arr (u32_to_sz size_class))
-      (Seq.index md_as_seq 0) `star`
-    A.varray (A.split_l arr (u32_to_sz size_class)))
+      (Seq.index md_as_seq 0));
+  change_slprop_rel
+    (A.varray (A.split_l arr (u32_to_sz size_class)))
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class))
+      (A.varray (A.split_l arr (u32_to_sz size_class))))
+    (fun
+      (x: t_of (A.varray (A.split_l arr (u32_to_sz size_class))))
+      (y: t_of (some_as_vp #(Seq.lseq U8.t (U32.v size_class))
+        (A.varray (A.split_l arr (u32_to_sz size_class))))) ->
+      let x' : Seq.lseq U8.t (U32.v size_class) = x in
+      let y' : option (Seq.lseq U8.t (U32.v size_class)) = y in
+      Some x' == y'
+    )
+    (fun _ -> ());
+  change_equal_slprop
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class))
+      (A.varray (A.split_l arr (u32_to_sz size_class))))
     (slab_vprop_aux size_class
       (A.split_l arr (u32_to_sz size_class))
       (Seq.index md_as_seq' 0)
-    )
-    (fun _ -> admit ());
+    );
   intro_slab_vprop size_class arr md md_as_seq';
-  //[@inline_let] let b = true in
-  //change_equal_slprop
-  //  emp
-  //  (if b then emp else A.varray ptr);
   return true
 
 #push-options "--z3rlimit 30"
