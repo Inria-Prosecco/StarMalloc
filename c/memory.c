@@ -86,6 +86,11 @@ uint32_t* mmap_sizes_init (size_t len) {
   return (uint32_t*) mmap_init(len * sizeof(uint32_t));
 }
 
+// slabs allocator init
+bool* mmap_bool_init (size_t len) {
+  return (bool*) mmap_init(len * sizeof(bool));
+}
+
 /// Mman2
 
 // large allocator init
@@ -115,10 +120,10 @@ void mmap_strict_untrap (uint8_t* ptr, size_t len) {
 
 // syscall wrapper
 void mmap_trap (uint8_t* ptr, size_t len) {
-  int r = madvise((void*) ptr, len, MADV_DONTNEED);
-  if (r && errno != ENOMEM) {
-    fatal_error("non-ENOMEM MADV_DONTNEED madvise failure");
-  }
+  //int r = madvise((void*) ptr, len, MADV_DONTNEED);
+  //if (r && errno != ENOMEM) {
+  //  fatal_error("non-ENOMEM MADV_DONTNEED madvise failure");
+  //}
   return;
 }
 

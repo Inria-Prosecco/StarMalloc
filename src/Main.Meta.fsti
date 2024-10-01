@@ -38,11 +38,11 @@ val total_nb_sc_lemma (_: unit)
   (total_nb_sc == US.v nb_size_classes * US.v nb_arenas)
 
 inline_for_extraction noextract
-val arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l})
+val arena_sc_list : (l:list sc_union{List.length l == total_nb_sc /\ Cons? l})
 
-val sizes_t_pred (r: TLA.t sc) : prop
+val sizes_t_pred (r: TLA.t sc_union) : prop
 
-unfold type sizes_t = r:TLA.t sc{
+unfold type sizes_t = r:TLA.t sc_union{
   TLA.length r == total_nb_sc /\
   sizes_t_pred r
 }
@@ -69,7 +69,7 @@ type size_classes_all =
     ro_perm: ro_array size_classes g_size_classes; // The read-only permission on size_classes
     //ro_sizes: ro_array sizes g_sizes;
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
-      synced_sizes total_nb_sc sizes g_size_classes /\
+      synced_sizes 0sz g_size_classes sizes total_nb_sc /\
       A.length arr == US.v slab_region_size /\
       (forall (i:nat{i < Seq.length g_size_classes}).
         size_class_pred arr (Seq.index g_size_classes i) i)
@@ -84,13 +84,13 @@ val slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
   (array U8.t)
   emp (fun r -> null_or_varray r)
   (requires fun _ ->
-    U32.v bytes <= U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size
+    U32.v bytes <= U32.v (get_u32 (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size)
   )
   (ensures fun _ r _ ->
-    let size = (Seq.index sc_all.g_size_classes (US.v i)).data.size in
+    let size = get_u32 ((Seq.index sc_all.g_size_classes (US.v i)).data.size) in
     U32.v size > 0 /\
     not (is_null r) ==> (
-      A.length r == U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size /\
+      A.length r == U32.v (get_u32 (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size) /\
       A.length r >= U32.v bytes /\
       array_u8_alignment r 16ul /\
       ((U32.v page_size) % (U32.v size) == 0 ==> array_u8_alignment r size)
@@ -100,11 +100,11 @@ val slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
 inline_for_extraction noextract
 val set_canary
   (ptr: array U8.t)
-  (size: sc)
+  (size: sc_union)
   : Steel unit
   (null_or_varray ptr) (fun _ -> null_or_varray ptr)
   (requires fun _ ->
-    not (is_null ptr) ==> A.length ptr = U32.v size)
+    not (is_null ptr) ==> A.length ptr = U32.v (get_u32 size))
   (ensures fun _ _ h1 ->
     let s : t_of (null_or_varray ptr)
       = h1 (null_or_varray ptr) in

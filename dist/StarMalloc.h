@@ -12,6 +12,8 @@
 #include "PtrdiffWrapper.h"
 #include "Mman.h"
 #include "ExternUtils.h"
+#include "Constants.h"
+#include "Config.h"
 #include "ArrayList.h"
 
 extern size_t StarMalloc_threshold;

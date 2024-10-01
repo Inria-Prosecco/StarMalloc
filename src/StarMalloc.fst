@@ -56,6 +56,7 @@ module G = FStar.Ghost
 
 //TODO: [@ CConst]
 let threshold : US.t =
+  let page_size = 131072ul in
   if enable_slab_canaries_malloc
   then US.sub (US.uint32_to_sizet page_size) 2sz
   else US.uint32_to_sizet page_size
@@ -125,7 +126,7 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
 let aligned_alloc arena_id alignment size
   =
   let page_as_sz = US.uint32_to_sizet page_size in
-  let check = US.gt alignment 0sz && US.rem (US.uint32_to_sizet page_size) alignment = 0sz in
+  let check = US.gt alignment 0sz && US.rem (US.uint32_to_sizet 131072ul) alignment = 0sz in
   if check then (
     let alignment_as_u32 = US.sizet_to_uint32 alignment in
     if (US.lte size threshold) then (
@@ -248,7 +249,7 @@ let full_getsize (ptr: array U8.t)
       (G.reveal (snd result) ==> (
         let idx = sc_selection (US.sizet_to_uint32 (fst result)) in
         (enable_sc_fast_selection ==>
-          A.length ptr == U32.v (L.index sc_list (US.v idx))) /\
+          A.length ptr == U32.v (get_u32 (L.index sc_list (US.v idx)))) /\
         (enable_slab_canaries_malloc ==>
           A.length ptr == US.v (fst result) + 2
         ) /\
@@ -292,7 +293,7 @@ let getsize (ptr: array U8.t)
       (US.v result <= U32.v page_size ==> (
         let idx = sc_selection (US.sizet_to_uint32 result) in
         (enable_sc_fast_selection ==>
-          A.length ptr == U32.v (L.index sc_list (US.v idx))) /\
+          A.length ptr == U32.v (get_u32 (L.index sc_list (US.v idx)))) /\
         (enable_slab_canaries_malloc ==>
           A.length ptr == US.v result + 2
         ) /\
@@ -319,7 +320,7 @@ let realloc_small_optim_lemma
     US.v old_size <= U32.v page_size /\
     US.v new_size <= US.v threshold /\
     (let old_idx = sc_selection (US.sizet_to_uint32 old_size) in
-    let old_sc = L.index sc_list (US.v old_idx) in
+    let old_sc = get_u32 (L.index sc_list (US.v old_idx)) in
     let new_idx = if enable_slab_canaries_malloc
       then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
       else sc_selection (US.sizet_to_uint32 new_size) in

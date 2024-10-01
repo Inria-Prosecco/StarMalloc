@@ -15,6 +15,8 @@ extern uint64_t *mmap_u64_init(size_t len);
 
 extern ArrayList_cell *mmap_cell_status_init(size_t len);
 
+extern bool *mmap_bool_init(size_t len);
+
 extern size_t *mmap_ptr_us_init(void);
 
 extern size_t *mmap_array_us_init(size_t len);

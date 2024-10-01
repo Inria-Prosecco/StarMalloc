@@ -67,6 +67,7 @@ extract: $(ALL_KRML_FILES)
 	  -bundle Steel.SpinLock= -bundle 'FStar.\*,Steel.\*' \
 	  -bundle 'StarMalloc=Mman2,FatalError,Map.\*,Impl.\*,Spec.\*,Main,Main2,Main.Meta,LargeAlloc'[rename=StarMalloc] \
 	  -bundle 'SlabsCommon,SlabsFree,SlabsAlloc'[rename=Slabs] \
+	  -bundle 'SlabsCommon2,SlabsFree2,SlabsAlloc2'[rename=Slabs2] \
 	  -bundle 'SlotsFree,SlotsAlloc'[rename=Slots] \
 	  -bundle 'ArrayList,ArrayListGen'[rename=ArrayList] \
 	  -no-prefix LargeAlloc \
@@ -86,10 +87,13 @@ EXT_VENDOR_FILES = vendor/steel/src/c/steel_spinlock.c
 # TODO: improve this
 #dist/Mman.c leads to issue, moving non-extern code apart
 FILES = \
+  dist/Config.c \
+  dist/Constants.c \
   dist/ArrayList.c \
   dist/krmlinit.c \
   dist/StarMalloc.c \
   dist/Slabs.c \
+  dist/Slabs2.c \
   dist/Slots.c \
   dist/Bitmap5.c \
   dist/Utils2.c \

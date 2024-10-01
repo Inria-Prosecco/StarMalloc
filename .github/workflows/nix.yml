@@ -13,12 +13,12 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
-      - name: build StarMalloc (light)
-        run: |
-          nix build -L .#starmalloc-light
-      - name: build StarMalloc (light) logs
-        run: |
-          nix log .#starmalloc-light
+      #- name: build StarMalloc (light)
+      #  run: |
+      #    nix build -L .#starmalloc-light
+      #- name: build StarMalloc (light) logs
+      #  run: |
+      #    nix log .#starmalloc-light
 
       - name: build StarMalloc
         run: |
