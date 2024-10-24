@@ -18,7 +18,7 @@ that its properties can be compared with many other allocators.
 
 Using a modified version of Firefox (additional `--disable-jemalloc` build flag to use the environment allocator), it has successfully been tested on standard browser benchmarks (such as JetStream2 and Speedometer 2.1) as a replacement for the Firefox-shipped memory allocator.
 
-In terms of performance, it is roughly on par with hardened_malloc whose design was used as a basis. On the mimalloc-benchmarking suite, using hardened_malloc as a baseline, we get performance ranging from 0.70x to 1.30x, with a geometric mean on all 31 benches of ~1. Please note that some implementation differences remain (e.g. constant canaries vs. cryptographic canaries, slightly different quarantine implementation, no security mechanism for large allocations).
+In terms of performance, it is roughly on par with hardened_malloc whose design was used as a basis. On the mimalloc-benchmarking suite, using hardened_malloc as a baseline, we get performance ranging from 0.70x to 1.30x, with a geometric mean on all 31 benches of ~1 (more details in the paper). Please note that some implementation differences remain (e.g. constant canaries vs. cryptographic canaries, slightly different quarantine implementation, no security mechanism for large allocations), which should have very limited performance impact.
 
 ## Security mechanisms
 
