@@ -24,6 +24,7 @@ val allocate_slab
   (size_class: sc)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
+  (md_bm_region_q: array U64.t{A.length md_bm_region_q = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   (r_idxs: array US.t{A.length r_idxs = 7})
@@ -32,14 +33,14 @@ val allocate_slab
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_bm_region_q md_region r_idxs)
   )
   (fun r ->
     (if (A.is_null r) then emp else A.varray r) `star`
     vrefinedep
       (vptr md_count)
       vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
+      (size_class_vprop_aux size_class slab_region md_bm_region md_bm_region_q md_region r_idxs)
   )
   (requires fun _ -> True)
   (ensures fun _ r _ ->

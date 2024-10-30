@@ -13,13 +13,13 @@ size_t Config_guard_pages_interval = (size_t)2U;
 
 bool Config_enable_quarantine = true;
 
+bool Config_enable_quarantine_slot = true;
+
 bool Config_enable_quarantine_trap = true;
 
 bool Config_enable_quarantine_strict_trap = false;
 
-size_t Config_quarantine_queue_length = (size_t)1024U;
-
-size_t Config_quarantine_queue_threshold = (size_t)256U;
+size_t Config_quarantine_queue_length = (size_t)4096U;
 
 bool Config_enable_zeroing_malloc = true;
 

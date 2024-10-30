@@ -95,11 +95,10 @@ inline_for_extraction
 val guard_pages_interval: v:US.t{2 <= US.v v /\ US.fits (US.v metadata_max + US.v v)}
 
 // quarantine mechanism
-// for now, basic quarantine:
-// when a slab becomes empty (from partial/full),
-// it is never used again
 inline_for_extraction
 val enable_quarantine: bool
+inline_for_extraction
+val enable_quarantine_slot: bool
 // controls whether quarantined slabs are unmapped
 inline_for_extraction
 val enable_quarantine_trap: bool
@@ -108,8 +107,14 @@ inline_for_extraction
 val enable_quarantine_strict_trap: bool
 inline_for_extraction
 val quarantine_queue_length: v:US.t{0 < US.v v /\ US.v v <= US.v metadata_max}
-inline_for_extraction
-val quarantine_queue_threshold: v:US.t{0 < US.v v /\ US.v v < US.v quarantine_queue_length}
+//: v:US.t{0 < US.v v /\ US.v v < US.v quarantine_queue_length}
+noextract inline_for_extraction
+val quarantine_queue_threshold (size_class: sc) : (v:US.t{0 < US.v v})
+
+// required
+val enable_quarantine_lemma (_:unit)
+  : Lemma
+  (enable_quarantine_slot ==> enable_quarantine)
 
 // zeroing mechanism (slabs)
 // controls whether zeroing is checked at allocation
