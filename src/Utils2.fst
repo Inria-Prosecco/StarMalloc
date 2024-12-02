@@ -16,8 +16,8 @@ open Constants
 
 #push-options "--fuel 0 --ifuel 0"
 
-let array = Steel.ST.Array.array
-let ptr = Steel.ST.Array.ptr
+let array (a: Type) = Steel.ST.Array.array a
+let ptr (a: Type) = Steel.ST.Array.ptr a
 
 noextract
 unfold let same_base_array (#a: Type) (arr1 arr2: array a)
@@ -87,6 +87,18 @@ let zf_b_slice
   (ensures zf_b (Seq.slice arr i j))
   =
   Seq.lemma_eq_intro (Seq.slice arr i j) (Seq.create (j - i) false)
+
+let zf_b_split
+  (arr: Seq.seq bool)
+  (i:nat{i <= Seq.length arr})
+  : Lemma
+  (requires zf_b arr)
+  (ensures
+    zf_b (fst (Seq.split arr i)) /\
+    zf_b (snd (Seq.split arr i)))
+  =
+  zf_b_slice arr 0 i;
+  zf_b_slice arr i (Seq.length arr)
 
 noextract
 let max64_nat : nat = FU.max_int U64.n

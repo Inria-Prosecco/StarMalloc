@@ -19,22 +19,73 @@ let u32_to_sz
 
 open Constants
 
+/// Small allocator size classes
+
+/// List of small size classes
+inline_for_extraction noextract
+val sc_list_sc: list sc
+
+/// List of extended size classes
+inline_for_extraction noextract
+val sc_list_ex: list sc_ex
+///
 /// List of size classes used in each arena
 inline_for_extraction noextract
-val sc_list : (l:list sc{Cons? l /\ L.mem page_size l})
+val sc_list: (l:list sc_union{Cons? l})
+
+val sc_list_reveal (_:unit)
+  : Lemma
+  (sc_list ==
+  L.append
+    (L.map (fun v -> Sc v) sc_list_sc)
+    (L.map (fun v -> Sc_ex v) sc_list_ex)
+  )
 
 /// Number of size classes per arena
 inline_for_extraction
 [@ CMacro ]
-val nb_size_classes: v:US.t{US.v v > 0 /\ US.v v == L.length sc_list}
+val nb_size_classes: v:US.t{
+  0 < US.v v /\
+  US.v v == L.length sc_list
+}
+
+/// Number of normal size classes per arena
+inline_for_extraction
+[@ CMacro ]
+val nb_size_classes_sc: v:US.t{
+  0 <= US.v v /\
+  US.v v <= US.v nb_size_classes /\
+  US.v v == L.length sc_list_sc
+}
+
+/// Number of extended size classes per arena
+inline_for_extraction
+[@ CMacro ]
+val nb_size_classes_sc_ex: v:US.t{
+  0 <= US.v v /\
+  US.v v <= US.v nb_size_classes /\
+  US.v v == L.length sc_list_ex
+}
+
+val nb_size_classes_lemma (_:unit)
+  : Lemma
+  (US.v nb_size_classes_sc + US.v nb_size_classes_sc_ex
+  =
+  US.v nb_size_classes)
+
+/// Controls whether extended size classes
+/// (size classes whose size is >= page size)
+/// are enabled
+inline_for_extraction
+val enable_extended_size_classes: bool
 
 noextract
 unfold type sc_selection_f = (x:U32.t) -> Pure US.t
   (requires
-    U32.v x <= max_sc)
+    U32.v x <= max_sc_ex)
   (ensures fun r ->
     US.v r < US.v nb_size_classes /\
-    U32.v x <= U32.v (L.index sc_list (US.v r))
+    U32.v x <= U32.v (get_u32 (L.index sc_list (US.v r)))
   )
 
 /// Size class selection (fast path)
@@ -52,7 +103,7 @@ val sc_selection_is_exact1 (k:nat)
     k < US.v nb_size_classes
   )
   (ensures
-    US.v (sc_selection (L.index sc_list k)) == k
+    US.v (sc_selection (get_u32 (L.index sc_list k))) == k
   )
 
 val sc_selection_is_exact2 (k:nat)
@@ -61,7 +112,7 @@ val sc_selection_is_exact2 (k:nat)
     k < US.v nb_size_classes
   )
   (ensures
-    US.v (sc_selection (U32.sub (L.index sc_list k) 2ul)) == k
+    US.v (sc_selection (U32.sub (get_u32 (L.index sc_list k)) 2ul)) == k
   )
 
 /// Number of arenas
@@ -73,8 +124,44 @@ inline_for_extraction
 val metadata_max: v:US.t{
   US.v v > 0 /\
   US.fits (US.v v * U32.v page_size * US.v nb_size_classes * US.v nb_arenas) /\
-  US.fits (US.v v * U32.v page_size)
+  US.fits (US.v v * U32.v page_size) /\
+  (US.v v) % (US.v max_sc_coef * 2) == 0
 }
+
+val sc_slab_region_size
+  : v:US.t{
+    0 < US.v v /\
+    US.v v == US.v metadata_max * U32.v page_size
+  }
+
+val full_slab_region_size
+  : v:US.t{
+    0 < US.v v /\
+    US.v v == US.v metadata_max * U32.v page_size * US.v nb_size_classes * US.v nb_arenas
+  }
+
+inline_for_extraction
+val metadata_max_ex: v:US.t{
+  US.v v > 0 /\
+  US.v v <= US.v metadata_max /\
+  US.fits (US.v v * US.v sc_ex_slab_size) /\
+  US.v v * US.v sc_ex_slab_size == US.v sc_slab_region_size
+}
+
+//let slab_size
+//  : v:US.t{0 < US.v v}
+//  =
+//  US.mul (u32_to_sz page_size) (US.mul max_sc_coef 2sz)
+
+//let metadata_max_ex
+//  : v:US.t{
+//    0 < US.v v /\
+//    US.v v * US.v max_sc_coef * 2 == US.v metadata_max /\
+//    slab_region_size = US.mul v slab_size /\
+//    US.fits (US.v v * US.v slab_size)
+//  }
+//  =
+//  US.div metadata_max (US.mul max_sc_coef 2sz)
 
 val metadata_max_up_fits (_:unit)
   : Lemma

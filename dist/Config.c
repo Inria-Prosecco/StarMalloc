@@ -3,9 +3,17 @@
 
 #include "Config.h"
 
+bool Config_enable_extended_size_classes = true;
+
 bool Config_enable_sc_fast_selection = true;
 
 size_t Config_metadata_max = (size_t)16777216U;
+
+size_t Config_sc_slab_region_size = (size_t)68719476736U;
+
+size_t Config_full_slab_region_size = (size_t)8796093022208U;
+
+size_t Config_metadata_max_ex = (size_t)262144U;
 
 bool Config_enable_guard_pages = true;
 

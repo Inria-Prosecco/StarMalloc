@@ -29,6 +29,8 @@ typedef struct Impl_Trees_Cast_M_node_s
 }
 Impl_Trees_Cast_M_node;
 
+extern size_t Main_slab_region_size;
+
 typedef struct Impl_Trees_Types_mmap_md_slabs_s
 {
   uint8_t *slab_region;
