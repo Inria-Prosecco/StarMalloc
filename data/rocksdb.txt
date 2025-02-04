@@ -1,0 +1,49 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  rocksdb
+
+---- 1: rocksdb
+
+run 1: rocksdb sys: SYSMALLOC=1 /home/atn/stapp/mimalloc-bench/extern/rocksdb-8.1.1/db_bench --benchmarks=fillrandom
+RocksDB:    version 8.1.1
+Date:       Mon Feb  3 20:00:46 2025
+CPU:        8 * Intel(R) Xeon(R) CPU E5-1620 0 @ 3.60GHz
+CPUCache:   10240 KB
+... finished 100 ops                              ... finished 200 ops                              ... finished 300 ops                              ... finished 400 ops                              ... finished 500 ops                              ... finished 600 ops                              ... finished 700 ops                              ... finished 800 ops                              ... finished 900 ops                              ... finished 1000 ops                              ... finished 1500 ops                              ... finished 2000 ops                              ... finished 2500 ops                              ... finished 3000 ops                              ... finished 3500 ops                              ... finished 4000 ops                              ... finished 4500 ops                              ... finished 5000 ops                              ... finished 6000 ops                              ... finished 7000 ops                              ... finished 8000 ops                              ... finished 9000 ops                              ... finished 10000 ops                              ... finished 15000 ops                              ... finished 20000 ops                              ... finished 25000 ops                              ... finished 30000 ops                              ... finished 35000 ops                              ... finished 40000 ops                              ... finished 45000 ops                              ... finished 50000 ops                              ... finished 60000 ops                              ... finished 70000 ops                              ... finished 80000 ops                              ... finished 90000 ops                              ... finished 100000 ops                              ... finished 150000 ops                              ... finished 200000 ops                              ... finished 250000 ops                              ... finished 300000 ops                              ... finished 350000 ops                              ... finished 400000 ops                              ... finished 450000 ops                              ... finished 500000 ops                              ... finished 600000 ops                              ... finished 700000 ops                              ... finished 800000 ops                              ... finished 900000 ops                              ... finished 1000000 ops                              rocksdb     sys   0:07.12 101148 6.41 1.22 0 20180
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+rocksdb     sys   07.12 101148 6.41 1.22 0 20180
+
+Malloc: 47796
+Free: 40439
+Realloc: 769
+Calloc: 47
+Malloc_usable_size: 0
+Aligned_alloc: 1
+Posix_memalign: 0
+ value |-------------------------------------------------- count
+     0 |                                                       2
+     1 |@@                                                   447
+     2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           9248
+     4 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          5802
+     8 |@@@@@@@@@@@@@@@@@@@                                 4450
+    16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      10074
+    32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  11132
+    64 |@@@@@@@@@@@@@@@@@@@@@@                              5115
+   128 |@@@                                                  831
+   256 |@                                                    273
+   512 |                                                      68
+  1024 |                                                     141
+  2048 |                                                     126
+  4096 |                                                      76
+  8192 |                                                       9
+ 16384 |                                                       0
+ 32768 |                                                       2
+ 65536 |                                                       0
+131072 |                                                       0
+

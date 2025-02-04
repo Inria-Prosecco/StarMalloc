@@ -1,0 +1,45 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  espresso
+
+---- 1: espresso
+
+run 1: espresso sys: SYSMALLOC=1 ./espresso ../../bench/espresso/largest.espresso
+espresso    sys   1:56.18 5992 48.57 67.40 0 471
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+espresso    sys   1:56.18 5992 48.57 67.40 0 471
+
+Malloc: 33234721
+Free: 33227183
+Realloc: 323316
+Calloc: 40
+Malloc_usable_size: 0
+Aligned_alloc: 1
+Posix_memalign: 0
+ value |-------------------------------------------------- count
+     0 |                                                     142882
+     1 |                                                        446
+     2 |                                                       9092
+     4 |                                                       5681
+     8 |                                                     330803
+    16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    10673794
+    32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  17169332
+    64 |@@@@@@@                                             2584835
+   128 |@@@                                                 1055282
+   256 |@@                                                   705613
+   512 |                                                     202048
+  1024 |                                                      89941
+  2048 |                                                      97265
+  4096 |                                                     123096
+  8192 |                                                       3829
+ 16384 |                                                      40720
+ 32768 |                                                         62
+ 65536 |                                                          0
+131072 |                                                          0
+

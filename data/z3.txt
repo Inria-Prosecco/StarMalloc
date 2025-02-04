@@ -1,0 +1,49 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  z3
+
+---- 1: z3
+
+run 1: z3 sys: SYSMALLOC=1 z3 -smt2 /home/atn/stapp/mimalloc-bench/bench/z3/test1.smt2
+z3          sys   0:01.66 26656 0.49 0.54 132 3272
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+z3          sys   01.66 26656 0.49 0.54 132 3272
+
+Malloc: 186620
+Free: 179309
+Realloc: 137858
+Calloc: 48
+Malloc_usable_size: 0
+Aligned_alloc: 1
+Posix_memalign: 0
+  value |-------------------------------------------------- count
+      0 |                                                       2
+      1 |                                                     446
+      2 |@@@@@                                               9533
+      4 |@@@                                                 6178
+      8 |@@                                                  4067
+     16 |@@@@@@@@@@@@@@@@@@@                                33977
+     32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  88856
+     64 |@@@@@@@@@@@@@                                      23827
+    128 |@@@@@@@                                            12870
+    256 |@@                                                  4461
+    512 |                                                     672
+   1024 |                                                    1084
+   2048 |                                                     178
+   4096 |                                                     113
+   8192 |                                                     258
+  16384 |                                                      25
+  32768 |                                                      26
+  65536 |                                                      38
+ 131072 |                                                       6
+ 262144 |                                                       2
+ 524288 |                                                       1
+1048576 |                                                       0
+2097152 |                                                       0
+

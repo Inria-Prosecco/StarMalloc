@@ -1,0 +1,104 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  lean
+/home/atn/stapp/mimalloc-bench/extern/lean/library /home/atn/stapp/mimalloc-bench/out/bench
+
+---- 1: leanN
+
+run 1: leanN sys: SYSMALLOC=1 ../bin/lean --make -j 8
+preprocess...
+/home/atn/stapp/mimalloc-bench/extern/lean/out/release /home/atn/stapp/mimalloc-bench/extern/lean/library /home/atn/stapp/mimalloc-bench/out/bench
+CMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+-- The CXX compiler identification is GNU 14.2.1
+-- The C compiler identification is GNU 14.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- No build type selected, default to Release
+-- Lean library will be installed at /usr/local/lib/lean
+-- Using standard malloc.
+CMake Warning (dev) at CMakeLists.txt:346 (find_package):
+  Policy CMP0148 is not set: The FindPythonInterp and FindPythonLibs modules
+  are removed.  Run "cmake --help-policy CMP0148" for policy details.  Use
+  the cmake_policy command to set the policy and suppress this warning.
+
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- git commit sha1: 21d264a66d53b0a910178ae7d9529cb5886a39b6
+CMake Warning (dev) at cmake/Modules/StyleCheck.cmake:19 (find_package):
+  Policy CMP0148 is not set: The FindPythonInterp and FindPythonLibs modules
+  are removed.  Run "cmake --help-policy CMP0148" for policy details.  Use
+  the cmake_policy command to set the policy and suppress this warning.
+
+Call Stack (most recent call first):
+  CMakeLists.txt:464 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Configuring done (8.5s)
+-- Generating done (9.2s)
+-- Build files have been written to: /home/atn/stapp/mimalloc-bench/extern/lean/out/release
+Built target clean-leanpkg
+Built target clean-std-lib
+Built target clean-olean
+/home/atn/stapp/mimalloc-bench/extern/lean/library /home/atn/stapp/mimalloc-bench/out/bench
+leanN       sys   4:27.09 248568 251.18 392.54 88 63226
+/home/atn/stapp/mimalloc-bench/out/bench
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+leanN       sys   4:27.09 248568 251.18 392.54 88 63226
+
+Malloc: 139421671
+Free: 139495652
+Realloc: 77375
+Calloc: 53162
+Malloc_usable_size: 0
+Aligned_alloc: 49
+Posix_memalign: 0
+   value |-------------------------------------------------- count
+       0 |                                                          2
+       1 |                                                       1609
+       2 |                                                      31445
+       4 |                                                     166068
+       8 |                                                    1142248
+      16 |@@@@@@@                                            13067099
+      32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  93288695
+      64 |@@@@@@@@@@@@@@                                     27541082
+     128 |                                                    1587650
+     256 |@                                                   2159318
+     512 |                                                     294350
+    1024 |                                                      62176
+    2048 |                                                      40829
+    4096 |                                                       8431
+    8192 |                                                       6381
+   16384 |                                                       2622
+   32768 |                                                      12622
+   65536 |                                                       6927
+  131072 |                                                       2081
+  262144 |                                                         15
+  524288 |                                                          4
+ 1048576 |                                                          8
+ 2097152 |                                                          5
+ 4194304 |                                                          4
+ 8388608 |                                                          0
+16777216 |                                                          0
+

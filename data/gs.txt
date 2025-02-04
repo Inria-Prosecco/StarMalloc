@@ -1,0 +1,49 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  gs
+
+---- 1: gs
+
+run 1: gs sys: SYSMALLOC=1 gs -dBATCH -dNODISPLAY /home/atn/stapp/mimalloc-bench/extern/large.pdf
+gs          sys   0:02.04 32088 0.68 0.33 149 5316
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+gs          sys   02.04 32088 0.68 0.33 149 5316
+
+Malloc: 158227
+Free: 152505
+Realloc: 771
+Calloc: 843
+Malloc_usable_size: 0
+Aligned_alloc: 1
+Posix_memalign: 0
+  value |-------------------------------------------------- count
+      0 |                                                       2
+      1 |                                                     446
+      2 |@@@@@@@@@@                                          9641
+      4 |@@@@@@@                                             6259
+      8 |@@@@                                                4152
+     16 |@@@@@@@@@@@@                                       10866
+     32 |@@@@@@@@@@@@                                       11256
+     64 |@@@@@@@@                                            7487
+    128 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  43901
+    256 |@@                                                  2490
+    512 |                                                      72
+   1024 |                                                     337
+   2048 |@                                                   1259
+   4096 |@@@@@@@@@@@@@@@@@@@@@@                             19791
+   8192 |                                                      75
+  16384 |@@@@@@@@@@@@@@@@@@@@@@                             19978
+  32768 |                                                     229
+  65536 |                                                      25
+ 131072 |@@@@@@@@@@@@@@@@@@@@@@                             19805
+ 262144 |                                                       0
+ 524288 |                                                     156
+1048576 |                                                       0
+2097152 |                                                       0
+

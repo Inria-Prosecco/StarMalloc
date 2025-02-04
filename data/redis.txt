@@ -1,0 +1,52 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  redis
+
+---- 1: redis
+
+run 1: redis sys: SYSMALLOC=1 /home/atn/stapp/mimalloc-bench/extern/redis-6.2.7/src/redis-benchmark -r 1000000 -n 100000 -q -P 16 lpush a 1 2 3 4 5 lrange a 1 5
+start server
+OK
+OK
+redis sys: ops/sec: 7786.95, relative time: 256.839s
+redis       sys   0:256.839 12700 5.25 7.64 0 1426
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+redis       sys   256.839 12700 5.25 7.64 0 1426
+
+Malloc: 1288798
+Free: 1367357
+Realloc: 903407
+Calloc: 100950
+Malloc_usable_size: 4238663
+Aligned_alloc: 1
+Posix_memalign: 0
+  value |-------------------------------------------------- count
+      0 |                                                         3
+      1 |                                                       457
+      2 |                                                     10110
+      4 |                                                     14039
+      8 |                                                      6219
+     16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  1128792
+     32 |                                                     14065
+     64 |@@@@                                                105959
+    128 |                                                      1003
+    256 |                                                       395
+    512 |                                                       212
+   1024 |                                                       216
+   2048 |                                                      6468
+   4096 |                                                       102
+   8192 |                                                        10
+  16384 |                                                        60
+  32768 |                                                       682
+  65536 |                                                         4
+ 131072 |                                                         0
+ 262144 |                                                         2
+ 524288 |                                                         0
+1048576 |                                                         0
+

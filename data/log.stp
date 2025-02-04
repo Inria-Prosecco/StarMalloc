@@ -1,0 +1,47 @@
+#! /usr/bin/env stap
+
+global nb_malloc
+global nb_free
+global nb_realloc
+global nb_calloc
+global nb_malloc_usable_size
+global nb_aligned_alloc
+global nb_posix_memalign
+global logs, logs_calloc
+
+probe process("/lib*/libc.so.*").function("malloc") {
+  nb_malloc <<< 1
+  logs <<< $bytes
+}
+
+
+probe process("/lib*/libc.so.*").function("free") {
+  nb_free <<< 1
+}
+probe process("/lib*/libc.so.*").function("realloc") {
+  nb_realloc <<< 1
+}
+probe process("/lib*/libc.so.*").function("calloc") {
+  nb_calloc <<< 1
+}
+probe process("/lib*/libc.so.*").function("malloc_usable_size") {
+  nb_malloc_usable_size <<< 1
+}
+probe process("/lib*/libc.so.*").function("aligned_alloc") {
+  nb_aligned_alloc <<< 1
+}
+probe process("/lib*/libc.so.*").function("posix_memalign") {
+  nb_posix_memalign <<< 1
+}
+
+probe end,error {
+  printf("Malloc: %d\n", @sum(nb_malloc));
+  printf("Free: %d\n", @sum(nb_free));
+  printf("Realloc: %d\n", @sum(nb_realloc));
+  printf("Calloc: %d\n", @sum(nb_calloc));
+  printf("Malloc_usable_size: %d\n", @sum(nb_malloc_usable_size));
+  printf("Aligned_alloc: %d\n", @sum(nb_aligned_alloc));
+  printf("Posix_memalign: %d\n", @sum(nb_posix_memalign));
+  print(@hist_log(logs))
+}
+
