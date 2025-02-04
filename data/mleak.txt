@@ -1,0 +1,51 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  mleak
+
+---- 1: mleak10
+
+run 1: mleak10 sys: SYSMALLOC=1 ./mleak 5
+mleak10     sys   0:00.31 6060 0.10 0.23 0 6236
+
+---- 1: mleak100
+
+run 1: mleak100 sys: SYSMALLOC=1 ./mleak 50
+mleak100    sys   0:02.84 5876 0.83 2.46 0 60257
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+mleak10     sys   00.31 6060 0.10 0.23 0 6236
+mleak100    sys   02.84 5876 0.83 2.46 0 60257
+
+Malloc: 56877
+Free: 1232014
+Realloc: 1011
+Calloc: 93558
+Malloc_usable_size: 0
+Aligned_alloc: 2
+Posix_memalign: 0
+ value |-------------------------------------------------- count
+     0 |                                                       2
+     1 |@@                                                   539
+     2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           10742
+     4 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          7074
+     8 |@@@@@@@@@@@@@@@@@@@                                 5175
+    16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       11747
+    32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  13185
+    64 |@@@@@@@@@@@@@@@@@@@@@@@@                            6399
+   128 |@@@@                                                1179
+   256 |@                                                    381
+   512 |                                                      75
+  1024 |                                                     156
+  2048 |                                                     126
+  4096 |                                                      86
+  8192 |                                                       9
+ 16384 |                                                       0
+ 32768 |                                                       2
+ 65536 |                                                       0
+131072 |                                                       0
+

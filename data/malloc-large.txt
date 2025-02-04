@@ -1,0 +1,54 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  malloc-large
+
+---- 1: malloc-large
+
+run 1: malloc-large sys: SYSMALLOC=1 ./malloc-large
+malloc-large sys   0:02.49 534380 2.18 0.30 0 57344
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+malloc-large sys   02.49 534380 2.18 0.30 0 57344
+
+Malloc: 49982
+Free: 42655
+Realloc: 766
+Calloc: 47
+Malloc_usable_size: 0
+Aligned_alloc: 1
+Posix_memalign: 0
+   value |-------------------------------------------------- count
+       0 |                                                       2
+       1 |@@                                                   446
+       2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           9338
+       4 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          5820
+       8 |@@@@@@@@@@@@@@@@@@                                  4198
+      16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@     10380
+      32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  11139
+      64 |@@@@@@@@@@@@@@@@@@@@@@@                             5135
+     128 |@@@                                                  828
+     256 |@                                                    273
+     512 |                                                      68
+    1024 |                                                     141
+    2048 |                                                     126
+    4096 |                                                      76
+    8192 |                                                       9
+   16384 |                                                       0
+   32768 |                                                       2
+   65536 |                                                       1
+  131072 |                                                       0
+  262144 |                                                       0
+         ~
+ 1048576 |                                                       0
+ 2097152 |                                                       0
+ 4194304 |@                                                    289
+ 8388608 |@@@                                                  774
+16777216 |@@@@                                                 937
+33554432 |                                                       0
+67108864 |                                                       0
+

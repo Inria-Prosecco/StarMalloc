@@ -1,0 +1,45 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  cfrac
+
+---- 1: cfrac
+
+run 1: cfrac sys: SYSMALLOC=1 ./cfrac 17545186520507317056371138836327483792789528
+cfrac       sys   5:05.74 6036 125.24 180.24 0 447
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+cfrac       sys   5:05.74 6036 125.24 180.24 0 447
+
+Malloc: 91572218
+Free: 91569764
+Realloc: 756
+Calloc: 5095
+Malloc_usable_size: 0
+Aligned_alloc: 1
+Posix_memalign: 0
+ value |-------------------------------------------------- count
+     0 |                                                          2
+     1 |                                                        446
+     2 |                                                       9077
+     4 |                                                       5789
+     8 |@@@@@@@@@                                          14242164
+    16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  77266504
+    32 |                                                      41701
+    64 |                                                       5009
+   128 |                                                        822
+   256 |                                                        277
+   512 |                                                         68
+  1024 |                                                        142
+  2048 |                                                        129
+  4096 |                                                         77
+  8192 |                                                          9
+ 16384 |                                                          0
+ 32768 |                                                          2
+ 65536 |                                                          0
+131072 |                                                          0
+

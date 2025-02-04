@@ -1,0 +1,53 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  lean-mathlib
+/home/atn/stapp/mimalloc-bench/extern/mathlib /home/atn/stapp/mimalloc-bench/out/bench
+
+---- 1: mathlib
+
+run 1: mathlib sys: SYSMALLOC=1 /home/atn/stapp/mimalloc-bench/extern/lean/bin/leanpkg build
+preprocess...
+mathlib     sys   0:26.03 99072 11.79 15.89 1 42884
+/home/atn/stapp/mimalloc-bench/out/bench
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+mathlib     sys   26.03 99072 11.79 15.89 1 42884
+
+Malloc: 7519118
+Free: 7510791
+Realloc: 5479
+Calloc: 68
+Malloc_usable_size: 0
+Aligned_alloc: 1
+Posix_memalign: 0
+  value |-------------------------------------------------- count
+      0 |                                                         2
+      1 |                                                       453
+      2 |                                                      9400
+      4 |                                                      9672
+      8 |@@@@                                                420482
+     16 |@@@@@                                               573791
+     32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  4811499
+     64 |@@@@@@@@@@@@@@@                                    1505952
+    128 |                                                     61266
+    256 |@                                                   103905
+    512 |                                                      9964
+   1024 |                                                      4739
+   2048 |                                                      3436
+   4096 |                                                      1483
+   8192 |                                                      1859
+  16384 |                                                       491
+  32768 |                                                       388
+  65536 |                                                       204
+ 131072 |                                                       111
+ 262144 |                                                        11
+ 524288 |                                                         8
+1048576 |                                                         2
+2097152 |                                                         0
+4194304 |                                                         0
+

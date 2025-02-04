@@ -1,0 +1,57 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  rbstress
+
+---- 1: rbstress1
+
+run 1: rbstress1 sys: SYSMALLOC=1 ruby /home/atn/stapp/mimalloc-bench/bench/rbstress/stress_mem.rb 1
+rbstress1   sys   0:06.44 108544 5.40 0.40 38 25811
+
+---- 1: rbstressN
+
+run 1: rbstressN sys: SYSMALLOC=1 ruby /home/atn/stapp/mimalloc-bench/bench/rbstress/stress_mem.rb 8
+rbstressN   sys   0:07.08 102236 6.72 0.34 0 23860
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+rbstress1   sys   06.44 108544 5.40 0.40 38 25811
+rbstressN   sys   07.08 102236 6.72 0.34 0 23860
+
+Malloc: 133425
+Free: 142698
+Realloc: 18674
+Calloc: 39750
+Malloc_usable_size: 196360
+Aligned_alloc: 2
+Posix_memalign: 0
+  value |-------------------------------------------------- count
+      0 |                                                       2
+      1 |                                                     581
+      2 |@@@@@@@@@@@@@@@@@                                  10846
+      4 |@@@@@@@@@@@                                         7201
+      8 |@@@@@@@@@@@                                         7409
+     16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  31801
+     32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  31316
+     64 |@@@@@@@@@@@@@@@@@@@@@@@@@@                         16603
+    128 |@@@@@@@                                             4590
+    256 |@@@                                                 2219
+    512 |@@@@@@@@@@@@@@@@@@@@@@                             14472
+   1024 |@                                                   1170
+   2048 |@@@@                                                3091
+   4096 |                                                     202
+   8192 |                                                     609
+  16384 |                                                     313
+  32768 |                                                     258
+  65536 |@                                                    645
+ 131072 |                                                      46
+ 262144 |                                                      26
+ 524288 |                                                       8
+1048576 |                                                      15
+2097152 |                                                       2
+4194304 |                                                       0
+8388608 |                                                       0
+

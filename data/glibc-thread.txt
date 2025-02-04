@@ -1,0 +1,46 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  glibc-thread
+
+---- 1: glibc-thread
+
+run 1: glibc-thread sys: SYSMALLOC=1 ./glibc-thread 8
+glibc-thread,sys: iterations: 2509264, relative time: 398.523s
+glibc-thread sys   0:398.523 6008 4.93 10.91 0 558
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+glibc-thread sys   398.523 6008 4.93 10.91 0 558
+
+Malloc: 2559427
+Free: 2552207
+Realloc: 1114
+Calloc: 157
+Malloc_usable_size: 0
+Aligned_alloc: 2
+Posix_memalign: 0
+ value |-------------------------------------------------- count
+     0 |                                                         3
+     1 |                                                       452
+     2 |                                                      9497
+     4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  1259983
+     8 |@@@@@@@@@@@@@@@@@@@@@@@@@                           634593
+    16 |@@@@@@@@@@@@                                        324949
+    32 |@@@@@@                                              163919
+    64 |@@@                                                  80584
+   128 |@                                                    39454
+   256 |                                                     20411
+   512 |                                                     14809
+  1024 |                                                      5202
+  2048 |                                                      2957
+  4096 |                                                      1655
+  8192 |                                                       639
+ 16384 |                                                       318
+ 32768 |                                                         2
+ 65536 |                                                         0
+131072 |                                                         0
+

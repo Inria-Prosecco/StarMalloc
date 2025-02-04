@@ -1,0 +1,52 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  cthrash
+
+---- 1: cache-thrash1
+
+run 1: cache-thrash1 sys: SYSMALLOC=1 ./cache-thrash 1 1000 1 2000000 8
+cache-thrash1 sys   0:01.67 6160 1.66 0.00 0 238
+
+---- 1: cache-thrashN
+
+run 1: cache-thrashN sys: SYSMALLOC=1 ./cache-thrash 8 1000 1 2000000 8
+cache-thrashN sys   0:00.43 5876 3.40 0.00 0 254
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+cache-thrash1 sys   01.67 6160 1.66 0.00 0 238
+cache-thrashN sys   00.43 5876 3.40 0.00 0 254
+
+Malloc: 57040
+Free: 49493
+Realloc: 1017
+Calloc: 61
+Malloc_usable_size: 0
+Aligned_alloc: 2
+Posix_memalign: 0
+ value |-------------------------------------------------- count
+     0 |                                                       2
+     1 |@@                                                   539
+     2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           10802
+     4 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          6946
+     8 |@@@@@@@@@@@@@@@@@@@                                 5298
+    16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       11790
+    32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  13203
+    64 |@@@@@@@@@@@@@@@@@@@@@@@@                            6422
+   128 |@@@@                                                1203
+   256 |@                                                    381
+   512 |                                                      75
+  1024 |                                                     156
+  2048 |                                                     126
+  4096 |                                                      84
+  8192 |                                                       9
+ 16384 |                                                       0
+ 32768 |                                                       2
+ 65536 |                                                       2
+131072 |                                                       0
+262144 |                                                       0
+

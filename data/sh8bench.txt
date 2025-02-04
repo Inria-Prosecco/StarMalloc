@@ -1,0 +1,54 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  sh8bench
+
+---- 1: sh8benchN
+
+run 1: sh8benchN sys: SYSMALLOC=1 ./sh8bench 16
+sh8benchN   sys   5:49.41 163292 847.38 1930.13 0 157026
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+sh8benchN   sys   5:49.41 163292 847.38 1930.13 0 157026
+
+Malloc: 437100772
+Free: 436440780
+Realloc: 755
+Calloc: 56
+Malloc_usable_size: 0
+Aligned_alloc: 1
+Posix_memalign: 0
+    value |-------------------------------------------------- count
+        0 |                                                           2
+        1 |                                                         446
+        2 |                                                        9233
+        4 |                                                        5763
+        8 |@@@@@@@@@@@                                         68322897
+       16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  291684464
+       32 |@@@@@@@@@@                                          58345911
+       64 |@                                                    5838620
+      128 |@@                                                  11667732
+      256 |                                                         274
+      512 |                                                      583412
+     1024 |                                                      291805
+     2048 |                                                         125
+     4096 |                                                      175068
+     8192 |                                                       58345
+    16384 |                                                           0
+    32768 |                                                       58338
+    65536 |                                                           0
+   131072 |                                                       58320
+   262144 |                                                          16
+   524288 |                                                           0
+  1048576 |                                                           0
+          ~
+ 16777216 |                                                           0
+ 33554432 |                                                           0
+ 67108864 |                                                           1
+134217728 |                                                           0
+268435456 |                                                           0
+

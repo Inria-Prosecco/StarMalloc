@@ -1,0 +1,58 @@
+benchmarking on 8 cores.
+use '-h' or '--help' for help on configuration options.
+
+allocators:  sys
+tests     :  lua
+/home/atn/stapp/mimalloc-bench/extern/lua /home/atn/stapp/mimalloc-bench/out/bench
+
+---- 1: lua
+
+run 1: lua sys: SYSMALLOC=1 make
+/home/atn/stapp/mimalloc-bench/extern/lua /home/atn/stapp/mimalloc-bench/extern/lua /home/atn/stapp/mimalloc-bench/out/bench
+rm -f liblua.a lua lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o lundump.o lvm.o lzio.o ltests.o lua.o lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lstrlib.o lutf8lib.o loadlib.o lcorolib.o linit.o
+/home/atn/stapp/mimalloc-bench/extern/lua /home/atn/stapp/mimalloc-bench/out/bench
+lua         sys   0:30.78 107660 16.73 12.94 58 100039
+/home/atn/stapp/mimalloc-bench/out/bench
+
+results written to: /home/atn/stapp/mimalloc-bench/out/bench/benchres.csv
+
+#------------------------------------------------------------------
+# test    alloc   time  rss    user  sys  page-faults page-reclaims
+lua         sys   30.78 107660 16.73 12.94 58 100039
+
+Malloc: 4429677
+Free: 6197757
+Realloc: 189824
+Calloc: 1117746
+Malloc_usable_size: 0
+Aligned_alloc: 2
+Posix_memalign: 5446
+   value |-------------------------------------------------- count
+       0 |                                                         2
+       1 |                                                      7364
+       2 |                                                     18659
+       4 |@                                                    34882
+       8 |@@@@@@@@@@@@@@@@@                                   369434
+      16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  1027341
+      32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@            832304
+      64 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                743722
+     128 |@@@@@@@@@@@@@@@@@@@@@@@                             490719
+     256 |@@@@@@@@@@                                          223096
+     512 |@@@@@                                               122854
+    1024 |@@@@@@                                              128022
+    2048 |@@@@@@@@@@@@                                        253153
+    4096 |@@@@@@@                                             144295
+    8192 |                                                      8447
+   16384 |                                                      5938
+   32768 |                                                     12873
+   65536 |                                                      6389
+  131072 |                                                       157
+  262144 |                                                        13
+  524288 |                                                         5
+ 1048576 |                                                         1
+ 2097152 |                                                         4
+ 4194304 |                                                         0
+ 8388608 |                                                         3
+16777216 |                                                         0
+33554432 |                                                         0
+
