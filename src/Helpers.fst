@@ -29,7 +29,7 @@ open FStar.Mul
 
 #push-options "--fuel 0 --ifuel 0"
 
-#push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
+#push-options "--z3rlimit 150 --fuel 1 --ifuel 1"
 let slot_array (#a: Type)
   (size: U32.t)
   (max: U32.t)

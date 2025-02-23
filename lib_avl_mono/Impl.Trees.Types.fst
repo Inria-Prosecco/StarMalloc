@@ -13,7 +13,7 @@ module U32 = FStar.UInt32
 module U8 = FStar.UInt8
 
 noextract inline_for_extraction
-let array = Steel.ST.Array.array
+let array (a: Type) = Steel.ST.Array.array a
 
 open Constants
 open Config

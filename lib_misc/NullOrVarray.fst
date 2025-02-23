@@ -9,7 +9,7 @@ module A = Steel.Array
 
 #push-options "--fuel 0 --ifuel 0"
 
-let array = Steel.ST.Array.array
+let array (a: Type) = Steel.ST.Array.array a
 
 let null_or_varray_f (#a: Type)
   (r: array a)
