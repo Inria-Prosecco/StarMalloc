@@ -16,8 +16,8 @@ open Constants
 
 #push-options "--fuel 0 --ifuel 0"
 
-let array = Steel.ST.Array.array
-let ptr = Steel.ST.Array.ptr
+let array (a: Type) = Steel.ST.Array.array a
+let ptr (a: Type) = Steel.ST.Array.ptr a
 
 noextract
 unfold let same_base_array (#a: Type) (arr1 arr2: array a)
