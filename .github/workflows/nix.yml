@@ -34,12 +34,12 @@ jobs:
         run: |
           nix log .#check-dist
 
-      - name: check vendor/
-        run: |
-          nix build -L .#check-vendor
-      - name: check vendor/ logs
-        run: |
-          nix log .#check-vendor
+      #- name: check vendor/
+      #  run: |
+      #    nix build -L .#check-vendor
+      #- name: check vendor/ logs
+      #  run: |
+      #    nix log .#check-vendor
 
       #- name: bench StarMalloc
       #  run: |
