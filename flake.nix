@@ -4,11 +4,11 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
-      url = "github:FStarLang/FStar/9ec5695688344d0da59fb636723004b3c2f5175d";
+      url = "github:FStarLang/FStar/0dcfea34e90179cebdc3ed26399ac0d5c8f925f5";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
-      url = "github:FStarLang/steel/90d7ce2b7187dbf108b2c705ee09bba76343187e";
+      url = "github:FStarLang/steel/0f3e79acf1b53f76172bdaf5b84196d62e2018a5";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
