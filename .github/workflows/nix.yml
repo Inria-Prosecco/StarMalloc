@@ -22,10 +22,10 @@ jobs:
 
       - name: build StarMalloc
         run: |
-          nix build -L .#starmalloc
+          nix build -L .#starmalloc-admit-smt
       - name: build StarMalloc logs
         run: |
-          nix log .#starmalloc
+          nix log .#starmalloc-admit-smt
 
       - name: check dist/
         run: |
