@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
-      url = "github:FStarLang/FStar";
+      url = "github:cmovcc/FStar/fix-master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
