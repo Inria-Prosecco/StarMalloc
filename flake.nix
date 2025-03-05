@@ -14,7 +14,7 @@
       inputs.fstar.follows = "fstar-src";
     };
     krml-src = {
-      url = "github:FStarLang/karamel";
+      url = "github:FStarLang/karamel/87384b244a98a0c41a2e14c65b872d885af7c8df";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
