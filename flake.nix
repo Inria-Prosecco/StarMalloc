@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
-      url = "github:cmovcc/FStar/fix-bisect-commit";
+      url = "github:FStarLang/FStar/0dcfea34e90179cebdc3ed26399ac0d5c8f925f5";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
