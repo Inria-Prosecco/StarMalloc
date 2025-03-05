@@ -4,17 +4,17 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
-      url = "github:FStarLang/FStar";
+      url = "github:cmovcc/FStar/fix-bisect-commit";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
-      url = "github:FStarLang/steel";
+      url = "github:FStarLang/steel/0f3e79acf1b53f76172bdaf5b84196d62e2018a5";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
     };
     krml-src = {
-      url = "github:FStarLang/karamel";
+      url = "github:FStarLang/karamel/87384b244a98a0c41a2e14c65b872d885af7c8df";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
