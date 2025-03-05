@@ -7,6 +7,7 @@ readonly PROGNAME=$(basename $0)
 
 OTHERFLAGS=${OTHERFLAGS:=""}
 CORES=${CORES:=$(nproc)}
+FSTAR_EXE=${FSTAR_EXE:=fstar.exe}
 
 setup() {
   echo "0. Setup"
@@ -16,8 +17,8 @@ setup() {
   	exit 1
   fi
 
-  if [[ -z "${FSTAR_HOME}" ]]; then
-  	echo "FSTAR_HOME env var is not set, exiting"
+  if [[ -z "$(which ${FSTAR_EXE} 2>/dev/null)" ]]; then
+	echo "FSTAR_EXE (=${FSTAR_EXE}) not found, exiting"
   	exit 1
   fi
 

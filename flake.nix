@@ -44,7 +44,6 @@
         enableParallelBuilding = true;
         buildInputs = [ ];
         # TODO: unaesthetic workaround, could this be improved?
-        FSTAR_HOME = 1;
         STEEL_HOME = 1;
         KRML_HOME = 1;
         # use vendored files, as this would require Steel and KaRaMeL
@@ -73,7 +72,6 @@
         ];
         enableParallelBuilding = true;
         buildInputs = [ fstar steel karamel ];
-        FSTAR_HOME = fstar;
         STEEL_HOME = steel;
         KRML_HOME = karamel;
         installPhase = "mkdir $out && cp -r dist out/*.so $out";
