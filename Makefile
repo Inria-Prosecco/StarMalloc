@@ -1,5 +1,9 @@
+# Running 'make' will just verify
+default: verify
+
+# 'make all' will extract and build
 all: world
-world: verify
+world: verify extract lib
 
 # Many thanks to Jonathan Protzenko for its Low* tutorial
 
