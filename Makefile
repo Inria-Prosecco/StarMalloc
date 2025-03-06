@@ -77,6 +77,7 @@ extract: $(ALL_KRML_FILES)
 	  -warn-error +9 \
 	  -add-include 'Steel_SpinLock:"steel_types.h"' \
 	  -add-include 'Steel_SpinLock:"steel_base.h"' \
+	  -add-include 'Mman:"Steel_SpinLock.h"' \
 	  $^
 
 EXT_FILES = $(STEEL_HOME)/src/c/steel_spinlock.c
