@@ -8,6 +8,7 @@
 
 #include "SizeClass.h"
 #include "ArrayList.h"
+#include "Steel_SpinLock.h"
 
 extern uint8_t *mmap_u8_init(size_t len);
 

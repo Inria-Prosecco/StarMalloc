@@ -3,6 +3,7 @@
 
 #include "SizeClass.h"
 
+#include "ArrayList.h"
 #include "internal/Slabs.h"
 
 uint8_t *SizeClass_allocate_size_class(SizeClass_size_class_struct_ scs)

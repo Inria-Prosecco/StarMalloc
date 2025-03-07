@@ -3,6 +3,14 @@
 
 #include "internal/StarMalloc.h"
 
+#include "Steel_SpinLock.h"
+#include "SizeClassSelection.h"
+#include "SizeClass.h"
+#include "PtrdiffWrapper.h"
+#include "Mman.h"
+#include "ExternUtils.h"
+#include "ArrayList.h"
+
 static uint32_t avl_data_size = 64U;
 
 extern int64_t Impl_Trees_Cast_M_cmp(Impl_Trees_Cast_M_data uu___, Impl_Trees_Cast_M_data x0);
