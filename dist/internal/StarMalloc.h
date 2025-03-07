@@ -6,6 +6,8 @@
 
 #include "krmllib.h"
 
+#include "SizeClass.h"
+#include "Mman.h"
 #include "../StarMalloc.h"
 
 typedef struct Impl_Trees_Cast_M_data_s

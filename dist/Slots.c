@@ -3,6 +3,10 @@
 
 #include "internal/Slots.h"
 
+#include "Utils2.h"
+#include "ExternUtils.h"
+#include "Bitmap5.h"
+
 static uint8_t *slot_array(uint32_t size_class, uint8_t *arr, uint32_t pos)
 {
   uint8_t *ptr = arr;

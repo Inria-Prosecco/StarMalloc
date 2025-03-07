@@ -6,8 +6,6 @@
 
 #include "krmllib.h"
 
-#include "ExternUtils.h"
-
 uint32_t SizeClassSelection_log2u64(uint64_t x);
 
 uint32_t SizeClassSelection_inv_impl(uint32_t x);

@@ -3,6 +3,9 @@
 
 #include "internal/Slabs.h"
 
+#include "Utils2.h"
+#include "MemoryTrap.h"
+#include "ArrayList.h"
 #include "internal/Slots.h"
 #include "internal/ArrayList.h"
 

@@ -6,14 +6,6 @@
 
 #include "krmllib.h"
 
-#include "Steel_SpinLock.h"
-#include "SizeClassSelection.h"
-#include "SizeClass.h"
-#include "PtrdiffWrapper.h"
-#include "Mman.h"
-#include "ExternUtils.h"
-#include "ArrayList.h"
-
 extern size_t StarMalloc_threshold;
 
 uint8_t *StarMalloc_malloc(size_t arena_id, size_t size);
