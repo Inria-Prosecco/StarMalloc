@@ -1,13 +1,15 @@
+# Running 'make' will just verify
+default: verify
+
+# 'make all' will extract and build
 all: world
-world: verify
+world: verify extract lib
 
 # Many thanks to Jonathan Protzenko for its Low* tutorial
 
-FSTAR_HOME ?= $(realpath $(dir $(shell which fstar.exe))/..)
-
 include Makefile.include
 
-FSTAR_EXE = $(FSTAR_HOME)/bin/fstar.exe
+FSTAR_EXE ?= fstar.exe
 KRML_EXE = $(KRML_HOME)/krml
 
 FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_EMACS_PARAMS) \
