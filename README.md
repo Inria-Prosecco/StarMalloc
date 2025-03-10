@@ -49,7 +49,7 @@ See `BUILD.md` to reverify and extract StarMalloc from scratch using F\*, Steel 
 ### Light build
 
 With only a C compiler as dependency, the following command will produce `out/starmalloc.so` out of pre-extracted C files (`dist/` directory) and vendored C files (`vendor/` directory):
-`FSTAR_HOME=1 STEEL_HOME=1 KRML_HOME=1 NODEPEND=1 VENDOR=1 make light`.
+`STEEL_HOME=1 KRML_HOME=1 NODEPEND=1 VENDOR=1 make light`.
 (TODO: this command should be easier)
 
 - `{FSTAR,STEEl,KRML}_HOME=1` : so that checks in `Makefile.include` will not fail
