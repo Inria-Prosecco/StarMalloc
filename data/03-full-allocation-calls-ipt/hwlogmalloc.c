@@ -54,6 +54,7 @@ void* malloc(size_t size) {
   }
 
   void *p = NULL;
+  log_ipt((uint64_t) 1UL);
   log_ipt((uint64_t) size);
   p = real_malloc(size);
   log_ipt((uint64_t) p);
@@ -65,6 +66,7 @@ void free(void* ptr) {
     init();
   }
   uint64_t ptr_as_u64 = (uint64_t) ((uintptr_t) ptr);
+  log_ipt((uint64_t) 2UL);
   log_ipt(ptr_as_u64);
   real_free(ptr);
 }
