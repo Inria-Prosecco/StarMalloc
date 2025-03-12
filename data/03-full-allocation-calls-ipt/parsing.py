@@ -35,6 +35,7 @@ def magic_value_bij(x: int):
 
 NB_FUNCTIONS = 2 # malloc, free, TODO
 MAGIC_THRESHOLD = magic_value(NB_FUNCTIONS)
+CHECK_FOR_BINARY = True
 
 # malloc event is of the form:
 # 1;<size>;<ptr>
@@ -56,9 +57,6 @@ def parse(input_path, stop_at=0):
       # not a log line
       if len(parts) < 5:
         #print(line)
-        # RESET
-        if tid in tid_map:
-          tid_map[tid]["reset"] = 2 # hardcoded
         continue
       #if p1.match(parts[0]):
       #  print("OK")
@@ -75,24 +73,27 @@ def parse(input_path, stop_at=0):
       tid = words[1] # OK?
       payload = words[8]
 
-
-      #words2 = line.split("payload: ")
-      #payload = words2[1][:9]
-
-      #print(line)
+      #print(k, line)
       #print(tid, payload)
-      #print(k)
       #print(tid, int(payload, 16))
+
+      # new thread: initialize data structures
       if tid not in tid_map:
         print("New thread:", tid)
         tid_map[tid] = {}
+        tid_map[tid]["check_for_binary"] = True
+        tid_map[tid]["binary"] = ""
         tid_map[tid]["status"] = 0
         tid_map[tid]["buffer"] = []
         tid_map[tid]["malloc"] = []
         tid_map[tid]["free"] = []
-        tid_map[tid]["reset"] = False
 
-      #print(k, line)
+      if CHECK_FOR_BINARY:
+        if tid_map[tid]["check_for_binary"]:
+          binary = words[0]
+          if binary != "/usr/bin/env":
+            tid_map[tid]["binary"] = binary
+            tid_map[tid]["check_for_binary"] = False
 
       payload_as_int = int(payload, 16)
       # traces can be malformed, thus giving the priority to the assumed
@@ -119,7 +120,6 @@ def parse(input_path, stop_at=0):
             size = int(payload, 16)
             tid_map[tid]["buffer"].append(size)
           elif buffer_len == 1:
-            #print("MALLOC", tid_map[tid]["buffer"])
             size = tid_map[tid]["buffer"][0]
             returned_ptr = payload
             tid_map[tid]["malloc"].append((size, returned_ptr))
@@ -138,13 +138,13 @@ def parse(input_path, stop_at=0):
         else:
           raise ValueError("Undefined status 2", status)
 
-  print ("# SUMMARY")
+  print("# SUMMARY")
   print(k, "lines parsed:")
   print(errors, "errors (=", end="")
   print("%10.3E" % float(errors/k), end="")
   print("%)")
   for tid in tid_map:
-    print("- Thread", tid)
+    print("- Thread", tid, tid_map[tid]["binary"])
     print("  - malloc: ", len(tid_map[tid]["malloc"]))
     print("  - free: ", len(tid_map[tid]["free"]))
 
