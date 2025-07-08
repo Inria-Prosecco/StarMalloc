@@ -25,15 +25,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1741216333,
-        "narHash": "sha256-SZASoUf9r/40i0yZ+B49Rn9nh87cxqr8m5uP6OpB5KM=",
-        "owner": "FStarLang",
+        "lastModified": 1751417653,
+        "narHash": "sha256-c0rYoa0y5rl4Toor+wNPy9++0HQm5sBX2Aw8gTf1Mlo=",
+        "owner": "mtzguido",
         "repo": "FStar",
-        "rev": "dd464b1c4cdebbbfd21808e1d71736e873743f46",
+        "rev": "a5ea24814c6dcad3838f01f6238cf6475f282fc7",
         "type": "github"
       },
       "original": {
-        "owner": "FStarLang",
+        "owner": "mtzguido",
+        "ref": "z3",
         "repo": "FStar",
         "type": "github"
       }
@@ -52,11 +53,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1741223092,
-        "narHash": "sha256-k720cQjeFFNZj41UtvtKwXrSzrqy//Kr/3B/Gg6DRfo=",
+        "lastModified": 1751943827,
+        "narHash": "sha256-TMLBPrDJXLjmqBupqV1ZmOsEy8nEtkK0kxttVNAL6M8=",
         "owner": "FStarLang",
         "repo": "karamel",
-        "rev": "786646b50f22725a516afd04259aa90529c19a3b",
+        "rev": "c73b9549d56c1e98c12c2014d347f452674a3bce",
         "type": "github"
       },
       "original": {
@@ -103,15 +104,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1741286373,
-        "narHash": "sha256-oI3bJcyTNTTHjcd/rSlJ+v85j5mophqHUtc8I2KtnbM=",
-        "owner": "FStarLang",
+        "lastModified": 1751995849,
+        "narHash": "sha256-WrjEcW61Ac2knhJGupcFWmkmjtzQahFJ6798zRPrstQ=",
+        "owner": "cmovcc",
         "repo": "steel",
-        "rev": "8eabafb6bbee254fbca7f6e6b86cdd63dd14e9c2",
+        "rev": "2b58d01d05340ddf7dea75001394128419463d9c",
         "type": "github"
       },
       "original": {
-        "owner": "FStarLang",
+        "owner": "cmovcc",
+        "ref": "fix-proofs-z3-4.13.3",
         "repo": "steel",
         "type": "github"
       }
