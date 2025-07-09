@@ -8,7 +8,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
-      url = "github:cmovcc/steel/fix-proofs-z3-4.13.3";
+      url = "github:FStarLang/steel";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
