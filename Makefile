@@ -16,6 +16,7 @@ FSTAR_OPTIONS = $(SIL) --cache_checked_modules $(FSTAR_EMACS_PARAMS) \
   --already_cached 'FStar Steel C Prims' \
   --compat_pre_typed_indexed_effects \
   --cmi --odir obj --cache_dir obj \
+  --z3version 4.13.3 \
   $(OTHERFLAGS)
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
