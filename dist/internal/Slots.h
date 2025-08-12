@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __internal_Slots_H
-#define __internal_Slots_H
+#ifndef internal_Slots_H
+#define internal_Slots_H
 
 #include "krmllib.h"
 
@@ -18,5 +18,5 @@ SlotsFree_deallocate_slot(
 );
 
 
-#define __internal_Slots_H_DEFINED
-#endif
+#define internal_Slots_H_DEFINED
+#endif /* internal_Slots_H */

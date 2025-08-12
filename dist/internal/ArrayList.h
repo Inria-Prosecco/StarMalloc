@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __internal_ArrayList_H
-#define __internal_ArrayList_H
+#ifndef internal_ArrayList_H
+#define internal_ArrayList_H
 
 #include "krmllib.h"
 
@@ -45,5 +45,5 @@ ArrayList_extend_insert(
 );
 
 
-#define __internal_ArrayList_H_DEFINED
-#endif
+#define internal_ArrayList_H_DEFINED
+#endif /* internal_ArrayList_H */

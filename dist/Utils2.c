@@ -46,9 +46,8 @@ bool Utils2_has_free_slot_s(uint32_t size_class, uint64_t *md)
   uint64_t v2 = md[2U];
   uint64_t v3 = md[3U];
   return
-    !(v0 == full)
-    || (bound > 1U && !(v1 == 18446744073709551615ULL))
-    || (bound > 2U && !(v2 == 18446744073709551615ULL))
+    !(v0 == full) || (bound > 1U && !(v1 == 18446744073709551615ULL)) ||
+      (bound > 2U && !(v2 == 18446744073709551615ULL))
     || (bound > 3U && !(v3 == 18446744073709551615ULL));
 }
 
@@ -60,11 +59,8 @@ bool Utils2_is_empty_s(uint32_t size_class, uint64_t *md)
   uint64_t v2 = md[2U];
   uint64_t v3 = md[3U];
   return
-    v0
-    == 0ULL
-    && (bound <= 1U || v1 == 0ULL)
-    && (bound <= 2U || v2 == 0ULL)
-    && (bound <= 3U || v3 == 0ULL);
+    v0 == 0ULL && (bound <= 1U || v1 == 0ULL) && (bound <= 2U || v2 == 0ULL) &&
+      (bound <= 3U || v3 == 0ULL);
 }
 
 bool Utils2_is_partial_s(uint32_t size_class, uint64_t *md)

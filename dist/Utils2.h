@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __Utils2_H
-#define __Utils2_H
+#ifndef Utils2_H
+#define Utils2_H
 
 #include "krmllib.h"
 
@@ -23,5 +23,5 @@ bool Utils2_is_partial_s(uint32_t size_class, uint64_t *md);
 bool Utils2_is_full_s(uint32_t size_class, uint64_t *md);
 
 
-#define __Utils2_H_DEFINED
-#endif
+#define Utils2_H_DEFINED
+#endif /* Utils2_H */

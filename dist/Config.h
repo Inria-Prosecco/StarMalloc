@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __Config_H
-#define __Config_H
+#ifndef Config_H
+#define Config_H
 
 #include "krmllib.h"
 
@@ -41,5 +41,5 @@ extern uint8_t Config_slab_canaries_magic1;
 extern uint8_t Config_slab_canaries_magic2;
 
 
-#define __Config_H_DEFINED
-#endif
+#define Config_H_DEFINED
+#endif /* Config_H */

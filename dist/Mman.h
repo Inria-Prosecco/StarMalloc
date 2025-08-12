@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __Mman_H
-#define __Mman_H
+#ifndef Mman_H
+#define Mman_H
 
 #include "krmllib.h"
 
@@ -36,5 +36,5 @@ extern uint8_t *mmap_u8(size_t size);
 extern void munmap_u8(uint8_t *ptr, size_t size);
 
 
-#define __Mman_H_DEFINED
-#endif
+#define Mman_H_DEFINED
+#endif /* Mman_H */

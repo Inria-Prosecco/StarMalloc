@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __ExternUtils_H
-#define __ExternUtils_H
+#ifndef ExternUtils_H
+#define ExternUtils_H
 
 #include "krmllib.h"
 
@@ -19,5 +19,5 @@ extern bool check_zeroing_u8(uint8_t *ptr, size_t n);
 extern uint8_t *memcpy_u8(uint8_t *dest, uint8_t *src, size_t n);
 
 
-#define __ExternUtils_H_DEFINED
-#endif
+#define ExternUtils_H_DEFINED
+#endif /* ExternUtils_H */

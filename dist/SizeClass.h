@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __SizeClass_H
-#define __SizeClass_H
+#ifndef SizeClass_H
+#define SizeClass_H
 
 #include "krmllib.h"
 
@@ -27,5 +27,5 @@ bool
 SizeClass_deallocate_size_class(SizeClass_size_class_struct_ scs, uint8_t *ptr, size_t diff);
 
 
-#define __SizeClass_H_DEFINED
-#endif
+#define SizeClass_H_DEFINED
+#endif /* SizeClass_H */

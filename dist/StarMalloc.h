@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __StarMalloc_H
-#define __StarMalloc_H
+#ifndef StarMalloc_H
+#define StarMalloc_H
 
 #include "krmllib.h"
 
@@ -21,5 +21,5 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size);
 uint8_t *StarMalloc_calloc(size_t arena_id, size_t size1, size_t size2);
 
 
-#define __StarMalloc_H_DEFINED
-#endif
+#define StarMalloc_H_DEFINED
+#endif /* StarMalloc_H */
