@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __krmlinit_H
-#define __krmlinit_H
+#ifndef krmlinit_H
+#define krmlinit_H
 
 #include "krmllib.h"
 
@@ -13,5 +13,5 @@ __attribute__ ((visibility ("hidden")))
 void krmlinit_globals(void);
 
 
-#define __krmlinit_H_DEFINED
-#endif
+#define krmlinit_H_DEFINED
+#endif /* krmlinit_H */

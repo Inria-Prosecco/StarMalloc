@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __Steel_SpinLock_H
-#define __Steel_SpinLock_H
+#ifndef Steel_SpinLock_H
+#define Steel_SpinLock_H
 
 #include "krmllib.h"
 
@@ -28,5 +28,5 @@ extern void Steel_SpinLock_s_acquire(Steel_SpinLock_lock *l);
 extern void Steel_SpinLock_s_release(Steel_SpinLock_lock *l);
 
 
-#define __Steel_SpinLock_H_DEFINED
-#endif
+#define Steel_SpinLock_H_DEFINED
+#endif /* Steel_SpinLock_H */

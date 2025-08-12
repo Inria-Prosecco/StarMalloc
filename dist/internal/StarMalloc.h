@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __internal_StarMalloc_H
-#define __internal_StarMalloc_H
+#ifndef internal_StarMalloc_H
+#define internal_StarMalloc_H
 
 #include "krmllib.h"
 
@@ -114,5 +114,5 @@ Main_Meta_size_classes_all Main_Meta_init(void);
 extern Main_Meta_size_classes_all Main_Meta_sc_all;
 
 
-#define __internal_StarMalloc_H_DEFINED
-#endif
+#define internal_StarMalloc_H_DEFINED
+#endif /* internal_StarMalloc_H */

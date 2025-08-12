@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __MemoryTrap_H
-#define __MemoryTrap_H
+#ifndef MemoryTrap_H
+#define MemoryTrap_H
 
 #include "krmllib.h"
 
@@ -15,5 +15,5 @@ extern void mmap_strict_untrap(uint8_t *arr, size_t len);
 extern void mmap_untrap(uint8_t *arr, size_t len);
 
 
-#define __MemoryTrap_H_DEFINED
-#endif
+#define MemoryTrap_H_DEFINED
+#endif /* MemoryTrap_H */

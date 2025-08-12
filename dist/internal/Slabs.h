@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#ifndef __internal_Slabs_H
-#define __internal_Slabs_H
+#ifndef internal_Slabs_H
+#define internal_Slabs_H
 
 #include "krmllib.h"
 
@@ -31,5 +31,5 @@ uint8_t
 );
 
 
-#define __internal_Slabs_H_DEFINED
-#endif
+#define internal_Slabs_H_DEFINED
+#endif /* internal_Slabs_H */
