@@ -54,6 +54,7 @@ val init_avl_scs (slab_region: array U8.t)
   )
 
 open Mman
+#push-options "--z3rlimit 20"
 let init_avl_scs (slab_region: array U8.t)
   =
   let md_bm_region_size = US.mul metadata_max 4sz in
@@ -62,6 +63,7 @@ let init_avl_scs (slab_region: array U8.t)
   let md_region = mmap_cell_status_init md_region_size in
   let scs = init_struct_aux avl_data_size slab_region md_bm_region md_region in
   return scs
+#pop-options
 
 module L = Steel.SpinLock
 
