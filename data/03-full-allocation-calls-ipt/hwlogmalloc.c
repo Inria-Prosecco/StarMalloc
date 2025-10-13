@@ -27,7 +27,7 @@ static inline bool is_init(void) {
 }
 
 // invariants to be preserved when adding other functions (e.g. calloc, realloc, etc)
-// 1. before each allocation/deallocation primitive call, log_ipt(magic_value)
+// 1. the header must be logged before each allocation/deallocation primitive call
 // 2. this magic value must be only used by the considered allocation/deallocation primitive
 // 3. there must be one log_ipt call right after the considered allocation/deallocation primitive
 
@@ -44,23 +44,45 @@ static void init(void) {
   }
   real_malloc = dlsym(RTLD_NEXT, "malloc");
   real_free = dlsym(RTLD_NEXT, "free");
+  //real_calloc = dlsym(RTLD_NEXT, "calloc");
 
   atomic_store_explicit(&check_init, true, memory_order_release);
   pthread_mutex_unlock(&m);
 }
 
+const bool use_ipt = true;
+
+uint64_t encode_malloc_p1 (size_t size) {
+  uint64_t v1 = ((uint64_t) (1UL << 63)) | ((uint64_t) size);
+  return v1;
+}
+uint64_t encode_malloc_p2 (void* ptr) {
+  uint64_t ptr_as_u64 = (uint64_t) ((uintptr_t) ptr);
+  return ptr_as_u64;
+}
+uint64_t encode_free_p1 (){
+  uint64_t v1 = (uint64_t) (1UL << 62);
+  return v1;
+}
+uint64_t encode_free_p2 (void* ptr){
+  uint64_t ptr_as_u64 = (uint64_t) ((uintptr_t) ptr);
+  return ptr_as_u64;
+}
 
 void* malloc(size_t size) {
   if(! is_init()) {
     init();
   }
   // execution start
-  log_ipt((uint64_t) (-1L));
-  log_ipt((uint64_t) size);
-  void* p = real_malloc(size);
+  if (use_ipt) {
+    log_ipt(encode_malloc_p1(size));
+  }
+  void* ptr = real_malloc(size);
   // execution end
-  log_ipt((uint64_t) p);
-  return p;
+  if (use_ipt) {
+    log_ipt(encode_malloc_p2(ptr));
+  }
+  return ptr;
 }
 
 void free(void* ptr) {
@@ -68,10 +90,38 @@ void free(void* ptr) {
     init();
   }
   // execution start
-  log_ipt((uint64_t) (-2L));
-  uint64_t ptr_as_u64 = (uint64_t) ((uintptr_t) ptr);
+  if (use_ipt) {
+    log_ipt(encode_free_p1());
+  }
   real_free(ptr);
   // execution end
-  log_ipt(ptr_as_u64);
+  if (use_ipt) {
+    log_ipt(encode_free_p2(ptr));
+  }
 }
+
+//void* calloc(size_t size1, size_t size2) {
+//  if(! is_init()) {
+//    init();
+//  }
+//  // execution start
+//  uint64_t v1 = (1UL << 63) | (1UL << 62) | ((uint64_t) size1 << 30UL) | ((uint64_t) size2);
+//  log_ipt(v1);
+//  uint64_t ptr_as_u64 = (uint64_t) ((uintptr_t) ptr);
+//  void* p = real_calloc(size1, size2);
+//  // execution end
+//  log_ipt((uint64_t) p);
+//  return p;
+//}
+//
+//void* realloc(void* ptr, size_t new_size) {
+//
+//  if(! is_init()) {
+//    init();
+//  }
+//
+//}
+//
+//
+//
 

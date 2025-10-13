@@ -20,11 +20,11 @@ def create_arg_parser():
   #                help='Path to the output that contains the resumes.')
   return parser
 
-def magic_value(x: int):
-  return 2**64 -x
-
-def magic_value_bij(x: int):
-  return -x + 2**64
+#def magic_value(x: int):
+#  return 2**64 -x
+#
+#def magic_value_bij(x: int):
+#  return -x + 2**64
 
 # Assume: 2**64-n, where n is small, is never:
 # - an integer/pointer argument to allocation/deallocation functions
@@ -34,7 +34,7 @@ def magic_value_bij(x: int):
 # use malloc=magic_value(1), free=magic_value(2), ...
 
 NB_FUNCTIONS = 2 # malloc, free, TODO
-MAGIC_THRESHOLD = magic_value(NB_FUNCTIONS)
+MAGIC_THRESHOLD = 2**60 #magic_value(NB_FUNCTIONS)
 CHECK_FOR_BINARY = True
 
 # malloc event is of the form:
@@ -44,7 +44,15 @@ CHECK_FOR_BINARY = True
 # 2;<ptr>
 # (2 ptwrite instructions)
 
+def decode_header(x: int):
+    if x == 8:
+        return 1
+    if x == 4:
+        return 2
+
+
 def parse(input_path, stop_at=0):
+  #with open(input_path) as fd:
   with lzma.open(input_path, 'rt') as fd:
     #p1 = re.compile(r"\s+[a-zA-Z0-9_-]+\s+[0-9]+\s+[0-9]+\.[0-9]+")
     # exclude two first lines
@@ -95,12 +103,17 @@ def parse(input_path, stop_at=0):
             tid_map[tid]["binary"] = binary
             tid_map[tid]["check_for_binary"] = False
 
+      #status = tid_map[tid]["status"]
+      #buffer = tid_map[tid]["buffer"]
       payload_as_int = int(payload, 16)
+      #print("status/payload/payload/buffer", status, payload,payload_as_int, buffer)
       # traces can be malformed, thus giving the priority to the assumed
       # unambiguous beginning of one function execution
       if payload_as_int >= MAGIC_THRESHOLD:
         old_status = tid_map[tid]["status"]
-        new_status = magic_value_bij(payload_as_int)
+
+        header = payload_as_int >> 60
+        new_status = decode_header(header)
         tid_map[tid]["status"] = new_status
         tid_map[tid]["buffer"] = []
         if old_status != 0:
@@ -108,35 +121,42 @@ def parse(input_path, stop_at=0):
           errors += 1
           continue
       # continuing to parse a function trace
-      else:
-        status = tid_map[tid]["status"]
-        buffer_len = len(tid_map[tid]["buffer"])
-        if status == 0:
-          #print("Incomplete tracing... skipping until next function trace")
-          errors += 1
-          continue
-        elif status == 1:
-          if buffer_len == 0:
-            size = int(payload, 16)
-            tid_map[tid]["buffer"].append(size)
-          elif buffer_len == 1:
-            size = tid_map[tid]["buffer"][0]
-            returned_ptr = payload
-            tid_map[tid]["malloc"].append((size, returned_ptr))
-            tid_map[tid]["buffer"] = []
-            tid_map[tid]["status"] = 0
-          else:
-            raise ValueError("Malloc parsing: buffer too long")
-        elif status == 2:
-          if buffer_len == 0:
-            given_ptr = payload
-            tid_map[tid]["free"].append(given_ptr)
-            tid_map[tid]["buffer"] = []
-            tid_map[tid]["status"] = 0
-          else:
-            raise ValueError("Free parsing: buffer too long")
+      #else:
+      status = tid_map[tid]["status"]
+      buffer_len = len(tid_map[tid]["buffer"])
+      if status == 0:
+        #print("Incomplete tracing... skipping until next function trace")
+        print("!payload:", payload,payload_as_int)
+        print("!buffer:", tid_map[tid]["buffer"])
+        errors += 1
+        continue
+      elif status == 1:
+        if buffer_len == 0:
+          size = int(payload, 16) - 2**63
+          tid_map[tid]["buffer"].append(size)
+        elif buffer_len == 1:
+          size = tid_map[tid]["buffer"][0]
+          returned_ptr = payload
+          tid_map[tid]["malloc"].append((size, returned_ptr))
+          #print("MALLOC:", size, returned_ptr)
+          tid_map[tid]["buffer"] = []
+          tid_map[tid]["status"] = 0
         else:
-          raise ValueError("Undefined status 2", status)
+          raise ValueError("Malloc parsing: buffer too long")
+      elif status == 2:
+        if buffer_len == 0:
+          header = int(payload, 16)
+          tid_map[tid]["buffer"].append(header)
+        elif buffer_len == 1:
+          returned_ptr = payload
+          tid_map[tid]["free"].append(returned_ptr)
+          #print("FREE:", returned_ptr)
+          tid_map[tid]["buffer"] = []
+          tid_map[tid]["status"] = 0
+        else:
+          raise ValueError("Free parsing: buffer too long")
+      else:
+        raise ValueError("Undefined status", status)
 
   print("# SUMMARY")
   print(k, "lines parsed:")
