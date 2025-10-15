@@ -12,7 +12,7 @@ FSTAR_EXE=${FSTAR_EXE:=fstar.exe}
 setup() {
   echo "0. Setup"
 
-  if [[ -z "$(which z3 2>/dev/null)" ]]; then
+  if [[ -z "$(which z3-4.13.3 2>/dev/null)" ]]; then
   echo "z3 is not in the PATH, exiting"
   	exit 1
   fi

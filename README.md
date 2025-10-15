@@ -1,10 +1,18 @@
 # StarMalloc
 
-A verified security-oriented general-purpose userspace memory allocator,
-that can be used as a drop-in replacement for the libc allocator.
-It is heavily inspired from [hardened\_malloc](https://github.com/GrapheneOS/hardened_malloc)'s design.
+A verified security-oriented general-purpose userspace memory allocator, that
+can be used as a drop-in replacement for the libc allocator.
+It is heavily inspired from
+[hardened\_malloc](https://github.com/GrapheneOS/hardened_malloc)'s design.
 
-The code for all of the usual memory management primitives (`malloc`, `free`, `realloc`, ...) is formally verified using the [F\*](https://github.com/FStarLang/FStar) verification framework and the [Steel](https://github.com/FStarLang/Steel) separation logic for memory safety and functional correctness.
+Usual C memory management primitives (including `malloc`, `free`, `realloc`,
+`aligned_alloc`) are formally verified using the
+[F\*](https://github.com/FStarLang/FStar) verification framework and the
+[Steel](https://github.com/FStarLang/Steel) separation logic for memory safety
+and functional correctness.
+
+Corresponding verified F* code is extracted to C code thanks to the
+[KaRaMeL](https://github.com/FStarLang/karamel) compiler.
 
 ## Corresponding papers
 
@@ -13,12 +21,21 @@ The code for all of the usual memory management primitives (`malloc`, `free`, `r
 ## Performance and usability
 
 StarMalloc has been successfully tested on the
-[mimalloc-bench](https://github.com/daanx/mimalloc-bench) benchmarking suite, so
-that its properties can be compared with many other allocators.
+[mimalloc-bench](https://github.com/daanx/mimalloc-bench) benchmarking suite,
+so that its properties can be compared with many other allocators.
 
-Using a modified version of Firefox (additional `--disable-jemalloc` build flag to use the environment allocator), it has successfully been tested on standard browser benchmarks (such as JetStream2 and Speedometer 2.1) as a replacement for the Firefox-shipped memory allocator.
+Using a modified version of Firefox (additional `--disable-jemalloc` build flag
+to use the environment allocator), it has successfully been tested on standard
+browser benchmarks (such as JetStream2 and Speedometer 2.1) as a replacement
+for the Firefox-shipped memory allocator.
 
-In terms of performance, it is roughly on par with hardened_malloc whose design was used as a basis. On the mimalloc-benchmarking suite, using hardened_malloc as a baseline, we get performance ranging from 0.70x to 1.30x, with a geometric mean on all 31 benches of ~1 (more details in the paper). Please note that some implementation differences remain (e.g. constant canaries vs. cryptographic canaries, slightly different quarantine implementation, no security mechanism for large allocations), which should have very limited performance impact.
+In terms of performance, it is roughly on par with hardened_malloc whose design
+was used as a basis. On the mimalloc-benchmarking suite, using hardened_malloc
+as a baseline, we get performance ranging from 0.70x to 1.30x, with a geometric
+mean on all 31 benches of ~1 (more details in the paper). Please note that some
+implementation differences remain (e.g. constant canaries vs. cryptographic
+canaries, slightly different quarantine implementation, no security mechanism
+for large allocations), which should have very limited performance impact.
 
 ## Security mechanisms
 
@@ -44,7 +61,15 @@ Out-of-scope are security properties, even though we would very much like to tac
 
 ## Build
 
-See `BUILD.md` to reverify and extract StarMalloc from scratch using F\*, Steel and KaRaMeL.
+## Full build
+
+Assuming F\*, Steel and KaRaMeL have been installed, the following environment variables must be set.
+
+- `FSTAR_HOME` pointing to the F\* installation directory,
+- `STEEL_HOME` pointing to the Steel installation directory,
+- `KRML_HOME` pointing to the KaRaMeL installation directory.
+
+Only `z3-4.13.3` is currently supported to build StarMalloc.
 
 ### Light build
 
@@ -58,6 +83,18 @@ With only a C compiler as dependency, the following command will produce `out/st
 
 StarMalloc can then be used this way: `LD_PRELOAD=out/starmalloc.so <program>`.
 Note: some programs (e.g. Firefox or Chromium) use shipped allocators instead of the system (or environment) allocator, some additional work (such as recompilation with additional build flags) may be required.
+
+## Performance evaluation
+
+Using `bash setup-all.sh -st-only` followed by `bash build-bench-env.sh hm bench
+lean redis rocksdb linux` from the `external/mimalloc-bench` directory, the
+mimalloc-bench benchmarking suite is ready to be used, assuming required
+dependencies all are already installed.
+
+From the `extern/mimalloc-bench/out/bench` directory, one can then run benchmarks
+using `bash ../../bench.sh sys hm st allt no-security` to test the system
+allocator, hardened\_malloc and StarMalloc on all benchmarks measuring
+performance (time and memory).
 
 ## External repositories
 
@@ -81,7 +118,7 @@ Note: some programs (e.g. Firefox or Chromium) use shipped allocators instead of
 - (feature) improve support for a F\*/Steel client
 - slab allocations:
   - (feature) add support for 48-bytes size-class
-  - (security) slots quarantine
+  - (security) slots quarantine (WIP)
   - (security) initial mapping of allocation region should be `PROT_NONE`
   - (performance) size class selection could be improved (`malloc` case = done, `aligned_alloc` case remaining)
   - (security) randomizing guard pages
@@ -98,5 +135,5 @@ Please note that for practical reasons, some code from Steel and KaRaMeL is vend
 
 - Antonin Reitz `antonin.reitz@inria.fr`
 - Aymeric Fromherz `aymeric.fromherz@inria.fr`
-- Jonathan Protzenko `protz@microsoft.com`
+- Jonathan Protzenko `jonathan.protzenko+github@gmail.com`
 
