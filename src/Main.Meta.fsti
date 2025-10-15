@@ -38,11 +38,11 @@ val total_nb_sc_lemma (_: unit)
   (total_nb_sc == US.v nb_size_classes * US.v nb_arenas)
 
 inline_for_extraction noextract
-val arena_sc_list : (l:list sc{List.length l == total_nb_sc /\ Cons? l})
+val arena_sc_list : (l:list sc_full{List.length l == total_nb_sc /\ Cons? l})
 
-val sizes_t_pred (r: TLA.t sc) : prop
+val sizes_t_pred (r: TLA.t sc_full) : prop
 
-unfold type sizes_t = r:TLA.t sc{
+unfold type sizes_t = r:TLA.t sc_full{
   TLA.length r == total_nb_sc /\
   sizes_t_pred r
 }
@@ -70,7 +70,7 @@ type size_classes_all =
     //ro_sizes: ro_array sizes g_sizes;
     slab_region: arr:array U8.t{ // The region of memory handled by this size class
       synced_sizes total_nb_sc sizes g_size_classes /\
-      A.length arr == US.v slab_region_size /\
+      A.length arr == US.v full_slab_region_size /\
       (forall (i:nat{i < Seq.length g_size_classes}).
         size_class_pred arr (Seq.index g_size_classes i) i)
     }
@@ -84,16 +84,16 @@ val slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
   (array U8.t)
   emp (fun r -> null_or_varray r)
   (requires fun _ ->
-    U32.v bytes <= U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size
+    U32.v bytes <= U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size.sc
   )
   (ensures fun _ r _ ->
     let size = (Seq.index sc_all.g_size_classes (US.v i)).data.size in
-    U32.v size > 0 /\
+    U32.v size.sc > 0 /\
     not (is_null r) ==> (
-      A.length r == U32.v (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size /\
+      A.length r == U32.v size.sc /\
       A.length r >= U32.v bytes /\
       array_u8_alignment r 16ul /\
-      ((U32.v page_size) % (U32.v size) == 0 ==> array_u8_alignment r size)
+      ((U32.v size.slab_size) % (U32.v size.sc) == 0 ==> array_u8_alignment r size.sc)
     )
   )
 
@@ -169,7 +169,7 @@ val slab_malloc_generic_canary
 inline_for_extraction noextract
 val slab_aligned_alloc_generic_nocanary
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
-  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v page_size) % (U32.v v) = 0}))
+  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v max_slab_size) % (U32.v v) = 0}))
   bytes
   : Steel (array U8.t)
   emp
@@ -190,7 +190,7 @@ val slab_aligned_alloc_generic_nocanary
 inline_for_extraction noextract
 val slab_aligned_alloc_generic_canary
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
-  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v page_size) % (U32.v v) = 0}))
+  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v max_slab_size) % (U32.v v) = 0}))
   bytes
   : Steel (array U8.t)
   emp

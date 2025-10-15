@@ -65,6 +65,7 @@
           "lib_misc(/.*)?"
           "lib_ringbuffer(/.*)?"
           "src(/.*)?"
+          "vendor(/.*)?"
           "c(/.*)?"
           "Makefile.include"
           "Makefile"

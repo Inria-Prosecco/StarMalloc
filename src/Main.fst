@@ -94,7 +94,7 @@ let intro_ind_varraylist_nil r r_idxs =
     (SlabsCommon.ind_varraylist_aux r)
 
 val intro_left_vprop_empty (#opened:_)
-  (sc:sc)
+  (sc:sc_full)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
@@ -160,6 +160,7 @@ let intro_left_vprop_empty sc slab_region md_bm_region md_region r_idxs
     (left_vprop2 sc slab_region md_bm_region md_region r_idxs 0sz)
 
 val intro_right_vprop_empty (#opened:_)
+  (sc: sc_full)
   (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
@@ -167,37 +168,37 @@ val intro_right_vprop_empty (#opened:_)
      (A.varray (split_r slab_region 0sz) `star`
       A.varray (split_r md_bm_region 0sz) `star`
       A.varray (split_r md_region 0sz))
-    (fun _ -> SlabsCommon.right_vprop slab_region md_bm_region md_region 0sz)
+    (fun _ -> SlabsCommon.right_vprop sc slab_region md_bm_region md_region 0sz)
     (requires fun h ->
       A.asel (split_r slab_region 0sz) h `Seq.equal` Seq.create (A.length slab_region) U8.zero /\
       A.asel (split_r md_bm_region 0sz) h `Seq.equal` Seq.create (A.length md_bm_region) U64.zero)
     (ensures fun _ _ _ -> True)
 
-let intro_right_vprop_empty slab_region md_bm_region md_region =
+let intro_right_vprop_empty sc slab_region md_bm_region md_region =
   change_equal_slprop
     (A.varray (A.split_r slab_region 0sz))
-    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size))));
+    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz sc.slab_size))));
   change_equal_slprop
     (A.varray (A.split_r md_bm_region 0sz))
     (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz)));
   intro_vrefine
-    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size)))) zf_u8;
+    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz sc.slab_size)))) zf_u8;
   intro_vrefine
     (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz))) zf_u64;
   assert_norm (
-    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size)))
+    (A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz sc.slab_size)))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz))
       `vrefine` zf_u64) `star`
     A.varray (A.split_r md_region 0sz) ==
-    (right_vprop slab_region md_bm_region md_region 0sz));
+    (right_vprop sc slab_region md_bm_region md_region 0sz));
   change_equal_slprop
-    ((A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz page_size)))
+    ((A.varray (A.split_r slab_region (US.mul 0sz (u32_to_sz sc.slab_size)))
       `vrefine` zf_u8) `star`
     (A.varray (A.split_r md_bm_region (US.mul 0sz 4sz))
       `vrefine` zf_u64) `star`
     A.varray (A.split_r md_region 0sz))
-    (right_vprop slab_region md_bm_region md_region 0sz)
+    (right_vprop sc slab_region md_bm_region md_region 0sz)
 
 #restart-solver
 
@@ -238,7 +239,7 @@ let init_idxs (r_idxs: array US.t{A.length r_idxs == 7})
 #push-options "--z3rlimit 200 --compat_pre_typed_indexed_effects --fuel 0 --ifuel 0"
 noextract inline_for_extraction
 let init_struct_aux
-  (sc:sc)
+  (sc:sc_full)
   (slab_region: array U8.t{A.length slab_region == U32.v page_size * US.v metadata_max})
   (md_bm_region: array U64.t{A.length md_bm_region == US.v 4sz * US.v metadata_max})
   (md_region: array AL.cell{A.length md_region == US.v metadata_max})
@@ -250,12 +251,12 @@ let init_struct_aux
   )
   (fun scs -> size_class_vprop scs)
   (requires fun h0 ->
-    array_u8_alignment slab_region page_size /\
+    array_u8_alignment slab_region max_slab_size /\
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0)
   )
   (ensures fun _ r h1 ->
-    U32.eq r.size sc /\
+    r.size == sc /\
     //zf_u8 (A.asel (A.split_l slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) (US.sub n 1sz))) h1) /\
     //zf_u64 (A.asel (A.split_l md_bm_region (US.mul (US.mul metadata_max 4sz) (US.sub n 1sz))) h1) /\
     r.slab_region == slab_region /\
@@ -275,7 +276,7 @@ let init_struct_aux
   drop (A.varray (A.split_l md_bm_region 0sz));
   drop (A.varray (A.split_l slab_region 0sz));
 
-  intro_right_vprop_empty slab_region md_bm_region md_region;
+  intro_right_vprop_empty sc slab_region md_bm_region md_region;
 
   let r_idxs = mmap_array_us_init 7sz in
   init_idxs r_idxs;
@@ -290,13 +291,13 @@ let init_struct_aux
 
   intro_vrefinedep
     (R.vptr md_count)
-    vrefinedep_prop
+    (vrefinedep_prop sc)
     (size_class_vprop_aux sc
       slab_region md_bm_region md_region
       r_idxs)
     (left_vprop sc slab_region md_bm_region md_region
       r_idxs 0sz `star`
-     right_vprop slab_region md_bm_region md_region 0sz);
+     right_vprop sc slab_region md_bm_region md_region 0sz);
 
 
   [@inline_let]
@@ -312,7 +313,7 @@ let init_struct_aux
   change_slprop_rel
     (vrefinedep
       (R.vptr md_count)
-      vrefinedep_prop
+      (vrefinedep_prop sc)
       (size_class_vprop_aux sc
         slab_region md_bm_region md_region r_idxs)
     )
@@ -325,7 +326,7 @@ let init_struct_aux
         ==
         vrefinedep
           (R.vptr scs.md_count)
-          vrefinedep_prop
+          (vrefinedep_prop sc)
           (size_class_vprop_aux scs.size
             scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
       ) by (norm [delta_only [`%size_class_vprop]]; trefl ())
@@ -349,7 +350,7 @@ let init_struct
     US.v metadata_max * US.v 4sz <= US.v metadata_max * US.v 4sz * US.v n /\
     US.v metadata_max <= US.v metadata_max * US.v n
   })
-  (sc:sc)
+  (sc:sc_full)
   (slab_region: array U8.t{A.length slab_region == U32.v page_size * US.v metadata_max * US.v n})
   (md_bm_region: array U64.t{A.length md_bm_region == US.v 4sz * US.v metadata_max * US.v n})
   (md_region: array AL.cell{A.length md_region == US.v metadata_max * US.v n})
@@ -365,13 +366,13 @@ let init_struct
     A.varray (A.split_r md_region metadata_max)
   )
   (requires fun h0 ->
-    array_u8_alignment slab_region page_size /\
+    array_u8_alignment slab_region max_slab_size /\
     zf_u8 (A.asel slab_region h0) /\
     zf_u64 (A.asel md_bm_region h0)
   )
   (ensures fun _ r h1 ->
-    U32.eq r.size sc /\
-    array_u8_alignment (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size))) page_size /\
+    r.size == sc /\
+    array_u8_alignment (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size))) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size))) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul metadata_max 4sz)) h1) /\
     A.ptr_of r.slab_region == A.ptr_of slab_region /\
@@ -410,11 +411,11 @@ let init_struct
   );
   lemma_mod_mul2 (US.v metadata_max) (U32.v page_size) 16;
   assert (US.v (US.mul metadata_max (u32_to_sz page_size)) % 16 == 0);
-  array_u8_alignment_lemma slab_region slab_region' page_size page_size;
+  array_u8_alignment_lemma slab_region slab_region' max_slab_size max_slab_size;
   array_u8_alignment_lemma slab_region
     (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size)))
-    page_size page_size;
-  assert (array_u8_alignment slab_region' page_size);
+    max_slab_size max_slab_size;
+  assert (array_u8_alignment (A.split_r slab_region (US.mul metadata_max (u32_to_sz page_size))) max_slab_size);
   let scs = init_struct_aux sc slab_region' md_bm_region' md_region' in
   return scs
 
@@ -521,13 +522,13 @@ let f_lemma
 unfold
 let size_class_pred (slab_region:array U8.t) (sc:size_class) (i:nat) : prop =
   same_base_array slab_region sc.data.slab_region /\
-  A.offset (A.ptr_of sc.data.slab_region) == A.offset (A.ptr_of slab_region) + i * US.v slab_size
+  A.offset (A.ptr_of sc.data.slab_region) == A.offset (A.ptr_of slab_region) + i * US.v sc_slab_region_size
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 200"
 
 noextract inline_for_extraction
 val init_wrapper2
-  (sc: sc)
+  (sc: sc_full)
   (n: US.t{
     US.fits (US.v metadata_max * US.v (u32_to_sz page_size) * US.v n) /\
     US.fits (US.v metadata_max * US.v 4sz * US.v n) /\
@@ -564,16 +565,16 @@ val init_wrapper2
   (requires fun h0 ->
     US.v k < US.v n /\
     US.v k' == US.v k + 1 /\
-    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
     True
   )
   (ensures fun _ r h1 ->
-    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
-    U32.eq r.data.size sc /\
+    r.data.size == sc /\
     size_class_pred slab_region r (US.v k)
     //same_base_array slab_region r.data.slab_region /\
     //A.offset (A.ptr_of r.data.slab_region) == A.offset (A.ptr_of slab_region) + US.v metadata_max * US.v (u32_to_sz page_size) * US.v k
@@ -635,14 +636,15 @@ let init_wrapper2 sc n k k' slab_region md_bm_region md_region
 module G = FStar.Ghost
 module UP = FStar.PtrdiffT
 
-let slab_region_size
+let full_slab_region_size
   : v:US.t{
     US.v v == US.v metadata_max * U32.v page_size * US.v nb_size_classes * US.v nb_arenas /\
     UP.fits (US.v v)
   }
   =
+  metadata_max_fits ();
   metadata_max_up_fits ();
-  slab_size `US.mul` nb_size_classes `US.mul` nb_arenas
+  sc_slab_region_size `US.mul` nb_size_classes `US.mul` nb_arenas
 
 ///// A logical predicate indicating that a list of sizes corresponds
 ///// to the sizes of a list of size_classes
@@ -652,8 +654,10 @@ let slab_region_size
 /// A logical predicate indicating that a list of sizes corresponds
 /// to the sizes of a list of size_classes
 let synced_sizes (#n:nat{US.fits n}) (k:nat{k <= n})
-  (sizes:TLA.t sc{TLA.length sizes >= n})
-  (size_classes:Seq.lseq size_class n) : prop =
+  (sizes:TLA.t sc_full{TLA.length sizes >= n})
+  (size_classes:Seq.lseq size_class n)
+  : prop
+  =
   forall (i:nat{i < k}). TLA.get sizes (US.uint_to_t i) == (Seq.index size_classes i).data.size
 
 
@@ -687,7 +691,7 @@ val init_size_class
     A.length md_region >= US.v metadata_max * US.v k'
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc{TLA.length sizes >= US.v n})
+  (sizes: TLA.t sc_full{TLA.length sizes >= US.v n})
   : Steel unit
   (
     A.varray (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) `star`
@@ -707,14 +711,14 @@ val init_size_class
   )
   (requires fun h0 ->
     US.v k' == US.v k + 1 /\
-    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
     synced_sizes (US.v k) sizes (asel size_classes h0) /\
     (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
-    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k')) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k')) h1) /\
     synced_sizes (US.v k') sizes (asel size_classes h1) /\
@@ -748,7 +752,7 @@ irreducible let reduce_attr : unit = ()
 /// to `init_size_class`
 [@@ reduce_attr]
 noextract
-val init_size_classes_aux (l:list sc)
+val init_size_classes_aux (l:list sc_full)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -774,7 +778,7 @@ val init_size_classes_aux (l:list sc)
     A.length md_region >= US.v metadata_max * US.v k'
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc{TLA.length sizes >= US.v n})
+  (sizes: TLA.t sc_full{TLA.length sizes >= US.v n})
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
   (
@@ -800,14 +804,14 @@ val init_size_classes_aux (l:list sc)
     Cons? l /\
 
     US.v k' == US.v k + 1 /\
-    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) k)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) k)) h0) /\
     synced_sizes (US.v k) sizes (asel size_classes h0) /\
     (forall (i:nat{i < US.v k}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
-    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
     synced_sizes (US.v n) sizes (asel size_classes h1) /\
@@ -850,7 +854,7 @@ let rec init_size_classes_aux l n k k' slab_region md_bm_region md_region size_c
 #push-options "--fuel 0 --ifuel 0"
 /// Entrypoint, allocating all size classes according to the list of sizes [l]
 inline_for_extraction noextract
-val init_size_classes (l:list sc)
+val init_size_classes (l:list sc_full)
   (n: US.t{
     UInt.size (US.v n) U32.n /\
     US.fits (US.v n) /\
@@ -874,7 +878,7 @@ val init_size_classes (l:list sc)
     A.length md_region >= US.v metadata_max * 1
   })
   (size_classes: array size_class{A.length size_classes == US.v n})
-  (sizes: TLA.t sc{TLA.length sizes >= US.v n})
+  (sizes: TLA.t sc_full{TLA.length sizes >= US.v n})
   //(sizes: array sc{A.length sizes == US.v n})
   : Steel unit
   (
@@ -899,14 +903,14 @@ val init_size_classes (l:list sc)
     List.length l == US.v n /\
     Cons? l /\
 
-    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) 0sz)) h0) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) 0sz)) h0) /\
     synced_sizes 0 sizes (asel size_classes h0) /\
     (forall (i:nat{i < 0}) . size_class_pred slab_region (Seq.index (asel size_classes h0) i) i)
   )
   (ensures fun _ r h1 ->
-    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) page_size /\
+    array_u8_alignment (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) max_slab_size /\
     zf_u8 (A.asel (A.split_r slab_region (US.mul (US.mul metadata_max (u32_to_sz page_size)) n)) h1) /\
     zf_u64 (A.asel (A.split_r md_bm_region (US.mul (US.mul metadata_max 4sz) n)) h1) /\
     synced_sizes (US.v n) sizes (asel size_classes h1) /\
@@ -950,9 +954,9 @@ val allocate_size_class
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
     not (is_null r) ==> (
-      A.length r == U32.v scs.size /\
+      A.length r == U32.v scs.size.sc /\
       array_u8_alignment r 16ul /\
-      ((U32.v scs.size > 0 /\ (U32.v page_size) % (U32.v scs.size) == 0) ==> array_u8_alignment r scs.size)
+      (U32.v scs.size.slab_size % U32.v scs.size.sc == 0 ==> array_u8_alignment r scs.size.sc)
     )
   )
 

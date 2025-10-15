@@ -28,7 +28,7 @@ open SlabsAlloc
 
 noeq
 type size_class_struct' = {
-  size: sc;
+  size: sc_full;
   slabs_idxs: A.array US.t;
   md_count: ref US.t;
   slab_region: array U8.t;
@@ -40,12 +40,12 @@ open Prelude
 open FStar.Mul
 
 inline_for_extraction noextract
-let slab_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size /\ US.v v > 0})
+let sc_slab_region_size : (v:US.t{US.v v == US.v metadata_max * U32.v page_size /\ US.v v > 0})
   = US.mul metadata_max (US.of_u32 page_size)
 
 type size_class_struct = s:size_class_struct'{
-  A.length s.slab_region == US.v slab_size /\
-  array_u8_alignment s.slab_region page_size /\
+  A.length s.slab_region == US.v sc_slab_region_size /\
+  array_u8_alignment s.slab_region max_slab_size /\
   A.length s.md_bm_region == US.v metadata_max * 4 /\
   A.length s.md_region == US.v metadata_max /\
   A.length s.slabs_idxs == 7
@@ -59,7 +59,7 @@ let size_class_vprop
   =
   vrefinedep
     (vptr scs.md_count)
-    vrefinedep_prop
+    (vrefinedep_prop scs.size)
     (size_class_vprop_aux scs.size
       scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
 
@@ -74,7 +74,7 @@ let allocate_size_class_sl_lemma1
     SM.interp (hp_of (
       vrefinedep
         (vptr scs.md_count)
-        vrefinedep_prop
+        (vrefinedep_prop scs.size)
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
     )) m /\
@@ -83,7 +83,7 @@ let allocate_size_class_sl_lemma1
     sel_of (
       vrefinedep
         (vptr scs.md_count)
-        vrefinedep_prop
+        (vrefinedep_prop scs.size)
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
     ) m
@@ -98,7 +98,7 @@ let allocate_size_class_sl_lemma2
     SM.interp (hp_of (
       vrefinedep
         (vptr scs.md_count)
-        vrefinedep_prop
+        (vrefinedep_prop scs.size)
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
     )) m
@@ -110,7 +110,7 @@ let allocate_size_class_sl_lemma2
     sel_of (
       vrefinedep
         (vptr scs.md_count)
-        vrefinedep_prop
+        (vrefinedep_prop scs.size)
         (size_class_vprop_aux scs.size
           scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs)
     ) m
@@ -146,53 +146,58 @@ let mod_arith_lemma_applied
   lemma_mod_mul2 (n/page_size) page_size align;
   lemma_mod_plus2 0 ((n/page_size)*page_size) align
 
-let allocate_size_class_aux
+#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
+val allocate_size_class_aux
   (scs: size_class_struct)
   (r: array U8.t)
   : Lemma
   (requires
     not (A.is_null r) ==> (
-      A.length r == U32.v scs.size /\
+      A.length r == U32.v scs.size.sc /\
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
-      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v scs.size) == 0
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v scs.size.slab_size) % (U32.v scs.size.sc) == 0
     )
   )
   (ensures
     not (A.is_null r) ==> (
-      A.length r == U32.v scs.size /\
+      A.length r == U32.v scs.size.sc /\
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
-      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v scs.size) == 0 /\
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v scs.size.slab_size) % (U32.v scs.size.sc) == 0 /\
+      //(U32.v scs.size.sc <= U32.v page_size ==>
       array_u8_alignment r 16ul /\
-      ((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
+      ((U32.v scs.size.slab_size) % (U32.v scs.size.sc) == 0 ==> array_u8_alignment r scs.size.sc)
     )
   )
+
+let allocate_size_class_aux scs r
   =
   if not (A.is_null r)
   then (
     assert (same_base_array r scs.slab_region);
     assert (same_base_array scs.slab_region r);
-    assert (array_u8_alignment scs.slab_region page_size);
+    assert (array_u8_alignment scs.slab_region max_slab_size);
     mod_arith_lemma_applied
       (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region))
-      (U32.v page_size)
-      (U32.v scs.size)
+      (U32.v scs.size.slab_size)
+      (U32.v scs.size.sc)
       16;
     assert ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % 16 == 0);
-    array_u8_alignment_lemma scs.slab_region r page_size 16ul;
-    if ((U32.v page_size) % (U32.v scs.size) = 0) then (
+    array_u8_alignment_lemma scs.slab_region r max_slab_size 16ul;
+    // no boundary crossing of allocations for size classes <= 4096
+    // allows to retrieve alignment, see Constants.fst
+    if ((U32.v scs.size.slab_size) % (U32.v scs.size.sc) = 0) then (
       mod_arith_lemma_applied
         (A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region))
-        (U32.v page_size)
-        (U32.v scs.size)
-        (U32.v scs.size);
-      assert ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % (U32.v scs.size) == 0);
-      array_u8_alignment_lemma scs.slab_region r page_size scs.size
+        (U32.v scs.size.slab_size)
+        (U32.v scs.size.sc)
+        (U32.v scs.size.sc);
+      assert ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % (U32.v scs.size.sc) == 0);
+      array_u8_alignment_lemma scs.slab_region r max_slab_size scs.size.sc
     ) else ()
   ) else ()
 
-#push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let allocate_size_class
   (scs: size_class_struct)
   : Steel (array U8.t)
@@ -203,12 +208,13 @@ let allocate_size_class
   (requires fun h0 -> True)
   (ensures fun h0 r h1 ->
     not (A.is_null r) ==> (
-      A.length r == U32.v scs.size /\
+      A.length r == U32.v scs.size.sc /\
       same_base_array r scs.slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region) >= 0 /\
-      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v page_size) % (U32.v scs.size) == 0 /\
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of scs.slab_region)) % U32.v scs.size.slab_size) % (U32.v scs.size.sc) == 0 /\
+      //(U32.v scs.size.sc <= U32.v page_size ==>
       array_u8_alignment r 16ul /\
-      ((U32.v page_size) % (U32.v scs.size) == 0 ==> array_u8_alignment r scs.size)
+      ((U32.v scs.size.slab_size) % (U32.v scs.size.sc) == 0 ==> array_u8_alignment r scs.size.sc)
     )
   )
   =
@@ -216,7 +222,7 @@ let allocate_size_class
     (size_class_vprop scs)
     (vrefinedep
       (vptr scs.md_count)
-      vrefinedep_prop
+      (vrefinedep_prop scs.size)
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
     (fun x y -> x == y)
@@ -228,7 +234,7 @@ let allocate_size_class
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
-      vrefinedep_prop
+      (vrefinedep_prop scs.size)
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
     (size_class_vprop scs)
@@ -257,8 +263,8 @@ let deallocate_size_class
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of scs.slab_region) in
     0 <= diff' /\
     US.v diff = diff' /\
-    (diff' % U32.v page_size) % U32.v scs.size == 0 /\
-    A.length ptr == U32.v scs.size /\
+    (diff' % U32.v scs.size.slab_size) % U32.v scs.size.sc == 0 /\
+    A.length ptr == U32.v scs.size.sc /\
     same_base_array ptr scs.slab_region)
   (ensures fun h0 _ h1 -> True)
   =
@@ -266,7 +272,7 @@ let deallocate_size_class
     (size_class_vprop scs)
     (vrefinedep
       (vptr scs.md_count)
-      vrefinedep_prop
+      (vrefinedep_prop scs.size)
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
     (fun x y -> x == y)
@@ -278,7 +284,7 @@ let deallocate_size_class
   change_slprop_rel
     (vrefinedep
       (vptr scs.md_count)
-      vrefinedep_prop
+      (vrefinedep_prop scs.size)
       (size_class_vprop_aux scs.size
         scs.slab_region scs.md_bm_region scs.md_region scs.slabs_idxs))
     (size_class_vprop scs)

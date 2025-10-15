@@ -6,11 +6,13 @@
 
 #include "krmllib.h"
 
-uint8_t *SlotsAlloc_allocate_slot(uint32_t size_class, uint64_t *md, uint8_t *arr);
+#include "Constants.h"
+
+uint8_t *SlotsAlloc_allocate_slot(Constants_sc_full_ size_class, uint64_t *md, uint8_t *arr);
 
 bool
 SlotsFree_deallocate_slot(
-  uint32_t size_class,
+  Constants_sc_full_ size_class,
   uint64_t *md,
   uint8_t *arr,
   uint8_t *ptr,

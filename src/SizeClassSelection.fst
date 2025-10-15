@@ -15,6 +15,12 @@ open FStar.Mul
 
 #push-options "--fuel 0 --ifuel 0"
 
+// CONFIGURABLE values, with _n = pow2 _k
+let _n = 131072
+let _k = 17
+
+let _ = assert_norm (pow2 _k == _n)
+
 // misc
 let from_vec_property (#n: pos) (a: FBV.bv_t n) (s:nat{s <= n})
   : Lemma
@@ -175,7 +181,7 @@ let log2u64_spec (x: nat)
   : Pure nat
   (requires
     x > 0 /\
-    x <= 4096)
+    x <= _n)
   (ensures fun r ->
     r < 64 /\
     x >= pow2 r /\
@@ -189,7 +195,7 @@ let log2u64_spec_eq_lemma (x:nat) (r: nat)
   : Lemma
   (requires
     x > 0 /\
-    x <= 4096 /\
+    x <= _n /\
     x >= pow2 r /\
     x < pow2 (r + 1))
   (ensures
@@ -248,8 +254,8 @@ let upper_div_impl
   (y: U32.t)
   : Pure U32.t
   (requires
-    U32.v x <= 4096 /\
-    U32.v y <= 4096 /\
+    U32.v x <= _n /\
+    U32.v y <= _n /\
     (exists (k:nat). U32.v y == pow2 k)
   )
   (ensures fun r ->
@@ -268,8 +274,8 @@ let fast_upper_div_impl
   (k: U32.t)
   : Pure U32.t
   (requires
-    U32.v x <= 4096 /\
-    U32.v y <= 4096 /\
+    U32.v x <= _n /\
+    U32.v y <= _n /\
     //(exists (k:nat).
     U32.v y == pow2 (U32.v k) /\
     U32.v k < 32
@@ -291,22 +297,22 @@ let inv_aux_2 (x: nat)
   : Pure (nat & nat)
   (requires
     64 <= x /\
-    x <= 4096
+    x <= _n
   )
   (ensures fun r ->
     let y, z = r in
     x <= sc_list_f_aux_2 y z /\
-    y <= 6 /\
+    y <= _k - 6 /\
     z <= 4 /\
-    (y = 6 ==> z = 0)
+    (y = _k - 6 ==> z = 0)
   )
   =
   let log = log2u64_spec x in
   assert_norm (pow2 6 == 64);
-  assert_norm (pow2 12 == 4096);
+  assert_norm (pow2 _k == _n);
   if log < 6 then FML.pow2_le_compat 6 (log+1);
-  if log > 12 then FML.pow2_lt_compat log 12;
-  assert (6 <= log /\ log <= 12);
+  if log > _k then FML.pow2_lt_compat log _k;
+  assert (6 <= log /\ log <= _k);
   let align = pow2 log in
   let align2 = pow2 (log - 2) in
   let y = log - 6 in
@@ -321,14 +327,15 @@ let inv_aux_2 (x: nat)
     assert (align + align == pow2 (log + 1))
   )
   else ();
-  if (y = 6)
-  then (
-    assert (log == 12);
-    assert (x >= pow2 12);
-    assert_norm (pow2 12 == 4096);
-    assert (z == 0)
-  ) else ();
   y, z
+  //if (y = 6)
+  //then (
+  //  assert (log == 12);
+  //  assert (x >= pow2 12);
+  //  assert_norm (pow2 12 == 4096);
+  //  assert (z == 0)
+  //) else ();
+  //y, z
 #pop-options
 
 noextract
@@ -336,11 +343,11 @@ let inv_aux (x: nat)
   : Pure (nat)
   (requires
     64 <= x /\
-    x <= 4096
+    x <= _n
   )
   (ensures fun r ->
     x <= sc_list_f_aux r /\
-    r <= 24
+    r <= 4 * (_k - 6)
   )
   =
   let y, z = inv_aux_2 x in
@@ -352,11 +359,11 @@ noextract
 let inv (x: nat)
   : Pure (nat)
   (requires
-    x <= 4096
+    x <= _n
   )
   (ensures fun r ->
     x <= sc_list_f r /\
-    r <= 26
+    r <= 4 * (_k - 6) + 2
   )
   =
   if x <= 16
@@ -382,7 +389,7 @@ inline_for_extraction noextract
 let inv_impl_aux_2 (x: U32.t)
   : Pure (U32.t & U32.t)
   (requires U32.v x >= 64 /\
-    U32.v x <= 4096
+    U32.v x <= _n
   )
   (ensures fun r ->
     let y, z = r in
@@ -397,9 +404,9 @@ let inv_impl_aux_2 (x: U32.t)
   assert (U64.v x_as_u64 == U32.v x);
   let log = log2u64 x_as_u64 in
   assert_norm (pow2 6 == 64);
-  assert_norm (pow2 12 == 4096);
+  assert_norm (pow2 _k == _n);
   if U32.v log < 6 then FML.pow2_le_compat 6 (U32.v log + 1);
-  if U32.v log > 12 then FML.pow2_lt_compat (U32.v log) 12;
+  if U32.v log > _k then FML.pow2_lt_compat (U32.v log) _k;
   let align = U32.shift_left 1ul log in
   let align2 = U32.shift_left 1ul (U32.sub log 2ul) in
   FML.pow2_lt_compat (U32.v log) (U32.v log - 2);
@@ -413,7 +420,7 @@ inline_for_extraction noextract
 let inv_impl_aux (x: U32.t)
   : Pure (U32.t)
   (requires U32.v x >= 64 /\
-    U32.v x <= 4096
+    U32.v x <= _n
   )
   (ensures fun r ->
     let r' = inv_aux (U32.v x) in
@@ -427,12 +434,13 @@ let inv_impl_aux (x: U32.t)
 let inv_impl (x: U32.t)
   : Pure (U32.t)
   (requires
-    U32.v x <= 4096
+    U32.v x <= _n
   )
   (ensures fun r ->
     let r' = inv (U32.v x) in
     U32.v r == r' /\
-    U32.v x <= sc_list_f (U32.v r)
+    U32.v x <= sc_list_f (U32.v r) /\
+    U32.v r <= 4 * (_k - 6) + 2
   )
   =
   if U32.lte x 16ul
@@ -450,7 +458,7 @@ let log2u64_is_mon_increasing (x y: nat)
   (requires
     0 < x /\
     x <= y /\
-    y <= 4096
+    y <= _n
   )
   (ensures
     log2u64_spec x <= log2u64_spec y
@@ -484,7 +492,7 @@ let inv_aux_is_mon_increasing (x y: nat)
   (requires
     64 <= x /\
     x <= y /\
-    y <= 4096
+    y <= _n
   )
   (ensures (
     let rx = inv_aux x in
@@ -496,10 +504,10 @@ let inv_aux_is_mon_increasing (x y: nat)
   let log_y = log2u64_spec y in
   log2u64_is_mon_increasing x y;
   assert_norm (pow2 6 == 64);
-  assert_norm (pow2 12 == 4096);
+  assert_norm (pow2 _k == _n);
   if log_x < 6 then FML.pow2_le_compat 6 (log_x+1);
-  if log_y > 12 then FML.pow2_lt_compat log_y 12;
-  assert (6 <= log_x /\ log_x <= log_y /\ log_y <= 12);
+  if log_y > _k then FML.pow2_lt_compat log_y _k;
+  assert (6 <= log_x /\ log_x <= log_y /\ log_y <= _k);
   if log_x = log_y
   then (
     let align = pow2 log_x in
@@ -511,8 +519,8 @@ let inv_aux_is_mon_increasing (x y: nat)
 let inv_is_mon_increasing (x y: nat)
   : Lemma
   (requires
-    x <= 4096 /\
-    y <= 4096
+    x <= _n /\
+    y <= _n
   )
   (ensures (
     let rx = inv x in
@@ -651,10 +659,10 @@ let sc_list_f_is_smon_increasing_lte
 #push-options "--z3rlimit 50"
 let inv_exact_log (k: nat)
   : Lemma
-  (requires k <= 24)
+  (requires k <= 4 * (_k - 6))
   (ensures
     64 <= sc_list_f_aux k /\
-    sc_list_f_aux k <= 4096 /\
+    sc_list_f_aux k <= _n /\
     (let r = sc_list_f_aux k in
     log2u64_spec r = (k/4) + 6
   ))
@@ -663,8 +671,8 @@ let inv_exact_log (k: nat)
   let k2 = k%4 in
   let r = sc_list_f_aux k in
   sc_list_f_aux_min k;
-  sc_list_f_aux_is_smon_increasing_lte k 24;
-  assert_norm (sc_list_f_aux 24 == 4096);
+  sc_list_f_aux_is_smon_increasing_lte k (4 * (_k - 6));
+  assert_norm (sc_list_f_aux (4 * (_k - 6)) == _n);
   assert (r == pow2 (k1 + 6) + k2 * pow2 (k1 + 4));
   assert (k2 < 4);
   FML.pow2_plus (k1 + 4) 2;
@@ -679,25 +687,25 @@ let inv_exact_log (k: nat)
 #push-options "--z3rlimit 50"
 let inv_exact_aux (k: nat)
   : Lemma
-  (requires k <= 24)
+  (requires k <= 4 * (_k - 6))
   (ensures
     64 <= sc_list_f_aux k /\
-    sc_list_f_aux k <= 4096 /\
+    sc_list_f_aux k <= _n /\
     inv_aux (sc_list_f_aux k) == k
   )
   =
   let x = sc_list_f_aux k in
   sc_list_f_aux_min k;
-  sc_list_f_aux_is_smon_increasing_lte k 24;
-  assert_norm (sc_list_f_aux 24 == 4096);
+  sc_list_f_aux_is_smon_increasing_lte k (4 * (_k - 6));
+  assert_norm (sc_list_f_aux (4 * (_k - 6)) == _n);
   let log = log2u64_spec x in
   assert_norm (pow2 6 == 64);
-  assert_norm (pow2 12 == 4096);
+  assert_norm (pow2 _k == _n);
   inv_exact_log k;
   assert (log = k/4 +6);
   if log < 6 then FML.pow2_le_compat 6 (log+1);
-  if log > 12 then FML.pow2_lt_compat log 12;
-  assert (6 <= log /\ log <= 12);
+  if log > _k then FML.pow2_lt_compat log _k;
+  assert (6 <= log /\ log <= _k);
   let align = pow2 log in
   let align2 = pow2 (log - 2) in
   let y = log - 6 in
@@ -709,13 +717,13 @@ let inv_exact_aux (k: nat)
 
 let inv_exact (k: nat)
   : Lemma
-  (requires k <= 26)
+  (requires k <= 4 * (_k - 6) + 2)
   (ensures
-    sc_list_f k <= 4096 /\
+    sc_list_f k <= _n /\
     inv (sc_list_f k) == k
   )
   =
-  sc_list_f_is_smon_increasing_lte k 26;
+  sc_list_f_is_smon_increasing_lte k (4 * (_k - 6) + 2);
   assert (sc_list_f 26 = 4096) by T.compute();
   if k = 0 then (
     assert (sc_list_f 0 == 16) by T.compute()
@@ -736,10 +744,10 @@ let inv_exact (k: nat)
 
 let inv_exact_log2 (k: nat)
   : Lemma
-  (requires 1 <= k /\ k <= 24)
+  (requires 1 <= k /\ k <= 4 * (_k - 6))
   (ensures
     64 <= sc_list_f_aux (k-1) /\
-    sc_list_f_aux (k-1) < 4096 /\
+    sc_list_f_aux (k-1) < _n /\
     (let r = sc_list_f_aux (k-1) + 1 in
     log2u64_spec r = (k-1)/4 + 6
   ))
@@ -748,8 +756,8 @@ let inv_exact_log2 (k: nat)
   let k2 = (k-1)%4 in
   let r = sc_list_f_aux (k-1) + 1 in
   sc_list_f_aux_min (k-1);
-  sc_list_f_aux_is_smon_increasing_lt (k-1) 24;
-  assert_norm (sc_list_f_aux 24 == 4096);
+  sc_list_f_aux_is_smon_increasing_lt (k-1) (4 * (_k - 6));
+  assert_norm (sc_list_f_aux (4 * (_k - 6)) == _n);
   assert (r == pow2 (k1 + 6) + k2 * pow2 (k1 + 4) + 1);
   assert (r >= pow2 (k1 + 6));
   assert (k2 < 4);
@@ -764,25 +772,25 @@ let inv_exact_log2 (k: nat)
 #push-options "--z3rlimit 50"
 let inv_exact_aux2 (k: nat)
   : Lemma
-  (requires 1 <= k /\ k <= 24)
+  (requires 1 <= k /\ k <= 4 * (_k - 6))
   (ensures
     64 <= sc_list_f_aux (k-1) /\
-    sc_list_f_aux (k-1) < 4096 /\
+    sc_list_f_aux (k-1) < _n /\
     inv_aux (sc_list_f_aux (k-1) + 1) == k
   )
   =
   let x = sc_list_f_aux (k-1) + 1 in
   sc_list_f_aux_min (k-1);
-  sc_list_f_aux_is_smon_increasing_lt (k-1) 24;
-  assert_norm (sc_list_f_aux 24 == 4096);
+  sc_list_f_aux_is_smon_increasing_lt (k-1) (4 * (_k - 6));
+  assert_norm (sc_list_f_aux (4 * (_k - 6)) == _n);
   let log = log2u64_spec x in
   assert_norm (pow2 6 == 64);
   assert_norm (pow2 12 == 4096);
   inv_exact_log2 k;
   assert (log = (k-1)/4+6);
   if log < 6 then FML.pow2_le_compat 6 (log+1);
-  if log > 12 then FML.pow2_lt_compat log 12;
-  assert (6 <= log /\ log <= 12);
+  if log > _k then FML.pow2_lt_compat log _k;
+  assert (6 <= log /\ log <= _k);
   let align = pow2 log in
   let align2 = pow2 (log - 2) in
   let y = log - 6 in
@@ -794,15 +802,15 @@ let inv_exact_aux2 (k: nat)
 
 let inv_exact2 (k: nat)
   : Lemma
-  (requires k <= 26)
+  (requires k <= 4 * (_k - 6) + 2)
   (ensures
     2 <= sc_list_f k /\
-    sc_list_f k <= 4096 /\
+    sc_list_f k <= _n /\
     inv (sc_list_f k - 2) == k
   )
   =
   sc_list_f_is_smon_increasing_lte 0 k;
-  sc_list_f_is_smon_increasing_lte k 26;
+  sc_list_f_is_smon_increasing_lte k (4 * (_k - 6) + 2);
   assert_norm (sc_list_f 0 = 16);
   assert_norm (sc_list_f 26 = 4096);
   if k = 0 then (

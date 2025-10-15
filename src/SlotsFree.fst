@@ -27,7 +27,7 @@ open FStar.Mul
 open SlotsAlloc
 
 let apply_starseq_upd2 (#opened:_)
-  (size_class: sc)
+  (size_class: sc_full)
   //TODO: remove
   (md: slab_metadata)
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
@@ -42,7 +42,7 @@ let apply_starseq_upd2 (#opened:_)
         (U32.v pos)) `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq1 arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -50,7 +50,7 @@ let apply_starseq_upd2 (#opened:_)
   (fun _ ->
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq2 arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -63,14 +63,14 @@ let apply_starseq_upd2 (#opened:_)
   (ensures fun h0 _ h1 ->
     v_starseq_len
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq1 arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       h0;
     v_starseq_len
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq2 arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -81,14 +81,14 @@ let apply_starseq_upd2 (#opened:_)
         (U32.v pos));
     let v1 = v_starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq1 arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       h0 in
     let v2 = v_starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq2 arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq2 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -121,7 +121,7 @@ let apply_starseq_upd2 (#opened:_)
   starseq_upd4
     #_
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(Seq.lseq U8.t (U32.v size_class))
+    #(Seq.lseq U8.t (U32.v size_class.sc))
     (slab_vprop_aux_f size_class md_as_seq1 arr)
     (slab_vprop_aux_f size_class md_as_seq2 arr)
     (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
@@ -132,7 +132,7 @@ let apply_starseq_upd2 (#opened:_)
 
 noextract inline_for_extraction
 let deallocate_slot_aux
-  (size_class: sc)
+  (size_class: sc_full)
   (md: slab_metadata)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
@@ -146,7 +146,7 @@ let deallocate_slot_aux
     A.varray md `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class (Bitmap4.set md_as_seq pos) arr)
       (slab_vprop_aux_f_lemma size_class (Bitmap4.set md_as_seq pos) arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -155,7 +155,7 @@ let deallocate_slot_aux
     A.varray md `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -169,28 +169,28 @@ let deallocate_slot_aux
   (ensures fun h0 _ h1 ->
     v_starseq_len
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class (Bitmap4.set md_as_seq pos) arr)
       (slab_vprop_aux_f_lemma size_class (Bitmap4.set md_as_seq pos) arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       h0;
     v_starseq_len
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       h1;
     let blob1 = v_starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class (Bitmap4.set md_as_seq pos) arr)
       (slab_vprop_aux_f_lemma size_class (Bitmap4.set md_as_seq pos) arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
       h0 in
     let blob2 = v_starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -227,7 +227,7 @@ let deallocate_slot_aux
 // that is, A.split_r arr (rounding size_class)
 #push-options "--z3rlimit 100 --fuel 0 --ifuel 0"
 let deallocate_slot_aux0
-  (size_class: sc)
+  (size_class: sc_full)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
   (ptr: array U8.t)
   (diff: U32.t)
@@ -236,7 +236,7 @@ let deallocate_slot_aux0
     let diff2 = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array arr ptr /\
     0 <= diff2 /\
-    diff2 <= U32.v page_size /\
+    diff2 <= U32.v size_class.slab_size /\
     U32.v diff == diff2
   ))
   (ensures
@@ -249,7 +249,7 @@ let deallocate_slot_aux0
   US.lt diff_sz (rounding size_class)
 
 let deallocate_slot_aux_lemma
-  (size_class: sc)
+  (size_class: sc_full)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
   (ptr: array U8.t)
   (diff: nat)
@@ -259,23 +259,23 @@ let deallocate_slot_aux_lemma
     same_base_array arr ptr /\
     0 <= diff2 /\
     diff2 < US.v (rounding size_class) /\
-    diff2 % (U32.v size_class) = 0 /\
+    diff2 % (U32.v size_class.sc) = 0 /\
     diff == diff2
   ))
   (ensures (
-    let r = diff / (U32.v size_class) in
+    let r = diff / (U32.v size_class.sc) in
     r < U32.v (nb_slots size_class)
   ))
   =
   let x = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
   let y = US.v (rounding size_class) in
-  assert (x % (U32.v size_class) == 0);
-  Math.Lemmas.cancel_mul_mod (U32.v (nb_slots size_class)) (U32.v size_class);
-  assert (y % (U32.v size_class) == 0);
+  assert (x % (U32.v size_class.sc) == 0);
+  Math.Lemmas.cancel_mul_mod (U32.v (nb_slots size_class)) (U32.v size_class.sc);
+  assert (y % (U32.v size_class.sc) == 0);
   assert (x < y)
 
 let deallocate_slot_aux1
-  (size_class: sc)
+  (size_class: sc_full)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
   (ptr: array U8.t)
   (diff: U32.t)
@@ -285,36 +285,36 @@ let deallocate_slot_aux1
     same_base_array arr ptr /\
     0 <= diff2 /\
     diff2 < US.v (rounding size_class) /\
-    diff2 % (U32.v size_class) = 0 /\
+    diff2 % (U32.v size_class.sc) = 0 /\
     U32.v diff == diff2
   ))
   (ensures fun r ->
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
-    U32.v r = diff / (U32.v size_class) /\
+    U32.v r = diff / (U32.v size_class.sc) /\
     U32.v r < U32.v (nb_slots size_class) /\
     U32.v r < U64.n * 4)
   =
   deallocate_slot_aux_lemma size_class arr ptr (U32.v diff);
-  let div = U32.div diff size_class in
+  let div = U32.div diff size_class.sc in
   div
 
-let slot_array_offset_lemma (size_class: sc) (arr: array U8.t) (pos: U32.t)
+let slot_array_offset_lemma (size_class: sc_full) (arr: array U8.t) (pos: U32.t)
   : Lemma
   (requires
     U32.v pos < U32.v (nb_slots size_class) /\
     A.length arr = US.v (rounding size_class))
   (ensures
-    U32.v (U32.mul pos size_class)
+    U32.v (U32.mul pos size_class.sc)
     ==
     A.offset (A.ptr_of (slot_array size_class arr pos)) - A.offset (A.ptr_of arr)
   )
   =
   let ptr = A.ptr_of arr in
-  let shift = U32.mul pos size_class in
+  let shift = U32.mul pos size_class.sc in
   nb_slots_correct size_class pos;
-  assert (U32.v shift <= U32.v page_size);
-  assert_norm (U32.v shift <= FI.max_int U16.n);
-  assert (U32.v shift <= FI.max_int U16.n);
+  //assert (U32.v shift <= U32.v page_size);
+  //assert_norm (U32.v shift <= FI.max_int U16.n);
+  //assert (U32.v shift <= FI.max_int U16.n);
   let shift_size_t = US.uint32_to_sizet shift in
   assert (US.v shift_size_t < A.length arr);
   let ptr_shifted = A.ptr_shift ptr shift_size_t in
@@ -322,7 +322,7 @@ let slot_array_offset_lemma (size_class: sc) (arr: array U8.t) (pos: U32.t)
   ()
 
 let deallocate_slot_aux2
-  (size_class: sc)
+  (size_class: sc_full)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
   (ptr: array U8.t)
   : Lemma
@@ -331,22 +331,22 @@ let deallocate_slot_aux2
     same_base_array arr ptr /\
     0 <= diff /\
     diff < US.v (rounding size_class) /\
-    diff % (U32.v size_class) == 0 /\
-    A.length ptr == U32.v size_class
+    diff % (U32.v size_class.sc) == 0 /\
+    A.length ptr == U32.v size_class.sc
   ))
   (ensures (
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
-    let pos = diff / U32.v size_class in
+    let pos = diff / U32.v size_class.sc in
     pos < U32.v (nb_slots size_class) /\
     ptr == slot_array size_class arr (U32.uint_to_t pos)
   ))
   =
   let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
-  let pos = diff / (U32.v size_class) in
-  let rem = diff % (U32.v size_class) in
+  let pos = diff / (U32.v size_class.sc) in
+  let rem = diff % (U32.v size_class.sc) in
   assert (rem = 0);
-  assert (diff = pos * (U32.v size_class));
-  assert (nb_slots size_class = U32.div page_size size_class);
+  assert (diff = pos * (U32.v size_class.sc));
+  assert (nb_slots size_class = U32.div size_class.slab_size size_class.sc);
   deallocate_slot_aux_lemma size_class arr ptr diff;
   assert (pos < U32.v (nb_slots size_class));
   slot_array_offset_lemma size_class arr (U32.uint_to_t pos);
@@ -360,7 +360,7 @@ let deallocate_slot_aux2
 #push-options "--z3rlimit 50"
 let deallocate_slot'_aux0
   (#opened:_)
-  (size_class: sc)
+  (size_class: sc_full)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
@@ -387,13 +387,13 @@ let deallocate_slot'_aux0
     (fun _ -> ());
   change_slprop_rel
     (A.varray (slot_array size_class arr pos))
-    (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos))
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class.sc)) (slot_vprop size_class arr pos))
     (fun
       (x: t_of (A.varray (slot_array size_class arr pos)))
-      (y: t_of (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos)))
+      (y: t_of (some_as_vp #(Seq.lseq U8.t (U32.v size_class.sc)) (slot_vprop size_class arr pos)))
       ->
-      let x' : Seq.lseq U8.t (U32.v size_class) = x in
-      let y' : option (Seq.lseq U8.t (U32.v size_class)) = y in
+      let x' : Seq.lseq U8.t (U32.v size_class.sc) = x in
+      let y' : option (Seq.lseq U8.t (U32.v size_class.sc)) = y in
       y' == Some x')
     (fun _ -> ());
   starseq_upd_aux_lemma3 size_class (G.reveal md_as_seq) arr pos;
@@ -403,7 +403,7 @@ let deallocate_slot'_aux0
         (U32.v pos) == pos);
   assert (Bitmap4.get (G.reveal md_as_seq) pos = false);
   assert (
-    (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos))
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class.sc)) (slot_vprop size_class arr pos))
     ==
     ((slab_vprop_aux_f size_class (G.reveal md_as_seq) arr)
       (Seq.index
@@ -411,14 +411,14 @@ let deallocate_slot'_aux0
         (U32.v pos)))
   );
   change_equal_slprop
-    (some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (slot_vprop size_class arr pos))
+    (some_as_vp #(Seq.lseq U8.t (U32.v size_class.sc)) (slot_vprop size_class arr pos))
     ((slab_vprop_aux_f size_class (G.reveal md_as_seq) arr)
       (Seq.index
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
         (U32.v pos)))
 
 let set_unset_bij
-  (size_class: sc)
+  (size_class: sc_full)
   (md_as_seq1 md_as_seq2: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
@@ -445,7 +445,7 @@ let set_unset_bij
     (Bitmap4.unset md_as_seq2 pos)
 
 let unset_set_bij
-  (size_class: sc)
+  (size_class: sc_full)
   (md_as_seq1 md_as_seq2: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
@@ -473,7 +473,7 @@ let unset_set_bij
 
 let deallocate_slot'_aux1
   (#opened: _)
-  (size_class: sc)
+  (size_class: sc_full)
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
@@ -482,7 +482,7 @@ let deallocate_slot'_aux1
   (
    starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq1 arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -490,7 +490,7 @@ let deallocate_slot'_aux1
   (fun _ ->
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class (Bitmap4.set md_as_seq2 pos) arr)
       (slab_vprop_aux_f_lemma size_class (Bitmap4.set md_as_seq2 pos) arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -508,7 +508,7 @@ let deallocate_slot'_aux1
   starseq_weakening
     #_
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(option (Seq.lseq U8.t (U32.v size_class)))
+    #(option (Seq.lseq U8.t (U32.v size_class.sc)))
     (slab_vprop_aux_f size_class md_as_seq1 arr)
     (slab_vprop_aux_f size_class (Bitmap4.set md_as_seq2 pos) arr)
     (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
@@ -518,7 +518,7 @@ let deallocate_slot'_aux1
 
 let deallocate_slot'_aux2
   (#opened: _)
-  (size_class: sc)
+  (size_class: sc_full)
   (md_as_seq1: G.erased (Seq.lseq U64.t 4))
   (md_as_seq2: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
@@ -527,7 +527,7 @@ let deallocate_slot'_aux2
   (
    starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq1 arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -535,7 +535,7 @@ let deallocate_slot'_aux2
   (fun _ ->
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq2 pos) arr)
       (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq2 pos) arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -553,7 +553,7 @@ let deallocate_slot'_aux2
   starseq_weakening
     #_
     #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(option (Seq.lseq U8.t (U32.v size_class)))
+    #(option (Seq.lseq U8.t (U32.v size_class.sc)))
     (slab_vprop_aux_f size_class md_as_seq1 arr)
     (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq2 pos) arr)
     (slab_vprop_aux_f_lemma size_class md_as_seq1 arr)
@@ -569,12 +569,12 @@ let u32_bounded
 open ExternUtils
 
 val deallocate_zeroing
-  (size_class: sc)
+  (size_class: sc_full)
   (ptr: array U8.t)
   : Steel unit
   (A.varray ptr) (fun _ -> A.varray ptr)
   (requires fun h0 ->
-    A.length ptr = U32.v size_class
+    A.length ptr = U32.v size_class.sc
   )
   (ensures fun _ _ h1 ->
     enable_zeroing_free ==> zf_u8 (A.asel ptr h1)
@@ -583,7 +583,7 @@ val deallocate_zeroing
 let deallocate_zeroing size_class ptr
   =
   if enable_zeroing_free then (
-    apply_zeroing_u8 ptr (US.uint32_to_sizet size_class)
+    apply_zeroing_u8 ptr (US.uint32_to_sizet size_class.sc)
   ) else (
     return ()
   )
@@ -592,7 +592,7 @@ let deallocate_zeroing size_class ptr
 //CAUTION
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let deallocate_slot'
-  (size_class: sc)
+  (size_class: sc_full)
   (md: slab_metadata)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
@@ -604,7 +604,7 @@ let deallocate_slot'
     A.varray ptr `star`
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq arr)
       (slab_vprop_aux_f_lemma size_class md_as_seq arr)
       (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -615,7 +615,7 @@ let deallocate_slot'
       emp `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-        #(option (Seq.lseq U8.t (U32.v size_class)))
+        #(option (Seq.lseq U8.t (U32.v size_class.sc)))
         (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) arr)
         (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) arr)
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -623,7 +623,7 @@ let deallocate_slot'
       A.varray ptr `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-        #(option (Seq.lseq U8.t (U32.v size_class)))
+        #(option (Seq.lseq U8.t (U32.v size_class.sc)))
         (slab_vprop_aux_f size_class md_as_seq arr)
         (slab_vprop_aux_f_lemma size_class md_as_seq arr)
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -633,11 +633,11 @@ let deallocate_slot'
     let diff = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of arr) in
     same_base_array ptr arr /\
     0 <= diff /\
-    diff < U32.v page_size /\
-    diff % U32.v size_class == 0 /\
+    diff < U32.v size_class.slab_size /\
+    diff % U32.v size_class.sc == 0 /\
     US.v diff_ == diff /\
     A.asel md h0 == G.reveal md_as_seq /\
-    A.length ptr == U32.v size_class
+    A.length ptr == U32.v size_class.sc
   )
   (ensures fun h0 r h1 ->
     // using h0 (A.varray md) instead fails
@@ -692,7 +692,7 @@ let lemma_div_lt
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
 let bound2_inv2
-  (size_class: sc)
+  (size_class: sc_full)
   (md_as_seq: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
@@ -713,14 +713,13 @@ let bound2_inv2
   let md_as_seq' = Bitmap4.unset md_as_seq pos in
   let bm' = Bitmap4.array_to_bv2 md_as_seq' in
   let nb_slots_sc_rem = U32.rem nb_slots_sc 64ul in
-  if (U32.v size_class <= 64)
+  if (U32.v nb_slots_sc >= 64)
   then (
-    assert (size_class = 16ul \/ size_class = 32ul \/ size_class = 64ul);
-    assert (U32.v nb_slots_sc_rem = 0);
+    let x = U32.v size_class.sc in
+    let y = U32.v size_class.slab_size in
+    assert (x == y/256 \/ x == y/128 \/ x == y/64);
     Seq.lemma_empty (Seq.slice bm' 0 (64 - U32.v bound2))
   ) else (
-    assert (U32.v size_class > 64);
-    lemma_div_lt (U32.v page_size) 64 (U32.v size_class);
     assert (U32.v nb_slots_sc < 64);
     assert (nb_slots_sc_rem = nb_slots_sc);
     let idx = Bitmap4.f #4 (U32.v pos) in
@@ -733,11 +732,19 @@ let bound2_inv2
 
 #restart-solver
 
+noextract
+let is_full
+  (size_class: sc_full)
+  (s: Seq.lseq U64.t 4)
+  : bool
+  =
+  not (has_free_slot size_class s)
+
 #push-options "--z3rlimit 100 --compat_pre_typed_indexed_effects"
 let deallocate_slot
-  (size_class: sc)
+  (size_class: sc_full)
   (md: slab_metadata)
-  (arr: array U8.t{A.length arr = U32.v page_size})
+  (arr: array U8.t{A.length arr = U32.v size_class.slab_size})
   (ptr: array U8.t)
   (diff_: US.t)
   : Steel bool
@@ -752,10 +759,10 @@ let deallocate_slot
     //let v0 : Seq.lseq U64.t 4 = dfst blob0 in
     same_base_array arr ptr /\
     0 <= diff /\
-    diff < U32.v page_size /\
-    diff % U32.v size_class == 0 /\
+    diff < U32.v size_class.slab_size /\
+    diff % U32.v size_class.sc == 0 /\
     US.v diff_ = diff /\
-    A.length ptr == U32.v size_class
+    A.length ptr == U32.v size_class.sc
   )
     //not (is_empty size_class v0))
   (ensures fun h0 b h1 ->
@@ -779,7 +786,7 @@ let deallocate_slot
         emp `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-          #(option (Seq.lseq U8.t (U32.v size_class)))
+          #(option (Seq.lseq U8.t (U32.v size_class.sc)))
           (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_l arr (rounding size_class)))
           (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_l arr (rounding size_class)))
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -787,7 +794,7 @@ let deallocate_slot
         A.varray ptr `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-          #(option (Seq.lseq U8.t (U32.v size_class)))
+          #(option (Seq.lseq U8.t (U32.v size_class.sc)))
           (slab_vprop_aux_f size_class md_as_seq (A.split_l arr (rounding size_class)))
           (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_l arr (rounding size_class)))
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -795,7 +802,7 @@ let deallocate_slot
       (emp `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-        #(option (Seq.lseq U8.t (U32.v size_class)))
+        #(option (Seq.lseq U8.t (U32.v size_class.sc)))
         (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_l arr (rounding size_class)))
         (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_l arr (rounding size_class)))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));
@@ -814,7 +821,7 @@ let deallocate_slot
         emp `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-          #(option (Seq.lseq U8.t (U32.v size_class)))
+          #(option (Seq.lseq U8.t (U32.v size_class.sc)))
           (slab_vprop_aux_f size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_l arr (rounding size_class)))
           (slab_vprop_aux_f_lemma size_class (Bitmap4.unset md_as_seq (snd r)) (A.split_l arr (rounding size_class)))
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -822,7 +829,7 @@ let deallocate_slot
         A.varray ptr `star`
         starseq
           #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-          #(option (Seq.lseq U8.t (U32.v size_class)))
+          #(option (Seq.lseq U8.t (U32.v size_class.sc)))
           (slab_vprop_aux_f size_class md_as_seq (A.split_l arr (rounding size_class)))
           (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_l arr (rounding size_class)))
           (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
@@ -830,7 +837,7 @@ let deallocate_slot
       (A.varray ptr `star`
       starseq
         #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-        #(option (Seq.lseq U8.t (U32.v size_class)))
+        #(option (Seq.lseq U8.t (U32.v size_class.sc)))
         (slab_vprop_aux_f size_class md_as_seq (A.split_l arr (rounding size_class)))
         (slab_vprop_aux_f_lemma size_class md_as_seq (A.split_l arr (rounding size_class)))
         (SeqUtils.init_u32_refined (U32.v (nb_slots size_class))));

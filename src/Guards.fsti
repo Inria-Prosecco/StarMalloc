@@ -22,11 +22,13 @@ open MemoryTrap
 /// `enable_guard_pages` is enabled, this either
 /// corresponds to `trap_array` or to `varray`
 val guard_slab
-  (arr: array U8.t{A.length arr = U32.v page_size})
+  (size_class: sc_full)
+  (arr: array U8.t{A.length arr = U32.v size_class.slab_size})
   : vprop
 
 inline_for_extraction noextract
 val mmap_trap_guard
-  (arr: array U8.t{A.length arr = U32.v page_size})
-  (len: US.t{US.v len = U32.v page_size})
-  : SteelT unit (A.varray arr) (fun _ -> guard_slab arr)
+  (size_class: sc_full)
+  (arr: array U8.t{A.length arr = U32.v size_class.slab_size})
+  (len: US.t{US.v len = U32.v size_class.slab_size})
+  : SteelT unit (A.varray arr) (fun _ -> guard_slab size_class arr)
