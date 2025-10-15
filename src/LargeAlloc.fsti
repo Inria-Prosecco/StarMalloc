@@ -21,7 +21,7 @@ val large_malloc (size: US.t)
   (fun ptr -> null_or_varray ptr)
   (requires fun _ ->
     US.v size > 0 /\
-    US.v size > U32.v page_size /\
+    US.v size > U32.v max_slab_size /\
     US.fits (US.v size + U32.v page_size)
   )
   (ensures fun _ ptr h1 ->
@@ -52,6 +52,6 @@ val large_getsize (ptr: array U8.t)
     A.asel ptr h1 == A.asel ptr h0 /\
     (US.v r > 0 ==>
       A.length ptr == US.v r /\
-      US.v r > U32.v page_size
+      US.v r > U32.v max_slab_size
     )
   )

@@ -23,44 +23,45 @@ open Config
 /// this predicate is abstract, does not expose any
 /// primitive to use it, and can only be introduced
 /// through the mmap_trap function below
-assume val trap_array (arr: array U8.t) : vprop
+assume val trap_array (sc: sc_full)
+  (arr: array U8.t{A.length arr = U32.v sc.slab_size}) : vprop
 
 /// Introduction function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a mmap(PROT_NONE)
-assume val mmap_strict_trap
-  (arr: array U8.t)
+assume val mmap_strict_trap (sc: G.erased sc_full)
+  (arr: array U8.t{A.length arr = U32.v (G.reveal sc).slab_size})
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})
   : SteelT unit
   (A.varray arr)
-  (fun _ -> trap_array arr)
+  (fun _ -> trap_array sc arr)
 
 /// Introduction function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a madvise(MADV_DONTNEED)
-assume val mmap_trap
-  (arr: array U8.t)
+assume val mmap_trap (sc: G.erased sc_full)
+  (arr: array U8.t{A.length arr = U32.v (G.reveal sc).slab_size})
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})
   : SteelT unit
   (A.varray arr)
-  (fun _ -> trap_array arr)
+  (fun _ -> trap_array sc arr)
 
 /// Elimination function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a mmap(PROT_READ|PROT_WRITE)
-assume val mmap_strict_untrap
-  (arr: array U8.t)
+assume val mmap_strict_untrap (sc: G.erased sc_full)
+  (arr: array U8.t{A.length arr = U32.v (G.reveal sc).slab_size})
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})
   : SteelT unit
-  (trap_array arr)
+  (trap_array sc arr)
   (fun _ -> A.varray arr)
 
 /// Elimination function for the abstract `trap_array`
 /// predicate above. Under the hood, this function will
 /// be implemented in C as a noop.
-assume val mmap_untrap
-  (arr: array U8.t)
+assume val mmap_untrap (sc: G.erased sc_full)
+  (arr: array U8.t{A.length arr = U32.v (G.reveal sc).slab_size})
   (len: US.t{US.v len == A.length arr /\ US.v len > 0})
   : SteelT unit
-  (trap_array arr)
+  (trap_array sc arr)
   (fun _ -> A.varray arr)

@@ -126,7 +126,7 @@ let rec find
     (Some? r ==> (
       let size = Some?.v r in
       A.length (fst v) == US.v size /\
-      US.v size > U32.v page_size /\
+      US.v size > U32.v max_slab_size /\
       A.is_full_array (fst v) /\
       Spec.mem (spec_convert cmp) (v_linked_tree p ptr h0)
         (fst v, Some?.v r)

@@ -28,13 +28,19 @@ open LargeAlloc
 
 #push-options "--fuel 0 --ifuel 0"
 
+//TODO: [@ CConst]
+let threshold : US.t =
+  if enable_slab_canaries_malloc
+  then US.sub (u32_to_sz max_slab_size) 2sz
+  else u32_to_sz max_slab_size
+
 #push-options "--fuel 1 --ifuel 1"
 val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
   : Steel (array U8.t)
   emp
   (fun r -> null_or_varray r)
   (requires fun _ ->
-    US.fits (US.v size + U32.v page_size)
+    US.fits (US.v size + U32.v max_slab_size)
   )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
@@ -44,7 +50,7 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
       array_u8_alignment r 16ul /\
       (enable_zeroing_malloc ==> zf_u8 (Seq.slice s 0 (US.v size)))
       //Seq.length s >= 2 /\
-      //(enable_slab_canaries_malloc ==>
+      //((enable_slab_canaries_malloc /\ US.v size <= US.v threshold) ==>
       //  Seq.index s (A.length r - 2) == slab_canaries_magic1 /\
       //  Seq.index s (A.length r - 1) == slab_canaries_magic2
       //)
@@ -54,11 +60,6 @@ val malloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (size: US.t)
 
 module G = FStar.Ghost
 
-//TODO: [@ CConst]
-let threshold : US.t =
-  if enable_slab_canaries_malloc
-  then US.sub (US.uint32_to_sizet page_size) 2sz
-  else US.uint32_to_sizet page_size
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 30"
 let malloc arena_id size =
@@ -79,9 +80,9 @@ let malloc arena_id size =
     )
   ) else (
     // TODO: use efficient align here
-    assert (US.v size > U32.v page_size - 2);
-    let size' = if US.lte size (US.uint32_to_sizet page_size)
-      then US.add (US.uint32_to_sizet page_size) 1sz
+    assert (US.v size > U32.v max_slab_size - 2);
+    let size' = if US.lte size (u32_to_sz max_slab_size)
+      then US.add (u32_to_sz max_slab_size) 1sz
       else size in
     let r = large_malloc size' in
     let s : G.erased (t_of (null_or_varray r))
@@ -105,14 +106,15 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
   emp
   (fun r -> null_or_varray r)
   (requires fun _ ->
-    US.fits (US.v size + U32.v page_size)
+    US.fits (US.v size + U32.v max_slab_size)
   )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
     not (A.is_null r) ==> (
       0 < US.v alignment /\
-      US.v alignment <= U32.v page_size /\
+      US.v alignment <= U32.v max_slab_size /\
+      //US.v alignment <= U32.v page_size /\
       A.length r >= US.v size /\
       array_u8_alignment r 16ul /\
       array_u8_alignment r (US.sizet_to_uint32 alignment) /\
@@ -121,32 +123,36 @@ val aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignment:US.
   )
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 50"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 100"
 let aligned_alloc arena_id alignment size
   =
   let page_as_sz = US.uint32_to_sizet page_size in
-  let check = US.gt alignment 0sz && US.rem (US.uint32_to_sizet page_size) alignment = 0sz in
-  if check then (
-    let alignment_as_u32 = US.sizet_to_uint32 alignment in
-    if (US.lte size threshold) then (
-      let ptr = slab_aligned_alloc arena_id alignment_as_u32 (US.sizet_to_uint32 size) in
-      if (A.is_null ptr || not enable_zeroing_malloc) then (
+  let alignment_as_u32 = US.sizet_to_uint32 alignment in
+  // use slab aligned allocations
+  let check1 = US.gt alignment 0sz && US.rem (US.uint32_to_sizet max_slab_size) alignment = 0sz
+  && US.lte size threshold in
+  // use large allocations
+  let check2 = US.gt alignment 0sz && US.rem (US.uint32_to_sizet page_size) alignment = 0sz in
+  if check1 then (
+    let ptr = slab_aligned_alloc arena_id alignment_as_u32 (US.sizet_to_uint32 size) in
+    if (A.is_null ptr || not enable_zeroing_malloc) then (
+      return ptr
+    ) else (
+      elim_live_null_or_varray ptr;
+      let b = check_zeroing_u8 ptr size in
+      if b then (
+        intro_live_null_or_varray ptr;
         return ptr
       ) else (
-        elim_live_null_or_varray ptr;
-        let b = check_zeroing_u8 ptr size in
-        if b then (
-          intro_live_null_or_varray ptr;
-          return ptr
-        ) else (
-          // TODO: distinct case from malloc?
-          FatalError.die_from_malloc_zeroing_check_failure ptr;
-          intro_null_null_or_varray #U8.t
-        )
+        // TODO: distinct case from malloc?
+        FatalError.die_from_malloc_zeroing_check_failure ptr;
+        intro_null_null_or_varray #U8.t
       )
-    ) else (
-      let size' = if US.lte size (US.uint32_to_sizet page_size)
-        then US.add (US.uint32_to_sizet page_size) 1sz
+    )
+  ) else (
+    if check2 then (
+      let size' = if US.lte size (US.uint32_to_sizet max_slab_size)
+        then US.add (US.uint32_to_sizet max_slab_size) 1sz
         else size in
       let ptr = large_malloc size' in
       assert_norm (pow2 12 == U32.v page_size);
@@ -164,11 +170,11 @@ let aligned_alloc arena_id alignment size
           16ul
       ) else ();
       return ptr
+    ) else (
+      // TODO: add some warning, failure
+      let r = intro_null_null_or_varray #U8.t in
+      return r
     )
-  ) else (
-    // TODO: add some warning, failure
-    let r = intro_null_null_or_varray #U8.t in
-    return r
   )
 #pop-options
 
@@ -212,7 +218,7 @@ let spec_getsize
   (length: nat{enable_slab_canaries_malloc ==> length >= 2})
   : Tot nat
   =
-  if (length <= U32.v page_size)
+  if (length <= U32.v max_slab_size)
   then (
     // slab allocation, possibly a canary
     if enable_slab_canaries_malloc
@@ -244,11 +250,11 @@ let full_getsize (ptr: array U8.t)
     (US.v (fst result) > 0 ==>
       (enable_slab_canaries_malloc ==> A.length ptr >= 2) /\
       US.v (fst result) == spec_getsize (A.length ptr) /\
-      (G.reveal (snd result) <==> US.v (fst result) <= U32.v page_size) /\
+      (G.reveal (snd result) <==> US.v (fst result) <= U32.v max_slab_size) /\
       (G.reveal (snd result) ==> (
         let idx = sc_selection (US.sizet_to_uint32 (fst result)) in
         (enable_sc_fast_selection ==>
-          A.length ptr == U32.v (L.index sc_list (US.v idx))) /\
+          A.length ptr == U32.v (L.index sc_list (US.v idx)).sc) /\
         (enable_slab_canaries_malloc ==>
           A.length ptr == US.v (fst result) + 2
         ) /\
@@ -289,10 +295,10 @@ let getsize (ptr: array U8.t)
     (US.v result > 0 ==>
       (enable_slab_canaries_malloc ==> A.length ptr >= 2) /\
       US.v result == spec_getsize (A.length ptr) /\
-      (US.v result <= U32.v page_size ==> (
+      (US.v result <= U32.v max_slab_size ==> (
         let idx = sc_selection (US.sizet_to_uint32 result) in
         (enable_sc_fast_selection ==>
-          A.length ptr == U32.v (L.index sc_list (US.v idx))) /\
+          A.length ptr == U32.v (L.index sc_list (US.v idx)).sc) /\
         (enable_slab_canaries_malloc ==>
           A.length ptr == US.v result + 2
         ) /\
@@ -316,10 +322,10 @@ let realloc_small_optim_lemma
   (new_size: US.t)
   : Lemma
   (requires enable_sc_fast_selection /\
-    US.v old_size <= U32.v page_size /\
+    US.v old_size <= U32.v max_slab_size /\
     US.v new_size <= US.v threshold /\
     (let old_idx = sc_selection (US.sizet_to_uint32 old_size) in
-    let old_sc = L.index sc_list (US.v old_idx) in
+    let old_sc = (L.index sc_list (US.v old_idx)).sc in
     let new_idx = if enable_slab_canaries_malloc
       then sc_selection (US.sizet_to_uint32 (US.add new_size 2sz))
       else sc_selection (US.sizet_to_uint32 new_size) in
@@ -383,7 +389,7 @@ val realloc_standard_case (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   )
   (requires fun _ ->
     within_size_classes_pred ptr /\
-    US.fits (US.v new_size + U32.v page_size) /\
+    US.fits (US.v new_size + U32.v max_slab_size) /\
     not (A.is_null ptr) /\
     US.v new_size > 0
   )
@@ -416,7 +422,7 @@ let realloc_standard_case arena_id ptr new_size
   =
   elim_live_null_or_varray ptr;
   let old_size = getsize ptr in
-  let old_allocation_is_small : bool = US.lte old_size (u32_to_sz page_size) in
+  let old_allocation_is_small : bool = US.lte old_size (u32_to_sz max_slab_size) in
   let new_allocation_is_small : bool = US.lte new_size threshold in
   let same_case : bool = old_allocation_is_small = new_allocation_is_small in
   let small_case_optim_condition = enable_sc_fast_selection && old_allocation_is_small && same_case && (
@@ -520,7 +526,7 @@ val realloc (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   )
   (requires fun _ ->
     within_size_classes_pred ptr /\
-    US.fits (US.v new_size + U32.v page_size)
+    US.fits (US.v new_size + U32.v max_slab_size)
   )
   (ensures fun h0 r h1 ->
     let s0 : t_of (null_or_varray ptr)
@@ -604,7 +610,7 @@ val calloc
   (requires fun _ ->
     FStar.Math.Lemmas.nat_times_nat_is_nat (US.v size1) (US.v size2);
     let size : nat = US.v size1 * US.v size2 in
-    US.fits (size + U32.v page_size)
+    US.fits (size + U32.v max_slab_size)
   )
   (ensures fun _ r h1 ->
     FStar.Math.Lemmas.nat_times_nat_is_nat (US.v size1) (US.v size2);

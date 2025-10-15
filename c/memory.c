@@ -5,17 +5,27 @@
 
 #include "internal/StarMalloc.h"
 #include "fatal_error.h"
+#include "Constants.h"
 
 /// Mman.fst
 
 // syscall wrapper: initialization (fatal error on failure)
 uint8_t *mmap_init(size_t size) {
-  void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_NORESERVE, -1, 0);
+  size_t size2 = size + Constants_max_slab_size;
+  void* ptr = mmap(NULL, size2, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_NORESERVE, -1, 0);
   if (ptr == MAP_FAILED) {
     if (errno != ENOMEM) {
       fatal_error("non-ENOMEM mmap failure");
     }
-    fatal_error ("mmap failed during initialization (returned NULL)");
+    fatal_error("mmap failed during initialization (returned NULL)");
+  }
+  uintptr_t addr = (uintptr_t) ptr;
+  if (addr % Constants_max_slab_size != 0) {
+    ptr += (size_t) (Constants_max_slab_size - addr % Constants_max_slab_size);
+  }
+  addr = (uintptr_t) ptr;
+  if (addr % Constants_max_slab_size != 0) {
+    fatal_error("mmap failed during initialization (misaligned)");
   }
   return ptr;
 }
@@ -115,10 +125,6 @@ void mmap_strict_untrap (uint8_t* ptr, size_t len) {
 
 // syscall wrapper
 void mmap_trap (uint8_t* ptr, size_t len) {
-  int r = madvise((void*) ptr, len, MADV_DONTNEED);
-  if (r && errno != ENOMEM) {
-    fatal_error("non-ENOMEM MADV_DONTNEED madvise failure");
-  }
   return;
 }
 

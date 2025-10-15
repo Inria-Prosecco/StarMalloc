@@ -4,7 +4,7 @@ friend Config
 
 [@@ reduce_attr]
 inline_for_extraction noextract
-let sc_list: l:list sc{US.v nb_size_classes == List.length sc_list}
+let sc_list: l:list sc_full{US.v nb_size_classes == List.length sc_list}
 = normalize_term sc_list
 
 /// Number of arenas as a nat, for specification purposes. Not relying on US.v
@@ -38,11 +38,11 @@ module ML = MiscList
 inline_for_extraction noextract
 let rec arena_sc_list'
   (i:nat{i <= US.v nb_arenas})
-  (acc:list sc{
+  (acc:list sc_full{
     List.length acc = i * US.v nb_size_classes /\
     (forall (k:nat{k < L.length acc}). L.index acc k == L.index sc_list (k % (US.v nb_size_classes)))
   })
-  : Tot (l:list sc{
+  : Tot (l:list sc_full{
     L.length l == total_nb_sc /\
     (forall (k:nat{k < L.length l}). L.index l k == L.index sc_list (k % (US.v nb_size_classes)))
   })
@@ -59,7 +59,7 @@ let rec arena_sc_list'
   ) else (
     List.append_length acc sc_list;
     let l = acc `List.append` sc_list in
-    ML.lemma_append_repeat #sc i sc_list (US.v nb_size_classes) acc;
+    ML.lemma_append_repeat #sc_full i sc_list (US.v nb_size_classes) acc;
     assert (forall (k:nat{k < L.length acc}).
       L.index l k == L.index sc_list (k % (US.v nb_size_classes))
     );
@@ -70,7 +70,7 @@ let rec arena_sc_list'
 /// Fuel needed to establish that the length of [] is 0
 #push-options "--fuel 1"
 [@@ reduce_attr]
-let arena_sc_list : l:list sc{
+let arena_sc_list : l:list sc_full{
   (forall (i:nat{i < L.length l}). L.index l i == L.index sc_list (i % US.v nb_size_classes))
 }
 = arena_sc_list' 0 []
@@ -79,7 +79,7 @@ let arena_sc_list : l:list sc{
 #restart-solver
 
 [@"opaque_to_smt"]
-let sizes_t_pred (r: TLA.t sc)
+let sizes_t_pred (r: TLA.t sc_full)
   =
   TLA.length r == total_nb_sc /\
   (forall (k:US.t{US.v k < total_nb_sc}).
@@ -94,7 +94,7 @@ let sizes_t_pred_elim (r: sizes_t)
 let sizes : sizes_t =
   normalize_term_spec arena_sc_list;
   reveal_opaque (`%sizes_t_pred) sizes_t_pred;
-  TLA.create #sc (normalize_term arena_sc_list)
+  TLA.create #sc_full (normalize_term arena_sc_list)
 #pop-options
 
 #push-options "--z3rlimit 300 --fuel 0 --ifuel 0"
@@ -105,6 +105,7 @@ let init
   (fun _ r _ -> True)
   =
   metadata_max_up_fits ();
+  metadata_max_fits ();
   US.fits_lte
     (US.v nb_size_classes * US.v nb_arenas)
     ((US.v metadata_max * U32.v page_size) * US.v nb_size_classes * US.v nb_arenas);
@@ -194,9 +195,9 @@ val allocate_size_class
     let scs' = (Seq.index (G.reveal sc_all.g_size_classes) (US.v (G.reveal idx))).data in
     scs' == scs /\
     not (is_null r) ==> (
-      A.length r == U32.v scs'.size /\
+      A.length r == U32.v scs'.size.sc /\
       array_u8_alignment r 16ul /\
-      ((U32.v scs'.size > 0 /\ (U32.v page_size) % (U32.v scs.size) == 0) ==> array_u8_alignment r scs.size)
+      (U32.v scs.size.slab_size % U32.v scs.size.sc == 0 ==> array_u8_alignment r scs.size.sc)
     )
   )
 
@@ -224,10 +225,10 @@ let slab_malloc_one (i:US.t{US.v i < total_nb_sc}) (bytes: U32.t)
     (fun _ _ r x1 ->
       let size = (Seq.index (G.reveal sc_all.g_size_classes) (US.v i)).data.size in
       not (is_null r) ==> (
-        A.length r == U32.v size /\
+        A.length r == U32.v size.sc /\
         A.length r >= U32.v bytes /\
         array_u8_alignment r 16ul /\
-        ((U32.v page_size) % (U32.v size) == 0 ==> array_u8_alignment r size)
+        ((U32.v size.slab_size) % (U32.v size.sc) == 0 ==> array_u8_alignment r size.sc)
       )
     )
     (fun sc_data -> allocate_size_class (G.hide i) sc_data)
@@ -243,7 +244,7 @@ let cons_implies_positive_length (#a: Type) (l: list a)
 
 #push-options "--fuel 0 --ifuel 0 --z3rlimit 100"
 let aux_lemma
-  (l:list sc{List.length l <= length sc_all.size_classes /\ Cons? l})
+  (l:list sc_full{List.length l <= length sc_all.size_classes /\ Cons? l})
   (i:US.t{US.v i + List.length l == US.v nb_size_classes})
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   : Lemma
@@ -288,7 +289,7 @@ let aux_lemma
 [@@ reduce_attr]
 noextract
 let rec slab_malloc_i
-  (l:list sc{List.length l <= length sc_all.size_classes})
+  (l:list sc_full{List.length l <= length sc_all.size_classes})
   (i:US.t{US.v i + List.length l == US.v nb_size_classes})
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   bytes
@@ -310,7 +311,7 @@ let rec slab_malloc_i
     | hd::tl ->
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sizes idx in
+      let size = (TLA.get sizes idx).sc in
       if bytes `U32.lte` size then
         slab_malloc_one idx bytes
       else
@@ -337,7 +338,7 @@ let set_canary ptr size
 [@@ reduce_attr]
 noextract
 let rec slab_malloc_canary_i
-  (l:list sc{List.length l <= length sc_all.size_classes})
+  (l:list sc_full{List.length l <= length sc_all.size_classes})
   (i:US.t{US.v i + List.length l == US.v nb_size_classes})
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
   bytes
@@ -361,7 +362,7 @@ let rec slab_malloc_canary_i
     | hd::tl ->
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sizes idx in
+      let size = (TLA.get sizes idx).sc in
       if bytes `U32.lte` (size `U32.sub` 2ul) then
         let ptr = slab_malloc_one idx bytes in
         set_canary ptr size;
@@ -374,6 +375,25 @@ open MiscArith
 
 #restart-solver
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit 50"
+let mod_lemma
+  (sc: sc_full)
+  : Lemma
+  (requires
+    U32.v sc.slab_size % U32.v sc.sc == 0)
+  (ensures
+    U32.v max_slab_size % U32.v sc.sc == 0)
+  =
+  assert (U32.v max_slab_size % U32.v sc.slab_size == 0);
+  let k = U32.v max_slab_size / U32.v sc.slab_size in
+  assert (U32.v max_slab_size == k * U32.v sc.slab_size);
+  assert (U32.v sc.slab_size % U32.v sc.sc == 0);
+  let k' = U32.v sc.slab_size / U32.v sc.sc in
+  assert (U32.v sc.slab_size == k' * U32.v sc.sc);
+  ()
+#pop-options
+
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
 /// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
 /// The key difference lies in the condition of the if-branch: we only
@@ -382,10 +402,10 @@ open MiscArith
 [@@ reduce_attr]
 noextract
 let rec slab_aligned_alloc_i
-  (l:list sc{List.length l <= length sc_all.size_classes})
+  (l:list sc_full{List.length l <= length sc_all.size_classes})
   (i:US.t{US.v i + List.length l == US.v nb_size_classes})
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
-  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v page_size) % (U32.v v) = 0}))
+  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v max_slab_size) % (U32.v v) = 0}))
   bytes
   : Steel (array U8.t)
   emp
@@ -406,17 +426,19 @@ let rec slab_aligned_alloc_i
     | hd::tl ->
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sizes idx in
-      let b = U32.eq (U32.rem page_size size) 0ul in
-      if b && bytes `U32.lte` size && alignment `U32.lte` size then (
+      let size = (TLA.get sizes idx) in
+      let b = U32.eq (U32.rem size.slab_size size.sc) 0ul in
+      if b && bytes `U32.lte` size.sc && alignment `U32.lte` size.sc then (
         let r = slab_malloc_one idx bytes in
         let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
-        assert (G.reveal size_ = size);
-        assert ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
-        assert_norm (U32.v page_size = pow2 12);
-        alignment_lemma (U32.v page_size) 12 (U32.v alignment) (U32.v size);
-        assert (U32.v size % U32.v alignment = 0);
-        array_u8_alignment_lemma2 r size alignment;
+        assert (G.reveal size_.sc = size.sc);
+        assert (G.reveal size_.slab_size = size.slab_size);
+        mod_lemma size;
+        assert ((U32.v max_slab_size) % (U32.v (G.reveal size_.sc)) = 0);
+        assert_norm (U32.v max_slab_size = pow2 17);
+        alignment_lemma (U32.v max_slab_size) 17 (U32.v alignment) (U32.v size.sc);
+        assert (U32.v size.sc % U32.v alignment = 0);
+        array_u8_alignment_lemma2 r size.sc alignment;
         return r
       ) else (
         slab_aligned_alloc_i tl (i `US.add` 1sz) arena_id alignment bytes
@@ -430,10 +452,10 @@ let rec slab_aligned_alloc_i
 [@@ reduce_attr]
 noextract
 let rec slab_aligned_alloc_canary_i
-  (l:list sc{List.length l <= length sc_all.size_classes})
+  (l:list sc_full{List.length l <= length sc_all.size_classes})
   (i:US.t{US.v i + List.length l == US.v nb_size_classes})
   (arena_id:US.t{US.v arena_id < US.v nb_arenas})
-  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v page_size) % (U32.v v) = 0}))
+  (alignment: (v:U32.t{U32.v v > 0 /\ (U32.v max_slab_size) % (U32.v v) = 0}))
   bytes
   : Steel (array U8.t)
   emp
@@ -456,19 +478,21 @@ let rec slab_aligned_alloc_canary_i
     | hd::tl ->
       aux_lemma l i arena_id;
       [@inline_let] let idx = (arena_id `US.mul` nb_size_classes) `US.add` i in
-      let size = TLA.get sizes idx in
-      let b = U32.eq (U32.rem page_size size) 0ul in
-      if b && bytes `U32.lte` (size `U32.sub` 2ul) && alignment `U32.lte` size then (
-        let ptr = slab_malloc_one idx bytes in
+      let size = (TLA.get sizes idx) in
+      let b = U32.eq (U32.rem size.slab_size size.sc) 0ul in
+      if b && bytes `U32.lte` (size.sc `U32.sub` 2ul) && alignment `U32.lte` size.sc then (
+        let r = slab_malloc_one idx bytes in
         let size_ = G.hide (Seq.index sc_all.g_size_classes (US.v idx)).data.size in
-        assert (G.reveal size_ = size);
-        assert ((U32.v page_size) % (U32.v (G.reveal size_ )) = 0);
-        assert_norm (U32.v page_size = pow2 12);
-        alignment_lemma (U32.v page_size) 12 (U32.v alignment) (U32.v size);
-        assert (U32.v size % U32.v alignment = 0);
-        array_u8_alignment_lemma2 ptr size alignment;
-        set_canary ptr size;
-        return ptr
+        assert (G.reveal size_.sc = size.sc);
+        assert (G.reveal size_.slab_size = size.slab_size);
+        mod_lemma size;
+        assert ((U32.v max_slab_size) % (U32.v (G.reveal size_.sc)) = 0);
+        assert_norm (U32.v max_slab_size = pow2 17);
+        alignment_lemma (U32.v max_slab_size) 17 (U32.v alignment) (U32.v size.sc);
+        assert (U32.v size.sc % U32.v alignment = 0);
+        array_u8_alignment_lemma2 r size.sc alignment;
+        set_canary r size.sc;
+        return r
       ) else (
         slab_aligned_alloc_canary_i tl (i `US.add` 1sz) arena_id alignment bytes
       )

@@ -6,13 +6,13 @@
 
 #include "krmllib.h"
 
-#define CONFIG_NB_SIZE_CLASSES ((size_t)27U)
-
-extern bool Config_enable_sc_fast_selection;
-
 #define CONFIG_NB_ARENAS ((size_t)4U)
 
 extern size_t Config_metadata_max;
+
+#define CONFIG_NB_SIZE_CLASSES ((size_t)47U)
+
+extern bool Config_enable_sc_fast_selection;
 
 extern bool Config_enable_guard_pages;
 
