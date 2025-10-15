@@ -16,16 +16,98 @@ let _ : squash (US.fits_u64)
 let _ : squash (UP.fits (FStar.Int.max_int 64))
   = A.intro_fits_ptrdiff64 ()
 
-let sc_list1 : list sc = [
-    16ul; 32ul;
-    64ul; 80ul; 96ul; 112ul;
-    128ul; 160ul; 192ul; 224ul;
-    256ul; 320ul; 384ul; 448ul;
-    512ul; 640ul; 768ul; 896ul;
-    1024ul; 1280ul; 1536ul; 1792ul;
-    2048ul; 2560ul; 3072ul; 3584ul;
-    4096ul
-  ]
+
+// CONFIGURABLE
+let nb_arenas = 4sz
+
+// CONFIGURABLE
+inline_for_extraction noextract
+let metadata_max' = 16777216UL
+
+//DO NOT EDIT
+let metadata_max_fits_lemma (_:unit)
+  : Lemma
+  (let x = U32.v page_size * U64.v metadata_max' in// * US.v nb_size_classes * US.v nb_arenas in
+  x < FStar.UInt.max_int U64.n /\
+  x < FStar.Int.max_int U64.n)
+  =
+  ()
+  //let l = normalize_term (L.length sc_list) in
+  //normalize_term_spec (L.length sc_list);
+  //assert (US.v nb_size_classes = l)
+
+//DO NOT EDIT, edit metadata_max' instead
+let metadata_max =
+  //metadata_max_fits_lemma ();
+  //US.fits_u64_implies_fits (U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas);
+  assert_norm (U64.v metadata_max' < pow2 64);
+  assert_norm (U64.v metadata_max' * U32.v page_size < pow2 64);
+  US.fits_u64_implies_fits (U64.v metadata_max');
+  US.fits_u64_implies_fits (U64.v metadata_max' * U32.v page_size);
+  US.of_u64 metadata_max'
+
+#push-options "--fuel 0 --ifuel 0"
+let sc_list1 : list sc_full = [
+  // special cases
+  {sc = 16ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 32ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 64ul; slab_size = 4096ul; md_max = metadata_max};
+  // 16
+  {sc = 80ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 96ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 112ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 128ul; slab_size = 4096ul; md_max = metadata_max};
+  // 32
+  {sc = 160ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 192ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 224ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 256ul; slab_size = 4096ul; md_max = metadata_max};
+  // 64
+  {sc = 320ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 384ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 448ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 512ul; slab_size = 4096ul; md_max = metadata_max};
+  // 128
+  {sc = 640ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 768ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 896ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 1024ul; slab_size = 4096ul; md_max = metadata_max};
+  // 256
+  {sc = 1280ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 1536ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 1792ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 2048ul; slab_size = 4096ul; md_max = metadata_max};
+  // 512
+  {sc = 2560ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 3072ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 3584ul; slab_size = 4096ul; md_max = metadata_max};
+  {sc = 4096ul; slab_size = 4096ul; md_max = metadata_max};
+  // 1024
+  {sc = 5120ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 6144ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 7168ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 8192ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  // 2048
+  {sc = 10240ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 12288ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 14336ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 16384ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  // 4096: large internal fragmentation
+  {sc = 20480ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 24576ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 28672ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  {sc = 32768ul; slab_size = 32768ul; md_max = US.div metadata_max 8sz};
+  // 8192: large internal fragmentation
+  {sc = 40960ul; slab_size = 65536ul; md_max = US.div metadata_max 16sz};
+  {sc = 49152ul; slab_size = 65536ul; md_max = US.div metadata_max 16sz};
+  {sc = 57344ul; slab_size = 65536ul; md_max = US.div metadata_max 16sz};
+  {sc = 65536ul; slab_size = 65536ul; md_max = US.div metadata_max 16sz};
+  // 16384: large internal fragmentation
+  {sc = 81920ul; slab_size = 131072ul; md_max = US.div metadata_max 32sz};
+  {sc = 98304ul; slab_size = 131072ul; md_max = US.div metadata_max 32sz};
+  {sc = 114688ul; slab_size = 131072ul; md_max = US.div metadata_max 32sz};
+  {sc = 131072ul; slab_size = 131072ul; md_max = US.div metadata_max 32sz};
+]
 
 //let sc_list = [
 //    16ul; 32ul; 64ul;
@@ -38,8 +120,8 @@ let sc_list_f1 : nat -> nat = SizeClassSelection.sc_list_f
 open MiscList
 
 let sc_list =
-  assert_norm (L.last sc_list1 = page_size);
-  last_mem_lemma sc_list1;
+  //assert_norm (L.last sc_list1 = page_size);
+  //last_mem_lemma sc_list1;
   sc_list1
 
 let sc_list_f = SizeClassSelection.sc_list_f
@@ -49,26 +131,26 @@ module T = FStar.Tactics
 let sc_list_check (_:unit)
   : Lemma
   (let l1 : list nat
-    = L.map (fun (k:sc) -> U32.v k <: nat) sc_list in
+    = L.map (fun (k:sc_full) -> U32.v k.sc <: nat) sc_list in
   let l2 : list nat
     = L.map (fun k -> sc_list_f k) (init (L.length sc_list)) in
   l1 == l2)
   =
   let l1 : list nat
-    = L.map (fun (k:sc) -> U32.v k <: nat) sc_list in
+    = L.map (fun (k:sc_full) -> U32.v k.sc <: nat) sc_list in
   let l2 : list nat
     = L.map (fun k -> sc_list_f k) (init (L.length sc_list)) in
   assert (l1 = l2) by T.compute ()
 
 let sc_list_lemma (i:nat{i < L.length sc_list})
   : Lemma
-  (U32.v (L.index sc_list i) == sc_list_f i)
+  (U32.v (L.index sc_list i).sc == sc_list_f i)
   =
   sc_list_check ();
-  lemma_map_eq_to_index_eq
-    (fun (k:sc) -> U32.v k <: nat)
+  lemma_map_eq_to_index_eq #sc_full #nat #nat
+    (fun (k:sc_full) -> U32.v k.sc <: nat)
     (fun k -> sc_list_f k)
-    (sc_list)
+    sc_list
     (init (L.length sc_list))
     i;
   lemma_init_index (L.length sc_list) i
@@ -77,7 +159,7 @@ let sc_list_lemma (i:nat{i < L.length sc_list})
 //DO NOT EDIT, edit sc_list instead
 let nb_size_classes
   =
-  assert_norm (L.length sc_list < U32.n);
+  assert_norm (L.length sc_list < 256);
   [@inline_let] let l = normalize_term (L.length sc_list) in
   normalize_term_spec (L.length sc_list);
   assert (l == L.length sc_list);
@@ -92,9 +174,13 @@ let nb_size_classes
   US.fits_u64_implies_fits_32 ();
   US.of_u32 l_as_u32
 
+let metadata_max_fits () =
+  US.fits_u64_implies_fits (U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas)
+
 let sc_selection x =
   let r = SizeClassSelection.inv_impl x in
-  assert_norm (L.length sc_list = 27);
+  // TODO: FIXME number of size classes is hardcoded
+  assert_norm (L.length sc_list = 47);
   sc_list_lemma (U32.v r);
   US.uint32_to_sizet r
 
@@ -102,38 +188,14 @@ let enable_sc_fast_selection = true
 
 let sc_selection_is_exact1 k
   =
-  assert_norm (L.length sc_list = 27);
   sc_list_lemma k;
   SizeClassSelection.inv_exact k
 
 let sc_selection_is_exact2 k
   =
-  assert_norm (L.length sc_list = 27);
   sc_list_lemma k;
   SizeClassSelection.inv_exact2 k
 
-let nb_arenas = 4sz
-
-inline_for_extraction noextract
-let metadata_max' = 16777216UL
-
-//DO NOT EDIT
-let metadata_max_fits_lemma (_:unit)
-  : Lemma
-  (let x = U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas in
-  x < FStar.UInt.max_int U64.n /\
-  x < FStar.Int.max_int U64.n)
-  =
-  let l = normalize_term (L.length sc_list) in
-  normalize_term_spec (L.length sc_list);
-  assert (US.v nb_size_classes = l)
-
-//DO NOT EDIT, edit metadata_max' instead
-let metadata_max =
-  metadata_max_fits_lemma ();
-  US.fits_u64_implies_fits (U32.v page_size * U64.v metadata_max' * US.v nb_size_classes * US.v nb_arenas);
-  US.fits_u64_implies_fits (U64.v metadata_max');
-  US.of_u64 metadata_max'
 
 //DO NOT EDIT
 let metadata_max_up_fits _ =

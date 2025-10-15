@@ -292,7 +292,7 @@ let large_malloc_aux
     let t : wdm data = v_ind_tree metadata_ptr h0 in
     Spec.size_of_tree t < c /\
     US.v size > 0 /\
-    US.v size > U32.v page_size /\
+    US.v size > U32.v max_slab_size /\
     US.fits (US.v size + U32.v page_size)
   )
   (ensures fun h0 r h1 ->
@@ -301,7 +301,7 @@ let large_malloc_aux
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
     US.fits (US.v size + U32.v page_size) /\
-    US.v size > U32.v page_size /\
+    US.v size > U32.v max_slab_size /\
     Spec.is_avl (spec_convert cmp) t /\
     (not (A.is_null r) ==> (
       (let size' = mmap_actual_size size in
@@ -397,7 +397,7 @@ let large_free_aux
     b ==> (
       US.fits (A.length ptr) /\
       A.is_full_array ptr /\
-      A.length ptr > U32.v page_size /\
+      A.length ptr > U32.v max_slab_size /\
       (let size = US.uint_to_t (A.length ptr) in
         Spec.mem (spec_convert cmp) t
           (ptr, size) /\
@@ -460,7 +460,7 @@ let large_malloc (size: US.t)
   (fun ptr -> null_or_varray ptr)
   (requires fun _ ->
     US.v size > 0 /\
-    US.v size > U32.v page_size /\
+    US.v size > U32.v max_slab_size /\
     US.fits (US.v size + U32.v page_size)
   )
   (ensures fun _ ptr h1 ->
@@ -547,7 +547,7 @@ let large_getsize_aux (metadata: ref t) (ptr: array U8.t)
     //h0 (ind_linked_wf_tree metadata) /\
     (US.v r > 0 ==>
       A.length ptr == US.v r /\
-      US.v r > U32.v page_size
+      US.v r > U32.v max_slab_size
     )
   )
   =
@@ -579,7 +579,7 @@ let large_getsize (ptr: array U8.t)
     A.asel ptr h1 == A.asel ptr h0 /\
     (US.v r > 0 ==>
       A.length ptr == US.v r /\
-      US.v r > U32.v page_size
+      US.v r > U32.v max_slab_size
     )
   )
   =
@@ -599,7 +599,7 @@ let large_getsize (ptr: array U8.t)
       x0 `Seq.equal` x1 /\
       (US.v r > 0 ==>
         A.length ptr == US.v r /\
-        US.v r > U32.v page_size
+        US.v r > U32.v max_slab_size
       )
     )
     (fun _ -> large_getsize_aux metadata.data ptr)

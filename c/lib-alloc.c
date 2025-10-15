@@ -7,6 +7,7 @@
 #include "internal/StarMalloc.h"
 #include "fatal_error.h"
 
+// https://sourceware.org/glibc/manual/latest/html_node/Replacing-malloc.html
 __attribute__((tls_model("initial-exec")))
 static _Thread_local unsigned thread_arena = CONFIG_NB_ARENAS;
 static atomic_uint thread_arena_counter = 0;

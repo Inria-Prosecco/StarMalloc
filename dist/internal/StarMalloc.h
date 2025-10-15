@@ -8,7 +8,10 @@
 
 #include "SizeClass.h"
 #include "Mman.h"
+#include "Constants.h"
 #include "../StarMalloc.h"
+
+extern uint32_t Impl_Trees_Cast_M_avl_data_size;
 
 typedef struct Impl_Trees_Cast_M_data_s
 {
@@ -30,6 +33,8 @@ typedef struct Impl_Trees_Cast_M_node_s
   uint64_t height;
 }
 Impl_Trees_Cast_M_node;
+
+extern Constants_sc_full_ Impl_Trees_Types_sc_avl;
 
 typedef struct Impl_Trees_Types_mmap_md_slabs_s
 {

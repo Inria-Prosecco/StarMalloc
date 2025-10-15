@@ -10,6 +10,9 @@ module L =  FStar.List.Tot
 open FStar.Mul
 open Prelude
 
+open Constants
+
+
 inline_for_extraction noextract
 let u32_to_sz
   (x:U32.t)
@@ -17,24 +20,50 @@ let u32_to_sz
   =
   US.uint32_to_sizet x
 
-open Constants
+/// Number of arenas
+inline_for_extraction
+[@ CMacro ]
+val nb_arenas: v:US.t{US.v v > 0}
+
+inline_for_extraction
+val metadata_max: v:US.t{
+  US.v v > 0 /\
+  //US.fits (US.v v * U32.v page_size * US.v nb_size_classes * US.v nb_arenas) /\
+  US.fits (US.v v * U32.v page_size) /\
+  (US.v v * U32.v page_size) % U32.v max_slab_size = 0
+}
+
+
+inline_for_extraction noextract
+let sc_full = v:sc_full'{
+  US.v v.md_max <= US.v metadata_max /\
+  US.v v.md_max * U32.v v.slab_size == US.v metadata_max * U32.v page_size
+}
 
 /// List of size classes used in each arena
 inline_for_extraction noextract
-val sc_list : (l:list sc{Cons? l /\ L.mem page_size l})
+val sc_list : (l:list sc_full{
+  Cons? l /\
+  //L.mem (U32.v max_slab_size) (L.map (fun (x: sc_full) -> U32.v x.sc) l)
+  True
+})
 
 /// Number of size classes per arena
 inline_for_extraction
 [@ CMacro ]
 val nb_size_classes: v:US.t{US.v v > 0 /\ US.v v == L.length sc_list}
 
+val metadata_max_fits (_:unit)
+  : Lemma
+  (US.fits (US.v metadata_max * U32.v page_size * US.v nb_size_classes * US.v nb_arenas))
+
 noextract
 unfold type sc_selection_f = (x:U32.t) -> Pure US.t
   (requires
-    U32.v x <= max_sc)
+    U32.v x <= U32.v max_slab_size)
   (ensures fun r ->
     US.v r < US.v nb_size_classes /\
-    U32.v x <= U32.v (L.index sc_list (US.v r))
+    U32.v x <= U32.v (L.index sc_list (US.v r)).sc
   )
 
 /// Size class selection (fast path)
@@ -52,7 +81,7 @@ val sc_selection_is_exact1 (k:nat)
     k < US.v nb_size_classes
   )
   (ensures
-    US.v (sc_selection (L.index sc_list k)) == k
+    US.v (sc_selection (L.index sc_list k).sc) == k
   )
 
 val sc_selection_is_exact2 (k:nat)
@@ -61,20 +90,10 @@ val sc_selection_is_exact2 (k:nat)
     k < US.v nb_size_classes
   )
   (ensures
-    US.v (sc_selection (U32.sub (L.index sc_list k) 2ul)) == k
+    US.v (sc_selection (U32.sub (L.index sc_list k).sc 2ul)) == k
   )
 
-/// Number of arenas
-inline_for_extraction
-[@ CMacro ]
-val nb_arenas: v:US.t{US.v v > 0}
 
-inline_for_extraction
-val metadata_max: v:US.t{
-  US.v v > 0 /\
-  US.fits (US.v v * U32.v page_size * US.v nb_size_classes * US.v nb_arenas) /\
-  US.fits (US.v v * U32.v page_size)
-}
 
 val metadata_max_up_fits (_:unit)
   : Lemma

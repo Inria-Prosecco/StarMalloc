@@ -29,8 +29,8 @@ val slab_malloc
   emp
   (fun r -> null_or_varray r)
   (requires fun _ ->
-    (enable_slab_canaries_malloc ==> U32.v bytes <= U32.v page_size - 2) /\
-    (not enable_slab_canaries_malloc ==> U32.v bytes <= U32.v page_size)
+    (enable_slab_canaries_malloc ==> U32.v bytes <= U32.v max_slab_size - 2) /\
+    (not enable_slab_canaries_malloc ==> U32.v bytes <= U32.v max_slab_size)
   )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
@@ -52,13 +52,13 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
   (fun r -> null_or_varray r)
   (requires fun _ ->
     U32.v alignment > 0 /\
-    (U32.v page_size) % (U32.v alignment) = 0
+    (U32.v max_slab_size) % (U32.v alignment) = 0
   )
   (ensures fun _ r h1 ->
     let s : t_of (null_or_varray r)
       = h1 (null_or_varray r) in
     U32.v alignment > 0 /\
-    (U32.v page_size) % (U32.v alignment) = 0 /\
+    (U32.v max_slab_size) % (U32.v alignment) = 0 /\
     not (is_null r) ==> (
       A.length r >= U32.v bytes /\
       array_u8_alignment r 16ul /\
@@ -74,7 +74,7 @@ val slab_aligned_alloc (arena_id:US.t{US.v arena_id < US.v nb_arenas}) (alignmen
 val within_size_classes_pred (ptr:A.array U8.t) : prop
 
 inline_for_extraction noextract
-let slab_region_size = Main.slab_region_size
+let slab_region_size = Main.full_slab_region_size
 
 val slab_getsize (ptr: array U8.t)
   : Steel US.t
@@ -89,10 +89,10 @@ val slab_getsize (ptr: array U8.t)
   )
   (ensures fun h0 result h1 ->
     A.asel ptr h1 == A.asel ptr h0 /\
-    US.v result <= U32.v page_size /\
+    US.v result <= U32.v max_slab_size /\
     (result <> 0sz ==> (
       let idx = sc_selection (US.sizet_to_uint32 result) in
-      A.length ptr <= U32.v page_size /\
+      A.length ptr <= U32.v max_slab_size /\
       (enable_slab_canaries_malloc ==>
         A.length ptr == US.v result + 2
       ) /\
@@ -100,7 +100,7 @@ val slab_getsize (ptr: array U8.t)
         A.length ptr == US.v result
       ) /\
       (enable_sc_fast_selection ==>
-        A.length ptr == U32.v (L.index sc_list (US.v idx)))
+        A.length ptr == U32.v (L.index sc_list (US.v idx)).sc)
     ))
   )
 
@@ -116,7 +116,7 @@ val slab_free (ptr:array U8.t)
     SAA.within_bounds
       (A.split_l (G.reveal sc_all.slab_region) 0sz)
       ptr
-      (A.split_r (G.reveal sc_all.slab_region) slab_region_size)
+      (A.split_r (G.reveal sc_all.slab_region) Main.full_slab_region_size)
   )
   (ensures fun h0 r _ ->
     let s = A.asel ptr h0 in

@@ -25,7 +25,7 @@ let avl_data_size : v:sc{U32.v avl_data_size_aux <= U32.v v} = 64ul
 type data = x: (array U8.t * US.t){
   (
     US.v (snd x) > 0 /\
-    US.v (snd x) > U32.v page_size /\
+    US.v (snd x) > U32.v max_slab_size /\
     A.length (fst x) == US.v (snd x) /\
     A.is_full_array (fst x)
   )

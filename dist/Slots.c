@@ -5,23 +5,25 @@
 
 #include "Utils2.h"
 #include "ExternUtils.h"
+#include "Constants.h"
 #include "Bitmap5.h"
 
-static uint8_t *slot_array(uint32_t size_class, uint8_t *arr, uint32_t pos)
+static uint8_t *slot_array(Constants_sc_full_ size_class, uint8_t *arr, uint32_t pos)
 {
   uint8_t *ptr = arr;
-  uint32_t shift = pos * size_class;
+  uint32_t shift = pos * size_class.sc;
   size_t shift_size_t = (size_t)shift;
   return ptr + shift_size_t;
 }
 
-static uint8_t *get_slot_as_returned_value(uint32_t size_class, uint8_t *arr, uint32_t pos)
+static uint8_t
+*get_slot_as_returned_value(Constants_sc_full_ size_class, uint8_t *arr, uint32_t pos)
 {
   uint8_t *r = slot_array(size_class, arr, pos);
   return r;
 }
 
-static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
+static uint32_t get_free_slot(Constants_sc_full_ size_class, uint64_t *bitmap)
 {
   uint32_t nb_slots_v = Utils2_nb_slots(size_class);
   uint32_t bound = nb_slots_v / 64U;
@@ -73,7 +75,7 @@ static uint32_t get_free_slot(uint32_t size_class, uint64_t *bitmap)
   }
 }
 
-uint8_t *SlotsAlloc_allocate_slot(uint32_t size_class, uint64_t *md, uint8_t *arr)
+uint8_t *SlotsAlloc_allocate_slot(Constants_sc_full_ size_class, uint64_t *md, uint8_t *arr)
 {
   uint32_t pos = get_free_slot(size_class, md);
   Bitmap5_bm_set(md, pos);
@@ -82,23 +84,24 @@ uint8_t *SlotsAlloc_allocate_slot(uint32_t size_class, uint64_t *md, uint8_t *ar
   return r0;
 }
 
-static bool deallocate_slot_aux0(uint32_t size_class, uint32_t diff)
+static bool deallocate_slot_aux0(Constants_sc_full_ size_class, uint32_t diff)
 {
   size_t diff_sz = (size_t)diff;
   return diff_sz < Utils2_rounding(size_class);
 }
 
-static uint32_t deallocate_slot_aux1(uint32_t size_class, uint32_t diff)
+static uint32_t deallocate_slot_aux1(Constants_sc_full_ size_class, uint32_t diff)
 {
-  return diff / size_class;
+  return diff / size_class.sc;
 }
 
-static void deallocate_zeroing(uint32_t size_class, uint8_t *ptr)
+static void deallocate_zeroing(Constants_sc_full_ size_class, uint8_t *ptr)
 {
-  apply_zeroing_u8(ptr, (size_t)size_class);
+  apply_zeroing_u8(ptr, (size_t)size_class.sc);
 }
 
-static bool deallocate_slot_(uint32_t size_class, uint64_t *md, uint8_t *ptr, size_t diff_)
+static bool
+deallocate_slot_(Constants_sc_full_ size_class, uint64_t *md, uint8_t *ptr, size_t diff_)
 {
   uint32_t diff_u32 = (uint32_t)diff_;
   bool b = deallocate_slot_aux0(size_class, diff_u32);
@@ -126,7 +129,7 @@ static bool fst__bool___(bool x)
 
 bool
 SlotsFree_deallocate_slot(
-  uint32_t size_class,
+  Constants_sc_full_ size_class,
   uint64_t *md,
   uint8_t *arr,
   uint8_t *ptr,

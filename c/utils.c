@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "internal/StarMalloc.h"
 #include "fatal_error.h"
+#include "lib_memzero0.h"
 
 // glue
 uint32_t ffs64(uint64_t x) {
@@ -45,7 +46,7 @@ uint8_t* memcpy_u8(uint8_t* dest, uint8_t* src, size_t n) {
 // monomorphized (from void* to uint8_t*) glue
 // TODO: compat, use hacl-star libmemzero
 void apply_zeroing_u8(uint8_t* dest, size_t n) {
-  explicit_bzero(dest, n);
+  Lib_Memzero0_memzero0(dest, (size_t) n);
   return;
 }
 

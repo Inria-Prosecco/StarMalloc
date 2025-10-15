@@ -99,48 +99,48 @@ val lemma_partition_and_pred_implies_mem5
 open Guards
 open Quarantine
 
-val t (size_class: sc) : Type0
+val t (size_class: sc_full) : Type0
 
 val empty_md_is_properly_zeroed
-  (size_class: sc)
+  (size_class: sc_full)
   : Lemma
   (slab_vprop_aux2 size_class (Seq.create 4 0UL))
 
 /// A trivial, non-informative selector for quarantined and guard pages
 inline_for_extraction noextract
-val empty_t (size_class:sc) : t size_class
+val empty_t (size_class:sc_full) : t size_class
 
 unfold
-let blob
+let blob (size_class: sc_full)
   = slab_metadata &
-    (arr:array U8.t{A.length arr = U32.v page_size})
+    (arr:array U8.t{A.length arr = U32.v size_class.slab_size})
 
 /// Predicates capturing that a slab is empty, partially full, or full respectively
-let p_empty (size_class: sc) : blob -> vprop
+let p_empty (size_class: sc_full) : blob size_class -> vprop
   =
-  fun (b:blob) ->
+  fun b ->
     slab_vprop size_class (snd b) (fst b)
     `VR2.vrefine`
     (fun ((|s,_|),_) -> is_empty size_class s == true)
 
-let p_partial (size_class: sc) : blob -> vprop
+let p_partial (size_class: sc_full) : blob size_class -> vprop
   =
-  fun (b:blob) ->
+  fun b ->
     slab_vprop size_class (snd b) (fst b)
     `VR2.vrefine`
     (fun ((|s,_|),_) -> is_partial size_class s == true)
 
-let p_full (size_class: sc) : blob -> vprop
+let p_full (size_class: sc_full) : blob size_class -> vprop
   =
-  fun (b:blob) ->
+  fun b ->
     slab_vprop size_class (snd b) (fst b)
     `VR2.vrefine`
     (fun ((|s,_|),_) -> is_full size_class s == true)
 
-let p_guard (sc:sc) : blob -> vprop
+let p_guard (sc:sc_full) : blob sc -> vprop
   =
-  fun (b:blob) ->
-    (guard_slab (snd b) `star` A.varray (fst b))
+  fun b ->
+    (guard_slab sc (snd b) `star` A.varray (fst b))
     `vrewrite`
     (fun _ -> empty_t sc)
     //(
@@ -149,18 +149,18 @@ let p_guard (sc:sc) : blob -> vprop
     //  (fun (_,s) -> s `Seq.equal` Seq.create 4 0UL)
     //) `vrewrite` (fun _ -> empty_t sc)
 
-let p_quarantine (sc:sc) : blob -> vprop
+let p_quarantine (sc:sc_full) : blob sc -> vprop
   =
-  fun (b:blob) ->
+  fun b ->
     (
-      (quarantine_slab (snd b) `star` A.varray (fst b))
+      (quarantine_slab sc (snd b) `star` A.varray (fst b))
       `VR2.vrefine`
       (fun (_,s) -> s `Seq.equal` Seq.create 4 0UL)
     ) `vrewrite` (fun _ -> empty_t sc)
 
 val p_empty_unpack (#opened:_)
-  (sc: sc)
-  (b1 b2: blob)
+  (sc: sc_full)
+  (b1 b2: blob sc)
   : SteelGhost unit opened
   ((p_empty sc) b1)
   (fun _ -> slab_vprop sc (snd b2) (fst b2))
@@ -178,9 +178,8 @@ val p_empty_unpack (#opened:_)
   )
 
 val p_partial_unpack (#opened:_)
-  (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (sc: sc_full)
+  (b1 b2: blob sc)
   : SteelGhost unit opened
   ((p_partial sc) b1)
   (fun _ -> slab_vprop sc (snd b2) (fst b2))
@@ -198,9 +197,8 @@ val p_partial_unpack (#opened:_)
   )
 
 val p_full_unpack (#opened:_)
-  (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (sc: sc_full)
+  (b1 b2: blob sc)
   : SteelGhost unit opened
   ((p_full sc) b1)
   (fun _ -> slab_vprop sc (snd b2) (fst b2))
@@ -218,9 +216,8 @@ val p_full_unpack (#opened:_)
   )
 
 val p_empty_pack (#opened:_)
-  (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (sc: sc_full)
+  (b1 b2: blob sc)
   : SteelGhost unit opened
   (slab_vprop sc (snd b1) (fst b1))
   (fun _ -> (p_empty sc) b2)
@@ -240,9 +237,8 @@ val p_empty_pack (#opened:_)
   )
 
 val p_partial_pack (#opened:_)
-  (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (sc: sc_full)
+  (b1 b2: blob sc)
   : SteelGhost unit opened
   (slab_vprop sc (snd b1) (fst b1))
   (fun _ -> (p_partial sc) b2)
@@ -262,9 +258,8 @@ val p_partial_pack (#opened:_)
   )
 
 val p_full_pack (#opened:_)
-  (sc: sc)
-  (b1: blob)
-  (b2: blob)
+  (sc: sc_full)
+  (b1 b2: blob sc)
   : SteelGhost unit opened
   (slab_vprop sc (snd b1) (fst b1))
   (fun _ -> (p_full sc) b2)
@@ -284,17 +279,17 @@ val p_full_pack (#opened:_)
   )
 
 val p_guard_pack (#opened:_)
-  (size_class:sc)
-  (b: blob)
+  (size_class:sc_full)
+  (b: blob size_class)
   : SteelGhostT unit opened
-  (guard_slab (snd b) `star` A.varray (fst b))
+  (guard_slab size_class (snd b) `star` A.varray (fst b))
   (fun _ -> p_guard size_class b)
 
 val p_quarantine_pack (#opened:_)
-  (size_class:sc)
-  (b: blob)
+  (size_class:sc_full)
+  (b: blob size_class)
   : SteelGhost unit opened
-  (quarantine_slab (snd b) `star` A.varray (fst b))
+  (quarantine_slab size_class (snd b) `star` A.varray (fst b))
   (fun _ -> p_quarantine size_class b)
   (requires fun h0 ->
     let s : Seq.lseq U64.t 4 = A.asel (fst b) h0 in
@@ -303,11 +298,11 @@ val p_quarantine_pack (#opened:_)
   (ensures fun _ _ _ -> True)
 
 val p_quarantine_unpack (#opened:_)
-  (size_class:sc)
-  (b: blob)
+  (size_class:sc_full)
+  (b: blob size_class)
   : SteelGhost unit opened
   (p_quarantine size_class b)
-  (fun _ -> quarantine_slab (snd b) `star` A.varray (fst b))
+  (fun _ -> quarantine_slab size_class (snd b) `star` A.varray (fst b))
   (requires fun _ -> True)
   (ensures fun _ _ h1 ->
     let s : Seq.lseq U64.t 4 = A.asel (fst b) h1 in
@@ -319,30 +314,32 @@ val p_quarantine_unpack (#opened:_)
 /// Retrieving the slab at index [md_count] in the [slab_region]
 inline_for_extraction noextract
 val slab_array
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
-  (md_count: US.t{US.v md_count < US.v metadata_max})
+  (sc: sc_full)
+  (slab_region: array U8.t)
+  (md_count: US.t)
   : Pure (array U8.t)
   (requires
-    A.length slab_region = US.v metadata_max * U32.v page_size /\
-    US.v md_count < US.v metadata_max)
+    A.length slab_region = US.v sc.md_max * U32.v sc.slab_size /\
+    US.v md_count < US.v sc.md_max)
   (ensures fun r ->
-    A.length r = U32.v page_size /\
+    A.length r = U32.v sc.slab_size /\
     same_base_array r slab_region /\
-    A.offset (A.ptr_of r) == A.offset (A.ptr_of slab_region) + US.v md_count * U32.v page_size
+    A.offset (A.ptr_of r) == A.offset (A.ptr_of slab_region) + US.v md_count * U32.v sc.slab_size
   )
 
 #push-options "--print_implicits"
 
 val pack_slab_array (#opened:_)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
-  (md_count: US.t{US.v md_count < US.v metadata_max})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
+  (md_count: US.t{US.v md_count < US.v sc.md_max})
   : SteelGhost unit opened
-    (A.varray (A.split_l (A.split_r slab_region (US.mul md_count (u32_to_sz page_size))) (u32_to_sz page_size)))
-    (fun _ -> A.varray (slab_array slab_region md_count))
+    (A.varray (A.split_l (A.split_r slab_region (US.mul md_count (u32_to_sz sc.slab_size))) (u32_to_sz sc.slab_size)))
+    (fun _ -> A.varray (slab_array sc slab_region md_count))
     (requires fun _ -> True)
     (ensures fun h0 _ h1 ->
-      A.asel (A.split_l (A.split_r slab_region (US.mul md_count (u32_to_sz page_size))) (u32_to_sz page_size)) h0 ==
-      A.asel (slab_array slab_region md_count) h1)
+      A.asel (A.split_l (A.split_r slab_region (US.mul md_count (u32_to_sz sc.slab_size))) (u32_to_sz sc.slab_size)) h0 ==
+      A.asel (slab_array sc slab_region md_count) h1)
 
 /// Retrieving the metadata bitmap at index [md_count] in array [md_bm_region]
 inline_for_extraction noextract
@@ -412,31 +409,31 @@ val unpack_md_array (#opened:_)
 // TODO: Document what the vprops represent
 
 let f
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   (md_region_lv: Seq.lseq AL.status (US.v md_count_v))
   (i: US.t{US.v i < US.v md_count_v})
   : vprop
   =
   match Seq.index md_region_lv (US.v i) with
-  | 0ul -> p_empty size_class (md_bm_array md_bm_region i, slab_array slab_region i)
-  | 1ul -> p_partial size_class (md_bm_array md_bm_region i, slab_array slab_region i)
-  | 2ul -> p_full size_class (md_bm_array md_bm_region i, slab_array slab_region i)
-  | 3ul -> p_guard size_class (md_bm_array md_bm_region i, slab_array slab_region i)
-  | 4ul -> p_quarantine size_class (md_bm_array md_bm_region i, slab_array slab_region i)
+  | 0ul -> p_empty sc (md_bm_array md_bm_region i, slab_array sc slab_region i)
+  | 1ul -> p_partial sc (md_bm_array md_bm_region i, slab_array sc slab_region i)
+  | 2ul -> p_full sc (md_bm_array md_bm_region i, slab_array sc slab_region i)
+  | 3ul -> p_guard sc (md_bm_array md_bm_region i, slab_array sc slab_region i)
+  | 4ul -> p_quarantine sc (md_bm_array md_bm_region i, slab_array sc slab_region i)
 
 val f_lemma
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   (md_region_lv: Seq.lseq AL.status (US.v md_count_v))
   (i: US.t{US.v i < US.v md_count_v})
   : Lemma
-  (t_of (f size_class slab_region md_bm_region md_count_v md_region_lv i)
-  == t size_class)
+  (t_of (f sc slab_region md_bm_region md_count_v md_region_lv i)
+  == t sc)
 
 let ind_varraylist_aux2
   (r_varraylist: A.array AL.cell)
@@ -522,92 +519,93 @@ let left_vprop1
     r_idxs
 
 let left_vprop2_aux
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   (x: Seq.lseq AL.status (US.v md_count_v))
   : vprop
   =
   starseq
     #(pos:US.t{US.v pos < US.v md_count_v})
-    #(t size_class)
-    (f size_class slab_region md_bm_region md_count_v x)
-    (f_lemma size_class slab_region md_bm_region md_count_v x)
+    #(t sc)
+    (f sc slab_region md_bm_region md_count_v x)
+    (f_lemma sc slab_region md_bm_region md_count_v x)
     (SeqUtils.init_us_refined (US.v md_count_v))
 
 let left_vprop2
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (r_idxs: A.array US.t{A.length r_idxs = 7})
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   (x: t_of (ind_varraylist (A.split_l md_region md_count_v) r_idxs))
   : vprop
   = starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)))
-      (f_lemma size_class slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)))
+      #(t sc)
+      (f sc slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)))
+      (f_lemma sc slab_region md_bm_region md_count_v (ALG.dataify (dsnd x)))
       (SeqUtils.init_us_refined (US.v md_count_v))
 
 let left_vprop
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (r_idxs: A.array US.t{A.length r_idxs = 7})
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   =
   left_vprop1 md_region r_idxs md_count_v
   `vdep`
-  left_vprop2 size_class slab_region md_bm_region md_region r_idxs md_count_v
+  left_vprop2 sc slab_region md_bm_region md_region r_idxs md_count_v
 
 unfold
-let vrefinedep_prop (x:US.t) : prop =
-  US.v x <= US.v metadata_max /\
+let vrefinedep_prop (sc: sc_full) (x:US.t): prop =
+  US.v x <= US.v sc.md_max /\
   US.v x <> AL.null
 
 let right_vprop
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
-  (v: US.t{US.v v <= US.v metadata_max})
+  (v: US.t{US.v v <= US.v sc.md_max})
   : vprop
   =
-  (A.varray (A.split_r slab_region (US.mul v (u32_to_sz page_size)))
+  (A.varray (A.split_r slab_region (US.mul v (u32_to_sz sc.slab_size)))
     `vrefine` zf_u8) `star`
   (A.varray (A.split_r md_bm_region (US.mul v 4sz))
     `vrefine` zf_u64) `star`
   A.varray (A.split_r md_region v)
 
 let size_class_vprop_aux
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (r_idxs: array US.t{A.length r_idxs = 7})
-  (v: US.t{US.v v <= US.v metadata_max == true})
+  (v: US.t{US.v v <= US.v sc.md_max == true})
   : vprop
   =
-  left_vprop size_class
+  left_vprop sc
     slab_region md_bm_region md_region
     r_idxs v `star`
-  right_vprop
+  right_vprop sc
     slab_region md_bm_region md_region v
 
 open SteelVRefineDep
 
 val pack_3
   (#opened:_)
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   (r_idxs: array US.t{A.length r_idxs = 7})
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx1 idx2 idx3 idx4 idx5 idx6 idx7: US.t)
   : SteelGhost unit opened
@@ -619,16 +617,16 @@ val pack_3
       (US.v idx1) (US.v idx2) (US.v idx3) (US.v idx4) (US.v idx5) (US.v idx6) (US.v idx7)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
-      (f_lemma size_class slab_region md_bm_region md_count_v (G.reveal md_region_lv))
+      #(t sc)
+      (f sc slab_region md_bm_region md_count_v (G.reveal md_region_lv))
+      (f_lemma sc slab_region md_bm_region md_count_v (G.reveal md_region_lv))
       (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (fun _ ->
     vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (left_vprop sc slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let gs0 = AL.v_arraylist pred1 pred2 pred3 pred4 pred5
@@ -652,144 +650,144 @@ val pack_3
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (left_vprop sc slab_region md_bm_region md_region r_idxs)
     ) in
     md_count_v == dfst blob1)
 
 val pack_slab_starseq
   (#opened:_)
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   //(r1 r2 r3 r4 r5: ref US.t)
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx: US.t{US.v idx < US.v md_count_v})
   (v: AL.status)
   : SteelGhost unit opened
   (
-    slab_vprop size_class
-      (slab_array slab_region idx)
+    slab_vprop sc
+      (slab_array sc slab_region idx)
       (md_bm_array md_bm_region idx) `star`
     (starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      #(t sc)
+      (f sc slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma sc slab_region md_bm_region md_count_v md_region_lv)
       (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) 0 (US.v idx)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      #(t sc)
+      (f sc slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma sc slab_region md_bm_region md_count_v md_region_lv)
       (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx + 1) (Seq.length (SeqUtils.init_us_refined (US.v md_count_v)))))
   )
   (fun _ ->
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v))
-      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v))
+      #(t sc)
+      (f sc slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v))
+      (f_lemma sc slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) v))
       (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (requires fun h0 ->
-    let md_blob : t_of (slab_vprop size_class
-      (slab_array slab_region idx)
+    let md_blob : t_of (slab_vprop sc
+      (slab_array sc slab_region idx)
       (md_bm_array md_bm_region idx))
-    = h0 (slab_vprop size_class
-      (slab_array slab_region idx)
+    = h0 (slab_vprop sc
+      (slab_array sc slab_region idx)
       (md_bm_array md_bm_region idx)) in
     let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
     v <> 4ul /\
     v <> 3ul /\
-    (v == 2ul ==> is_full size_class md) /\
-    (v == 1ul ==> is_partial size_class md) /\
-    (v == 0ul ==> is_empty size_class md) /\
+    (v == 2ul ==> is_full sc md) /\
+    (v == 1ul ==> is_partial sc md) /\
+    (v == 0ul ==> is_empty sc md) /\
     idx <> AL.null_ptr
   )
   (ensures fun _ _ _ -> True)
 
 inline_for_extraction noextract
 val upd_and_pack_slab_starseq_quarantine
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   (md_region_lv: G.erased (Seq.lseq AL.status (US.v md_count_v)))
   (idx: US.t{US.v idx < US.v md_count_v})
   : Steel unit
   (
-    slab_vprop size_class
-      (slab_array slab_region idx)
+    slab_vprop sc
+      (slab_array sc slab_region idx)
       (md_bm_array md_bm_region idx) `star`
     (starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      #(t sc)
+      (f sc slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma sc slab_region md_bm_region md_count_v md_region_lv)
       (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) 0 (US.v idx)) `star`
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v md_region_lv)
-      (f_lemma size_class slab_region md_bm_region md_count_v md_region_lv)
+      #(t sc)
+      (f sc slab_region md_bm_region md_count_v md_region_lv)
+      (f_lemma sc slab_region md_bm_region md_count_v md_region_lv)
       (Seq.slice (SeqUtils.init_us_refined (US.v md_count_v)) (US.v idx + 1) (Seq.length (SeqUtils.init_us_refined (US.v md_count_v)))))
   )
   (fun _ ->
     starseq
       #(pos:US.t{US.v pos < US.v md_count_v})
-      #(t size_class)
-      (f size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) 4ul))
-      (f_lemma size_class slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) 4ul))
+      #(t sc)
+      (f sc slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) 4ul))
+      (f_lemma sc slab_region md_bm_region md_count_v (Seq.upd md_region_lv (US.v idx) 4ul))
       (SeqUtils.init_us_refined (US.v md_count_v))
   )
   (requires fun h0 ->
-    let md_blob : t_of (slab_vprop size_class
-      (slab_array slab_region idx)
+    let md_blob : t_of (slab_vprop sc
+      (slab_array sc slab_region idx)
       (md_bm_array md_bm_region idx))
-    = h0 (slab_vprop size_class
-      (slab_array slab_region idx)
+    = h0 (slab_vprop sc
+      (slab_array sc slab_region idx)
       (md_bm_array md_bm_region idx)) in
     let md : Seq.lseq U64.t 4 = dfst (fst md_blob) in
-    is_empty size_class md
+    is_empty sc md
   )
   (ensures fun _ _ _ -> True)
 
 val pack_right_and_refactor_vrefine_dep
   (#opened:_)
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
   (r_idxs: array US.t{A.length r_idxs = 7})
-  (md_count_v: US.t{US.v md_count_v <= US.v metadata_max})
+  (md_count_v: US.t{US.v md_count_v <= US.v sc.md_max})
   : SteelGhost unit opened
   (
     vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (left_vprop sc slab_region md_bm_region md_region r_idxs)
     `star`
-    right_vprop slab_region md_bm_region md_region md_count_v
+    right_vprop sc slab_region md_bm_region md_region md_count_v
   )
   (fun _ ->
     vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (size_class_vprop_aux sc slab_region md_bm_region md_region r_idxs)
   )
   (requires fun h0 ->
     let blob0
       = h0 (vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (left_vprop sc slab_region md_bm_region md_region r_idxs)
     ) in
     md_count_v == dfst blob0
   )
@@ -797,14 +795,14 @@ val pack_right_and_refactor_vrefine_dep
     let blob0
       = h0 (vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (left_vprop size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (left_vprop sc slab_region md_bm_region md_region r_idxs)
     ) in
     let blob1
       = h1 (vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (size_class_vprop_aux sc slab_region md_bm_region md_region r_idxs)
     ) in
     dfst blob0 == dfst blob1
   )

@@ -99,6 +99,7 @@ FILES = \
   dist/SizeClass.c \
   dist/SizeClassSelection.c \
   dist/PtrdiffWrapper.c \
+  dist/Constants.c \
   c/utils.c \
   c/fatal_error.c \
   c/memory.c \
@@ -125,6 +126,10 @@ SHARED_FLAGS = \
   -Wall -Wextra -Wwrite-strings -Wundef \
   -std=c17 -D_DEFAULT_SOURCE \
   -shared -fPIC
+
+# use HACL*'s zeroing function
+SHARED_FLAGS += -I vendor/hacl-star
+FILES += vendor/hacl-star/Lib_Memzero0.c
 
 INCLUDE_FLAGS = \
   -I $(KRML_HOME)/include \
