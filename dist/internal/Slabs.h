@@ -6,12 +6,13 @@
 
 #include "krmllib.h"
 
+#include "Constants.h"
 #include "ArrayList.h"
 
 bool
 SlabsFree_deallocate_slab(
   uint8_t *ptr,
-  uint32_t size_class,
+  Constants_sc_full_ sc,
   uint8_t *slab_region,
   uint64_t *md_bm_region,
   ArrayList_cell *md_region,
@@ -22,7 +23,7 @@ SlabsFree_deallocate_slab(
 
 uint8_t
 *SlabsAlloc_allocate_slab(
-  uint32_t size_class,
+  Constants_sc_full_ sc,
   uint8_t *slab_region,
   uint64_t *md_bm_region,
   ArrayList_cell *md_region,

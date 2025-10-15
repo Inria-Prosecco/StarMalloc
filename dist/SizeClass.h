@@ -6,11 +6,12 @@
 
 #include "krmllib.h"
 
+#include "Constants.h"
 #include "ArrayList.h"
 
 typedef struct SizeClass_size_class_struct__s
 {
-  uint32_t size;
+  Constants_sc_full_ size;
   size_t *slabs_idxs;
   size_t *md_count;
   uint8_t *slab_region;

@@ -3,9 +3,9 @@
 
 #include "Config.h"
 
-bool Config_enable_sc_fast_selection = true;
-
 size_t Config_metadata_max = (size_t)16777216U;
+
+bool Config_enable_sc_fast_selection = true;
 
 bool Config_enable_guard_pages = true;
 

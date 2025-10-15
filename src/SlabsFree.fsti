@@ -23,8 +23,8 @@ include SlabsCommon
 
 val deallocate_slab
   (ptr: array U8.t)
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
@@ -35,24 +35,24 @@ val deallocate_slab
     A.varray ptr `star`
     vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (size_class_vprop_aux sc slab_region md_bm_region md_region r_idxs)
   )
   (fun b ->
     (if b then emp else A.varray ptr) `star`
     vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (size_class_vprop_aux sc slab_region md_bm_region md_region r_idxs)
   )
   (requires fun _ ->
     let diff' = A.offset (A.ptr_of ptr) - A.offset (A.ptr_of slab_region) in
     same_base_array ptr slab_region /\
     US.v diff_ = diff' /\
     0 <= diff' /\
-    (diff' % U32.v page_size) % U32.v size_class == 0 /\
+    (diff' % U32.v sc.slab_size) % U32.v sc.sc == 0 /\
     //diff' < US.v metadata_max * U32.v page_size /\
     //diff' % U32.v size_class = 0 /\
-    A.length ptr == U32.v size_class
+    A.length ptr == U32.v sc.sc
   )
   (ensures fun _ _ _ -> True)

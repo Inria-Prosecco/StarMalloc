@@ -9,9 +9,10 @@
 #include "PtrdiffWrapper.h"
 #include "Mman.h"
 #include "ExternUtils.h"
+#include "Constants.h"
 #include "ArrayList.h"
 
-static uint32_t avl_data_size = 64U;
+uint32_t Impl_Trees_Cast_M_avl_data_size = 64U;
 
 extern int64_t Impl_Trees_Cast_M_cmp(Impl_Trees_Cast_M_data uu___, Impl_Trees_Cast_M_data x0);
 
@@ -30,7 +31,7 @@ static void init_idxs(size_t *r_idxs)
   r_idxs[6U] = (size_t)0U;
 }
 
-static size_t slab_region_size = (size_t)7421703487488U;
+static size_t full_slab_region_size = (size_t)12919261626368U;
 
 static void
 init_size_class(
@@ -39,10 +40,10 @@ init_size_class(
   uint64_t *md_bm_region,
   ArrayList_cell *md_region,
   size_class *size_classes,
-  const uint32_t *sizes
+  const Constants_sc_full_ *sizes
 )
 {
-  uint32_t size = sizes[k];
+  Constants_sc_full_ size = sizes[k];
   static_assert(UINT32_MAX <= SIZE_MAX);
   uint8_t *slab_region_ = slab_region + (size_t)16777216U * (size_t)4096U * k;
   uint64_t *md_bm_region_ = md_bm_region + (size_t)67108864U * k;
@@ -62,6 +63,8 @@ init_size_class(
   size_classes[k].data = data;
 }
 
+Constants_sc_full_ Impl_Trees_Types_sc_avl;
+
 void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
 {
   size_t slab_region_size = (size_t)16777216U * (size_t)4096U;
@@ -77,8 +80,8 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
   SizeClass_size_class_struct_
   scs =
     {
-      .size = avl_data_size, .slabs_idxs = r_idxs, .md_count = md_count, .slab_region = slab_region,
-      .md_bm_region = md_bm_region, .md_region = md_region
+      .size = Impl_Trees_Types_sc_avl, .slabs_idxs = r_idxs, .md_count = md_count,
+      .slab_region = slab_region, .md_bm_region = md_bm_region, .md_region = md_region
     };
   SizeClass_size_class_struct_ scs0 = scs;
   Steel_SpinLock_new_lock(&ret->lock);
@@ -1274,25 +1277,205 @@ static size_t large_getsize(uint8_t *ptr)
 }
 
 static const
-uint32_t
-sizes[108U] =
+Constants_sc_full_
+sizes[188U] =
   {
-    16U, 32U, 64U, 80U, 96U, 112U, 128U, 160U, 192U, 224U, 256U, 320U, 384U, 448U, 512U, 640U, 768U,
-    896U, 1024U, 1280U, 1536U, 1792U, 2048U, 2560U, 3072U, 3584U, 4096U, 16U, 32U, 64U, 80U, 96U,
-    112U, 128U, 160U, 192U, 224U, 256U, 320U, 384U, 448U, 512U, 640U, 768U, 896U, 1024U, 1280U,
-    1536U, 1792U, 2048U, 2560U, 3072U, 3584U, 4096U, 16U, 32U, 64U, 80U, 96U, 112U, 128U, 160U,
-    192U, 224U, 256U, 320U, 384U, 448U, 512U, 640U, 768U, 896U, 1024U, 1280U, 1536U, 1792U, 2048U,
-    2560U, 3072U, 3584U, 4096U, 16U, 32U, 64U, 80U, 96U, 112U, 128U, 160U, 192U, 224U, 256U, 320U,
-    384U, 448U, 512U, 640U, 768U, 896U, 1024U, 1280U, 1536U, 1792U, 2048U, 2560U, 3072U, 3584U,
-    4096U
+    { .sc = 16U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 32U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 64U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 80U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 96U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 112U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 128U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 160U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 192U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 224U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 256U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 320U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 384U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 448U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 512U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 640U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 768U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 896U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1024U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1280U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1536U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1792U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 2048U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 2560U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 3072U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 3584U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 4096U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 5120U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 6144U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 7168U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 8192U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 10240U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 12288U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 14336U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 16384U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 20480U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 24576U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 28672U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 32768U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 40960U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 49152U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 57344U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 65536U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 81920U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 98304U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 114688U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 131072U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 16U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 32U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 64U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 80U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 96U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 112U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 128U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 160U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 192U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 224U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 256U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 320U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 384U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 448U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 512U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 640U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 768U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 896U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1024U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1280U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1536U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1792U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 2048U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 2560U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 3072U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 3584U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 4096U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 5120U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 6144U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 7168U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 8192U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 10240U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 12288U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 14336U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 16384U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 20480U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 24576U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 28672U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 32768U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 40960U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 49152U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 57344U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 65536U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 81920U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 98304U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 114688U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 131072U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 16U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 32U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 64U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 80U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 96U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 112U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 128U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 160U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 192U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 224U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 256U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 320U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 384U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 448U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 512U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 640U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 768U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 896U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1024U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1280U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1536U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1792U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 2048U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 2560U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 3072U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 3584U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 4096U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 5120U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 6144U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 7168U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 8192U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 10240U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 12288U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 14336U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 16384U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 20480U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 24576U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 28672U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 32768U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 40960U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 49152U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 57344U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 65536U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 81920U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 98304U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 114688U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 131072U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 16U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 32U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 64U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 80U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 96U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 112U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 128U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 160U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 192U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 224U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 256U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 320U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 384U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 448U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 512U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 640U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 768U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 896U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1024U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1280U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1536U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 1792U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 2048U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 2560U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 3072U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 3584U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 4096U, .slab_size = 4096U, .md_max = (size_t)16777216U },
+    { .sc = 5120U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 6144U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 7168U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 8192U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 10240U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 12288U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 14336U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 16384U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 20480U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 24576U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 28672U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 32768U, .slab_size = 32768U, .md_max = (size_t)2097152U },
+    { .sc = 40960U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 49152U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 57344U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 65536U, .slab_size = 65536U, .md_max = (size_t)1048576U },
+    { .sc = 81920U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 98304U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 114688U, .slab_size = 131072U, .md_max = (size_t)524288U },
+    { .sc = 131072U, .slab_size = 131072U, .md_max = (size_t)524288U }
   };
 
 Main_Meta_size_classes_all Main_Meta_init(void)
 {
-  uint8_t *slab_region = mmap_u8_init((size_t)16777216U * (size_t)4096U * (size_t)108U);
-  uint64_t *md_bm_region = mmap_u64_init((size_t)7247757312U);
-  ArrayList_cell *md_region = mmap_cell_status_init((size_t)1811939328U);
-  size_class *size_classes = mmap_sc_init((size_t)108U);
+  uint8_t *slab_region = mmap_u8_init((size_t)16777216U * (size_t)4096U * (size_t)188U);
+  uint64_t *md_bm_region = mmap_u64_init((size_t)12616466432U);
+  ArrayList_cell *md_region = mmap_cell_status_init((size_t)3154116608U);
+  size_class *size_classes = mmap_sc_init((size_t)188U);
   init_size_class((size_t)0U, slab_region, md_bm_region, md_region, size_classes, sizes);
   init_size_class((size_t)1U, slab_region, md_bm_region, md_region, size_classes, sizes);
   init_size_class((size_t)2U, slab_region, md_bm_region, md_region, size_classes, sizes);
@@ -1401,6 +1584,86 @@ Main_Meta_size_classes_all Main_Meta_init(void)
   init_size_class((size_t)105U, slab_region, md_bm_region, md_region, size_classes, sizes);
   init_size_class((size_t)106U, slab_region, md_bm_region, md_region, size_classes, sizes);
   init_size_class((size_t)107U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)108U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)109U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)110U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)111U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)112U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)113U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)114U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)115U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)116U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)117U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)118U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)119U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)120U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)121U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)122U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)123U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)124U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)125U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)126U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)127U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)128U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)129U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)130U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)131U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)132U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)133U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)134U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)135U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)136U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)137U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)138U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)139U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)140U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)141U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)142U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)143U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)144U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)145U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)146U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)147U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)148U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)149U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)150U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)151U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)152U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)153U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)154U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)155U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)156U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)157U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)158U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)159U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)160U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)161U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)162U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)163U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)164U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)165U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)166U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)167U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)168U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)169U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)170U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)171U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)172U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)173U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)174U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)175U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)176U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)177U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)178U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)179U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)180U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)181U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)182U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)183U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)184U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)185U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)186U, slab_region, md_bm_region, md_region, size_classes, sizes);
+  init_size_class((size_t)187U, slab_region, md_bm_region, md_region, size_classes, sizes);
   return
     ((Main_Meta_size_classes_all){ .size_classes = size_classes, .slab_region = slab_region });
 }
@@ -1417,703 +1680,1703 @@ static uint8_t *slab_malloc(size_t arena_id, uint32_t bytes)
 {
   uint32_t r0 = SizeClassSelection_inv_impl(bytes + 2U);
   size_t i = (size_t)r0;
-  uint32_t size = sizes[arena_id * (size_t)27U + i];
-  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + i].lock);
+  Constants_sc_full_ size = sizes[arena_id * (size_t)47U + i];
+  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + i].lock);
   uint8_t
-  *r = allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + i].data);
-  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + i].lock);
+  *r = allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + i].data);
+  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + i].lock);
   uint8_t *ptr = r;
   uint8_t *ptr0 = ptr;
   if (!(ptr0 == NULL))
   {
-    ptr0[(size_t)(size - 2U)] = 42U;
-    ptr0[(size_t)(size - 1U)] = 23U;
+    ptr0[(size_t)(size.sc - 2U)] = 42U;
+    ptr0[(size_t)(size.sc - 1U)] = 23U;
   }
   return ptr0;
 }
 
 static uint8_t *slab_aligned_alloc(size_t arena_id, uint32_t alignment, uint32_t bytes)
 {
-  uint32_t size = sizes[arena_id * (size_t)27U + (size_t)0U];
-  bool b = 4096U % size == 0U;
-  if (b && bytes <= size - 2U && alignment <= size)
+  Constants_sc_full_ size = sizes[arena_id * (size_t)47U + (size_t)0U];
+  bool b = size.slab_size % size.sc == 0U;
+  if (b && bytes <= size.sc - 2U && alignment <= size.sc)
   {
-    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)0U].lock);
+    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)0U].lock);
     uint8_t
     *r =
-      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)0U].data);
-    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)0U].lock);
+      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)0U].data);
+    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)0U].lock);
     uint8_t *ptr = r;
-    uint8_t *ptr0 = ptr;
-    if (!(ptr0 == NULL))
+    uint8_t *r0 = ptr;
+    if (!(r0 == NULL))
     {
-      ptr0[(size_t)(size - 2U)] = 42U;
-      ptr0[(size_t)(size - 1U)] = 23U;
+      r0[(size_t)(size.sc - 2U)] = 42U;
+      r0[(size_t)(size.sc - 1U)] = 23U;
     }
-    return ptr0;
+    return r0;
   }
   else
   {
-    uint32_t size1 = sizes[arena_id * (size_t)27U + (size_t)1U];
-    bool b1 = 4096U % size1 == 0U;
-    if (b1 && bytes <= size1 - 2U && alignment <= size1)
+    Constants_sc_full_ size1 = sizes[arena_id * (size_t)47U + (size_t)1U];
+    bool b1 = size1.slab_size % size1.sc == 0U;
+    if (b1 && bytes <= size1.sc - 2U && alignment <= size1.sc)
     {
-      Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)1U].lock);
+      Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)1U].lock);
       uint8_t
       *r =
-        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)1U].data);
-      Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)1U].lock);
+        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)1U].data);
+      Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)1U].lock);
       uint8_t *ptr = r;
-      uint8_t *ptr0 = ptr;
-      if (!(ptr0 == NULL))
+      uint8_t *r0 = ptr;
+      if (!(r0 == NULL))
       {
-        ptr0[(size_t)(size1 - 2U)] = 42U;
-        ptr0[(size_t)(size1 - 1U)] = 23U;
+        r0[(size_t)(size1.sc - 2U)] = 42U;
+        r0[(size_t)(size1.sc - 1U)] = 23U;
       }
-      return ptr0;
+      return r0;
     }
     else
     {
-      uint32_t size2 = sizes[arena_id * (size_t)27U + (size_t)2U];
-      bool b2 = 4096U % size2 == 0U;
-      if (b2 && bytes <= size2 - 2U && alignment <= size2)
+      Constants_sc_full_ size2 = sizes[arena_id * (size_t)47U + (size_t)2U];
+      bool b2 = size2.slab_size % size2.sc == 0U;
+      if (b2 && bytes <= size2.sc - 2U && alignment <= size2.sc)
       {
-        Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)2U].lock);
+        Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)2U].lock);
         uint8_t
         *r =
-          allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)2U].data);
-        Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)2U].lock);
+          allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)2U].data);
+        Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)2U].lock);
         uint8_t *ptr = r;
-        uint8_t *ptr0 = ptr;
-        if (!(ptr0 == NULL))
+        uint8_t *r0 = ptr;
+        if (!(r0 == NULL))
         {
-          ptr0[(size_t)(size2 - 2U)] = 42U;
-          ptr0[(size_t)(size2 - 1U)] = 23U;
+          r0[(size_t)(size2.sc - 2U)] = 42U;
+          r0[(size_t)(size2.sc - 1U)] = 23U;
         }
-        return ptr0;
+        return r0;
       }
       else
       {
-        uint32_t size3 = sizes[arena_id * (size_t)27U + (size_t)3U];
-        bool b3 = 4096U % size3 == 0U;
-        if (b3 && bytes <= size3 - 2U && alignment <= size3)
+        Constants_sc_full_ size3 = sizes[arena_id * (size_t)47U + (size_t)3U];
+        bool b3 = size3.slab_size % size3.sc == 0U;
+        if (b3 && bytes <= size3.sc - 2U && alignment <= size3.sc)
         {
-          Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)3U].lock);
+          Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)3U].lock);
           uint8_t
           *r =
-            allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)3U].data);
-          Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)3U].lock);
+            allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)3U].data);
+          Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)3U].lock);
           uint8_t *ptr = r;
-          uint8_t *ptr0 = ptr;
-          if (!(ptr0 == NULL))
+          uint8_t *r0 = ptr;
+          if (!(r0 == NULL))
           {
-            ptr0[(size_t)(size3 - 2U)] = 42U;
-            ptr0[(size_t)(size3 - 1U)] = 23U;
+            r0[(size_t)(size3.sc - 2U)] = 42U;
+            r0[(size_t)(size3.sc - 1U)] = 23U;
           }
-          return ptr0;
+          return r0;
         }
         else
         {
-          uint32_t size4 = sizes[arena_id * (size_t)27U + (size_t)4U];
-          bool b4 = 4096U % size4 == 0U;
-          if (b4 && bytes <= size4 - 2U && alignment <= size4)
+          Constants_sc_full_ size4 = sizes[arena_id * (size_t)47U + (size_t)4U];
+          bool b4 = size4.slab_size % size4.sc == 0U;
+          if (b4 && bytes <= size4.sc - 2U && alignment <= size4.sc)
           {
-            Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+            Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                 (size_t)4U].lock);
             uint8_t
             *r =
-              allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U + (size_t)4U].data);
-            Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+              allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U + (size_t)4U].data);
+            Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                 (size_t)4U].lock);
             uint8_t *ptr = r;
-            uint8_t *ptr0 = ptr;
-            if (!(ptr0 == NULL))
+            uint8_t *r0 = ptr;
+            if (!(r0 == NULL))
             {
-              ptr0[(size_t)(size4 - 2U)] = 42U;
-              ptr0[(size_t)(size4 - 1U)] = 23U;
+              r0[(size_t)(size4.sc - 2U)] = 42U;
+              r0[(size_t)(size4.sc - 1U)] = 23U;
             }
-            return ptr0;
+            return r0;
           }
           else
           {
-            uint32_t size5 = sizes[arena_id * (size_t)27U + (size_t)5U];
-            bool b5 = 4096U % size5 == 0U;
-            if (b5 && bytes <= size5 - 2U && alignment <= size5)
+            Constants_sc_full_ size5 = sizes[arena_id * (size_t)47U + (size_t)5U];
+            bool b5 = size5.slab_size % size5.sc == 0U;
+            if (b5 && bytes <= size5.sc - 2U && alignment <= size5.sc)
             {
-              Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+              Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                   (size_t)5U].lock);
               uint8_t
               *r =
-                allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                     (size_t)5U].data);
-              Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+              Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                   (size_t)5U].lock);
               uint8_t *ptr = r;
-              uint8_t *ptr0 = ptr;
-              if (!(ptr0 == NULL))
+              uint8_t *r0 = ptr;
+              if (!(r0 == NULL))
               {
-                ptr0[(size_t)(size5 - 2U)] = 42U;
-                ptr0[(size_t)(size5 - 1U)] = 23U;
+                r0[(size_t)(size5.sc - 2U)] = 42U;
+                r0[(size_t)(size5.sc - 1U)] = 23U;
               }
-              return ptr0;
+              return r0;
             }
             else
             {
-              uint32_t size6 = sizes[arena_id * (size_t)27U + (size_t)6U];
-              bool b6 = 4096U % size6 == 0U;
-              if (b6 && bytes <= size6 - 2U && alignment <= size6)
+              Constants_sc_full_ size6 = sizes[arena_id * (size_t)47U + (size_t)6U];
+              bool b6 = size6.slab_size % size6.sc == 0U;
+              if (b6 && bytes <= size6.sc - 2U && alignment <= size6.sc)
               {
-                Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                     (size_t)6U].lock);
                 uint8_t
                 *r =
-                  allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                  allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                       (size_t)6U].data);
-                Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                     (size_t)6U].lock);
                 uint8_t *ptr = r;
-                uint8_t *ptr0 = ptr;
-                if (!(ptr0 == NULL))
+                uint8_t *r0 = ptr;
+                if (!(r0 == NULL))
                 {
-                  ptr0[(size_t)(size6 - 2U)] = 42U;
-                  ptr0[(size_t)(size6 - 1U)] = 23U;
+                  r0[(size_t)(size6.sc - 2U)] = 42U;
+                  r0[(size_t)(size6.sc - 1U)] = 23U;
                 }
-                return ptr0;
+                return r0;
               }
               else
               {
-                uint32_t size7 = sizes[arena_id * (size_t)27U + (size_t)7U];
-                bool b7 = 4096U % size7 == 0U;
-                if (b7 && bytes <= size7 - 2U && alignment <= size7)
+                Constants_sc_full_ size7 = sizes[arena_id * (size_t)47U + (size_t)7U];
+                bool b7 = size7.slab_size % size7.sc == 0U;
+                if (b7 && bytes <= size7.sc - 2U && alignment <= size7.sc)
                 {
-                  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                       (size_t)7U].lock);
                   uint8_t
                   *r =
-                    allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                    allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                         (size_t)7U].data);
-                  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                       (size_t)7U].lock);
                   uint8_t *ptr = r;
-                  uint8_t *ptr0 = ptr;
-                  if (!(ptr0 == NULL))
+                  uint8_t *r0 = ptr;
+                  if (!(r0 == NULL))
                   {
-                    ptr0[(size_t)(size7 - 2U)] = 42U;
-                    ptr0[(size_t)(size7 - 1U)] = 23U;
+                    r0[(size_t)(size7.sc - 2U)] = 42U;
+                    r0[(size_t)(size7.sc - 1U)] = 23U;
                   }
-                  return ptr0;
+                  return r0;
                 }
                 else
                 {
-                  uint32_t size8 = sizes[arena_id * (size_t)27U + (size_t)8U];
-                  bool b8 = 4096U % size8 == 0U;
-                  if (b8 && bytes <= size8 - 2U && alignment <= size8)
+                  Constants_sc_full_ size8 = sizes[arena_id * (size_t)47U + (size_t)8U];
+                  bool b8 = size8.slab_size % size8.sc == 0U;
+                  if (b8 && bytes <= size8.sc - 2U && alignment <= size8.sc)
                   {
-                    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                         (size_t)8U].lock);
                     uint8_t
                     *r =
-                      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                           (size_t)8U].data);
-                    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                         (size_t)8U].lock);
                     uint8_t *ptr = r;
-                    uint8_t *ptr0 = ptr;
-                    if (!(ptr0 == NULL))
+                    uint8_t *r0 = ptr;
+                    if (!(r0 == NULL))
                     {
-                      ptr0[(size_t)(size8 - 2U)] = 42U;
-                      ptr0[(size_t)(size8 - 1U)] = 23U;
+                      r0[(size_t)(size8.sc - 2U)] = 42U;
+                      r0[(size_t)(size8.sc - 1U)] = 23U;
                     }
-                    return ptr0;
+                    return r0;
                   }
                   else
                   {
-                    uint32_t size9 = sizes[arena_id * (size_t)27U + (size_t)9U];
-                    bool b9 = 4096U % size9 == 0U;
-                    if (b9 && bytes <= size9 - 2U && alignment <= size9)
+                    Constants_sc_full_ size9 = sizes[arena_id * (size_t)47U + (size_t)9U];
+                    bool b9 = size9.slab_size % size9.sc == 0U;
+                    if (b9 && bytes <= size9.sc - 2U && alignment <= size9.sc)
                     {
-                      Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                      Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                           (size_t)9U].lock);
                       uint8_t
                       *r =
-                        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                             (size_t)9U].data);
-                      Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                      Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                           (size_t)9U].lock);
                       uint8_t *ptr = r;
-                      uint8_t *ptr0 = ptr;
-                      if (!(ptr0 == NULL))
+                      uint8_t *r0 = ptr;
+                      if (!(r0 == NULL))
                       {
-                        ptr0[(size_t)(size9 - 2U)] = 42U;
-                        ptr0[(size_t)(size9 - 1U)] = 23U;
+                        r0[(size_t)(size9.sc - 2U)] = 42U;
+                        r0[(size_t)(size9.sc - 1U)] = 23U;
                       }
-                      return ptr0;
+                      return r0;
                     }
                     else
                     {
-                      uint32_t size10 = sizes[arena_id * (size_t)27U + (size_t)10U];
-                      bool b10 = 4096U % size10 == 0U;
-                      if (b10 && bytes <= size10 - 2U && alignment <= size10)
+                      Constants_sc_full_ size10 = sizes[arena_id * (size_t)47U + (size_t)10U];
+                      bool b10 = size10.slab_size % size10.sc == 0U;
+                      if (b10 && bytes <= size10.sc - 2U && alignment <= size10.sc)
                       {
-                        Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U
+                        Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U
                           + (size_t)10U].lock);
                         uint8_t
                         *r =
-                          allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U +
+                          allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U +
                               (size_t)10U].data);
-                        Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)27U
+                        Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id * (size_t)47U
                           + (size_t)10U].lock);
                         uint8_t *ptr = r;
-                        uint8_t *ptr0 = ptr;
-                        if (!(ptr0 == NULL))
+                        uint8_t *r0 = ptr;
+                        if (!(r0 == NULL))
                         {
-                          ptr0[(size_t)(size10 - 2U)] = 42U;
-                          ptr0[(size_t)(size10 - 1U)] = 23U;
+                          r0[(size_t)(size10.sc - 2U)] = 42U;
+                          r0[(size_t)(size10.sc - 1U)] = 23U;
                         }
-                        return ptr0;
+                        return r0;
                       }
                       else
                       {
-                        uint32_t size11 = sizes[arena_id * (size_t)27U + (size_t)11U];
-                        bool b11 = 4096U % size11 == 0U;
-                        if (b11 && bytes <= size11 - 2U && alignment <= size11)
+                        Constants_sc_full_ size11 = sizes[arena_id * (size_t)47U + (size_t)11U];
+                        bool b11 = size11.slab_size % size11.sc == 0U;
+                        if (b11 && bytes <= size11.sc - 2U && alignment <= size11.sc)
                         {
                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id *
-                              (size_t)27U
+                              (size_t)47U
                             + (size_t)11U].lock);
                           uint8_t
                           *r =
-                            allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)27U
+                            allocate_size_class(Main_Meta_sc_all.size_classes[arena_id * (size_t)47U
                               + (size_t)11U].data);
                           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id *
-                              (size_t)27U
+                              (size_t)47U
                             + (size_t)11U].lock);
                           uint8_t *ptr = r;
-                          uint8_t *ptr0 = ptr;
-                          if (!(ptr0 == NULL))
+                          uint8_t *r0 = ptr;
+                          if (!(r0 == NULL))
                           {
-                            ptr0[(size_t)(size11 - 2U)] = 42U;
-                            ptr0[(size_t)(size11 - 1U)] = 23U;
+                            r0[(size_t)(size11.sc - 2U)] = 42U;
+                            r0[(size_t)(size11.sc - 1U)] = 23U;
                           }
-                          return ptr0;
+                          return r0;
                         }
                         else
                         {
-                          uint32_t size12 = sizes[arena_id * (size_t)27U + (size_t)12U];
-                          bool b12 = 4096U % size12 == 0U;
-                          if (b12 && bytes <= size12 - 2U && alignment <= size12)
+                          Constants_sc_full_ size12 = sizes[arena_id * (size_t)47U + (size_t)12U];
+                          bool b12 = size12.slab_size % size12.sc == 0U;
+                          if (b12 && bytes <= size12.sc - 2U && alignment <= size12.sc)
                           {
                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id *
-                                (size_t)27U
+                                (size_t)47U
                               + (size_t)12U].lock);
                             uint8_t
                             *r =
                               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id *
-                                  (size_t)27U
+                                  (size_t)47U
                                 + (size_t)12U].data);
                             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id *
-                                (size_t)27U
+                                (size_t)47U
                               + (size_t)12U].lock);
                             uint8_t *ptr = r;
-                            uint8_t *ptr0 = ptr;
-                            if (!(ptr0 == NULL))
+                            uint8_t *r0 = ptr;
+                            if (!(r0 == NULL))
                             {
-                              ptr0[(size_t)(size12 - 2U)] = 42U;
-                              ptr0[(size_t)(size12 - 1U)] = 23U;
+                              r0[(size_t)(size12.sc - 2U)] = 42U;
+                              r0[(size_t)(size12.sc - 1U)] = 23U;
                             }
-                            return ptr0;
+                            return r0;
                           }
                           else
                           {
-                            uint32_t size13 = sizes[arena_id * (size_t)27U + (size_t)13U];
-                            bool b13 = 4096U % size13 == 0U;
-                            if (b13 && bytes <= size13 - 2U && alignment <= size13)
+                            Constants_sc_full_ size13 = sizes[arena_id * (size_t)47U + (size_t)13U];
+                            bool b13 = size13.slab_size % size13.sc == 0U;
+                            if (b13 && bytes <= size13.sc - 2U && alignment <= size13.sc)
                             {
                               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id *
-                                  (size_t)27U
+                                  (size_t)47U
                                 + (size_t)13U].lock);
                               uint8_t
                               *r =
                                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id *
-                                    (size_t)27U
+                                    (size_t)47U
                                   + (size_t)13U].data);
                               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id *
-                                  (size_t)27U
+                                  (size_t)47U
                                 + (size_t)13U].lock);
                               uint8_t *ptr = r;
-                              uint8_t *ptr0 = ptr;
-                              if (!(ptr0 == NULL))
+                              uint8_t *r0 = ptr;
+                              if (!(r0 == NULL))
                               {
-                                ptr0[(size_t)(size13 - 2U)] = 42U;
-                                ptr0[(size_t)(size13 - 1U)] = 23U;
+                                r0[(size_t)(size13.sc - 2U)] = 42U;
+                                r0[(size_t)(size13.sc - 1U)] = 23U;
                               }
-                              return ptr0;
+                              return r0;
                             }
                             else
                             {
-                              uint32_t size14 = sizes[arena_id * (size_t)27U + (size_t)14U];
-                              bool b14 = 4096U % size14 == 0U;
-                              if (b14 && bytes <= size14 - 2U && alignment <= size14)
+                              Constants_sc_full_
+                              size14 = sizes[arena_id * (size_t)47U + (size_t)14U];
+                              bool b14 = size14.slab_size % size14.sc == 0U;
+                              if (b14 && bytes <= size14.sc - 2U && alignment <= size14.sc)
                               {
                                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id *
-                                    (size_t)27U
+                                    (size_t)47U
                                   + (size_t)14U].lock);
                                 uint8_t
                                 *r =
                                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id *
-                                      (size_t)27U
+                                      (size_t)47U
                                     + (size_t)14U].data);
                                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id *
-                                    (size_t)27U
+                                    (size_t)47U
                                   + (size_t)14U].lock);
                                 uint8_t *ptr = r;
-                                uint8_t *ptr0 = ptr;
-                                if (!(ptr0 == NULL))
+                                uint8_t *r0 = ptr;
+                                if (!(r0 == NULL))
                                 {
-                                  ptr0[(size_t)(size14 - 2U)] = 42U;
-                                  ptr0[(size_t)(size14 - 1U)] = 23U;
+                                  r0[(size_t)(size14.sc - 2U)] = 42U;
+                                  r0[(size_t)(size14.sc - 1U)] = 23U;
                                 }
-                                return ptr0;
+                                return r0;
                               }
                               else
                               {
-                                uint32_t size15 = sizes[arena_id * (size_t)27U + (size_t)15U];
-                                bool b15 = 4096U % size15 == 0U;
-                                if (b15 && bytes <= size15 - 2U && alignment <= size15)
+                                Constants_sc_full_
+                                size15 = sizes[arena_id * (size_t)47U + (size_t)15U];
+                                bool b15 = size15.slab_size % size15.sc == 0U;
+                                if (b15 && bytes <= size15.sc - 2U && alignment <= size15.sc)
                                 {
                                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id *
-                                      (size_t)27U
+                                      (size_t)47U
                                     + (size_t)15U].lock);
                                   uint8_t
                                   *r =
                                     allocate_size_class(Main_Meta_sc_all.size_classes[arena_id *
-                                        (size_t)27U
+                                        (size_t)47U
                                       + (size_t)15U].data);
                                   Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id *
-                                      (size_t)27U
+                                      (size_t)47U
                                     + (size_t)15U].lock);
                                   uint8_t *ptr = r;
-                                  uint8_t *ptr0 = ptr;
-                                  if (!(ptr0 == NULL))
+                                  uint8_t *r0 = ptr;
+                                  if (!(r0 == NULL))
                                   {
-                                    ptr0[(size_t)(size15 - 2U)] = 42U;
-                                    ptr0[(size_t)(size15 - 1U)] = 23U;
+                                    r0[(size_t)(size15.sc - 2U)] = 42U;
+                                    r0[(size_t)(size15.sc - 1U)] = 23U;
                                   }
-                                  return ptr0;
+                                  return r0;
                                 }
                                 else
                                 {
-                                  uint32_t size16 = sizes[arena_id * (size_t)27U + (size_t)16U];
-                                  bool b16 = 4096U % size16 == 0U;
-                                  if (b16 && bytes <= size16 - 2U && alignment <= size16)
+                                  Constants_sc_full_
+                                  size16 = sizes[arena_id * (size_t)47U + (size_t)16U];
+                                  bool b16 = size16.slab_size % size16.sc == 0U;
+                                  if (b16 && bytes <= size16.sc - 2U && alignment <= size16.sc)
                                   {
                                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id *
-                                        (size_t)27U
+                                        (size_t)47U
                                       + (size_t)16U].lock);
                                     uint8_t
                                     *r =
                                       allocate_size_class(Main_Meta_sc_all.size_classes[arena_id *
-                                          (size_t)27U
+                                          (size_t)47U
                                         + (size_t)16U].data);
                                     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id *
-                                        (size_t)27U
+                                        (size_t)47U
                                       + (size_t)16U].lock);
                                     uint8_t *ptr = r;
-                                    uint8_t *ptr0 = ptr;
-                                    if (!(ptr0 == NULL))
+                                    uint8_t *r0 = ptr;
+                                    if (!(r0 == NULL))
                                     {
-                                      ptr0[(size_t)(size16 - 2U)] = 42U;
-                                      ptr0[(size_t)(size16 - 1U)] = 23U;
+                                      r0[(size_t)(size16.sc - 2U)] = 42U;
+                                      r0[(size_t)(size16.sc - 1U)] = 23U;
                                     }
-                                    return ptr0;
+                                    return r0;
                                   }
                                   else
                                   {
-                                    uint32_t size17 = sizes[arena_id * (size_t)27U + (size_t)17U];
-                                    bool b17 = 4096U % size17 == 0U;
-                                    if (b17 && bytes <= size17 - 2U && alignment <= size17)
+                                    Constants_sc_full_
+                                    size17 = sizes[arena_id * (size_t)47U + (size_t)17U];
+                                    bool b17 = size17.slab_size % size17.sc == 0U;
+                                    if (b17 && bytes <= size17.sc - 2U && alignment <= size17.sc)
                                     {
                                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                        * (size_t)27U
+                                        * (size_t)47U
                                         + (size_t)17U].lock);
                                       uint8_t
                                       *r =
                                         allocate_size_class(Main_Meta_sc_all.size_classes[arena_id *
-                                            (size_t)27U
+                                            (size_t)47U
                                           + (size_t)17U].data);
                                       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                        * (size_t)27U
+                                        * (size_t)47U
                                         + (size_t)17U].lock);
                                       uint8_t *ptr = r;
-                                      uint8_t *ptr0 = ptr;
-                                      if (!(ptr0 == NULL))
+                                      uint8_t *r0 = ptr;
+                                      if (!(r0 == NULL))
                                       {
-                                        ptr0[(size_t)(size17 - 2U)] = 42U;
-                                        ptr0[(size_t)(size17 - 1U)] = 23U;
+                                        r0[(size_t)(size17.sc - 2U)] = 42U;
+                                        r0[(size_t)(size17.sc - 1U)] = 23U;
                                       }
-                                      return ptr0;
+                                      return r0;
                                     }
                                     else
                                     {
-                                      uint32_t size18 = sizes[arena_id * (size_t)27U + (size_t)18U];
-                                      bool b18 = 4096U % size18 == 0U;
-                                      if (b18 && bytes <= size18 - 2U && alignment <= size18)
+                                      Constants_sc_full_
+                                      size18 = sizes[arena_id * (size_t)47U + (size_t)18U];
+                                      bool b18 = size18.slab_size % size18.sc == 0U;
+                                      if (b18 && bytes <= size18.sc - 2U && alignment <= size18.sc)
                                       {
                                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                          * (size_t)27U
+                                          * (size_t)47U
                                           + (size_t)18U].lock);
                                         uint8_t
                                         *r =
                                           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)27U
+                                            * (size_t)47U
                                             + (size_t)18U].data);
                                         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                          * (size_t)27U
+                                          * (size_t)47U
                                           + (size_t)18U].lock);
                                         uint8_t *ptr = r;
-                                        uint8_t *ptr0 = ptr;
-                                        if (!(ptr0 == NULL))
+                                        uint8_t *r0 = ptr;
+                                        if (!(r0 == NULL))
                                         {
-                                          ptr0[(size_t)(size18 - 2U)] = 42U;
-                                          ptr0[(size_t)(size18 - 1U)] = 23U;
+                                          r0[(size_t)(size18.sc - 2U)] = 42U;
+                                          r0[(size_t)(size18.sc - 1U)] = 23U;
                                         }
-                                        return ptr0;
+                                        return r0;
                                       }
                                       else
                                       {
-                                        uint32_t
-                                        size19 = sizes[arena_id * (size_t)27U + (size_t)19U];
-                                        bool b19 = 4096U % size19 == 0U;
-                                        if (b19 && bytes <= size19 - 2U && alignment <= size19)
+                                        Constants_sc_full_
+                                        size19 = sizes[arena_id * (size_t)47U + (size_t)19U];
+                                        bool b19 = size19.slab_size % size19.sc == 0U;
+                                        if
+                                        (b19 && bytes <= size19.sc - 2U && alignment <= size19.sc)
                                         {
                                           Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)27U
+                                            * (size_t)47U
                                             + (size_t)19U].lock);
                                           uint8_t
                                           *r =
                                             allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)27U
+                                              * (size_t)47U
                                               + (size_t)19U].data);
                                           Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                            * (size_t)27U
+                                            * (size_t)47U
                                             + (size_t)19U].lock);
                                           uint8_t *ptr = r;
-                                          uint8_t *ptr0 = ptr;
-                                          if (!(ptr0 == NULL))
+                                          uint8_t *r0 = ptr;
+                                          if (!(r0 == NULL))
                                           {
-                                            ptr0[(size_t)(size19 - 2U)] = 42U;
-                                            ptr0[(size_t)(size19 - 1U)] = 23U;
+                                            r0[(size_t)(size19.sc - 2U)] = 42U;
+                                            r0[(size_t)(size19.sc - 1U)] = 23U;
                                           }
-                                          return ptr0;
+                                          return r0;
                                         }
                                         else
                                         {
-                                          uint32_t
-                                          size20 = sizes[arena_id * (size_t)27U + (size_t)20U];
-                                          bool b20 = 4096U % size20 == 0U;
-                                          if (b20 && bytes <= size20 - 2U && alignment <= size20)
+                                          Constants_sc_full_
+                                          size20 = sizes[arena_id * (size_t)47U + (size_t)20U];
+                                          bool b20 = size20.slab_size % size20.sc == 0U;
+                                          if
+                                          (b20 && bytes <= size20.sc - 2U && alignment <= size20.sc)
                                           {
                                             Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)27U
+                                              * (size_t)47U
                                               + (size_t)20U].lock);
                                             uint8_t
                                             *r =
                                               allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)27U
+                                                * (size_t)47U
                                                 + (size_t)20U].data);
                                             Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                              * (size_t)27U
+                                              * (size_t)47U
                                               + (size_t)20U].lock);
                                             uint8_t *ptr = r;
-                                            uint8_t *ptr0 = ptr;
-                                            if (!(ptr0 == NULL))
+                                            uint8_t *r0 = ptr;
+                                            if (!(r0 == NULL))
                                             {
-                                              ptr0[(size_t)(size20 - 2U)] = 42U;
-                                              ptr0[(size_t)(size20 - 1U)] = 23U;
+                                              r0[(size_t)(size20.sc - 2U)] = 42U;
+                                              r0[(size_t)(size20.sc - 1U)] = 23U;
                                             }
-                                            return ptr0;
+                                            return r0;
                                           }
                                           else
                                           {
-                                            uint32_t
-                                            size21 = sizes[arena_id * (size_t)27U + (size_t)21U];
-                                            bool b21 = 4096U % size21 == 0U;
-                                            if (b21 && bytes <= size21 - 2U && alignment <= size21)
+                                            Constants_sc_full_
+                                            size21 = sizes[arena_id * (size_t)47U + (size_t)21U];
+                                            bool b21 = size21.slab_size % size21.sc == 0U;
+                                            if
+                                            (
+                                              b21 && bytes <= size21.sc - 2U &&
+                                                alignment <= size21.sc
+                                            )
                                             {
                                               Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)27U
+                                                * (size_t)47U
                                                 + (size_t)21U].lock);
                                               uint8_t
                                               *r =
                                                 allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)27U
+                                                  * (size_t)47U
                                                   + (size_t)21U].data);
                                               Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                * (size_t)27U
+                                                * (size_t)47U
                                                 + (size_t)21U].lock);
                                               uint8_t *ptr = r;
-                                              uint8_t *ptr0 = ptr;
-                                              if (!(ptr0 == NULL))
+                                              uint8_t *r0 = ptr;
+                                              if (!(r0 == NULL))
                                               {
-                                                ptr0[(size_t)(size21 - 2U)] = 42U;
-                                                ptr0[(size_t)(size21 - 1U)] = 23U;
+                                                r0[(size_t)(size21.sc - 2U)] = 42U;
+                                                r0[(size_t)(size21.sc - 1U)] = 23U;
                                               }
-                                              return ptr0;
+                                              return r0;
                                             }
                                             else
                                             {
-                                              uint32_t
-                                              size22 = sizes[arena_id * (size_t)27U + (size_t)22U];
-                                              bool b22 = 4096U % size22 == 0U;
+                                              Constants_sc_full_
+                                              size22 = sizes[arena_id * (size_t)47U + (size_t)22U];
+                                              bool b22 = size22.slab_size % size22.sc == 0U;
                                               if
-                                              (b22 && bytes <= size22 - 2U && alignment <= size22)
+                                              (
+                                                b22 && bytes <= size22.sc - 2U &&
+                                                  alignment <= size22.sc
+                                              )
                                               {
                                                 Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)27U
+                                                  * (size_t)47U
                                                   + (size_t)22U].lock);
                                                 uint8_t
                                                 *r =
                                                   allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)27U
+                                                    * (size_t)47U
                                                     + (size_t)22U].data);
                                                 Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                  * (size_t)27U
+                                                  * (size_t)47U
                                                   + (size_t)22U].lock);
                                                 uint8_t *ptr = r;
-                                                uint8_t *ptr0 = ptr;
-                                                if (!(ptr0 == NULL))
+                                                uint8_t *r0 = ptr;
+                                                if (!(r0 == NULL))
                                                 {
-                                                  ptr0[(size_t)(size22 - 2U)] = 42U;
-                                                  ptr0[(size_t)(size22 - 1U)] = 23U;
+                                                  r0[(size_t)(size22.sc - 2U)] = 42U;
+                                                  r0[(size_t)(size22.sc - 1U)] = 23U;
                                                 }
-                                                return ptr0;
+                                                return r0;
                                               }
                                               else
                                               {
-                                                uint32_t
-                                                size23 = sizes[arena_id * (size_t)27U + (size_t)23U];
-                                                bool b23 = 4096U % size23 == 0U;
+                                                Constants_sc_full_
+                                                size23 = sizes[arena_id * (size_t)47U + (size_t)23U];
+                                                bool b23 = size23.slab_size % size23.sc == 0U;
                                                 if
-                                                (b23 && bytes <= size23 - 2U && alignment <= size23)
+                                                (
+                                                  b23 && bytes <= size23.sc - 2U &&
+                                                    alignment <= size23.sc
+                                                )
                                                 {
                                                   Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)27U
+                                                    * (size_t)47U
                                                     + (size_t)23U].lock);
                                                   uint8_t
                                                   *r =
                                                     allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)27U
+                                                      * (size_t)47U
                                                       + (size_t)23U].data);
                                                   Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                    * (size_t)27U
+                                                    * (size_t)47U
                                                     + (size_t)23U].lock);
                                                   uint8_t *ptr = r;
-                                                  uint8_t *ptr0 = ptr;
-                                                  if (!(ptr0 == NULL))
+                                                  uint8_t *r0 = ptr;
+                                                  if (!(r0 == NULL))
                                                   {
-                                                    ptr0[(size_t)(size23 - 2U)] = 42U;
-                                                    ptr0[(size_t)(size23 - 1U)] = 23U;
+                                                    r0[(size_t)(size23.sc - 2U)] = 42U;
+                                                    r0[(size_t)(size23.sc - 1U)] = 23U;
                                                   }
-                                                  return ptr0;
+                                                  return r0;
                                                 }
                                                 else
                                                 {
-                                                  uint32_t
+                                                  Constants_sc_full_
                                                   size24 =
-                                                    sizes[arena_id * (size_t)27U + (size_t)24U];
-                                                  bool b24 = 4096U % size24 == 0U;
+                                                    sizes[arena_id * (size_t)47U + (size_t)24U];
+                                                  bool b24 = size24.slab_size % size24.sc == 0U;
                                                   if
                                                   (
-                                                    b24 && bytes <= size24 - 2U &&
-                                                      alignment <= size24
+                                                    b24 && bytes <= size24.sc - 2U &&
+                                                      alignment <= size24.sc
                                                   )
                                                   {
                                                     Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)27U
+                                                      * (size_t)47U
                                                       + (size_t)24U].lock);
                                                     uint8_t
                                                     *r =
                                                       allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)27U
+                                                        * (size_t)47U
                                                         + (size_t)24U].data);
                                                     Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                      * (size_t)27U
+                                                      * (size_t)47U
                                                       + (size_t)24U].lock);
                                                     uint8_t *ptr = r;
-                                                    uint8_t *ptr0 = ptr;
-                                                    if (!(ptr0 == NULL))
+                                                    uint8_t *r0 = ptr;
+                                                    if (!(r0 == NULL))
                                                     {
-                                                      ptr0[(size_t)(size24 - 2U)] = 42U;
-                                                      ptr0[(size_t)(size24 - 1U)] = 23U;
+                                                      r0[(size_t)(size24.sc - 2U)] = 42U;
+                                                      r0[(size_t)(size24.sc - 1U)] = 23U;
                                                     }
-                                                    return ptr0;
+                                                    return r0;
                                                   }
                                                   else
                                                   {
-                                                    uint32_t
+                                                    Constants_sc_full_
                                                     size25 =
-                                                      sizes[arena_id * (size_t)27U + (size_t)25U];
-                                                    bool b25 = 4096U % size25 == 0U;
+                                                      sizes[arena_id * (size_t)47U + (size_t)25U];
+                                                    bool b25 = size25.slab_size % size25.sc == 0U;
                                                     if
                                                     (
-                                                      b25 && bytes <= size25 - 2U &&
-                                                        alignment <= size25
+                                                      b25 && bytes <= size25.sc - 2U &&
+                                                        alignment <= size25.sc
                                                     )
                                                     {
                                                       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)27U
+                                                        * (size_t)47U
                                                         + (size_t)25U].lock);
                                                       uint8_t
                                                       *r =
                                                         allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)27U
+                                                          * (size_t)47U
                                                           + (size_t)25U].data);
                                                       Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                        * (size_t)27U
+                                                        * (size_t)47U
                                                         + (size_t)25U].lock);
                                                       uint8_t *ptr = r;
-                                                      uint8_t *ptr0 = ptr;
-                                                      if (!(ptr0 == NULL))
+                                                      uint8_t *r0 = ptr;
+                                                      if (!(r0 == NULL))
                                                       {
-                                                        ptr0[(size_t)(size25 - 2U)] = 42U;
-                                                        ptr0[(size_t)(size25 - 1U)] = 23U;
+                                                        r0[(size_t)(size25.sc - 2U)] = 42U;
+                                                        r0[(size_t)(size25.sc - 1U)] = 23U;
                                                       }
-                                                      return ptr0;
+                                                      return r0;
                                                     }
                                                     else
                                                     {
-                                                      uint32_t
+                                                      Constants_sc_full_
                                                       size26 =
-                                                        sizes[arena_id * (size_t)27U + (size_t)26U];
-                                                      bool b26 = 4096U % size26 == 0U;
+                                                        sizes[arena_id * (size_t)47U + (size_t)26U];
+                                                      bool b26 = size26.slab_size % size26.sc == 0U;
                                                       if
                                                       (
-                                                        b26 && bytes <= size26 - 2U &&
-                                                          alignment <= size26
+                                                        b26 && bytes <= size26.sc - 2U &&
+                                                          alignment <= size26.sc
                                                       )
                                                       {
                                                         Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)27U
+                                                          * (size_t)47U
                                                           + (size_t)26U].lock);
                                                         uint8_t
                                                         *r =
                                                           allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
-                                                            * (size_t)27U
+                                                            * (size_t)47U
                                                             + (size_t)26U].data);
                                                         Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
-                                                          * (size_t)27U
+                                                          * (size_t)47U
                                                           + (size_t)26U].lock);
                                                         uint8_t *ptr = r;
-                                                        uint8_t *ptr0 = ptr;
-                                                        if (!(ptr0 == NULL))
+                                                        uint8_t *r0 = ptr;
+                                                        if (!(r0 == NULL))
                                                         {
-                                                          ptr0[(size_t)(size26 - 2U)] = 42U;
-                                                          ptr0[(size_t)(size26 - 1U)] = 23U;
+                                                          r0[(size_t)(size26.sc - 2U)] = 42U;
+                                                          r0[(size_t)(size26.sc - 1U)] = 23U;
                                                         }
-                                                        return ptr0;
+                                                        return r0;
                                                       }
                                                       else
-                                                        return NULL;
+                                                      {
+                                                        Constants_sc_full_
+                                                        size27 =
+                                                          sizes[arena_id * (size_t)47U + (size_t)27U];
+                                                        bool
+                                                        b27 = size27.slab_size % size27.sc == 0U;
+                                                        if
+                                                        (
+                                                          b27 && bytes <= size27.sc - 2U &&
+                                                            alignment <= size27.sc
+                                                        )
+                                                        {
+                                                          Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                            * (size_t)47U
+                                                            + (size_t)27U].lock);
+                                                          uint8_t
+                                                          *r =
+                                                            allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                              * (size_t)47U
+                                                              + (size_t)27U].data);
+                                                          Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                            * (size_t)47U
+                                                            + (size_t)27U].lock);
+                                                          uint8_t *ptr = r;
+                                                          uint8_t *r0 = ptr;
+                                                          if (!(r0 == NULL))
+                                                          {
+                                                            r0[(size_t)(size27.sc - 2U)] = 42U;
+                                                            r0[(size_t)(size27.sc - 1U)] = 23U;
+                                                          }
+                                                          return r0;
+                                                        }
+                                                        else
+                                                        {
+                                                          Constants_sc_full_
+                                                          size28 =
+                                                            sizes[arena_id * (size_t)47U +
+                                                              (size_t)28U];
+                                                          bool
+                                                          b28 = size28.slab_size % size28.sc == 0U;
+                                                          if
+                                                          (
+                                                            b28 && bytes <= size28.sc - 2U &&
+                                                              alignment <= size28.sc
+                                                          )
+                                                          {
+                                                            Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                              * (size_t)47U
+                                                              + (size_t)28U].lock);
+                                                            uint8_t
+                                                            *r =
+                                                              allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                * (size_t)47U
+                                                                + (size_t)28U].data);
+                                                            Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                              * (size_t)47U
+                                                              + (size_t)28U].lock);
+                                                            uint8_t *ptr = r;
+                                                            uint8_t *r0 = ptr;
+                                                            if (!(r0 == NULL))
+                                                            {
+                                                              r0[(size_t)(size28.sc - 2U)] = 42U;
+                                                              r0[(size_t)(size28.sc - 1U)] = 23U;
+                                                            }
+                                                            return r0;
+                                                          }
+                                                          else
+                                                          {
+                                                            Constants_sc_full_
+                                                            size29 =
+                                                              sizes[arena_id * (size_t)47U +
+                                                                (size_t)29U];
+                                                            bool
+                                                            b29 = size29.slab_size % size29.sc == 0U;
+                                                            if
+                                                            (
+                                                              b29 && bytes <= size29.sc - 2U &&
+                                                                alignment <= size29.sc
+                                                            )
+                                                            {
+                                                              Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                * (size_t)47U
+                                                                + (size_t)29U].lock);
+                                                              uint8_t
+                                                              *r =
+                                                                allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                  * (size_t)47U
+                                                                  + (size_t)29U].data);
+                                                              Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                * (size_t)47U
+                                                                + (size_t)29U].lock);
+                                                              uint8_t *ptr = r;
+                                                              uint8_t *r0 = ptr;
+                                                              if (!(r0 == NULL))
+                                                              {
+                                                                r0[(size_t)(size29.sc - 2U)] = 42U;
+                                                                r0[(size_t)(size29.sc - 1U)] = 23U;
+                                                              }
+                                                              return r0;
+                                                            }
+                                                            else
+                                                            {
+                                                              Constants_sc_full_
+                                                              size30 =
+                                                                sizes[arena_id * (size_t)47U +
+                                                                  (size_t)30U];
+                                                              bool
+                                                              b30 =
+                                                                size30.slab_size % size30.sc == 0U;
+                                                              if
+                                                              (
+                                                                b30 && bytes <= size30.sc - 2U &&
+                                                                  alignment <= size30.sc
+                                                              )
+                                                              {
+                                                                Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                  * (size_t)47U
+                                                                  + (size_t)30U].lock);
+                                                                uint8_t
+                                                                *r =
+                                                                  allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                    * (size_t)47U
+                                                                    + (size_t)30U].data);
+                                                                Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                  * (size_t)47U
+                                                                  + (size_t)30U].lock);
+                                                                uint8_t *ptr = r;
+                                                                uint8_t *r0 = ptr;
+                                                                if (!(r0 == NULL))
+                                                                {
+                                                                  r0[(size_t)(size30.sc - 2U)] = 42U;
+                                                                  r0[(size_t)(size30.sc - 1U)] = 23U;
+                                                                }
+                                                                return r0;
+                                                              }
+                                                              else
+                                                              {
+                                                                Constants_sc_full_
+                                                                size31 =
+                                                                  sizes[arena_id * (size_t)47U +
+                                                                    (size_t)31U];
+                                                                bool
+                                                                b31 =
+                                                                  size31.slab_size % size31.sc == 0U;
+                                                                if
+                                                                (
+                                                                  b31 && bytes <= size31.sc - 2U &&
+                                                                    alignment <= size31.sc
+                                                                )
+                                                                {
+                                                                  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                    * (size_t)47U
+                                                                    + (size_t)31U].lock);
+                                                                  uint8_t
+                                                                  *r =
+                                                                    allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                      * (size_t)47U
+                                                                      + (size_t)31U].data);
+                                                                  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                    * (size_t)47U
+                                                                    + (size_t)31U].lock);
+                                                                  uint8_t *ptr = r;
+                                                                  uint8_t *r0 = ptr;
+                                                                  if (!(r0 == NULL))
+                                                                  {
+                                                                    r0[(size_t)(size31.sc - 2U)] =
+                                                                      42U;
+                                                                    r0[(size_t)(size31.sc - 1U)] =
+                                                                      23U;
+                                                                  }
+                                                                  return r0;
+                                                                }
+                                                                else
+                                                                {
+                                                                  Constants_sc_full_
+                                                                  size32 =
+                                                                    sizes[arena_id * (size_t)47U +
+                                                                      (size_t)32U];
+                                                                  bool
+                                                                  b32 =
+                                                                    size32.slab_size % size32.sc ==
+                                                                      0U;
+                                                                  if
+                                                                  (
+                                                                    b32 && bytes <= size32.sc - 2U
+                                                                    && alignment <= size32.sc
+                                                                  )
+                                                                  {
+                                                                    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                      * (size_t)47U
+                                                                      + (size_t)32U].lock);
+                                                                    uint8_t
+                                                                    *r =
+                                                                      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                        * (size_t)47U
+                                                                        + (size_t)32U].data);
+                                                                    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                      * (size_t)47U
+                                                                      + (size_t)32U].lock);
+                                                                    uint8_t *ptr = r;
+                                                                    uint8_t *r0 = ptr;
+                                                                    if (!(r0 == NULL))
+                                                                    {
+                                                                      r0[(size_t)(size32.sc - 2U)] =
+                                                                        42U;
+                                                                      r0[(size_t)(size32.sc - 1U)] =
+                                                                        23U;
+                                                                    }
+                                                                    return r0;
+                                                                  }
+                                                                  else
+                                                                  {
+                                                                    Constants_sc_full_
+                                                                    size33 =
+                                                                      sizes[arena_id * (size_t)47U +
+                                                                        (size_t)33U];
+                                                                    bool
+                                                                    b33 =
+                                                                      size33.slab_size % size33.sc
+                                                                      == 0U;
+                                                                    if
+                                                                    (
+                                                                      b33 && bytes <= size33.sc - 2U
+                                                                      && alignment <= size33.sc
+                                                                    )
+                                                                    {
+                                                                      Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                        * (size_t)47U
+                                                                        + (size_t)33U].lock);
+                                                                      uint8_t
+                                                                      *r =
+                                                                        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                          * (size_t)47U
+                                                                          + (size_t)33U].data);
+                                                                      Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                        * (size_t)47U
+                                                                        + (size_t)33U].lock);
+                                                                      uint8_t *ptr = r;
+                                                                      uint8_t *r0 = ptr;
+                                                                      if (!(r0 == NULL))
+                                                                      {
+                                                                        r0[(size_t)(size33.sc - 2U)]
+                                                                        = 42U;
+                                                                        r0[(size_t)(size33.sc - 1U)]
+                                                                        = 23U;
+                                                                      }
+                                                                      return r0;
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                      Constants_sc_full_
+                                                                      size34 =
+                                                                        sizes[arena_id * (size_t)47U
+                                                                        + (size_t)34U];
+                                                                      bool
+                                                                      b34 =
+                                                                        size34.slab_size % size34.sc
+                                                                        == 0U;
+                                                                      if
+                                                                      (
+                                                                        b34 &&
+                                                                          bytes <= size34.sc - 2U
+                                                                        && alignment <= size34.sc
+                                                                      )
+                                                                      {
+                                                                        Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                          * (size_t)47U
+                                                                          + (size_t)34U].lock);
+                                                                        uint8_t
+                                                                        *r =
+                                                                          allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                            * (size_t)47U
+                                                                            + (size_t)34U].data);
+                                                                        Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                          * (size_t)47U
+                                                                          + (size_t)34U].lock);
+                                                                        uint8_t *ptr = r;
+                                                                        uint8_t *r0 = ptr;
+                                                                        if (!(r0 == NULL))
+                                                                        {
+                                                                          r0[(size_t)(size34.sc - 2U)]
+                                                                          = 42U;
+                                                                          r0[(size_t)(size34.sc - 1U)]
+                                                                          = 23U;
+                                                                        }
+                                                                        return r0;
+                                                                      }
+                                                                      else
+                                                                      {
+                                                                        Constants_sc_full_
+                                                                        size35 =
+                                                                          sizes[arena_id *
+                                                                            (size_t)47U
+                                                                          + (size_t)35U];
+                                                                        bool
+                                                                        b35 =
+                                                                          size35.slab_size %
+                                                                            size35.sc
+                                                                          == 0U;
+                                                                        if
+                                                                        (
+                                                                          b35 &&
+                                                                            bytes <= size35.sc - 2U
+                                                                          && alignment <= size35.sc
+                                                                        )
+                                                                        {
+                                                                          Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                            * (size_t)47U
+                                                                            + (size_t)35U].lock);
+                                                                          uint8_t
+                                                                          *r =
+                                                                            allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                              * (size_t)47U
+                                                                              + (size_t)35U].data);
+                                                                          Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                            * (size_t)47U
+                                                                            + (size_t)35U].lock);
+                                                                          uint8_t *ptr = r;
+                                                                          uint8_t *r0 = ptr;
+                                                                          if (!(r0 == NULL))
+                                                                          {
+                                                                            r0[(size_t)(size35.sc -
+                                                                              2U)]
+                                                                            = 42U;
+                                                                            r0[(size_t)(size35.sc -
+                                                                              1U)]
+                                                                            = 23U;
+                                                                          }
+                                                                          return r0;
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                          Constants_sc_full_
+                                                                          size36 =
+                                                                            sizes[arena_id *
+                                                                              (size_t)47U
+                                                                            + (size_t)36U];
+                                                                          bool
+                                                                          b36 =
+                                                                            size36.slab_size %
+                                                                              size36.sc
+                                                                            == 0U;
+                                                                          if
+                                                                          (
+                                                                            b36 &&
+                                                                              bytes <=
+                                                                                size36.sc - 2U
+                                                                            &&
+                                                                              alignment <= size36.sc
+                                                                          )
+                                                                          {
+                                                                            Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                              * (size_t)47U
+                                                                              + (size_t)36U].lock);
+                                                                            uint8_t
+                                                                            *r =
+                                                                              allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                * (size_t)47U
+                                                                                + (size_t)36U].data);
+                                                                            Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                              * (size_t)47U
+                                                                              + (size_t)36U].lock);
+                                                                            uint8_t *ptr = r;
+                                                                            uint8_t *r0 = ptr;
+                                                                            if (!(r0 == NULL))
+                                                                            {
+                                                                              r0[(size_t)(size36.sc
+                                                                              - 2U)]
+                                                                              = 42U;
+                                                                              r0[(size_t)(size36.sc
+                                                                              - 1U)]
+                                                                              = 23U;
+                                                                            }
+                                                                            return r0;
+                                                                          }
+                                                                          else
+                                                                          {
+                                                                            Constants_sc_full_
+                                                                            size37 =
+                                                                              sizes[arena_id *
+                                                                                (size_t)47U
+                                                                              + (size_t)37U];
+                                                                            bool
+                                                                            b37 =
+                                                                              size37.slab_size %
+                                                                                size37.sc
+                                                                              == 0U;
+                                                                            if
+                                                                            (
+                                                                              b37 &&
+                                                                                bytes <=
+                                                                                  size37.sc - 2U
+                                                                              &&
+                                                                                alignment <=
+                                                                                  size37.sc
+                                                                            )
+                                                                            {
+                                                                              Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                * (size_t)47U
+                                                                                + (size_t)37U].lock);
+                                                                              uint8_t
+                                                                              *r =
+                                                                                allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                  * (size_t)47U
+                                                                                  + (size_t)37U].data);
+                                                                              Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                * (size_t)47U
+                                                                                + (size_t)37U].lock);
+                                                                              uint8_t *ptr = r;
+                                                                              uint8_t *r0 = ptr;
+                                                                              if (!(r0 == NULL))
+                                                                              {
+                                                                                r0[(size_t)(size37.sc
+                                                                                - 2U)]
+                                                                                = 42U;
+                                                                                r0[(size_t)(size37.sc
+                                                                                - 1U)]
+                                                                                = 23U;
+                                                                              }
+                                                                              return r0;
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                              Constants_sc_full_
+                                                                              size38 =
+                                                                                sizes[arena_id *
+                                                                                  (size_t)47U
+                                                                                + (size_t)38U];
+                                                                              bool
+                                                                              b38 =
+                                                                                size38.slab_size %
+                                                                                  size38.sc
+                                                                                == 0U;
+                                                                              if
+                                                                              (
+                                                                                b38 &&
+                                                                                  bytes <=
+                                                                                    size38.sc - 2U
+                                                                                &&
+                                                                                  alignment <=
+                                                                                    size38.sc
+                                                                              )
+                                                                              {
+                                                                                Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                  * (size_t)47U
+                                                                                  + (size_t)38U].lock);
+                                                                                uint8_t
+                                                                                *r =
+                                                                                  allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                    * (size_t)47U
+                                                                                    + (size_t)38U].data);
+                                                                                Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                  * (size_t)47U
+                                                                                  + (size_t)38U].lock);
+                                                                                uint8_t *ptr = r;
+                                                                                uint8_t *r0 = ptr;
+                                                                                if (!(r0 == NULL))
+                                                                                {
+                                                                                  r0[(size_t)(size38.sc
+                                                                                  - 2U)]
+                                                                                  = 42U;
+                                                                                  r0[(size_t)(size38.sc
+                                                                                  - 1U)]
+                                                                                  = 23U;
+                                                                                }
+                                                                                return r0;
+                                                                              }
+                                                                              else
+                                                                              {
+                                                                                Constants_sc_full_
+                                                                                size39 =
+                                                                                  sizes[arena_id *
+                                                                                    (size_t)47U
+                                                                                  + (size_t)39U];
+                                                                                bool
+                                                                                b39 =
+                                                                                  size39.slab_size %
+                                                                                    size39.sc
+                                                                                  == 0U;
+                                                                                if
+                                                                                (
+                                                                                  b39 &&
+                                                                                    bytes <=
+                                                                                      size39.sc - 2U
+                                                                                  &&
+                                                                                    alignment <=
+                                                                                      size39.sc
+                                                                                )
+                                                                                {
+                                                                                  Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                    * (size_t)47U
+                                                                                    + (size_t)39U].lock);
+                                                                                  uint8_t
+                                                                                  *r =
+                                                                                    allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                      * (size_t)47U
+                                                                                      + (size_t)39U].data);
+                                                                                  Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                    * (size_t)47U
+                                                                                    + (size_t)39U].lock);
+                                                                                  uint8_t *ptr = r;
+                                                                                  uint8_t *r0 = ptr;
+                                                                                  if (!(r0 == NULL))
+                                                                                  {
+                                                                                    r0[(size_t)(size39.sc
+                                                                                    - 2U)]
+                                                                                    = 42U;
+                                                                                    r0[(size_t)(size39.sc
+                                                                                    - 1U)]
+                                                                                    = 23U;
+                                                                                  }
+                                                                                  return r0;
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                  Constants_sc_full_
+                                                                                  size40 =
+                                                                                    sizes[arena_id *
+                                                                                      (size_t)47U
+                                                                                    + (size_t)40U];
+                                                                                  bool
+                                                                                  b40 =
+                                                                                    size40.slab_size
+                                                                                    % size40.sc
+                                                                                    == 0U;
+                                                                                  if
+                                                                                  (
+                                                                                    b40 &&
+                                                                                      bytes <=
+                                                                                        size40.sc -
+                                                                                          2U
+                                                                                    &&
+                                                                                      alignment <=
+                                                                                        size40.sc
+                                                                                  )
+                                                                                  {
+                                                                                    Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                      * (size_t)47U
+                                                                                      + (size_t)40U].lock);
+                                                                                    uint8_t
+                                                                                    *r =
+                                                                                      allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                        *
+                                                                                          (size_t)47U
+                                                                                        +
+                                                                                          (size_t)40U].data);
+                                                                                    Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                      * (size_t)47U
+                                                                                      + (size_t)40U].lock);
+                                                                                    uint8_t
+                                                                                    *ptr = r;
+                                                                                    uint8_t
+                                                                                    *r0 = ptr;
+                                                                                    if
+                                                                                    (!(r0 == NULL))
+                                                                                    {
+                                                                                      r0[(size_t)(size40.sc
+                                                                                      - 2U)]
+                                                                                      = 42U;
+                                                                                      r0[(size_t)(size40.sc
+                                                                                      - 1U)]
+                                                                                      = 23U;
+                                                                                    }
+                                                                                    return r0;
+                                                                                  }
+                                                                                  else
+                                                                                  {
+                                                                                    Constants_sc_full_
+                                                                                    size41 =
+                                                                                      sizes[arena_id
+                                                                                      * (size_t)47U
+                                                                                      + (size_t)41U];
+                                                                                    bool
+                                                                                    b41 =
+                                                                                      size41.slab_size
+                                                                                      % size41.sc
+                                                                                      == 0U;
+                                                                                    if
+                                                                                    (
+                                                                                      b41 &&
+                                                                                        bytes <=
+                                                                                          size41.sc
+                                                                                          - 2U
+                                                                                      &&
+                                                                                        alignment <=
+                                                                                          size41.sc
+                                                                                    )
+                                                                                    {
+                                                                                      Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                        *
+                                                                                          (size_t)47U
+                                                                                        +
+                                                                                          (size_t)41U].lock);
+                                                                                      uint8_t
+                                                                                      *r =
+                                                                                        allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                          *
+                                                                                            (size_t)47U
+                                                                                          +
+                                                                                            (size_t)41U].data);
+                                                                                      Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                        *
+                                                                                          (size_t)47U
+                                                                                        +
+                                                                                          (size_t)41U].lock);
+                                                                                      uint8_t
+                                                                                      *ptr = r;
+                                                                                      uint8_t
+                                                                                      *r0 = ptr;
+                                                                                      if
+                                                                                      (
+                                                                                        !(r0 == NULL)
+                                                                                      )
+                                                                                      {
+                                                                                        r0[(size_t)(size41.sc
+                                                                                        - 2U)]
+                                                                                        = 42U;
+                                                                                        r0[(size_t)(size41.sc
+                                                                                        - 1U)]
+                                                                                        = 23U;
+                                                                                      }
+                                                                                      return r0;
+                                                                                    }
+                                                                                    else
+                                                                                    {
+                                                                                      Constants_sc_full_
+                                                                                      size42 =
+                                                                                        sizes[arena_id
+                                                                                        *
+                                                                                          (size_t)47U
+                                                                                        +
+                                                                                          (size_t)42U];
+                                                                                      bool
+                                                                                      b42 =
+                                                                                        size42.slab_size
+                                                                                        % size42.sc
+                                                                                        == 0U;
+                                                                                      if
+                                                                                      (
+                                                                                        b42 &&
+                                                                                          bytes <=
+                                                                                            size42.sc
+                                                                                            - 2U
+                                                                                        &&
+                                                                                          alignment
+                                                                                          <=
+                                                                                            size42.sc
+                                                                                      )
+                                                                                      {
+                                                                                        Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                          *
+                                                                                            (size_t)47U
+                                                                                          +
+                                                                                            (size_t)42U].lock);
+                                                                                        uint8_t
+                                                                                        *r =
+                                                                                          allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                            *
+                                                                                              (size_t)47U
+                                                                                            +
+                                                                                              (size_t)42U].data);
+                                                                                        Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                          *
+                                                                                            (size_t)47U
+                                                                                          +
+                                                                                            (size_t)42U].lock);
+                                                                                        uint8_t
+                                                                                        *ptr = r;
+                                                                                        uint8_t
+                                                                                        *r0 = ptr;
+                                                                                        if
+                                                                                        (
+                                                                                          !(r0 ==
+                                                                                            NULL)
+                                                                                        )
+                                                                                        {
+                                                                                          r0[(size_t)(size42.sc
+                                                                                          - 2U)]
+                                                                                          = 42U;
+                                                                                          r0[(size_t)(size42.sc
+                                                                                          - 1U)]
+                                                                                          = 23U;
+                                                                                        }
+                                                                                        return r0;
+                                                                                      }
+                                                                                      else
+                                                                                      {
+                                                                                        Constants_sc_full_
+                                                                                        size43 =
+                                                                                          sizes[arena_id
+                                                                                          *
+                                                                                            (size_t)47U
+                                                                                          +
+                                                                                            (size_t)43U];
+                                                                                        bool
+                                                                                        b43 =
+                                                                                          size43.slab_size
+                                                                                          %
+                                                                                            size43.sc
+                                                                                          == 0U;
+                                                                                        if
+                                                                                        (
+                                                                                          b43 &&
+                                                                                            bytes <=
+                                                                                              size43.sc
+                                                                                              - 2U
+                                                                                          &&
+                                                                                            alignment
+                                                                                            <=
+                                                                                              size43.sc
+                                                                                        )
+                                                                                        {
+                                                                                          Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                            *
+                                                                                              (size_t)47U
+                                                                                            +
+                                                                                              (size_t)43U].lock);
+                                                                                          uint8_t
+                                                                                          *r =
+                                                                                            allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                              *
+                                                                                                (size_t)47U
+                                                                                              +
+                                                                                                (size_t)43U].data);
+                                                                                          Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                            *
+                                                                                              (size_t)47U
+                                                                                            +
+                                                                                              (size_t)43U].lock);
+                                                                                          uint8_t
+                                                                                          *ptr = r;
+                                                                                          uint8_t
+                                                                                          *r0 = ptr;
+                                                                                          if
+                                                                                          (
+                                                                                            !(r0 ==
+                                                                                              NULL)
+                                                                                          )
+                                                                                          {
+                                                                                            r0[(size_t)(size43.sc
+                                                                                            - 2U)]
+                                                                                            = 42U;
+                                                                                            r0[(size_t)(size43.sc
+                                                                                            - 1U)]
+                                                                                            = 23U;
+                                                                                          }
+                                                                                          return r0;
+                                                                                        }
+                                                                                        else
+                                                                                        {
+                                                                                          Constants_sc_full_
+                                                                                          size44 =
+                                                                                            sizes[arena_id
+                                                                                            *
+                                                                                              (size_t)47U
+                                                                                            +
+                                                                                              (size_t)44U];
+                                                                                          bool
+                                                                                          b44 =
+                                                                                            size44.slab_size
+                                                                                            %
+                                                                                              size44.sc
+                                                                                            == 0U;
+                                                                                          if
+                                                                                          (
+                                                                                            b44 &&
+                                                                                              bytes
+                                                                                              <=
+                                                                                                size44.sc
+                                                                                                - 2U
+                                                                                            &&
+                                                                                              alignment
+                                                                                              <=
+                                                                                                size44.sc
+                                                                                          )
+                                                                                          {
+                                                                                            Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                              *
+                                                                                                (size_t)47U
+                                                                                              +
+                                                                                                (size_t)44U].lock);
+                                                                                            uint8_t
+                                                                                            *r =
+                                                                                              allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                                *
+                                                                                                  (size_t)47U
+                                                                                                +
+                                                                                                  (size_t)44U].data);
+                                                                                            Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                              *
+                                                                                                (size_t)47U
+                                                                                              +
+                                                                                                (size_t)44U].lock);
+                                                                                            uint8_t
+                                                                                            *ptr = r;
+                                                                                            uint8_t
+                                                                                            *r0 =
+                                                                                              ptr;
+                                                                                            if
+                                                                                            (
+                                                                                              !(r0
+                                                                                              ==
+                                                                                                NULL)
+                                                                                            )
+                                                                                            {
+                                                                                              r0[(size_t)(size44.sc
+                                                                                              - 2U)]
+                                                                                              = 42U;
+                                                                                              r0[(size_t)(size44.sc
+                                                                                              - 1U)]
+                                                                                              = 23U;
+                                                                                            }
+                                                                                            return
+                                                                                              r0;
+                                                                                          }
+                                                                                          else
+                                                                                          {
+                                                                                            Constants_sc_full_
+                                                                                            size45 =
+                                                                                              sizes[arena_id
+                                                                                              *
+                                                                                                (size_t)47U
+                                                                                              +
+                                                                                                (size_t)45U];
+                                                                                            bool
+                                                                                            b45 =
+                                                                                              size45.slab_size
+                                                                                              %
+                                                                                                size45.sc
+                                                                                              == 0U;
+                                                                                            if
+                                                                                            (
+                                                                                              b45 &&
+                                                                                                bytes
+                                                                                                <=
+                                                                                                  size45.sc
+                                                                                                  -
+                                                                                                    2U
+                                                                                              &&
+                                                                                                alignment
+                                                                                                <=
+                                                                                                  size45.sc
+                                                                                            )
+                                                                                            {
+                                                                                              Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                                *
+                                                                                                  (size_t)47U
+                                                                                                +
+                                                                                                  (size_t)45U].lock);
+                                                                                              uint8_t
+                                                                                              *r =
+                                                                                                allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                                  *
+                                                                                                    (size_t)47U
+                                                                                                  +
+                                                                                                    (size_t)45U].data);
+                                                                                              Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                                *
+                                                                                                  (size_t)47U
+                                                                                                +
+                                                                                                  (size_t)45U].lock);
+                                                                                              uint8_t
+                                                                                              *ptr =
+                                                                                                r;
+                                                                                              uint8_t
+                                                                                              *r0 =
+                                                                                                ptr;
+                                                                                              if
+                                                                                              (
+                                                                                                !(r0
+                                                                                                ==
+                                                                                                  NULL)
+                                                                                              )
+                                                                                              {
+                                                                                                r0[(size_t)(size45.sc
+                                                                                                - 2U)]
+                                                                                                =
+                                                                                                  42U;
+                                                                                                r0[(size_t)(size45.sc
+                                                                                                - 1U)]
+                                                                                                =
+                                                                                                  23U;
+                                                                                              }
+                                                                                              return
+                                                                                                r0;
+                                                                                            }
+                                                                                            else
+                                                                                            {
+                                                                                              Constants_sc_full_
+                                                                                              size46 =
+                                                                                                sizes[arena_id
+                                                                                                *
+                                                                                                  (size_t)47U
+                                                                                                +
+                                                                                                  (size_t)46U];
+                                                                                              bool
+                                                                                              b46 =
+                                                                                                size46.slab_size
+                                                                                                %
+                                                                                                  size46.sc
+                                                                                                ==
+                                                                                                  0U;
+                                                                                              if
+                                                                                              (
+                                                                                                b46
+                                                                                                &&
+                                                                                                  bytes
+                                                                                                  <=
+                                                                                                    size46.sc
+                                                                                                    -
+                                                                                                      2U
+                                                                                                &&
+                                                                                                  alignment
+                                                                                                  <=
+                                                                                                    size46.sc
+                                                                                              )
+                                                                                              {
+                                                                                                Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                                  *
+                                                                                                    (size_t)47U
+                                                                                                  +
+                                                                                                    (size_t)46U].lock);
+                                                                                                uint8_t
+                                                                                                *r =
+                                                                                                  allocate_size_class(Main_Meta_sc_all.size_classes[arena_id
+                                                                                                    *
+                                                                                                      (size_t)47U
+                                                                                                    +
+                                                                                                      (size_t)46U].data);
+                                                                                                Steel_SpinLock_release(&Main_Meta_sc_all.size_classes[arena_id
+                                                                                                  *
+                                                                                                    (size_t)47U
+                                                                                                  +
+                                                                                                    (size_t)46U].lock);
+                                                                                                uint8_t
+                                                                                                *ptr =
+                                                                                                  r;
+                                                                                                uint8_t
+                                                                                                *r0 =
+                                                                                                  ptr;
+                                                                                                if
+                                                                                                (
+                                                                                                  !(r0
+                                                                                                  ==
+                                                                                                    NULL)
+                                                                                                )
+                                                                                                {
+                                                                                                  r0[(size_t)(size46.sc
+                                                                                                  -
+                                                                                                    2U)]
+                                                                                                  =
+                                                                                                    42U;
+                                                                                                  r0[(size_t)(size46.sc
+                                                                                                  -
+                                                                                                    1U)]
+                                                                                                  =
+                                                                                                    23U;
+                                                                                                }
+                                                                                                return
+                                                                                                  r0;
+                                                                                              }
+                                                                                              else
+                                                                                                return
+                                                                                                  NULL;
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
                                                     }
                                                   }
                                                 }
@@ -2149,10 +3412,10 @@ static size_t slab_getsize(uint8_t *ptr)
   ptrdiff_t diff = pt0 - pt1;
   size_t diff_sz = (size_t)diff;
   size_t index = diff_sz / (size_t)68719476736U;
-  uint32_t size = sizes[index];
-  size_t rem_slot = diff_sz % (size_t)4096U;
-  if (rem_slot % (size_t)size == (size_t)0U)
-    return (size_t)(size - 2U);
+  Constants_sc_full_ size = sizes[index];
+  size_t rem_slot = diff_sz % (size_t)size.slab_size;
+  if (rem_slot % (size_t)size.sc == (size_t)0U)
+    return (size_t)(size.sc - 2U);
   else
     return (size_t)0U;
 }
@@ -2164,13 +3427,13 @@ static bool slab_free(uint8_t *ptr)
   ptrdiff_t diff = pt0 - pt1;
   size_t diff_sz = (size_t)diff;
   size_t index = diff_sz / (size_t)68719476736U;
-  uint32_t size = sizes[index];
+  Constants_sc_full_ size = sizes[index];
   size_t rem_slab = diff_sz % (size_t)68719476736U;
-  size_t rem_slot = diff_sz % (size_t)4096U;
-  if (rem_slot % (size_t)size == (size_t)0U)
+  size_t rem_slot = diff_sz % (size_t)size.slab_size;
+  if (rem_slot % (size_t)size.sc == (size_t)0U)
   {
-    uint8_t magic1 = ptr[(size_t)(size - 2U)];
-    uint8_t magic2 = ptr[(size_t)(size - 1U)];
+    uint8_t magic1 = ptr[(size_t)(size.sc - 2U)];
+    uint8_t magic2 = ptr[(size_t)(size.sc - 1U)];
     if (magic1 == 42U && magic2 == 23U)
     {
       Steel_SpinLock_acquire(&Main_Meta_sc_all.size_classes[index].lock);
@@ -2187,7 +3450,7 @@ static bool slab_free(uint8_t *ptr)
     return false;
 }
 
-size_t StarMalloc_threshold = (size_t)4096U - (size_t)2U;
+size_t StarMalloc_threshold;
 
 uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
 {
@@ -2211,8 +3474,8 @@ uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
   else
   {
     size_t size_;
-    if (size <= (size_t)4096U)
-      size_ = (size_t)4096U + (size_t)1U;
+    if (size <= (size_t)Constants_max_slab_size)
+      size_ = (size_t)Constants_max_slab_size + (size_t)1U;
     else
       size_ = size;
     uint8_t *r = large_malloc(size_);
@@ -2222,37 +3485,38 @@ uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
 
 uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size)
 {
-  bool check = alignment > (size_t)0U && (size_t)4096U % alignment == (size_t)0U;
-  if (check)
+  uint32_t alignment_as_u32 = (uint32_t)alignment;
+  bool
+  check1 =
+    alignment > (size_t)0U && (size_t)Constants_max_slab_size % alignment == (size_t)0U &&
+      size <= StarMalloc_threshold;
+  bool check2 = alignment > (size_t)0U && (size_t)4096U % alignment == (size_t)0U;
+  if (check1)
   {
-    uint32_t alignment_as_u32 = (uint32_t)alignment;
-    if (size <= StarMalloc_threshold)
+    uint8_t *ptr = slab_aligned_alloc(arena_id, alignment_as_u32, (uint32_t)size);
+    if (ptr == NULL || false)
+      return ptr;
+    else
     {
-      uint8_t *ptr = slab_aligned_alloc(arena_id, alignment_as_u32, (uint32_t)size);
-      if (ptr == NULL || false)
+      bool b = check_zeroing_u8(ptr, size);
+      if (b)
         return ptr;
       else
       {
-        bool b = check_zeroing_u8(ptr, size);
-        if (b)
-          return ptr;
-        else
-        {
-          FatalError_die_from_malloc_zeroing_check_failure(ptr);
-          return NULL;
-        }
+        FatalError_die_from_malloc_zeroing_check_failure(ptr);
+        return NULL;
       }
     }
+  }
+  else if (check2)
+  {
+    size_t size_;
+    if (size <= (size_t)Constants_max_slab_size)
+      size_ = (size_t)Constants_max_slab_size + (size_t)1U;
     else
-    {
-      size_t size_;
-      if (size <= (size_t)4096U)
-        size_ = (size_t)4096U + (size_t)1U;
-      else
-        size_ = size;
-      uint8_t *ptr = large_malloc(size_);
-      return ptr;
-    }
+      size_ = size;
+    uint8_t *ptr = large_malloc(size_);
+    return ptr;
   }
   else
     return NULL;
@@ -2268,7 +3532,7 @@ bool StarMalloc_free(uint8_t *ptr)
     b =
       within_bounds_ptr(Main_Meta_sc_all.slab_region,
         ptr,
-        Main_Meta_sc_all.slab_region + slab_region_size);
+        Main_Meta_sc_all.slab_region + full_slab_region_size);
     bool b0 = b;
     if (b0)
       return slab_free(ptr);
@@ -2283,7 +3547,7 @@ size_t StarMalloc_getsize(uint8_t *ptr)
   b =
     within_bounds_ptr(Main_Meta_sc_all.slab_region,
       ptr,
-      Main_Meta_sc_all.slab_region + slab_region_size);
+      Main_Meta_sc_all.slab_region + full_slab_region_size);
   bool b0 = b;
   if (b0)
   {
@@ -2318,7 +3582,7 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
   else
   {
     size_t old_size = StarMalloc_getsize(ptr);
-    bool old_allocation_is_small = old_size <= (size_t)4096U;
+    bool old_allocation_is_small = old_size <= (size_t)Constants_max_slab_size;
     bool new_allocation_is_small = new_size <= StarMalloc_threshold;
     bool same_case = old_allocation_is_small == new_allocation_is_small;
     bool small_case_optim_condition;

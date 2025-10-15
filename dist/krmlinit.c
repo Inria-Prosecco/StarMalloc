@@ -3,6 +3,8 @@
 
 #include "krmlinit.h"
 
+#include "StarMalloc.h"
+#include "Constants.h"
 #include "internal/StarMalloc.h"
 
 #if defined(__GNUC__) && !(defined(_WIN32) || defined(_WIN64))
@@ -11,8 +13,17 @@ __attribute__ ((visibility ("hidden")))
 
 void krmlinit_globals(void)
 {
+  Impl_Trees_Types_sc_avl =
+    (
+      (Constants_sc_full_){
+        .sc = Impl_Trees_Cast_M_avl_data_size,
+        .slab_size = 4096U,
+        .md_max = (size_t)16777216U
+      }
+    );
   Impl_Trees_Types_init_mmap_md_slabs(&Impl_Trees_Types_metadata_slabs);
   init_mmap_md(&metadata);
   Main_Meta_sc_all = Main_Meta_init();
+  StarMalloc_threshold = (size_t)Constants_max_slab_size - (size_t)2U;
 }
 

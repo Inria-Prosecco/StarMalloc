@@ -21,8 +21,8 @@ open Utils2
 include SlabsCommon
 
 val allocate_slab
-  (size_class: sc)
-  (slab_region: array U8.t{A.length slab_region = US.v metadata_max * U32.v page_size})
+  (sc: sc_full)
+  (slab_region: array U8.t{A.length slab_region = US.v sc.md_max * U32.v sc.slab_size})
   (md_bm_region: array U64.t{A.length md_bm_region = US.v metadata_max * 4})
   (md_region: array AL.cell{A.length md_region = US.v metadata_max})
   (md_count: ref US.t)
@@ -31,22 +31,22 @@ val allocate_slab
   (
     vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (size_class_vprop_aux sc slab_region md_bm_region md_region r_idxs)
   )
   (fun r ->
     (if (A.is_null r) then emp else A.varray r) `star`
     vrefinedep
       (vptr md_count)
-      vrefinedep_prop
-      (size_class_vprop_aux size_class slab_region md_bm_region md_region r_idxs)
+      (vrefinedep_prop sc)
+      (size_class_vprop_aux sc slab_region md_bm_region md_region r_idxs)
   )
   (requires fun _ -> True)
   (ensures fun _ r _ ->
     not (A.is_null r) ==> (
-      A.length r == U32.v size_class /\
+      A.length r == U32.v sc.sc /\
       same_base_array r slab_region /\
       A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region) >= 0 /\
-      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v page_size) % (U32.v size_class) == 0
+      ((A.offset (A.ptr_of r) - A.offset (A.ptr_of slab_region)) % U32.v sc.slab_size) % (U32.v sc.sc) == 0
     )
   )

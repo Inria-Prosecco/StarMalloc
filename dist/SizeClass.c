@@ -3,6 +3,7 @@
 
 #include "SizeClass.h"
 
+#include "Constants.h"
 #include "ArrayList.h"
 #include "internal/Slabs.h"
 

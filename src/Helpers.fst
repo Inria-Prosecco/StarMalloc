@@ -405,13 +405,13 @@ let empty_md_lemma
 
 #push-options "--z3rlimit 50 --fuel 1 --ifuel 1"
 let slab_to_slots_aux
-  (size_class: sc)
+  (size_class: sc_full)
   (arr: array U8.t{A.length arr = US.v (rounding size_class)})
   (pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
   : Lemma
   (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos
   ==
-  some_as_vp #(Seq.lseq U8.t (U32.v size_class)) (SlotsAlloc.slot_vprop size_class arr pos))
+  some_as_vp #(Seq.lseq U8.t (U32.v size_class.sc)) (SlotsAlloc.slot_vprop size_class arr pos))
   =
   let bm = a2bv (Seq.create 4 0UL) in
   let idx = Bitmap5.f #4 (U32.v pos) in
@@ -421,20 +421,20 @@ let slab_to_slots_aux
   assert (
     (slab_vprop_aux_f size_class (Seq.create 4 0UL) arr pos)
     ==
-    some_as_vp #(Seq.lseq U8.t (U32.v size_class))
+    some_as_vp #(Seq.lseq U8.t (U32.v size_class.sc))
       (SlotsAlloc.slot_vprop size_class arr pos)
   )
 #pop-options
 
 let slab_to_slots (#opened:_)
-  (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
+  (size_class: sc_full)
+  (arr: array U8.t{A.length arr = U32.v size_class.slab_size})
   : SteelGhostT unit opened
   (A.varray arr)
   (fun _ ->
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class (Seq.create 4 0UL)
         (A.split_l arr (rounding size_class)))
       (slab_vprop_aux_f_lemma size_class (Seq.create 4 0UL)
@@ -445,16 +445,16 @@ let slab_to_slots (#opened:_)
   )
   =
   A.ghost_split arr (rounding size_class);
-  array_to_pieces size_class (nb_slots size_class) (A.split_l arr (rounding size_class));
+  array_to_pieces size_class.sc (nb_slots size_class) (A.split_l arr (rounding size_class));
   starseq_weakening
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(Seq.lseq U8.t (U32.v size_class))
-    (slot_vprop size_class (nb_slots size_class)
+    #(Seq.lseq U8.t (U32.v size_class.sc))
+    (slot_vprop size_class.sc (nb_slots size_class)
       (A.split_l arr (rounding size_class)))
     (SlotsAlloc.slot_vprop size_class
       (A.split_l arr (rounding size_class)))
-    (slot_vprop_lemma size_class (nb_slots size_class)
+    (slot_vprop_lemma size_class.sc (nb_slots size_class)
       (A.split_l arr (rounding size_class)))
     (SlotsAlloc.slot_vprop_lemma size_class
       (A.split_l arr (rounding size_class)))
@@ -465,7 +465,7 @@ let slab_to_slots (#opened:_)
   starseq_weakening_rel_some
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(Seq.lseq U8.t (U32.v size_class))
+    #(Seq.lseq U8.t (U32.v size_class.sc))
     (SlotsAlloc.slot_vprop size_class
       (A.split_l arr (rounding size_class)))
     (slab_vprop_aux_f size_class (Seq.create 4 0UL)
@@ -479,7 +479,7 @@ let slab_to_slots (#opened:_)
 
 noextract
 let zero_beyond_bound
-  (size_class: sc)
+  (size_class: sc_full)
   (md_as_seq: Seq.lseq U64.t 4)
   : prop
   =
@@ -491,7 +491,7 @@ let zero_beyond_bound
 
 #push-options "--z3rlimit 100 --fuel 0 --ifuel 0"
 let empty_not_bitmap
-  (size_class:sc)
+  (size_class:sc_full)
   (s:Seq.lseq U64.t 4)
   (i:U32.t{U32.v i < U32.v (nb_slots size_class)})
   : Lemma
@@ -507,14 +507,14 @@ let empty_not_bitmap
 #pop-options
 
 let slots_to_slabs (#opened:_)
-  (size_class: sc)
-  (arr: array U8.t{A.length arr = U32.v page_size})
+  (size_class: sc_full)
+  (arr: array U8.t{A.length arr = U32.v size_class.slab_size})
   (md: G.erased (Seq.lseq U64.t 4))
   : SteelGhost unit opened
   (
     starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md
         (A.split_l arr (rounding size_class)))
       (slab_vprop_aux_f_lemma size_class md
@@ -531,11 +531,11 @@ let slots_to_slabs (#opened:_)
   Classical.forall_intro (Classical.move_requires (empty_not_bitmap size_class md));
   assert (forall (k:nat{k < U32.v (nb_slots size_class)}).
     slab_vprop_aux_f size_class md (A.split_l arr (rounding size_class)) (Seq.index s k) ==
-    some_as_vp #((Seq.lseq U8.t (U32.v size_class))) (SlotsAlloc.slot_vprop size_class (A.split_l arr (rounding size_class)) (Seq.index s k)));
+    some_as_vp #((Seq.lseq U8.t (U32.v size_class.sc))) (SlotsAlloc.slot_vprop size_class (A.split_l arr (rounding size_class)) (Seq.index s k)));
   starseq_weakening_rel_from_some
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(Seq.lseq U8.t (U32.v size_class))
+    #(Seq.lseq U8.t (U32.v size_class.sc))
     (slab_vprop_aux_f size_class md
       (A.split_l arr (rounding size_class)))
     (SlotsAlloc.slot_vprop size_class
@@ -549,18 +549,18 @@ let slots_to_slabs (#opened:_)
   starseq_weakening
     #_
     #(pos: U32.t{U32.v pos < U32.v (nb_slots size_class)})
-    #(Seq.lseq U8.t (U32.v size_class))
+    #(Seq.lseq U8.t (U32.v size_class.sc))
     (SlotsAlloc.slot_vprop size_class
       (A.split_l arr (rounding size_class)))
-    (slot_vprop size_class (nb_slots size_class)
+    (slot_vprop size_class.sc (nb_slots size_class)
       (A.split_l arr (rounding size_class)))
     (SlotsAlloc.slot_vprop_lemma size_class
       (A.split_l arr (rounding size_class)))
-    (slot_vprop_lemma size_class (nb_slots size_class)
+    (slot_vprop_lemma size_class.sc (nb_slots size_class)
       (A.split_l arr (rounding size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)))
     (SeqUtils.init_u32_refined (U32.v (nb_slots size_class)));
-  pieces_to_array size_class (nb_slots size_class)
+  pieces_to_array size_class.sc (nb_slots size_class)
     (A.split_l arr (rounding size_class));
   A.ghost_join
     (A.split_l arr (rounding size_class))
@@ -574,9 +574,9 @@ let slots_to_slabs (#opened:_)
 
 #push-options "--fuel 1 --ifuel 1"
 let intro_empty_slab_varray (#opened:_)
-  (size_class: sc)
+  (size_class: sc_full)
   (md_as_seq: G.erased (Seq.lseq U64.t 4))
-  (arr: array U8.t{A.length arr = U32.v page_size})
+  (arr: array U8.t{A.length arr = U32.v size_class.slab_size})
   : SteelGhost unit opened
   (
     slab_vprop_aux size_class (A.split_l arr (rounding size_class)) (G.reveal md_as_seq) `star`
@@ -593,7 +593,7 @@ let intro_empty_slab_varray (#opened:_)
     (slab_vprop_aux size_class (A.split_l arr (rounding size_class)) (G.reveal md_as_seq))
     (starseq
       #(pos:U32.t{U32.v pos < U32.v (nb_slots size_class)})
-      #(option (Seq.lseq U8.t (U32.v size_class)))
+      #(option (Seq.lseq U8.t (U32.v size_class.sc)))
       (slab_vprop_aux_f size_class md_as_seq
         (A.split_l arr (rounding size_class)))
       (slab_vprop_aux_f_lemma size_class md_as_seq

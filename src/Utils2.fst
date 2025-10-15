@@ -31,7 +31,7 @@ let array_u8_alignment = ArrayAlignment.array_u8_alignment
 let array_u8_alignment_lemma = ArrayAlignment.array_u8_alignment_lemma
 
 #push-options "--z3rlimit 30"
-let nb_slots (size_class: sc)
+let nb_slots (size_class: sc_full')
   : Pure U32.t
   (requires True)
   (ensures fun r ->
@@ -39,37 +39,37 @@ let nb_slots (size_class: sc)
     U32.v r <= 256
   )
   =
-  //TODO: stabilize
-  U32.div page_size size_class
+  U32.div size_class.slab_size size_class.sc
 #pop-options
 
 open FStar.Mul
 
 open Prelude
 
-let rounding (size_class: sc)
+let rounding (size_class: sc_full')
   : Pure US.t
   (requires True)
   (ensures fun r ->
-    US.v r <= U32.v page_size
+    US.v r <= U32.v size_class.slab_size
   )
   =
-  US.uint32_to_sizet (U32.mul (nb_slots size_class) size_class)
+  US.uint32_to_sizet (U32.mul (nb_slots size_class) size_class.sc)
 
 #push-options "--z3rlimit 50"
-let nb_slots_correct
-  (size_class: sc)
+let nb_slots_correct (size_class: sc_full')
   (pos: U32.t)
   : Lemma
-  (requires U32.v pos < U32.v (nb_slots size_class))
+  (requires
+    U32.v pos < U32.v (nb_slots size_class)
+  )
   (ensures
-    U32.v (U32.mul pos size_class)
-    <= US.v (rounding size_class) - U32.v size_class)
+    U32.v (U32.mul pos size_class.sc)
+    <= US.v (rounding size_class) - U32.v size_class.sc)
   =
   assert (U32.v pos <= U32.v (nb_slots size_class) - 1);
-  FML.lemma_mult_le_left (U32.v size_class) (U32.v pos) (U32.v (nb_slots size_class) - 1);
-  assert (U32.v pos * U32.v size_class <= U32.v (U32.mul (nb_slots size_class) size_class) - U32.v size_class);
-  assert (U32.v (U32.mul (nb_slots size_class) size_class) <= U32.v page_size)
+  FML.lemma_mult_le_left (U32.v size_class.sc) (U32.v pos) (U32.v (nb_slots size_class) - 1);
+  assert (U32.v pos * U32.v size_class.sc <= U32.v (U32.mul (nb_slots size_class) size_class.sc) - U32.v size_class.sc);
+  assert (U32.v (U32.mul (nb_slots size_class) size_class.sc) <= U32.v size_class.slab_size)
 #pop-options
 
 noextract
@@ -347,7 +347,7 @@ let full_n_lemma (x: U64.t) (bound: U32.t)
 module G = FStar.Ghost
 
 noextract inline_for_extraction
-let bound2_gen (v: U32.t) (size_class: G.erased sc)
+let bound2_gen (v: U32.t) (size_class: G.erased sc_full')
   : Pure U32.t
   (requires v == nb_slots (G.reveal size_class))
   (ensures fun r ->
@@ -362,7 +362,7 @@ let bound2_gen (v: U32.t) (size_class: G.erased sc)
 
 noextract
 let has_free_slot
-  (size_class: sc)
+  (size_class: sc_full')
   (s: Seq.lseq U64.t 4)
   : bool
   =
@@ -379,7 +379,7 @@ let has_free_slot
   (bound > 3 && (U64.v (Seq.index s 3) <> max))
 
 let has_free_slot_s
-  (size_class: sc)
+  (size_class: sc_full')
   (md: slab_metadata)
   : Steel bool
   (A.varray md) (fun _ -> A.varray md)
@@ -404,7 +404,7 @@ let has_free_slot_s
 
 noextract
 let is_empty
-  (size_class: sc)
+  (size_class: sc_full')
   (s: Seq.lseq U64.t 4)
   : bool
   =
@@ -416,7 +416,7 @@ let is_empty
   (bound <= 3 || (U64.v (Seq.index s 3) = 0))
 
 let is_empty_s
-  (size_class: sc)
+  (size_class: sc_full')
   (md: slab_metadata)
   : Steel bool
   (A.varray md) (fun _ -> A.varray md)
@@ -438,14 +438,14 @@ let is_empty_s
 
 noextract
 let is_partial
-  (size_class: sc)
+  (size_class: sc_full')
   (s: Seq.lseq U64.t 4)
   : bool
   =
   has_free_slot size_class s && (not (is_empty size_class s))
 
 let is_partial_s
-  (size_class: sc)
+  (size_class: sc_full')
   (md: slab_metadata)
   : Steel bool
   (A.varray md) (fun _ -> A.varray md)
@@ -461,14 +461,14 @@ let is_partial_s
 
 noextract
 let is_full
-  (size_class: sc)
+  (size_class: sc_full')
   (s: Seq.lseq U64.t 4)
   : bool
   =
   not (has_free_slot size_class s)
 
 let is_full_s
-  (size_class: sc)
+  (size_class: sc_full')
   (md: slab_metadata)
   : Steel bool
   (A.varray md) (fun _ -> A.varray md)
@@ -483,7 +483,7 @@ let is_full_s
 
 noextract
 let zeroes_impl_empty
-  (size_class: sc)
+  (size_class: sc_full')
   (s: Seq.lseq U64.t 4)
   : Lemma
   (requires s == Seq.create 4 0UL)
@@ -615,12 +615,12 @@ let lemma_nth_nonmax64
 
 #push-options "--z3rlimit 50"
 let lemma_nth_nonfull
-  (size_class: sc)
+  (size_class: sc_full')
   (x: U64.t)
   (i: nat{i < U32.v (nb_slots size_class) /\ i <= 63})
   : Lemma
   (requires
-    U32.v size_class > 64 /\
+    U32.v size_class.sc * 64 > U32.v size_class.slab_size /\
     FU.nth (U64.v x) (63 - i) = false)
   (ensures (
     let bound2 = nb_slots size_class in
@@ -643,7 +643,7 @@ let lemma_nth_nonfull
 
 #push-options "--z3rlimit 100"
 let set_lemma_nonempty
-  (size_class: sc)
+  (size_class: sc_full')
   (md_as_seq1: Seq.lseq U64.t 4)
   (md_as_seq2: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U64.n * 4})
@@ -699,7 +699,7 @@ let lemma_div_lt_aux
 
 #push-options "--z3rlimit 100"
 let set_lemma_nonfull
-  (size_class: sc)
+  (size_class: sc_full')
   (md_as_seq1: Seq.lseq U64.t 4)
   (md_as_seq2: Seq.lseq U64.t 4)
   (pos: U32.t{U32.v pos < U64.n * 4})
@@ -728,7 +728,7 @@ let set_lemma_nonfull
   then (
     let bound2 = bound2_gen (nb_slots size_class) (G.hide size_class) in
     let full = full_n bound2 in
-    if (U32.v size_class <= 64)
+    if (U32.v (nb_slots size_class) >= 64)
     then (
       assert (U32.v bound2 == 64);
       assert (full_n bound2 = max64);
@@ -736,17 +736,18 @@ let set_lemma_nonfull
       assert (x <> max64);
       assert (Seq.index md_as_seq2 (U32.v i1) <> full_n bound2)
     ) else (
-      assert (U32.v size_class > 64);
-      lemma_div_lt_aux 64 (U32.v size_class) (U32.v page_size);
-      assert ((U32.v page_size)/64 == 64);
-      assert (U32.v (nb_slots size_class) < 64);
-      assert (U32.v pos < 63);
-      assert (idx - U32.v i1 * 64 = idx);
-      assert (idx = Bitmap4.f_aux (U32.v pos));
-      assert (idx - U32.v i1 * 64 = 64 - U32.v pos - 1);
+      //assert (U32.v size_class > 64);
+      //lemma_div_lt_aux 64 (U32.v size_class) (U32.v page_size);
+      //assert ((U32.v page_size)/64 == 64);
+      //assert (U32.v (nb_slots size_class) < 64);
+      //assert (U32.v pos < 63);
+      //assert (idx - U32.v i1 * 64 = idx);
+      //assert (idx = Bitmap4.f_aux (U32.v pos));
+      //assert (idx - U32.v i1 * 64 = 64 - U32.v pos - 1);
       lemma_nth_nonfull size_class x (U32.v pos);
-      assert (x <> full_n bound2);
-      assert (Seq.index md_as_seq2 (U32.v i1) <> full_n bound2)
+      //assert (x <> full_n bound2);
+      //assert (Seq.index md_as_seq2 (U32.v i1) <> full_n bound2)
+      ()
     )
   ) else (
     lemma_nth_nonmax64 x (idx - U32.v i1 * 64);
