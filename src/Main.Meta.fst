@@ -394,7 +394,7 @@ let mod_lemma
 #pop-options
 
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit 200"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 250"
 /// `slab_aligned_alloc` works in a very similar way as `slab_malloc_i`
 /// The key difference lies in the condition of the if-branch: we only
 /// attempt to allocate in this size class if it satisfies the alignment
