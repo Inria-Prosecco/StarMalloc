@@ -99,8 +99,8 @@ uint32_t* mmap_sizes_init (size_t len) {
 /// Mman2
 
 // large allocator init
-Impl_Trees_Cast_M_node** mmap_ptr_metadata_init() {
-  return (Impl_Trees_Cast_M_node**) mmap_init(sizeof(Impl_Trees_Cast_M_node*));
+Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t** mmap_ptr_metadata_init() {
+  return (Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t**) mmap_init(sizeof(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t*));
 }
 
 /// MemoryTrap.fst
