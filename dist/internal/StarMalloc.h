@@ -13,26 +13,28 @@
 
 extern uint32_t Impl_Trees_Cast_M_avl_data_size;
 
-typedef struct Impl_Trees_Cast_M_data_s
+typedef struct K___Prims_dtuple2___uint8_t_____size_t_s
 {
   uint8_t *fst;
   size_t snd;
 }
-Impl_Trees_Cast_M_data;
+K___Prims_dtuple2___uint8_t_____size_t;
 
-typedef struct Impl_Trees_Cast_M_node_s Impl_Trees_Cast_M_node;
+typedef struct Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t_s
+Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t;
 
-typedef struct Impl_Trees_Cast_M_node_s Impl_Trees_Cast_M_node;
+typedef struct Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t_s
+Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t;
 
-typedef struct Impl_Trees_Cast_M_node_s
+typedef struct Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t_s
 {
-  Impl_Trees_Cast_M_data data;
-  Impl_Trees_Cast_M_node *left;
-  Impl_Trees_Cast_M_node *right;
+  K___Prims_dtuple2___uint8_t_____size_t data;
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *left;
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *right;
   uint64_t size;
   uint64_t height;
 }
-Impl_Trees_Cast_M_node;
+Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t;
 
 extern Constants_sc_full_ Impl_Trees_Types_sc_avl;
 
@@ -48,37 +50,44 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret);
 
 extern Impl_Trees_Types_mmap_md_slabs Impl_Trees_Types_metadata_slabs;
 
-bool Impl_BST_M_member(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v);
+bool
+Impl_BST_M_member(
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr,
+  K___Prims_dtuple2___uint8_t_____size_t v
+);
 
-Impl_Trees_Cast_M_node
+Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
 *Impl_AVL_M_insert_avl(
-  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
-  void (*f2)(Impl_Trees_Cast_M_node *x0),
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  *(*f1)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x0),
+  void (*f2)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *x0),
   bool r,
-  Impl_Trees_Cast_M_node *ptr,
-  Impl_Trees_Cast_M_data new_data
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr,
+  K___Prims_dtuple2___uint8_t_____size_t new_data
 );
 
 typedef struct Impl_AVL_M_result_s
 {
-  Impl_Trees_Cast_M_node *ptr;
-  Impl_Trees_Cast_M_data data;
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr;
+  K___Prims_dtuple2___uint8_t_____size_t data;
 }
 Impl_AVL_M_result;
 
 Impl_AVL_M_result
 Impl_AVL_M_remove_leftmost_avl(
-  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
-  void (*f2)(Impl_Trees_Cast_M_node *x0),
-  Impl_Trees_Cast_M_node *ptr
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  *(*f1)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x0),
+  void (*f2)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *x0),
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr
 );
 
-Impl_Trees_Cast_M_node
+Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
 *Impl_AVL_M_delete_avl(
-  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
-  void (*f2)(Impl_Trees_Cast_M_node *x0),
-  Impl_Trees_Cast_M_node *ptr,
-  Impl_Trees_Cast_M_data data_to_rm
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  *(*f1)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x0),
+  void (*f2)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *x0),
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr,
+  K___Prims_dtuple2___uint8_t_____size_t data_to_rm
 );
 
 #define FStar_Pervasives_Native_None 0
@@ -94,11 +103,14 @@ typedef struct FStar_Pervasives_Native_option__size_t_s
 FStar_Pervasives_Native_option__size_t;
 
 FStar_Pervasives_Native_option__size_t
-Map_M_find(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v);
+Map_M_find(
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr,
+  K___Prims_dtuple2___uint8_t_____size_t v
+);
 
 typedef struct mmap_md_s
 {
-  Impl_Trees_Cast_M_node **data;
+  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t **data;
   Steel_SpinLock_lock lock;
 }
 mmap_md;
