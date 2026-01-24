@@ -25,11 +25,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1764177615,
-        "narHash": "sha256-hr1C612vHYtFuapdmL4clsVwuYM1KHkaJ9SqrXsLLfk=",
+        "lastModified": 1768933010,
+        "narHash": "sha256-TAZ6iMOjJCxbjPP27TamGm8+yDqJ2RA8jBU8nwwM+ho=",
         "owner": "FStarLang",
         "repo": "FStar",
-        "rev": "0cbbc9bd61f64977cc534977a858e9291eab69cc",
+        "rev": "44996d76b88f51b2f2df450d40ac5c9094705f6f",
         "type": "github"
       },
       "original": {
@@ -52,11 +52,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1764099291,
-        "narHash": "sha256-+SwjLNEc6KhDFRufSLwHNPw5SWZSfHBQCqkQncSNhNc=",
+        "lastModified": 1767829042,
+        "narHash": "sha256-ros0u+hskr/q0eDQmQZjW8PvAZVjH6a5wGd8nm6AEzo=",
         "owner": "FStarLang",
         "repo": "karamel",
-        "rev": "5ec5a8ad312c02deeb8db72ec558a778d8258c01",
+        "rev": "b6df0cc3fa9e3d43eeaa3eac50d0696d12867c5f",
         "type": "github"
       },
       "original": {
@@ -65,13 +65,50 @@
         "type": "github"
       }
     },
+    "mimalloc-bench": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1761228023,
+        "narHash": "sha256-9GsRoHTH8KSMF72CTLq2oil23drX+cYnV7DmCunaNE4=",
+        "owner": "daanx",
+        "repo": "mimalloc-bench",
+        "rev": "6ec12891f89ec5cb6fcaef4b5162a07a0b222fca",
+        "type": "github"
+      },
+      "original": {
+        "owner": "daanx",
+        "repo": "mimalloc-bench",
+        "type": "github"
+      }
+    },
+    "nix-mimalloc-bench": {
+      "inputs": {
+        "mimalloc-bench": "mimalloc-bench",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1769220065,
+        "narHash": "sha256-Sigs5/C//GHdf0xXZoqpsRu8PXVdPIt9FIjTRrOu4NU=",
+        "owner": "cmovcc",
+        "repo": "nix-mimalloc-bench",
+        "rev": "d9c801f22bc4ac64d84f626223cb0473796ee343",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cmovcc",
+        "repo": "nix-mimalloc-bench",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1763966396,
-        "narHash": "sha256-6eeL1YPcY1MV3DDStIDIdy/zZCDKgHdkCmsrLJFiZf0=",
+        "lastModified": 1769018530,
+        "narHash": "sha256-MJ27Cy2NtBEV5tsK+YraYr2g851f3Fl1LpNHDzDX15c=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "5ae3b07d8d6527c42f17c876e404993199144b6a",
+        "rev": "88d3861acdd3d2f0e361767018218e51810df8a1",
         "type": "github"
       },
       "original": {
@@ -85,6 +122,7 @@
       "inputs": {
         "fstar-src": "fstar-src",
         "krml-src": "krml-src",
+        "nix-mimalloc-bench": "nix-mimalloc-bench",
         "nixpkgs": "nixpkgs",
         "steel-src": "steel-src"
       }

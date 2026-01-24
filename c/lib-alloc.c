@@ -1,5 +1,9 @@
 #include <stdlib.h>
 #include <stdatomic.h>
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "krmlinit.h"
 #include "Config.h"
@@ -61,6 +65,7 @@ static void init_slow_path(void) {
   }
   krmlinit_globals();
   atomic_store_explicit(&slab_region_ptr, Main_Meta_sc_all.slab_region, memory_order_release);
+
   pthread_mutex_unlock(&m);
   if (pthread_atfork(full_lock, full_unlock, post_fork_child)) {
     fatal_error("pthread_atfork failed");
@@ -107,6 +112,9 @@ void* realloc(void* ptr, size_t new_size) {
   return StarMalloc_realloc(arena, ptr, new_size);
 }
 
+#if ENABLE_LOGS
+static _Thread_local unsigned log_counter = 0;
+#endif
 // noop if ptr is null
 // deallocates previously allocated memory by (malloc / ...)
 // UAF + DF = undefined
@@ -116,6 +124,14 @@ void free(void *ptr) {
   // TODO: use enforce_init instead
   init();
   bool b = StarMalloc_free(ptr);
+#if ENABLE_LOGS
+  char buffer[128];
+  if (log_counter % 100 == 0) {
+    int size = snprintf(buffer, 128, "StarMalloc/free pointer: %p\n", ptr);
+    int sz = write(STDERR_FILENO, buffer, strlen(buffer));
+  }
+  log_counter += 1;
+#endif
   if (! b) {
     printf("free ptr: %p\n", ptr);
     fatal_error("invalid free");

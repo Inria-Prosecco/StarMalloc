@@ -37,6 +37,89 @@ implementation differences remain (e.g. constant canaries vs. cryptographic
 canaries, slightly different quarantine implementation, no security mechanism
 for large allocations), which should have very limited performance impact.
 
+## Artifact: experiment (E1)
+
+### Structure of this repository
+
+- `bench`: directory used to save benchmarks results (CSV and PDF files)
+- `c`: C code included as part of StarMalloc
+- `dist`: C code extracted from StarMalloc verified files
+- `extern`: directory used to install mimalloc-bench benchmarks
+- `lib_avl_common`, `lib_avl_mono`, `lib_bitmap`, `lib_list`, `lib_misc`: libraries included as part of StarMalloc verified files
+- `obj`: directory used to store intermediate objects for extraction
+- `out`: directory used to store resulting .so libraries (StarMalloc or StarMalloc with stderr logs)
+- `result`: directory used to store Nix derivation build results
+- `src`: StarMalloc main verified files
+- `tests`: some tests to check memory allocators behaviors
+- `vendor`: files included in the repository to compile StarMalloc in a standalone manner (only from C files, no other repository)
+
+### Functions and specifications from the paper
+
+`.fsti` files correspond to interfaces, used as abstraction barriers between `.fst` files.
+
+Briefly:
+
+- verified memory allocator APIs with rich specifications serving as functional correctness theorems: `src/StarMalloc.fst`
+- C stubs to define more C functions from this verified basis: `c/lib-alloc.c`
+- zeroing specification is included in the `malloc` signature in `src/StarMalloc.fst`
+- guard pages specification: see `src/SlabsAlloc.fst`, `allocate_slab_aux_3` signature
+- canaries specification is included in the slab allocator allocation functions, see `slab_malloc_generic_canary` and `slab_aligned_alloc_generic_canary` signatures in the `src/Main.Meta.fsti` file
+- configuration files are `src/Config.fst{,i}`
+
+Section 3.2/Modeling Slab Metadata
+
+- `dispatch` definition: `src/SlabsCommon.fsti`, `f` definition (search `let f`)
+- `starseq` definition: `lib_misc/SteelStarSeqUtils.fst{,i}`
+- `slabs_sl_aux` definition: `src/SlabsCommon.fsti`, `left_vprop2_aux` definition
+- `slabs_sl` definition: `src/SlabsCommon.fsti`, `left_vprop` definition
+
+Section 3.2/Optimizing Slab Metadata
+
+- `is_list` definition: `lib_list/ArrayListGen.fst{,i}`, `is_dlist2` definition
+- `arraylist_sl` definition: refinement predicate is in `lib_list/ArrayListGen.fsti`, `varraylist_refine` definition
+- `ind_arraylist_sl` definition: `src/SlabsCommon.fsti`, `ind_varraylist` definition
+- `slabs_sl` definition: `src/SlabsCommon.fsti`, `left_vprop` definition
+
+Section 3.3/Iterating on Verified Implementations
+
+- `arraylist_sl` definition: refinement predicate is in `lib_list/ArrayListGen.fsti`, `varraylist_refine` definition
+- `ind_arraylist_sl` definition: `src/SlabsCommon.fsti`, `ind_varraylist` definition
+
+Section 3.4/Reusing Generic Predicates
+
+- `available_slot` definition: `src/SlotsAlloc.fst`, `slab_vprop_aux_f` definition
+- `slots_sl` definition: `src/SlotsAlloc.fst`, `slab_vprop_aux` definition
+- `slab_sl` definition: `src/SlotsAlloc.fst`, `slab_vprop` definition
+
+Section 3.4/Reusing the Slab Allocator
+
+- in the `src/LargeAlloc.fst` file, the `trees_malloc2_aux` function reuses code from the `src/SizeClass.fst` file, that is related to the slab allocator
+- in the same file, the same thing applies for the `trees_free2_aux` function
+
+Section 3.5
+
+- `init_size_classes` definition: `src/Main.fst`, `init_size_classes_aux` definition
+- `init` definition with normalization: `src/Main.fst`, `init_size_classes` definition
+- corresponding extracted C code is the `Main_Meta_init` function in `dist/StarMalloc.c`
+
+Section 5.2/Supported APIs
+
+- `aligned_alloc` corresponds to the verified `aligned_alloc` function in `src/StarMalloc.fst`
+- `malloc_usable_size` corresponds to the verified `full_getsize` and `getsize` functions in `src/StarMalloc.fst` (stub is in `c/lib-alloc.c`)
+- other exposed APIs (e.g., memalign) are defined in `c/lib-alloc.c`
+
+Section 5.2/Hardening Features
+
+- `malloc` corresponds to the `malloc` signature in `src/StarMalloc.fst`, serving as a functional correctness theorem
+- `dispatch` definition: `src/SlabsCommon.fsti`, `f` definition (search `let f`)
+- `slab_guard_intro_guard`: `src/Guards.fsti`, `mmap_trap_guard` (in particular, no `untrap` function)
+- guard pages specification: see `src/SlabsAlloc.fst`, `allocate_slab_aux_3` signature
+
+Section 5.2/Syscall Modeling
+
+- `mmap` axiomatization: `src/Mman.fst`, `mmap_u8` signature
+- alignment axiomatization: `src/ArrayAlignment.fst` file
+
 ## Security mechanisms
 
 Most of the security mechanisms are configurable.

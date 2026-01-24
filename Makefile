@@ -173,7 +173,27 @@ build_from_extracted_files:
 	  $(VENDOR_PARAMS) \
 	  -o out/starmalloc.so
 
+# visible symbols are restricted using -fvisibility=hidden
+# (this can be checked using nm -gC out/file.so)
+build_from_extracted_files_logs:
+	mkdir -p out
+	$(CC) $(SHARED_FLAGS) \
+	  -DENABLE_LOGS \
+	  -pipe -O3 -flto -fPIC \
+	  -fno-plt -fstack-clash-protection -fcf-protection -fstack-protector-strong \
+	  -fvisibility=hidden \
+	  -march=native \
+	  -Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text \
+	  $(FILES) \
+	  $(VENDOR_PARAMS) \
+	  -o out/starmalloc-logs.so
+
+
+
 light: build_from_extracted_files
+
+light-logs: build_from_extracted_files_logs
+
 lib: verify extract
 	$(MAKE) extract build_from_extracted_files
 
@@ -181,4 +201,13 @@ hardened_lib:
 	@echo "This target has been deprecated, use the lib target instead."
 	exit 1
 
-.PHONY: all world verify clean depend obj test
+# this assumes that everything related to mimalloc-bench has been properly set up
+# this also requires TexLive to generate a PDF with results as tables
+bench:
+	bash bench.sh $(N)
+
+# this assumes that Nix is properly installed
+firefox-no-jemalloc:
+	nix build .#firefox-no-mozjemalloc
+
+.PHONY: all world verify clean depend obj test bench firefox-no-jemalloc
