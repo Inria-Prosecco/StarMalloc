@@ -5,9 +5,9 @@
 
 #include "ExternUtils.h"
 
-krml_checked_int_t SizeClassSelection__n = (krml_checked_int_t)131072;
+krml_checked_int_t SizeClassSelection__n = 131072;
 
-krml_checked_int_t SizeClassSelection__k = (krml_checked_int_t)17;
+krml_checked_int_t SizeClassSelection__k = 17;
 
 uint32_t SizeClassSelection_log2u64(uint64_t x)
 {

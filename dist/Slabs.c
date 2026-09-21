@@ -42,11 +42,7 @@ update_quarantine2_aux(
     ArrayList_cell prev1 = { .prev = prev.prev, .next = cell.next, .data = prev.data };
     md_region[cell.prev] = prev1;
   }
-  size_t hd_;
-  if (idx5 == idx6)
-    hd_ = cell.next;
-  else
-    hd_ = idx5;
+  size_t hd_ = idx5 == idx6 ? cell.next : idx5;
   size_t sz_ = idx7 - (size_t)1U;
   ArrayListGen_tuple3 idxs = { .x = hd_, .y = tl_, .z = sz_ };
   ArrayList_insert(md_region, idx1, idx6, 0U);
@@ -143,11 +139,7 @@ SlabsFree_deallocate_slab(
             ArrayList_cell cell2 = { .prev = pos, .next = cell1.next, .data = cell1.data };
             md_region[idxs.y] = cell2;
           }
-          size_t tl_;
-          if (idxs.y == (size_t)16777217U)
-            tl_ = pos;
-          else
-            tl_ = idxs.z;
+          size_t tl_ = idxs.y == (size_t)16777217U ? pos : idxs.z;
           size_t sz_ = idxs.w + (size_t)1U;
           ArrayListGen_tuple2 idxs_ = { .x1 = tl_, .y1 = sz_ };
           update_quarantine3(sc, slab_region, idx7_, idxs);
@@ -203,11 +195,7 @@ SlabsFree_deallocate_slab(
             ArrayList_cell cell2 = { .prev = pos, .next = cell1.next, .data = cell1.data };
             md_region[idxs.y] = cell2;
           }
-          size_t tl_;
-          if (idxs.y == (size_t)16777217U)
-            tl_ = pos;
-          else
-            tl_ = idxs.z;
+          size_t tl_ = idxs.y == (size_t)16777217U ? pos : idxs.z;
           size_t sz_ = idxs.w + (size_t)1U;
           ArrayListGen_tuple2 idxs_ = { .x1 = tl_, .y1 = sz_ };
           update_quarantine3(sc, slab_region, idx7_, idxs);
@@ -284,11 +272,7 @@ allocate_slab_aux_4_aux1(
     ArrayList_cell prev1 = { .prev = prev.prev, .next = cell.next, .data = prev.data };
     md_region[cell.prev] = prev1;
   }
-  size_t hd_;
-  if (idx5 == idx6)
-    hd_ = cell.next;
-  else
-    hd_ = idx5;
+  size_t hd_ = idx5 == idx6 ? cell.next : idx5;
   size_t sz_ = idx7 - (size_t)1U;
   ArrayListGen_tuple3 idxs = { .x = hd_, .y = tl_, .z = sz_ };
   ArrayList_insert(md_region, idx1, idx6, 0U);

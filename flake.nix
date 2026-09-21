@@ -4,11 +4,11 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     fstar-src = {
-      url = "github:FStarLang/FStar";
+      url = "github:FStarLang/FStar/v2026.03.24";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     steel-src = {
-      url = "github:FStarLang/steel";
+      url = "github:cmovcc/steel/fix-ci";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "fstar-src/flake-utils";
       inputs.fstar.follows = "fstar-src";
