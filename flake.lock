@@ -25,15 +25,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1764177615,
-        "narHash": "sha256-hr1C612vHYtFuapdmL4clsVwuYM1KHkaJ9SqrXsLLfk=",
+        "lastModified": 1774392039,
+        "narHash": "sha256-b+LQ6X1yHUdBlQp+bA9KbRu6vhB3CwipN7pAxWxR2Nk=",
         "owner": "FStarLang",
         "repo": "FStar",
-        "rev": "0cbbc9bd61f64977cc534977a858e9291eab69cc",
+        "rev": "70671ffb81fa30aba09b9d6e2af275dfbccaa8f8",
         "type": "github"
       },
       "original": {
         "owner": "FStarLang",
+        "ref": "v2026.03.24",
         "repo": "FStar",
         "type": "github"
       }
@@ -52,11 +53,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1764099291,
-        "narHash": "sha256-+SwjLNEc6KhDFRufSLwHNPw5SWZSfHBQCqkQncSNhNc=",
+        "lastModified": 1787349605,
+        "narHash": "sha256-S8f5TE4w1Upd5R1sI2y7Spwm6UfMGYwMpIqs8kv1xUc=",
         "owner": "FStarLang",
         "repo": "karamel",
-        "rev": "5ec5a8ad312c02deeb8db72ec558a778d8258c01",
+        "rev": "9abbb865b10a0cd5c557da81c024c3965cb6ff53",
         "type": "github"
       },
       "original": {
@@ -67,11 +68,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1763966396,
-        "narHash": "sha256-6eeL1YPcY1MV3DDStIDIdy/zZCDKgHdkCmsrLJFiZf0=",
+        "lastModified": 1789921291,
+        "narHash": "sha256-Ft/BRnIqw1MywFoXydKobjjWmDFgDdYtSpJliE8+yUw=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "5ae3b07d8d6527c42f17c876e404993199144b6a",
+        "rev": "44a91898084f46797b5fac650c7e8c9ac38c43d4",
         "type": "github"
       },
       "original": {
@@ -103,15 +104,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1764014639,
-        "narHash": "sha256-xQf47FlborY4OafiGxLDbjwt3qUrdQ++wcWdLtKdhKk=",
-        "owner": "FStarLang",
+        "lastModified": 1790006979,
+        "narHash": "sha256-8kDyc4nsW55/zK9mm/qLNMAnOCuTiQXWQluRh9nw4VM=",
+        "owner": "cmovcc",
         "repo": "steel",
-        "rev": "7d7e0b78ecb53f0ab7ab9ba00483e8e89c87ee4d",
+        "rev": "6d7219f837c339b5e69f8c94f2e2b9e92e100e1a",
         "type": "github"
       },
       "original": {
-        "owner": "FStarLang",
+        "owner": "cmovcc",
+        "ref": "fix-ci",
         "repo": "steel",
         "type": "github"
       }

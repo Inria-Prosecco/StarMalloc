@@ -25,8 +25,8 @@ size_t builtin_mul_overflow(size_t x, size_t y) {
 
 // required comparison using uintptr_t
 uint64_t Impl_Trees_Cast_M_cmp(
-  K___Prims_dtuple2___uint8_t_____size_t x,
-  K___Prims_dtuple2___uint8_t_____size_t y) {
+  Impl_Trees_Cast_M_data x,
+  Impl_Trees_Cast_M_data y) {
   uintptr_t x_cast = (uintptr_t) x.fst;
   uintptr_t y_cast = (uintptr_t) y.fst;
   if (x_cast == y_cast) {
@@ -60,16 +60,16 @@ bool check_zeroing_u8(uint8_t* ptr, size_t len) {
 }
 
 // required casts
-Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t* Impl_Trees_Cast_M_array_u8__to__ref_node(uint8_t* arr) {
+Impl_Trees_Cast_M_data* Impl_Trees_Cast_M_array_u8__to__ref_node(uint8_t* arr) {
   // see lib_avl_mono/Impl.Trees.Types.fst
-  static_assert(sizeof(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t) <= 64);
-  return (Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t*) arr;
+  static_assert(sizeof(Impl_Trees_Cast_M_data) <= 64);
+  return (Impl_Trees_Cast_M_data*) arr;
 }
-uint8_t* Impl_Trees_Cast_M_ref_node__to__array_u8(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t* r) {
+uint8_t* Impl_Trees_Cast_M_ref_node__to__array_u8(Impl_Trees_Cast_M_data* r) {
   return (uint8_t*) r;
 }
 
-void FatalError_die_from_avl_node_malloc_failure (Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t, uint8_t* ptr) {
+void FatalError_die_from_avl_node_malloc_failure (Impl_Trees_Cast_M_data, uint8_t* ptr) {
   fatal_error("large allocator: AVL node allocation failed");
 }
 void FatalError_die_from_avl_node_free_failure (uint8_t* ptr) {

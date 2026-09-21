@@ -24,10 +24,7 @@ size_t ArrayList_remove(ArrayList_cell *r, size_t hd1, size_t idx)
     ArrayList_cell prev1 = { .prev = prev.prev, .next = cell1.next, .data = prev.data };
     r[cell1.prev] = prev1;
   }
-  if (hd1 == idx)
-    return cell1.next;
-  else
-    return hd1;
+  return hd1 == idx ? cell1.next : hd1;
 }
 
 void ArrayList_insert(ArrayList_cell *r, size_t hd, size_t idx, uint32_t v)

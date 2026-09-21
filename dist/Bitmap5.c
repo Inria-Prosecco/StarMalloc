@@ -11,10 +11,7 @@ bool Bitmap5_bm_get(uint64_t *arr, uint32_t k)
   uint64_t x = arr[k_index];
   uint64_t r1 = x >> k2;
   uint64_t r2 = r1 & 1ULL;
-  if (r2 == 1ULL)
-    return true;
-  else
-    return false;
+  return r2 == 1ULL;
 }
 
 void Bitmap5_bm_set(uint64_t *arr, uint32_t k)

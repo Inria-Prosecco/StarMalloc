@@ -14,19 +14,11 @@
 
 uint32_t Impl_Trees_Cast_M_avl_data_size = 64U;
 
-extern int64_t
-Impl_Trees_Cast_M_cmp(
-  K___Prims_dtuple2___uint8_t_____size_t uu___,
-  K___Prims_dtuple2___uint8_t_____size_t x0
-);
+extern int64_t Impl_Trees_Cast_M_cmp(Impl_Trees_Cast_M_data uu___, Impl_Trees_Cast_M_data x0);
 
-extern uint8_t
-*Impl_Trees_Cast_M_ref_node__to__array_u8(
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *x
-);
+extern uint8_t *Impl_Trees_Cast_M_ref_node__to__array_u8(Impl_Trees_Cast_M_node *x);
 
-extern Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-*Impl_Trees_Cast_M_array_u8__to__ref_node(uint8_t *arr);
+extern Impl_Trees_Cast_M_node *Impl_Trees_Cast_M_array_u8__to__ref_node(uint8_t *arr);
 
 static void init_idxs(size_t *r_idxs)
 {
@@ -99,11 +91,8 @@ void Impl_Trees_Types_init_mmap_md_slabs(Impl_Trees_Types_mmap_md_slabs *ret)
 
 Impl_Trees_Types_mmap_md_slabs Impl_Trees_Types_metadata_slabs;
 
-extern Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-*FatalError_die_from_avl_node_malloc_failure(
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x,
-  uint8_t *ptr
-);
+extern Impl_Trees_Cast_M_node
+*FatalError_die_from_avl_node_malloc_failure(Impl_Trees_Cast_M_node x, uint8_t *ptr);
 
 extern void FatalError_die_from_avl_node_free_failure(uint8_t *ptr);
 
@@ -113,24 +102,20 @@ extern void FatalError_die_from_realloc_invalid_previous_alloc(uint8_t *ptr);
 
 extern void FatalError_die_from_realloc_free_failure(uint8_t *ptr);
 
-extern Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t **mmap_ptr_metadata_init(void);
+extern Impl_Trees_Cast_M_node **mmap_ptr_metadata_init(void);
 
-bool
-Impl_BST_M_member(
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr,
-  K___Prims_dtuple2___uint8_t_____size_t v
-)
+bool Impl_BST_M_member(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v)
 {
   if (ptr == NULL)
     return false;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *ptr;
-    K___Prims_dtuple2___uint8_t_____size_t data = node.data;
+    Impl_Trees_Cast_M_node node = *ptr;
+    Impl_Trees_Cast_M_data data = node.data;
     int64_t delta = Impl_Trees_Cast_M_cmp(v, data);
-    if (delta == (int64_t)0)
+    if (delta == 0LL)
       return true;
-    else if (delta < (int64_t)0)
+    else if (delta < 0LL)
     {
       bool b = Impl_BST_M_member(node.left, v);
       return b;
@@ -143,21 +128,20 @@ Impl_BST_M_member(
   }
 }
 
-static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-*rotate_left_right(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr)
+static Impl_Trees_Cast_M_node *rotate_left_right(Impl_Trees_Cast_M_node *ptr)
 {
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x_node = *ptr;
-  K___Prims_dtuple2___uint8_t_____size_t x = x_node.data;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t z_node = *x_node.left;
-  K___Prims_dtuple2___uint8_t_____size_t z = z_node.data;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t y_node = *z_node.right;
-  K___Prims_dtuple2___uint8_t_____size_t y = y_node.data;
+  Impl_Trees_Cast_M_node x_node = *ptr;
+  Impl_Trees_Cast_M_data x = x_node.data;
+  Impl_Trees_Cast_M_node z_node = *x_node.left;
+  Impl_Trees_Cast_M_data z = z_node.data;
+  Impl_Trees_Cast_M_node y_node = *z_node.right;
+  Impl_Trees_Cast_M_data y = y_node.data;
   uint64_t s10;
   if (z_node.left == NULL)
     s10 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     s10 = node.size;
   }
   uint64_t s20;
@@ -165,7 +149,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s20 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *y_node.left;
+    Impl_Trees_Cast_M_node node = *y_node.left;
     s20 = node.size;
   }
   uint64_t s = s10 + s20 + 1ULL;
@@ -174,7 +158,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h10 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     h10 = node.height;
   }
   uint64_t h20;
@@ -182,25 +166,20 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h20 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *y_node.left;
+    Impl_Trees_Cast_M_node node = *y_node.left;
     h20 = node.height;
   }
-  uint64_t ite0;
-  if (h10 > h20)
-    ite0 = h10;
-  else
-    ite0 = h20;
-  uint64_t h = ite0 + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h = (h10 > h20 ? h10 : h20) + 1ULL;
+  Impl_Trees_Cast_M_node
   n = { .data = z, .left = z_node.left, .right = y_node.left, .size = s, .height = h };
   *x_node.left = n;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_z = x_node.left;
+  Impl_Trees_Cast_M_node *new_z = x_node.left;
   uint64_t s11;
   if (y_node.right == NULL)
     s11 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *y_node.right;
+    Impl_Trees_Cast_M_node node = *y_node.right;
     s11 = node.size;
   }
   uint64_t s21;
@@ -208,7 +187,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s21 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *x_node.right;
+    Impl_Trees_Cast_M_node node = *x_node.right;
     s21 = node.size;
   }
   uint64_t s0 = s11 + s21 + 1ULL;
@@ -217,7 +196,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h11 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *y_node.right;
+    Impl_Trees_Cast_M_node node = *y_node.right;
     h11 = node.height;
   }
   uint64_t h21;
@@ -225,25 +204,20 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h21 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *x_node.right;
+    Impl_Trees_Cast_M_node node = *x_node.right;
     h21 = node.height;
   }
-  uint64_t ite1;
-  if (h11 > h21)
-    ite1 = h11;
-  else
-    ite1 = h21;
-  uint64_t h0 = ite1 + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h0 = (h11 > h21 ? h11 : h21) + 1ULL;
+  Impl_Trees_Cast_M_node
   n0 = { .data = x, .left = y_node.right, .right = x_node.right, .size = s0, .height = h0 };
   *ptr = n0;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_x = ptr;
+  Impl_Trees_Cast_M_node *new_x = ptr;
   uint64_t s1;
   if (new_z == NULL)
     s1 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_z;
+    Impl_Trees_Cast_M_node node = *new_z;
     s1 = node.size;
   }
   uint64_t s2;
@@ -251,7 +225,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s2 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_x;
+    Impl_Trees_Cast_M_node node = *new_x;
     s2 = node.size;
   }
   uint64_t s3 = s1 + s2 + 1ULL;
@@ -260,7 +234,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h1 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_z;
+    Impl_Trees_Cast_M_node node = *new_z;
     h1 = node.height;
   }
   uint64_t h2;
@@ -268,37 +242,31 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h2 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_x;
+    Impl_Trees_Cast_M_node node = *new_x;
     h2 = node.height;
   }
-  uint64_t ite;
-  if (h1 > h2)
-    ite = h1;
-  else
-    ite = h2;
-  uint64_t h3 = ite + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h3 = (h1 > h2 ? h1 : h2) + 1ULL;
+  Impl_Trees_Cast_M_node
   n1 = { .data = y, .left = new_z, .right = new_x, .size = s3, .height = h3 };
   *z_node.right = n1;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_y = z_node.right;
+  Impl_Trees_Cast_M_node *new_y = z_node.right;
   return new_y;
 }
 
-static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-*rotate_right_left(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr)
+static Impl_Trees_Cast_M_node *rotate_right_left(Impl_Trees_Cast_M_node *ptr)
 {
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x_node = *ptr;
-  K___Prims_dtuple2___uint8_t_____size_t x = x_node.data;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t z_node = *x_node.right;
-  K___Prims_dtuple2___uint8_t_____size_t z = z_node.data;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t y_node = *z_node.left;
-  K___Prims_dtuple2___uint8_t_____size_t y = y_node.data;
+  Impl_Trees_Cast_M_node x_node = *ptr;
+  Impl_Trees_Cast_M_data x = x_node.data;
+  Impl_Trees_Cast_M_node z_node = *x_node.right;
+  Impl_Trees_Cast_M_data z = z_node.data;
+  Impl_Trees_Cast_M_node y_node = *z_node.left;
+  Impl_Trees_Cast_M_data y = y_node.data;
   uint64_t s10;
   if (x_node.left == NULL)
     s10 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *x_node.left;
+    Impl_Trees_Cast_M_node node = *x_node.left;
     s10 = node.size;
   }
   uint64_t s20;
@@ -306,7 +274,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s20 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *y_node.left;
+    Impl_Trees_Cast_M_node node = *y_node.left;
     s20 = node.size;
   }
   uint64_t s = s10 + s20 + 1ULL;
@@ -315,7 +283,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h10 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *x_node.left;
+    Impl_Trees_Cast_M_node node = *x_node.left;
     h10 = node.height;
   }
   uint64_t h20;
@@ -323,25 +291,20 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h20 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *y_node.left;
+    Impl_Trees_Cast_M_node node = *y_node.left;
     h20 = node.height;
   }
-  uint64_t ite0;
-  if (h10 > h20)
-    ite0 = h10;
-  else
-    ite0 = h20;
-  uint64_t h = ite0 + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h = (h10 > h20 ? h10 : h20) + 1ULL;
+  Impl_Trees_Cast_M_node
   n = { .data = x, .left = x_node.left, .right = y_node.left, .size = s, .height = h };
   *ptr = n;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_x = ptr;
+  Impl_Trees_Cast_M_node *new_x = ptr;
   uint64_t s11;
   if (y_node.right == NULL)
     s11 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *y_node.right;
+    Impl_Trees_Cast_M_node node = *y_node.right;
     s11 = node.size;
   }
   uint64_t s21;
@@ -349,7 +312,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s21 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     s21 = node.size;
   }
   uint64_t s0 = s11 + s21 + 1ULL;
@@ -358,7 +321,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h11 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *y_node.right;
+    Impl_Trees_Cast_M_node node = *y_node.right;
     h11 = node.height;
   }
   uint64_t h21;
@@ -366,25 +329,20 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h21 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     h21 = node.height;
   }
-  uint64_t ite1;
-  if (h11 > h21)
-    ite1 = h11;
-  else
-    ite1 = h21;
-  uint64_t h0 = ite1 + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h0 = (h11 > h21 ? h11 : h21) + 1ULL;
+  Impl_Trees_Cast_M_node
   n0 = { .data = z, .left = y_node.right, .right = z_node.right, .size = s0, .height = h0 };
   *x_node.right = n0;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_z = x_node.right;
+  Impl_Trees_Cast_M_node *new_z = x_node.right;
   uint64_t s1;
   if (new_x == NULL)
     s1 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_x;
+    Impl_Trees_Cast_M_node node = *new_x;
     s1 = node.size;
   }
   uint64_t s2;
@@ -392,7 +350,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s2 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_z;
+    Impl_Trees_Cast_M_node node = *new_z;
     s2 = node.size;
   }
   uint64_t s3 = s1 + s2 + 1ULL;
@@ -401,7 +359,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h1 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_x;
+    Impl_Trees_Cast_M_node node = *new_x;
     h1 = node.height;
   }
   uint64_t h2;
@@ -409,35 +367,29 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h2 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_z;
+    Impl_Trees_Cast_M_node node = *new_z;
     h2 = node.height;
   }
-  uint64_t ite;
-  if (h1 > h2)
-    ite = h1;
-  else
-    ite = h2;
-  uint64_t h3 = ite + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h3 = (h1 > h2 ? h1 : h2) + 1ULL;
+  Impl_Trees_Cast_M_node
   n1 = { .data = y, .left = new_x, .right = new_z, .size = s3, .height = h3 };
   *z_node.left = n1;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_y = z_node.left;
+  Impl_Trees_Cast_M_node *new_y = z_node.left;
   return new_y;
 }
 
-static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-*rotate_left(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr)
+static Impl_Trees_Cast_M_node *rotate_left(Impl_Trees_Cast_M_node *ptr)
 {
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x_node = *ptr;
-  K___Prims_dtuple2___uint8_t_____size_t x = x_node.data;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t z_node = *x_node.right;
-  K___Prims_dtuple2___uint8_t_____size_t z = z_node.data;
+  Impl_Trees_Cast_M_node x_node = *ptr;
+  Impl_Trees_Cast_M_data x = x_node.data;
+  Impl_Trees_Cast_M_node z_node = *x_node.right;
+  Impl_Trees_Cast_M_data z = z_node.data;
   uint64_t s10;
   if (x_node.left == NULL)
     s10 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *x_node.left;
+    Impl_Trees_Cast_M_node node = *x_node.left;
     s10 = node.size;
   }
   uint64_t s20;
@@ -445,7 +397,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s20 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     s20 = node.size;
   }
   uint64_t s = s10 + s20 + 1ULL;
@@ -454,7 +406,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h10 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *x_node.left;
+    Impl_Trees_Cast_M_node node = *x_node.left;
     h10 = node.height;
   }
   uint64_t h20;
@@ -462,25 +414,20 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h20 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     h20 = node.height;
   }
-  uint64_t ite0;
-  if (h10 > h20)
-    ite0 = h10;
-  else
-    ite0 = h20;
-  uint64_t h = ite0 + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h = (h10 > h20 ? h10 : h20) + 1ULL;
+  Impl_Trees_Cast_M_node
   n = { .data = x, .left = x_node.left, .right = z_node.left, .size = s, .height = h };
   *ptr = n;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_subnode = ptr;
+  Impl_Trees_Cast_M_node *new_subnode = ptr;
   uint64_t s1;
   if (new_subnode == NULL)
     s1 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_subnode;
+    Impl_Trees_Cast_M_node node = *new_subnode;
     s1 = node.size;
   }
   uint64_t s2;
@@ -488,7 +435,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s2 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     s2 = node.size;
   }
   uint64_t s0 = s1 + s2 + 1ULL;
@@ -497,7 +444,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h1 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_subnode;
+    Impl_Trees_Cast_M_node node = *new_subnode;
     h1 = node.height;
   }
   uint64_t h2;
@@ -505,35 +452,29 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h2 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     h2 = node.height;
   }
-  uint64_t ite;
-  if (h1 > h2)
-    ite = h1;
-  else
-    ite = h2;
-  uint64_t h0 = ite + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h0 = (h1 > h2 ? h1 : h2) + 1ULL;
+  Impl_Trees_Cast_M_node
   n0 = { .data = z, .left = new_subnode, .right = z_node.right, .size = s0, .height = h0 };
   *x_node.right = n0;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_node = x_node.right;
+  Impl_Trees_Cast_M_node *new_node = x_node.right;
   return new_node;
 }
 
-static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-*rotate_right(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr)
+static Impl_Trees_Cast_M_node *rotate_right(Impl_Trees_Cast_M_node *ptr)
 {
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x_node = *ptr;
-  K___Prims_dtuple2___uint8_t_____size_t x = x_node.data;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t z_node = *x_node.left;
-  K___Prims_dtuple2___uint8_t_____size_t z = z_node.data;
+  Impl_Trees_Cast_M_node x_node = *ptr;
+  Impl_Trees_Cast_M_data x = x_node.data;
+  Impl_Trees_Cast_M_node z_node = *x_node.left;
+  Impl_Trees_Cast_M_data z = z_node.data;
   uint64_t s10;
   if (z_node.right == NULL)
     s10 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     s10 = node.size;
   }
   uint64_t s20;
@@ -541,7 +482,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s20 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *x_node.right;
+    Impl_Trees_Cast_M_node node = *x_node.right;
     s20 = node.size;
   }
   uint64_t s = s10 + s20 + 1ULL;
@@ -550,7 +491,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h10 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.right;
+    Impl_Trees_Cast_M_node node = *z_node.right;
     h10 = node.height;
   }
   uint64_t h20;
@@ -558,25 +499,20 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h20 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *x_node.right;
+    Impl_Trees_Cast_M_node node = *x_node.right;
     h20 = node.height;
   }
-  uint64_t ite0;
-  if (h10 > h20)
-    ite0 = h10;
-  else
-    ite0 = h20;
-  uint64_t h = ite0 + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h = (h10 > h20 ? h10 : h20) + 1ULL;
+  Impl_Trees_Cast_M_node
   n = { .data = x, .left = z_node.right, .right = x_node.right, .size = s, .height = h };
   *ptr = n;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_subnode = ptr;
+  Impl_Trees_Cast_M_node *new_subnode = ptr;
   uint64_t s1;
   if (z_node.left == NULL)
     s1 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     s1 = node.size;
   }
   uint64_t s2;
@@ -584,7 +520,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     s2 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_subnode;
+    Impl_Trees_Cast_M_node node = *new_subnode;
     s2 = node.size;
   }
   uint64_t s0 = s1 + s2 + 1ULL;
@@ -593,7 +529,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h1 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *z_node.left;
+    Impl_Trees_Cast_M_node node = *z_node.left;
     h1 = node.height;
   }
   uint64_t h2;
@@ -601,35 +537,30 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     h2 = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *new_subnode;
+    Impl_Trees_Cast_M_node node = *new_subnode;
     h2 = node.height;
   }
-  uint64_t ite;
-  if (h1 > h2)
-    ite = h1;
-  else
-    ite = h2;
-  uint64_t h0 = ite + 1ULL;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+  uint64_t h0 = (h1 > h2 ? h1 : h2) + 1ULL;
+  Impl_Trees_Cast_M_node
   n0 = { .data = z, .left = z_node.left, .right = new_subnode, .size = s0, .height = h0 };
   *x_node.left = n0;
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_node = x_node.left;
+  Impl_Trees_Cast_M_node *new_node = x_node.left;
   return new_node;
 }
 
-static bool is_balanced_local(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr)
+static bool is_balanced_local(Impl_Trees_Cast_M_node *ptr)
 {
   if (ptr == NULL)
     return true;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *ptr;
+    Impl_Trees_Cast_M_node node = *ptr;
     uint64_t lh;
     if (node.left == NULL)
       lh = 0ULL;
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.left;
+      Impl_Trees_Cast_M_node node1 = *node.left;
       lh = node1.height;
     }
     uint64_t rh;
@@ -637,7 +568,7 @@ static bool is_balanced_local(Impl_Core_node__K___Prims_dtuple2___uint8_t_____si
       rh = 0ULL;
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.right;
+      Impl_Trees_Cast_M_node node1 = *node.right;
       rh = node1.height;
     }
     bool b1 = rh + 1ULL >= lh;
@@ -646,20 +577,19 @@ static bool is_balanced_local(Impl_Core_node__K___Prims_dtuple2___uint8_t_____si
   }
 }
 
-static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-*rebalance_avl(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr)
+static Impl_Trees_Cast_M_node *rebalance_avl(Impl_Trees_Cast_M_node *ptr)
 {
   if (is_balanced_local(ptr))
     return ptr;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *ptr;
+    Impl_Trees_Cast_M_node node = *ptr;
     uint64_t lh;
     if (node.left == NULL)
       lh = 0ULL;
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.left;
+      Impl_Trees_Cast_M_node node1 = *node.left;
       lh = node1.height;
     }
     uint64_t rh;
@@ -667,18 +597,18 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
       rh = 0ULL;
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.right;
+      Impl_Trees_Cast_M_node node1 = *node.right;
       rh = node1.height;
     }
     if (lh > rh + 1ULL)
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t l_node = *node.left;
+      Impl_Trees_Cast_M_node l_node = *node.left;
       uint64_t llh;
       if (l_node.left == NULL)
         llh = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *l_node.left;
+        Impl_Trees_Cast_M_node node1 = *l_node.left;
         llh = node1.height;
       }
       uint64_t lrh;
@@ -686,7 +616,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         lrh = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *l_node.right;
+        Impl_Trees_Cast_M_node node1 = *l_node.right;
         lrh = node1.height;
       }
       if (lrh > llh)
@@ -696,13 +626,13 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
     }
     else if (rh > lh + 1ULL)
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t r_node = *node.right;
+      Impl_Trees_Cast_M_node r_node = *node.right;
       uint64_t rlh;
       if (r_node.left == NULL)
         rlh = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *r_node.left;
+        Impl_Trees_Cast_M_node node1 = *r_node.left;
         rlh = node1.height;
       }
       uint64_t rrh;
@@ -710,7 +640,7 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         rrh = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *r_node.right;
+        Impl_Trees_Cast_M_node node1 = *r_node.right;
         rrh = node1.height;
       }
       if (rlh > rrh)
@@ -723,35 +653,34 @@ static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
   }
 }
 
-Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+Impl_Trees_Cast_M_node
 *Impl_AVL_M_insert_avl(
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-  *(*f1)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x0),
-  void (*f2)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *x0),
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
   bool r,
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr,
-  K___Prims_dtuple2___uint8_t_____size_t new_data
+  Impl_Trees_Cast_M_node *ptr,
+  Impl_Trees_Cast_M_data new_data
 )
 {
   if (ptr == NULL)
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *l = NULL;
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *r1 = NULL;
+    Impl_Trees_Cast_M_node *l = NULL;
+    Impl_Trees_Cast_M_node *r1 = NULL;
     uint64_t sr = 1ULL;
     uint64_t hr = 1ULL;
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+    Impl_Trees_Cast_M_node
     n = { .data = new_data, .left = l, .right = r1, .size = sr, .height = hr };
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr1 = f1(n);
+    Impl_Trees_Cast_M_node *ptr1 = f1(n);
     return ptr1;
   }
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *ptr;
+    Impl_Trees_Cast_M_node node = *ptr;
     int64_t delta = Impl_Trees_Cast_M_cmp(node.data, new_data);
-    if (delta == (int64_t)0)
+    if (delta == 0LL)
       if (r)
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+        Impl_Trees_Cast_M_node
         new_node =
           {
             .data = new_data, .left = node.left, .right = node.right, .size = node.size,
@@ -762,16 +691,15 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
       }
       else
         return ptr;
-    else if (delta > (int64_t)0)
+    else if (delta > 0LL)
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-      *new_left = Impl_AVL_M_insert_avl(f1, f2, r, node.left, new_data);
+      Impl_Trees_Cast_M_node *new_left = Impl_AVL_M_insert_avl(f1, f2, r, node.left, new_data);
       uint64_t s1;
       if (new_left == NULL)
         s1 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *new_left;
+        Impl_Trees_Cast_M_node node1 = *new_left;
         s1 = node1.size;
       }
       uint64_t s2;
@@ -779,7 +707,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         s2 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.right;
+        Impl_Trees_Cast_M_node node1 = *node.right;
         s2 = node1.size;
       }
       uint64_t s = s1 + s2 + 1ULL;
@@ -788,7 +716,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         h1 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *new_left;
+        Impl_Trees_Cast_M_node node1 = *new_left;
         h1 = node1.height;
       }
       uint64_t h2;
@@ -796,31 +724,25 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         h2 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.right;
+        Impl_Trees_Cast_M_node node1 = *node.right;
         h2 = node1.height;
       }
-      uint64_t ite;
-      if (h1 > h2)
-        ite = h1;
-      else
-        ite = h2;
-      uint64_t h = ite + 1ULL;
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+      uint64_t h = (h1 > h2 ? h1 : h2) + 1ULL;
+      Impl_Trees_Cast_M_node
       n = { .data = node.data, .left = new_left, .right = node.right, .size = s, .height = h };
       *ptr = n;
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_ptr = ptr;
+      Impl_Trees_Cast_M_node *new_ptr = ptr;
       return rebalance_avl(new_ptr);
     }
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-      *new_right = Impl_AVL_M_insert_avl(f1, f2, r, node.right, new_data);
+      Impl_Trees_Cast_M_node *new_right = Impl_AVL_M_insert_avl(f1, f2, r, node.right, new_data);
       uint64_t s1;
       if (node.left == NULL)
         s1 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.left;
+        Impl_Trees_Cast_M_node node1 = *node.left;
         s1 = node1.size;
       }
       uint64_t s2;
@@ -828,7 +750,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         s2 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *new_right;
+        Impl_Trees_Cast_M_node node1 = *new_right;
         s2 = node1.size;
       }
       uint64_t s = s1 + s2 + 1ULL;
@@ -837,7 +759,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         h1 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.left;
+        Impl_Trees_Cast_M_node node1 = *node.left;
         h1 = node1.height;
       }
       uint64_t h2;
@@ -845,19 +767,14 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         h2 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *new_right;
+        Impl_Trees_Cast_M_node node1 = *new_right;
         h2 = node1.height;
       }
-      uint64_t ite;
-      if (h1 > h2)
-        ite = h1;
-      else
-        ite = h2;
-      uint64_t h = ite + 1ULL;
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+      uint64_t h = (h1 > h2 ? h1 : h2) + 1ULL;
+      Impl_Trees_Cast_M_node
       n = { .data = node.data, .left = node.left, .right = new_right, .size = s, .height = h };
       *ptr = n;
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_ptr = ptr;
+      Impl_Trees_Cast_M_node *new_ptr = ptr;
       return rebalance_avl(new_ptr);
     }
   }
@@ -865,16 +782,15 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
 
 Impl_AVL_M_result
 Impl_AVL_M_remove_leftmost_avl(
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-  *(*f1)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x0),
-  void (*f2)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *x0),
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
+  Impl_Trees_Cast_M_node *ptr
 )
 {
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *ptr;
+  Impl_Trees_Cast_M_node node = *ptr;
   if (node.left == NULL)
   {
-    K___Prims_dtuple2___uint8_t_____size_t data = node.data;
+    Impl_Trees_Cast_M_data data = node.data;
     f2(ptr);
     return ((Impl_AVL_M_result){ .ptr = node.right, .data = data });
   }
@@ -886,7 +802,7 @@ Impl_AVL_M_remove_leftmost_avl(
       s1 = 0ULL;
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *r0.ptr;
+      Impl_Trees_Cast_M_node node1 = *r0.ptr;
       s1 = node1.size;
     }
     uint64_t s2;
@@ -894,7 +810,7 @@ Impl_AVL_M_remove_leftmost_avl(
       s2 = 0ULL;
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.right;
+      Impl_Trees_Cast_M_node node1 = *node.right;
       s2 = node1.size;
     }
     uint64_t s = s1 + s2 + 1ULL;
@@ -903,7 +819,7 @@ Impl_AVL_M_remove_leftmost_avl(
       h1 = 0ULL;
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *r0.ptr;
+      Impl_Trees_Cast_M_node node1 = *r0.ptr;
       h1 = node1.height;
     }
     uint64_t h2;
@@ -911,42 +827,36 @@ Impl_AVL_M_remove_leftmost_avl(
       h2 = 0ULL;
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.right;
+      Impl_Trees_Cast_M_node node1 = *node.right;
       h2 = node1.height;
     }
-    uint64_t ite;
-    if (h1 > h2)
-      ite = h1;
-    else
-      ite = h2;
-    uint64_t h = ite + 1ULL;
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+    uint64_t h = (h1 > h2 ? h1 : h2) + 1ULL;
+    Impl_Trees_Cast_M_node
     n = { .data = node.data, .left = r0.ptr, .right = node.right, .size = s, .height = h };
     *ptr = n;
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_ptr = ptr;
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_ptr1 = rebalance_avl(new_ptr);
+    Impl_Trees_Cast_M_node *new_ptr = ptr;
+    Impl_Trees_Cast_M_node *new_ptr1 = rebalance_avl(new_ptr);
     return ((Impl_AVL_M_result){ .ptr = new_ptr1, .data = r0.data });
   }
 }
 
-Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+Impl_Trees_Cast_M_node
 *Impl_AVL_M_delete_avl(
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-  *(*f1)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x0),
-  void (*f2)(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *x0),
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr,
-  K___Prims_dtuple2___uint8_t_____size_t data_to_rm
+  Impl_Trees_Cast_M_node *(*f1)(Impl_Trees_Cast_M_node x0),
+  void (*f2)(Impl_Trees_Cast_M_node *x0),
+  Impl_Trees_Cast_M_node *ptr,
+  Impl_Trees_Cast_M_data data_to_rm
 )
 {
   if (ptr == NULL)
     return ptr;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *ptr;
+    Impl_Trees_Cast_M_node node = *ptr;
     int64_t delta = Impl_Trees_Cast_M_cmp(data_to_rm, node.data);
-    if (delta == (int64_t)0)
+    if (delta == 0LL)
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *ptr;
+      Impl_Trees_Cast_M_node node1 = *ptr;
       if (node1.right == NULL)
       {
         f2(ptr);
@@ -965,7 +875,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
           s1 = 0ULL;
         else
         {
-          Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node2 = *node1.left;
+          Impl_Trees_Cast_M_node node2 = *node1.left;
           s1 = node2.size;
         }
         uint64_t s2;
@@ -973,7 +883,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
           s2 = 0ULL;
         else
         {
-          Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node2 = *r0.ptr;
+          Impl_Trees_Cast_M_node node2 = *r0.ptr;
           s2 = node2.size;
         }
         uint64_t s = s1 + s2 + 1ULL;
@@ -982,7 +892,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
           h1 = 0ULL;
         else
         {
-          Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node2 = *node1.left;
+          Impl_Trees_Cast_M_node node2 = *node1.left;
           h1 = node2.height;
         }
         uint64_t h2;
@@ -990,33 +900,27 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
           h2 = 0ULL;
         else
         {
-          Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node2 = *r0.ptr;
+          Impl_Trees_Cast_M_node node2 = *r0.ptr;
           h2 = node2.height;
         }
-        uint64_t ite;
-        if (h1 > h2)
-          ite = h1;
-        else
-          ite = h2;
-        uint64_t h = ite + 1ULL;
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+        uint64_t h = (h1 > h2 ? h1 : h2) + 1ULL;
+        Impl_Trees_Cast_M_node
         n = { .data = r0.data, .left = node1.left, .right = r0.ptr, .size = s, .height = h };
         *ptr = n;
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_ptr = ptr;
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_ptr1 = rebalance_avl(new_ptr);
+        Impl_Trees_Cast_M_node *new_ptr = ptr;
+        Impl_Trees_Cast_M_node *new_ptr1 = rebalance_avl(new_ptr);
         return new_ptr1;
       }
     }
-    else if (delta < (int64_t)0)
+    else if (delta < 0LL)
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-      *new_left = Impl_AVL_M_delete_avl(f1, f2, node.left, data_to_rm);
+      Impl_Trees_Cast_M_node *new_left = Impl_AVL_M_delete_avl(f1, f2, node.left, data_to_rm);
       uint64_t s1;
       if (new_left == NULL)
         s1 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *new_left;
+        Impl_Trees_Cast_M_node node1 = *new_left;
         s1 = node1.size;
       }
       uint64_t s2;
@@ -1024,7 +928,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         s2 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.right;
+        Impl_Trees_Cast_M_node node1 = *node.right;
         s2 = node1.size;
       }
       uint64_t s = s1 + s2 + 1ULL;
@@ -1033,7 +937,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         h1 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *new_left;
+        Impl_Trees_Cast_M_node node1 = *new_left;
         h1 = node1.height;
       }
       uint64_t h2;
@@ -1041,31 +945,25 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         h2 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.right;
+        Impl_Trees_Cast_M_node node1 = *node.right;
         h2 = node1.height;
       }
-      uint64_t ite;
-      if (h1 > h2)
-        ite = h1;
-      else
-        ite = h2;
-      uint64_t h = ite + 1ULL;
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+      uint64_t h = (h1 > h2 ? h1 : h2) + 1ULL;
+      Impl_Trees_Cast_M_node
       n = { .data = node.data, .left = new_left, .right = node.right, .size = s, .height = h };
       *ptr = n;
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_ptr = ptr;
+      Impl_Trees_Cast_M_node *new_ptr = ptr;
       return rebalance_avl(new_ptr);
     }
     else
     {
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-      *new_right = Impl_AVL_M_delete_avl(f1, f2, node.right, data_to_rm);
+      Impl_Trees_Cast_M_node *new_right = Impl_AVL_M_delete_avl(f1, f2, node.right, data_to_rm);
       uint64_t s1;
       if (node.left == NULL)
         s1 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.left;
+        Impl_Trees_Cast_M_node node1 = *node.left;
         s1 = node1.size;
       }
       uint64_t s2;
@@ -1073,7 +971,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         s2 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *new_right;
+        Impl_Trees_Cast_M_node node1 = *new_right;
         s2 = node1.size;
       }
       uint64_t s = s1 + s2 + 1ULL;
@@ -1082,7 +980,7 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         h1 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *node.left;
+        Impl_Trees_Cast_M_node node1 = *node.left;
         h1 = node1.height;
       }
       uint64_t h2;
@@ -1090,48 +988,40 @@ Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
         h2 = 0ULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node1 = *new_right;
+        Impl_Trees_Cast_M_node node1 = *new_right;
         h2 = node1.height;
       }
-      uint64_t ite;
-      if (h1 > h2)
-        ite = h1;
-      else
-        ite = h2;
-      uint64_t h = ite + 1ULL;
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+      uint64_t h = (h1 > h2 ? h1 : h2) + 1ULL;
+      Impl_Trees_Cast_M_node
       n = { .data = node.data, .left = node.left, .right = new_right, .size = s, .height = h };
       *ptr = n;
-      Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *new_ptr = ptr;
+      Impl_Trees_Cast_M_node *new_ptr = ptr;
       return rebalance_avl(new_ptr);
     }
   }
 }
 
-static size_t snd__Prims_dtuple2__uint8_t_____size_t(K___Prims_dtuple2___uint8_t_____size_t x)
+static size_t snd__Prims_dtuple2__uint8_t_____size_t(Impl_Trees_Cast_M_data x)
 {
   return x.snd;
 }
 
 FStar_Pervasives_Native_option__size_t
-Map_M_find(
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *ptr,
-  K___Prims_dtuple2___uint8_t_____size_t v
-)
+Map_M_find(Impl_Trees_Cast_M_node *ptr, Impl_Trees_Cast_M_data v)
 {
   if (ptr == NULL)
     return ((FStar_Pervasives_Native_option__size_t){ .tag = FStar_Pervasives_Native_None });
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *ptr;
+    Impl_Trees_Cast_M_node node = *ptr;
     int64_t delta = Impl_Trees_Cast_M_cmp(v, node.data);
-    if (delta == (int64_t)0)
+    if (delta == 0LL)
     {
       size_t r = snd__Prims_dtuple2__uint8_t_____size_t(node.data);
       return
         ((FStar_Pervasives_Native_option__size_t){ .tag = FStar_Pervasives_Native_Some, .v = r });
     }
-    else if (delta < (int64_t)0)
+    else if (delta < 0LL)
     {
       FStar_Pervasives_Native_option__size_t r = Map_M_find(node.left, v);
       return r;
@@ -1146,8 +1036,8 @@ Map_M_find(
 
 void init_mmap_md(mmap_md *ret)
 {
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t **ptr = mmap_ptr_metadata_init();
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *tree = NULL;
+  Impl_Trees_Cast_M_node **ptr = mmap_ptr_metadata_init();
+  Impl_Trees_Cast_M_node *tree = NULL;
   *ptr = tree;
   Steel_SpinLock_new_lock(&ret->lock);
   ret->data = ptr;
@@ -1155,31 +1045,28 @@ void init_mmap_md(mmap_md *ret)
 
 mmap_md metadata;
 
-static Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-*trees_malloc2(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t x)
+static Impl_Trees_Cast_M_node *trees_malloc2(Impl_Trees_Cast_M_node x)
 {
   Steel_SpinLock_acquire(&Impl_Trees_Types_metadata_slabs.lock);
   uint8_t *ptr = SizeClass_allocate_size_class(Impl_Trees_Types_metadata_slabs.scs);
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *r0;
+  Impl_Trees_Cast_M_node *r0;
   if (ptr == NULL)
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-    *r = FatalError_die_from_avl_node_malloc_failure(x, ptr);
+    Impl_Trees_Cast_M_node *r = FatalError_die_from_avl_node_malloc_failure(x, ptr);
     r0 = r;
   }
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
-    *r_ = Impl_Trees_Cast_M_array_u8__to__ref_node(ptr);
+    Impl_Trees_Cast_M_node *r_ = Impl_Trees_Cast_M_array_u8__to__ref_node(ptr);
     *r_ = x;
     r0 = r_;
   }
   Steel_SpinLock_release(&Impl_Trees_Types_metadata_slabs.lock);
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *r = r0;
+  Impl_Trees_Cast_M_node *r = r0;
   return r;
 }
 
-static void trees_free2(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *r)
+static void trees_free2(Impl_Trees_Cast_M_node *r)
 {
   Steel_SpinLock_acquire(&Impl_Trees_Types_metadata_slabs.lock);
   uint8_t *ptr = Impl_Trees_Cast_M_ref_node__to__array_u8(r);
@@ -1196,19 +1083,19 @@ static void trees_free2(Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *
 static uint8_t *large_malloc(size_t size)
 {
   Steel_SpinLock_acquire(&metadata.lock);
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *md_v0 = *metadata.data;
+  Impl_Trees_Cast_M_node *md_v0 = *metadata.data;
   uint64_t md_size;
   if (md_v0 == NULL)
     md_size = 0ULL;
   else
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t node = *md_v0;
+    Impl_Trees_Cast_M_node node = *md_v0;
     md_size = node.size;
   }
   uint8_t *r;
   if (md_size < 18446744073709551615ULL)
   {
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *md_v = *metadata.data;
+    Impl_Trees_Cast_M_node *md_v = *metadata.data;
     uint8_t *ptr0 = mmap_u8(size);
     uint8_t *ptr;
     if (ptr0 == NULL)
@@ -1216,21 +1103,18 @@ static uint8_t *large_malloc(size_t size)
     else
     {
       size_t size_ = PtrdiffWrapper_mmap_actual_size(size);
-      bool
-      b =
-        Impl_BST_M_member(md_v,
-          ((K___Prims_dtuple2___uint8_t_____size_t){ .fst = ptr0, .snd = size_ }));
+      bool b = Impl_BST_M_member(md_v, ((Impl_Trees_Cast_M_data){ .fst = ptr0, .snd = size_ }));
       if (b)
         ptr = NULL;
       else
       {
-        Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+        Impl_Trees_Cast_M_node
         *md_v_ =
           Impl_AVL_M_insert_avl(trees_malloc2,
             trees_free2,
             false,
             md_v,
-            ((K___Prims_dtuple2___uint8_t_____size_t){ .fst = ptr0, .snd = size_ }));
+            ((Impl_Trees_Cast_M_data){ .fst = ptr0, .snd = size_ }));
         *metadata.data = md_v_;
         ptr = ptr0;
       }
@@ -1246,17 +1130,14 @@ static uint8_t *large_malloc(size_t size)
 
 static bool uu___is_Some__size_t(FStar_Pervasives_Native_option__size_t projectee)
 {
-  if (projectee.tag == FStar_Pervasives_Native_Some)
-    return true;
-  else
-    return false;
+  return projectee.tag == FStar_Pervasives_Native_Some;
 }
 
 static bool large_free(uint8_t *ptr)
 {
   Steel_SpinLock_acquire(&metadata.lock);
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *md_v = *metadata.data;
-  K___Prims_dtuple2___uint8_t_____size_t k_elem = { .fst = ptr, .snd = (size_t)0U };
+  Impl_Trees_Cast_M_node *md_v = *metadata.data;
+  Impl_Trees_Cast_M_data k_elem = { .fst = ptr, .snd = (size_t)0U };
   FStar_Pervasives_Native_option__size_t size = Map_M_find(md_v, k_elem);
   bool r;
   if (uu___is_Some__size_t(size))
@@ -1267,12 +1148,12 @@ static bool large_free(uint8_t *ptr)
     else
       size1 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
     munmap_u8(ptr, size1);
-    Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t
+    Impl_Trees_Cast_M_node
     *md_v_ =
       Impl_AVL_M_delete_avl(trees_malloc2,
         trees_free2,
         md_v,
-        ((K___Prims_dtuple2___uint8_t_____size_t){ .fst = ptr, .snd = size1 }));
+        ((Impl_Trees_Cast_M_data){ .fst = ptr, .snd = size1 }));
     *metadata.data = md_v_;
     r = true;
   }
@@ -1283,17 +1164,11 @@ static bool large_free(uint8_t *ptr)
   return b;
 }
 
-static size_t
-large_getsize_aux(
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t **metadata1,
-  uint8_t *ptr
-)
+static size_t large_getsize_aux(Impl_Trees_Cast_M_node **metadata1, uint8_t *ptr)
 {
-  Impl_Core_node__K___Prims_dtuple2___uint8_t_____size_t *md_v = *metadata1;
+  Impl_Trees_Cast_M_node *md_v = *metadata1;
   FStar_Pervasives_Native_option__size_t
-  size =
-    Map_M_find(md_v,
-      ((K___Prims_dtuple2___uint8_t_____size_t){ .fst = ptr, .snd = (size_t)0U }));
+  size = Map_M_find(md_v, ((Impl_Trees_Cast_M_data){ .fst = ptr, .snd = (size_t)0U }));
   if (uu___is_Some__size_t(size))
     if (size.tag == FStar_Pervasives_Native_Some)
       return size.v;
@@ -3454,10 +3329,7 @@ static size_t slab_getsize(uint8_t *ptr)
   size_t index = diff_sz / (size_t)68719476736U;
   Constants_sc_full_ size = sizes[index];
   size_t rem_slot = diff_sz % (size_t)size.slab_size;
-  if (rem_slot % (size_t)size.sc == (size_t)0U)
-    return (size_t)(size.sc - 2U);
-  else
-    return (size_t)0U;
+  return rem_slot % (size_t)size.sc == (size_t)0U ? (size_t)(size.sc - 2U) : (size_t)0U;
 }
 
 static bool slab_free(uint8_t *ptr)
@@ -3497,7 +3369,7 @@ uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
   if (size <= StarMalloc_threshold)
   {
     uint8_t *ptr = slab_malloc(arena_id, (uint32_t)size);
-    if (ptr == NULL || false)
+    if (ptr == NULL)
       return ptr;
     else
     {
@@ -3513,11 +3385,8 @@ uint8_t *StarMalloc_malloc(size_t arena_id, size_t size)
   }
   else
   {
-    size_t size_;
-    if (size <= (size_t)Constants_max_slab_size)
-      size_ = (size_t)Constants_max_slab_size + (size_t)1U;
-    else
-      size_ = size;
+    size_t
+    size_ = size <= Constants_max_slab_size ? (size_t)Constants_max_slab_size + (size_t)1U : size;
     uint8_t *r = large_malloc(size_);
     return r;
   }
@@ -3534,7 +3403,7 @@ uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size
   if (check1)
   {
     uint8_t *ptr = slab_aligned_alloc(arena_id, alignment_as_u32, (uint32_t)size);
-    if (ptr == NULL || false)
+    if (ptr == NULL)
       return ptr;
     else
     {
@@ -3550,11 +3419,8 @@ uint8_t *StarMalloc_aligned_alloc(size_t arena_id, size_t alignment, size_t size
   }
   else if (check2)
   {
-    size_t size_;
-    if (size <= (size_t)Constants_max_slab_size)
-      size_ = (size_t)Constants_max_slab_size + (size_t)1U;
-    else
-      size_ = size;
+    size_t
+    size_ = size <= Constants_max_slab_size ? (size_t)Constants_max_slab_size + (size_t)1U : size;
     uint8_t *ptr = large_malloc(size_);
     return ptr;
   }
@@ -3622,7 +3488,7 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
   else
   {
     size_t old_size = StarMalloc_getsize(ptr);
-    bool old_allocation_is_small = old_size <= (size_t)Constants_max_slab_size;
+    bool old_allocation_is_small = old_size <= Constants_max_slab_size;
     bool new_allocation_is_small = new_size <= StarMalloc_threshold;
     bool same_case = old_allocation_is_small == new_allocation_is_small;
     bool small_case_optim_condition;
@@ -3652,11 +3518,7 @@ uint8_t *StarMalloc_realloc(size_t arena_id, uint8_t *ptr, size_t new_size)
         return NULL;
       else
       {
-        size_t min_of_sizes;
-        if (new_size <= old_size)
-          min_of_sizes = new_size;
-        else
-          min_of_sizes = old_size;
+        size_t min_of_sizes = new_size <= old_size ? new_size : old_size;
         memcpy_u8(new_ptr, ptr, min_of_sizes);
         bool b = StarMalloc_free(ptr);
         if (b)
@@ -3675,9 +3537,6 @@ uint8_t *StarMalloc_calloc(size_t arena_id, size_t size1, size_t size2)
 {
   size_t size = builtin_mul_overflow(size1, size2);
   uint8_t *ptr = StarMalloc_malloc(arena_id, size);
-  if (ptr == NULL)
-    return ptr;
-  else
-    return ptr;
+  return ptr == NULL ? ptr : ptr;
 }
 
